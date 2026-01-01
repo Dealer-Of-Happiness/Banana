@@ -2,16 +2,25 @@
 
 **Your Offline AI with Internet Connectivity**
 
-Banana AI is a local AI system that runs on your computer, can be trained for specific tasks, and has the ability to connect to the internet when needed (Google, ChatGPT, Claude).
+Banana AI is a local AI system that runs on your computer or iPhone, can be trained for specific tasks, and has the ability to connect to the internet when needed (Google, ChatGPT, Claude).
+
+## Platforms
+
+| Platform | Status | Description |
+|----------|--------|-------------|
+| **Desktop** (Python) | ✅ Ready | Full-featured CLI and Web UI |
+| **iOS** (iPhone) | ✅ Ready | Native SwiftUI app for App Store |
 
 ## Features
 
-- **Offline Operation**: Run AI models locally using Ollama - no internet required
+- **Offline Operation**: Run AI models locally - no internet required
+- **iOS App**: Native iPhone app using llama.cpp
 - **Internet Connectivity**: Connect to ChatGPT, Claude, and Google when you need additional capabilities
-- **Custom Training**: Fine-tune models for your specific tasks using LoRA
-- **Knowledge Base**: Add your own documents for context-aware responses (RAG)
-- **Multiple Interfaces**: CLI and Web UI included
+- **Document Knowledge**: Upload PDFs/documents to give AI specialized knowledge (RAG)
+- **Custom Training**: Fine-tune models for your specific tasks using LoRA (desktop)
+- **Multiple Interfaces**: CLI, Web UI, and native iOS app
 - **Hybrid Mode**: Automatically use local AI first, fallback to internet when needed
+- **Privacy First**: All processing happens on your device
 
 ## Quick Start
 
@@ -260,6 +269,29 @@ ollama pull llama3.2:3b
 ### "Out of memory"
 
 Use a smaller model or enable 8-bit quantization in config.
+
+## iOS App
+
+Banana AI is also available as a native iOS app! See the [ios/README.md](ios/README.md) for details.
+
+### Features
+- Run AI completely offline on iPhone 12+
+- Upload documents (Tesla manuals, etc.) for specialized knowledge
+- Optional ChatGPT/Claude integration
+- Privacy-focused - data never leaves your device
+
+### Building
+```bash
+cd ios
+# Open in Xcode
+open Package.swift
+```
+
+### App Store
+The iOS app is designed for App Store distribution with:
+- Privacy manifest included
+- No tracking or analytics
+- Standard encryption compliance
 
 ## License
 

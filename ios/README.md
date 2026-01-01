@@ -1,139 +1,159 @@
-# Banana AI for iOS
+# DOH AI - iOS App
 
-**Run AI completely offline on your iPhone with document knowledge**
+**Dealer Of Happiness AI - Privacy-First Offline AI Assistant**
 
-Banana AI is a native iOS app that runs large language models directly on your device. Upload documents like Tesla service manuals, and the AI will use that knowledge to answer your questions - all without internet.
+DOH AI is a native iOS app that runs AI completely offline on your iPhone. Upload documents, analyze photos, and have voice conversations - all without internet. Optionally connect to cloud AI (ChatGPT, Claude, Google) using your own API keys.
 
 ## Features
 
-- **100% Offline Operation** - AI runs entirely on your iPhone
-- **Document Upload** - Add PDFs, text files to give AI specific knowledge
-- **RAG (Retrieval Augmented Generation)** - AI searches your documents for relevant info
-- **Optional Internet** - Connect to ChatGPT/Claude when you need more power
-- **Privacy First** - Your data never leaves your device
+### Core Features
+- **100% Offline AI** - Llama 3.2 runs locally on your device
+- **Voice Conversations** - Speak naturally in 6 languages
+- **Document Chat** - Upload PDFs, Word docs, text files
+- **Photo Analysis** - Camera or photo library with OCR
+- **Personal Knowledge Base** - Calendar, Health, Reminders integration
 
-## How It Works
+### Organization
+- **Folders with Locks** - Secure sensitive conversations with 6-digit passwords
+- **Chat History** - Full searchable history with iCloud sync
+- **Export** - Save chats as TXT, PDF, or JSON
 
-### Local AI
-The app uses **llama.cpp** to run quantized language models directly on your iPhone's Neural Engine. We use small, efficient models (1-3B parameters) that fit in iPhone's memory.
+### Platform Support
+- **iPhone** - Full-featured iOS 17+ app
+- **Apple Watch** - Voice queries on your wrist
+- **Home Screen Widgets** - Quick voice and text access
 
-### Document Knowledge (RAG)
-Instead of "training" (which requires massive compute), we use RAG:
-1. Documents are split into chunks
-2. Each chunk gets an embedding (semantic fingerprint)
-3. When you ask a question, we find relevant chunks
-4. Those chunks are included in the AI's context
-
-This means the AI "knows" your Tesla manual without actually retraining!
+### Privacy
+- All AI processing on-device
+- No data collection or tracking
+- Optional cloud AI with YOUR API keys
+- iCloud sync is opt-in and encrypted
 
 ## Requirements
 
-- iOS 16.0+
-- iPhone 12 or newer (A14 chip or later recommended)
-- ~2GB free storage for the AI model
-- ~4GB RAM (handled automatically by iOS)
+- **iPhone 12+** (A14 chip or later)
+- **iOS 17.0+**
+- **~2GB storage** for AI model
+- **Xcode 15+** to build
 
-## Building the App
+## Quick Start
 
-### Prerequisites
-- Xcode 15+
-- macOS Sonoma or later
-- Apple Developer account (for device testing)
+### 1. Clone Repository
+```bash
+git clone https://github.com/Dealer-Of-Happiness/Banana.git
+cd Banana/ios
+```
 
-### Steps
+### 2. Open in Xcode
+```bash
+# Create new Xcode project (iOS App, SwiftUI)
+# Add this package as dependency
+open Package.swift
+```
 
-1. **Open in Xcode**
-   ```bash
-   cd ios
-   open Package.swift
-   # Or create a new Xcode project and add this as a Swift Package
-   ```
+### 3. Configure Signing
+- Select your Team in Signing & Capabilities
+- Set Bundle ID: `com.yourname.dohai`
 
-2. **Create Xcode Project**
-   - File > New > Project
-   - Choose "App" under iOS
-   - Add this package as a dependency
-
-3. **Configure Signing**
-   - Select your Team in Signing & Capabilities
-   - Update Bundle Identifier
-
-4. **Build & Run**
-   - Select your iPhone as destination
-   - Press Cmd+R to build and run
-
-### Including the Model
-
-For App Store distribution, you have two options:
-
-**Option A: Download on First Launch (Recommended)**
-- App is small (~50MB)
-- Model downloads on first use (~1.8GB)
-- Better user experience for App Store
-
-**Option B: Bundle with App**
-- Add the GGUF model to the app bundle
-- Larger initial download but works immediately offline
-- Good for enterprise distribution
+### 4. Build & Run
+- Select your iPhone
+- Press Cmd+R
 
 ## Project Structure
 
 ```
-ios/
-├── Sources/BananaAI/
+ios/Sources/
+├── DOHAI/
 │   ├── App/
-│   │   └── BananaAIApp.swift       # App entry point
+│   │   ├── DOHAIApp.swift          # App entry point
+│   │   └── MainView.swift          # Main container
+│   ├── Models/
+│   │   ├── Conversation.swift      # Data models
+│   │   └── AppSettings.swift       # Settings enums
 │   ├── Views/
-│   │   ├── ContentView.swift       # Main container
-│   │   ├── ChatView.swift          # Chat interface
-│   │   ├── DocumentsView.swift     # Document management
-│   │   └── SettingsView.swift      # Settings
-│   └── Core/
-│       ├── LocalAIEngine.swift     # LLM inference
-│       ├── KnowledgeBase.swift     # Vector storage
-│       ├── DocumentProcessor.swift # PDF/text processing
-│       ├── SettingsManager.swift   # Settings persistence
-│       └── OnlineAIConnector.swift # ChatGPT/Claude APIs
-├── Package.swift                    # Swift Package config
-└── README.md                        # This file
+│   │   ├── Chat/
+│   │   │   ├── ChatView.swift      # Main chat UI
+│   │   │   └── VoiceInputView.swift # Voice input
+│   │   ├── Menu/
+│   │   │   └── SideMenuView.swift  # Folders & history
+│   │   ├── Settings/
+│   │   │   └── SettingsView.swift  # All settings
+│   │   └── Onboarding/
+│   │       └── TermsView.swift     # Terms acceptance
+│   └── Services/
+│       ├── LlamaService.swift      # Local AI engine
+│       ├── SpeechService.swift     # Text-to-speech
+│       ├── DocumentService.swift   # PDF/doc processing
+│       ├── ImageAnalysisService.swift # Photo analysis
+│       ├── KnowledgeBaseService.swift # Calendar, Health
+│       ├── CloudAIService.swift    # ChatGPT, Claude
+│       ├── ICloudSyncService.swift # Sync & export
+│       ├── ConversationManager.swift # Data management
+│       ├── DonationService.swift   # In-app purchases
+│       └── SettingsManager.swift   # Preferences
+├── DOHAIWidgets/
+│   └── DOHAIWidgets.swift          # Home screen widgets
+└── DOHAIWatch/
+    └── DOHAIWatchApp.swift         # Apple Watch app
 ```
 
-## Supported Models
+## Supported Languages
 
-| Model | Size | Quality | Speed |
-|-------|------|---------|-------|
-| Llama 3.2 1B | 0.9GB | Good | Fastest |
-| Llama 3.2 3B | 1.8GB | Better | Fast |
-| Phi-3 Mini | 2.3GB | Great for code | Medium |
-| Gemma 2 2B | 1.4GB | Balanced | Fast |
+| Language | Voice Input | Voice Output | AI Responses |
+|----------|-------------|--------------|--------------|
+| English | ✅ | ✅ | ✅ |
+| Spanish | ✅ | ✅ | ✅ |
+| French | ✅ | ✅ | ✅ |
+| Russian | ✅ | ✅ | ✅ |
+| Korean | ✅ | ✅ | ✅ |
+| Chinese | ✅ | ✅ | ✅ |
 
-## App Store Submission
+## Settings Overview
 
-### Requirements
-1. **Privacy Manifest** - Already included (no tracking)
-2. **Export Compliance** - Standard encryption only
-3. **Age Rating** - 4+ (no objectionable content)
+| Section | Options |
+|---------|---------|
+| AI Configuration | Temperature (0-2), Context Window (1K-8K) |
+| Cloud Connections | ChatGPT, Claude, Google AI (API keys) |
+| Language | Input/Output language selection |
+| Voice & Sound | Haptic feedback, Voice mode, Speech rate |
+| Knowledge Base | Calendar, Health, Fitness, Notes, Email, Reminders |
+| Data & Privacy | iCloud sync, Export, Clear cache |
+| Support | $0.99, $5, $20 donations |
 
-### Tips
-- Test on real devices before submission
-- Include clear privacy policy
-- Emphasize on-device processing
-- Consider offering model download as "additional content"
+## App Store Checklist
 
-## Limitations
+- [x] Privacy manifest (no tracking)
+- [x] Terms and Conditions
+- [x] All required Info.plist keys
+- [x] Non-exempt encryption declaration
+- [x] StoreKit 2 for donations
+- [x] Widget extensions
+- [x] Watch app with complications
 
-- **No Training**: You can't actually train/fine-tune models on iPhone. We use RAG instead.
-- **Context Length**: Limited to ~4K tokens due to memory
-- **Speed**: Slower than cloud AI but fully private
-- **Model Size**: Limited to ~3B parameter models
+## Building for App Store
 
-## Privacy
+### 1. Set Version
+In Xcode: Target > General
+- Version: 1.0.0
+- Build: 1
 
-- All AI processing happens on-device
-- Documents stored locally with encryption
-- No analytics or tracking
-- Optional internet mode requires explicit user consent
+### 2. Archive
+- Select "Any iOS Device (arm64)"
+- Product → Archive
+
+### 3. Upload
+- Organizer → Distribute App → App Store Connect
+
+### 4. App Store Connect
+- Add screenshots (6.7", 6.5", 5.5")
+- Write description
+- Set pricing (Free)
+- Submit for review
 
 ## License
 
-MIT License - Free to use and modify for App Store or personal use.
+MIT License
+
+## Contact
+
+marketing@dealerofhappiness.com

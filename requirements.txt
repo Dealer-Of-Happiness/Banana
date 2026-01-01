@@ -1,0 +1,43 @@
+# Core AI/ML Libraries
+torch>=2.0.0
+transformers>=4.35.0
+accelerate>=0.24.0
+peft>=0.6.0  # For LoRA fine-tuning
+datasets>=2.14.0
+bitsandbytes>=0.41.0  # For quantization
+
+# Local LLM Integration
+ollama>=0.1.0
+llama-cpp-python>=0.2.0
+
+# Web Framework
+fastapi>=0.104.0
+uvicorn>=0.24.0
+python-multipart>=0.0.6
+websockets>=12.0
+
+# Internet Connectivity
+httpx>=0.25.0
+aiohttp>=3.9.0
+openai>=1.3.0  # For ChatGPT API
+anthropic>=0.7.0  # For Claude API
+google-api-python-client>=2.100.0
+googlesearch-python>=1.2.0
+
+# Database & Storage
+chromadb>=0.4.0  # Vector database for RAG
+sqlite-utils>=3.35
+
+# Utilities
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+rich>=13.7.0  # Beautiful CLI
+click>=8.1.0
+tqdm>=4.66.0
+numpy>=1.24.0
+PyYAML>=6.0.0
+
+# Training utilities
+wandb>=0.16.0  # Optional: for training tracking
+tensorboard>=2.15.0

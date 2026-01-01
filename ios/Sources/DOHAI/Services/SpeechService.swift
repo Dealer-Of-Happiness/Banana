@@ -7,6 +7,8 @@
 
 import AVFoundation
 import Foundation
+import Combine
+import UIKit
 
 class SpeechService: NSObject, ObservableObject {
     private let settings: SettingsManager

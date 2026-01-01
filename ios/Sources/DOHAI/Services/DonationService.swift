@@ -7,6 +7,7 @@
 
 import Foundation
 import StoreKit
+import Combine
 
 @MainActor
 class DonationService: ObservableObject {
@@ -56,7 +57,7 @@ class DonationService: ObservableObject {
 
             switch result {
             case .success(let verification):
-                let transaction = try checkVerified(verification)
+                let transaction = try Self.checkVerified(verification)
 
                 // Consumable IAP - finish immediately
                 await transaction.finish()
@@ -82,10 +83,10 @@ class DonationService: ObservableObject {
     // MARK: - Transaction Listener
 
     private func listenForTransactions() -> Task<Void, Error> {
-        Task.detached {
+        Task.detached { [weak self] in
             for await result in Transaction.updates {
                 do {
-                    let transaction = try self.checkVerified(result)
+                    let transaction = try Self.checkVerified(result)
                     await transaction.finish()
                 } catch {
                     print("Transaction verification failed: \(error)")
@@ -94,7 +95,7 @@ class DonationService: ObservableObject {
         }
     }
 
-    private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
+    private nonisolated static func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
         switch result {
         case .unverified:
             throw StoreError.failedVerification

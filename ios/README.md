@@ -1,8 +1,14 @@
-# DOH AI - iOS App
+# AI goodbye - iOS App
 
-**Dealer Of Happiness AI - Privacy-First Offline AI Assistant**
+**Say goodbye to monthly subscriptions, sharing your private data, and requiring internet connection**
 
-DOH AI is a native iOS app that runs AI completely offline on your iPhone. Upload documents, analyze photos, and have voice conversations - all without internet. Optionally connect to cloud AI (ChatGPT, Claude, Google) using your own API keys.
+AI goodbye is a native iOS app that runs AI completely offline on your iPhone. Upload documents, analyze photos, and have voice conversations - all without internet. Optionally connect to cloud AI (ChatGPT, Claude, Google) using your own API keys.
+
+## Why AI goodbye?
+
+- **No Monthly Subscriptions** - Pay once, use forever
+- **Your Data Stays Yours** - No cloud processing, no data collection
+- **Works Offline** - Full AI power without internet
 
 ## Features
 
@@ -53,7 +59,7 @@ open Package.swift
 
 ### 3. Configure Signing
 - Select your Team in Signing & Capabilities
-- Set Bundle ID: `com.yourname.dohai`
+- Set Bundle ID: `com.aigoodbye.app`
 
 ### 4. Build & Run
 - Select your iPhone
@@ -65,7 +71,7 @@ open Package.swift
 ios/Sources/
 ├── DOHAI/
 │   ├── App/
-│   │   ├── DOHAIApp.swift          # App entry point
+│   │   ├── AIGoodbyeApp.swift     # App entry point
 │   │   └── MainView.swift          # Main container
 │   ├── Models/
 │   │   ├── Conversation.swift      # Data models
@@ -156,4 +162,6 @@ MIT License
 
 ## Contact
 
-marketing@dealerofhappiness.com
+support@aigoodbye.ai
+
+Website: https://aigoodbye.ai

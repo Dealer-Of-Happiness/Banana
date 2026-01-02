@@ -1,6 +1,6 @@
 //
 //  SettingsView.swift
-//  DOH AI
+//  AI goodbye
 //
 //  Complete settings screen with all configuration options
 //
@@ -41,7 +41,7 @@ struct SettingsView: View {
             // Data & Privacy
             dataPrivacySection
 
-            // Support DOH AI
+            // Support AI goodbye
             supportSection
 
             // About
@@ -90,7 +90,7 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             if let source = permissionDeniedSource {
-                Text("DOH AI needs access to \(source.displayName). Please enable it in Settings.")
+                Text("AI goodbye needs access to \(source.displayName). Please enable it in Settings.")
             } else {
                 Text("Permission was denied. Please enable it in Settings.")
             }
@@ -241,7 +241,7 @@ struct SettingsView: View {
         } header: {
             Label("Personal Knowledge Base", systemImage: "brain.head.profile")
         } footer: {
-            Text("Allow DOH AI to access your personal data to provide more relevant responses.")
+            Text("Allow AI goodbye to access your personal data to provide more relevant responses.")
         }
     }
 
@@ -363,9 +363,9 @@ struct SettingsView: View {
                 }
             }
         } header: {
-            Label("Support DOH AI", systemImage: "heart.fill")
+            Label("Support AI goodbye", systemImage: "heart.fill")
         } footer: {
-            Text("Your support helps us improve DOH AI. All features remain free.")
+            Text("Your support helps us improve AI goodbye. All features remain free.")
         }
     }
 
@@ -655,7 +655,7 @@ struct PrivacyPolicyView: View {
                     .font(.title.bold())
 
                 Text("""
-                DOH AI is designed with privacy as a core principle.
+                AI goodbye is designed with privacy as a core principle. Say goodbye to monthly subscriptions, sharing your private data, and requiring internet connection.
 
                 **Local Processing**
                 All AI processing happens directly on your device. Your conversations and documents never leave your device unless you explicitly enable cloud AI services.

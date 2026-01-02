@@ -1,6 +1,6 @@
 //
 //  VoiceInputView.swift
-//  DOH AI
+//  AI goodbye
 //
 //  Voice input interface with waveform visualization
 //

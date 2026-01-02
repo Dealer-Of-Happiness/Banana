@@ -1,6 +1,6 @@
 //
 //  SettingsManager.swift
-//  DOH AI
+//  AI goodbye
 //
 //  Centralized settings management with persistence
 //

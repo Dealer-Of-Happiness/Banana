@@ -1,6 +1,6 @@
 //
 //  DocumentService.swift
-//  DOH AI
+//  AI goodbye
 //
 //  Document processing service for PDF, Word, and text files
 //

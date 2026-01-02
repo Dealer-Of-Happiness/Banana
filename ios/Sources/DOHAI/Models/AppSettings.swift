@@ -1,6 +1,6 @@
 //
 //  AppSettings.swift
-//  DOH AI
+//  AI goodbye
 //
 //  App settings and configuration models
 //
@@ -89,9 +89,9 @@ enum CloudAIProvider: String, CaseIterable, Identifiable {
 // MARK: - Donation Tier
 
 enum DonationTier: String, CaseIterable, Identifiable {
-    case coffee = "com.dohai.donation.coffee"
-    case support = "com.dohai.donation.support"
-    case patron = "com.dohai.donation.patron"
+    case coffee = "com.aigoodbye.donation.coffee"
+    case support = "com.aigoodbye.donation.support"
+    case patron = "com.aigoodbye.donation.patron"
 
     var id: String { rawValue }
 

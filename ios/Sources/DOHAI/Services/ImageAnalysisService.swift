@@ -1,6 +1,6 @@
 //
 //  ImageAnalysisService.swift
-//  DOH AI
+//  AI goodbye
 //
 //  Image analysis using Llama 3.2 vision capabilities
 //

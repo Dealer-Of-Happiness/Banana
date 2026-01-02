@@ -1,6 +1,6 @@
 //
 //  Conversation.swift
-//  DOH AI
+//  AI goodbye
 //
 //  Data models for conversations and messages
 //

@@ -1,6 +1,6 @@
 //
 //  SpeechService.swift
-//  DOH AI
+//  AI goodbye
 //
 //  Text-to-speech service with multi-language support
 //

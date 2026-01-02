@@ -1,6 +1,6 @@
 //
 //  ChatView.swift
-//  DOH AI
+//  AI goodbye
 //
 //  Main chat interface with voice and text input
 //

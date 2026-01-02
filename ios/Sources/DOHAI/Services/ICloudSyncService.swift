@@ -1,6 +1,6 @@
 //
 //  ICloudSyncService.swift
-//  DOH AI
+//  AI goodbye
 //
 //  iCloud sync for conversations and settings
 //
@@ -106,7 +106,7 @@ class ICloudSyncService {
     }
 
     private func exportAsText(_ conversations: [Conversation], to url: URL) throws -> URL {
-        var content = "DOH AI Conversations Export\n"
+        var content = "AI goodbye Conversations Export\n"
         content += "Exported: \(Date().formatted())\n"
         content += "=" .padding(toLength: 50, withPad: "=", startingAt: 0) + "\n\n"
 
@@ -115,7 +115,7 @@ class ICloudSyncService {
             content += "Created: \(conversation.createdAt.formatted())\n\n"
 
             for message in conversation.messages {
-                let role = message.role == .user ? "You" : "DOH AI"
+                let role = message.role == .user ? "You" : "AI goodbye"
                 content += "\(role): \(message.content)\n\n"
             }
 
@@ -144,7 +144,7 @@ class ICloudSyncService {
 
             var yOffset: CGFloat = 50
 
-            "DOH AI Conversations".draw(at: CGPoint(x: 50, y: yOffset), withAttributes: titleAttributes)
+            "AI goodbye Conversations".draw(at: CGPoint(x: 50, y: yOffset), withAttributes: titleAttributes)
             yOffset += 40
 
             for conversation in conversations {
@@ -157,7 +157,7 @@ class ICloudSyncService {
                 yOffset += 25
 
                 for message in conversation.messages {
-                    let role = message.role == .user ? "You: " : "DOH AI: "
+                    let role = message.role == .user ? "You: " : "AI goodbye: "
                     let text = role + message.content
                     text.draw(in: CGRect(x: 50, y: yOffset, width: 512, height: 100), withAttributes: bodyAttributes)
                     yOffset += 50

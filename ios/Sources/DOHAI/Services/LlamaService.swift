@@ -1,6 +1,6 @@
 //
 //  LlamaService.swift
-//  DOH AI
+//  AI goodbye
 //
 //  Local Llama model inference service using LLM.swift
 //
@@ -161,7 +161,7 @@ actor LlamaService {
 
         // System message
         fullPrompt += "<|start_header_id|>system<|end_header_id|>\n\n"
-        fullPrompt += "You are DOH AI, a helpful and friendly assistant. Be concise.<|eot_id|>"
+        fullPrompt += "You are AI goodbye, a helpful and friendly assistant. Be concise.<|eot_id|>"
 
         // Add conversation history (keep last 4 exchanges for context window)
         for message in history.suffix(4) {

@@ -1,6 +1,6 @@
 //
 //  SideMenuView.swift
-//  DOH AI
+//  AI goodbye
 //
 //  Side menu with folders and chat organization
 //
@@ -100,7 +100,7 @@ struct SideMenuView: View {
 
     private var header: some View {
         HStack {
-            Text("DOH AI")
+            Text("AI goodbye")
                 .font(.title.bold())
                 .foregroundStyle(
                     LinearGradient(

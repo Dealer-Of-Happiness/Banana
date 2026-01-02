@@ -1,6 +1,6 @@
 //
 //  DonationService.swift
-//  DOH AI
+//  AI goodbye
 //
 //  In-App Purchase handling using StoreKit 2
 //
@@ -143,7 +143,7 @@ struct ThankYouView: View {
             Text("Thank You!")
                 .font(.largeTitle.bold())
 
-            Text("Your support means the world to us and helps keep DOH AI free for everyone.")
+            Text("Your support means the world to us and helps keep AI goodbye free for everyone.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
 

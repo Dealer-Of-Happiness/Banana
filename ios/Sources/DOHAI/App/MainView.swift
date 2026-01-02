@@ -1,6 +1,6 @@
 //
 //  MainView.swift
-//  DOH AI
+//  AI goodbye
 //
 //  Main container view with side menu and chat
 //

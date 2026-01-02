@@ -1,6 +1,6 @@
 //
 //  DOHAIWatchApp.swift
-//  DOH AI Watch
+//  AI goodbye Watch
 //
 //  Apple Watch companion app
 //
@@ -102,7 +102,7 @@ struct WatchContentView: View {
                     }
                 }
             }
-            .navigationTitle("DOH AI")
+            .navigationTitle("AI goodbye")
         }
     }
 }
@@ -243,7 +243,7 @@ class ComplicationController: NSObject, CLKComplicationDataSource {
 
         case .graphicCorner:
             return CLKComplicationTemplateGraphicCornerTextImage(
-                textProvider: CLKTextProvider(format: "DOH AI"),
+                textProvider: CLKTextProvider(format: "AI goodbye"),
                 imageProvider: CLKFullColorImageProvider(fullColorImage: UIImage(systemName: "brain.head.profile")!)
             )
 

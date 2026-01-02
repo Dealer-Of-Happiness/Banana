@@ -1,6 +1,6 @@
 //
 //  ConversationManager.swift
-//  DOH AI
+//  AI goodbye
 //
 //  Manages conversations and folders with SwiftData
 //

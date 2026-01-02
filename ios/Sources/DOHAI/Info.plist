@@ -5,7 +5,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>DOH AI</string>
+    <string>AI goodbye</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -54,21 +54,21 @@
 
     <!-- Privacy Usage Descriptions -->
     <key>NSCameraUsageDescription</key>
-    <string>DOH AI uses the camera to analyze photos and documents</string>
+    <string>AI goodbye uses the camera to analyze photos and documents</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>DOH AI uses the microphone for voice conversations</string>
+    <string>AI goodbye uses the microphone for voice conversations</string>
     <key>NSSpeechRecognitionUsageDescription</key>
-    <string>DOH AI uses speech recognition to understand your voice commands</string>
+    <string>AI goodbye uses speech recognition to understand your voice commands</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>DOH AI accesses photos for image analysis</string>
+    <string>AI goodbye accesses photos for image analysis</string>
     <key>NSCalendarsUsageDescription</key>
-    <string>DOH AI accesses your calendar to help manage your schedule</string>
+    <string>AI goodbye accesses your calendar to help manage your schedule</string>
     <key>NSRemindersUsageDescription</key>
-    <string>DOH AI accesses reminders to help you stay organized</string>
+    <string>AI goodbye accesses reminders to help you stay organized</string>
     <key>NSHealthShareUsageDescription</key>
-    <string>DOH AI reads health data to provide personalized insights</string>
+    <string>AI goodbye reads health data to provide personalized insights</string>
     <key>NSHealthUpdateUsageDescription</key>
-    <string>DOH AI does not write health data</string>
+    <string>AI goodbye does not write health data</string>
 
     <!-- File Sharing -->
     <key>UIFileSharingEnabled</key>
@@ -88,10 +88,10 @@
         <dict>
             <key>CFBundleURLSchemes</key>
             <array>
-                <string>dohai</string>
+                <string>aigoodbye</string>
             </array>
             <key>CFBundleURLName</key>
-            <string>com.dohai.app</string>
+            <string>com.aigoodbye.app</string>
         </dict>
     </array>
 

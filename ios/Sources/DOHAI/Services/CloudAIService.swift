@@ -1,6 +1,6 @@
 //
 //  CloudAIService.swift
-//  DOH AI
+//  AI goodbye
 //
 //  Cloud AI integrations (ChatGPT, Claude, Google)
 //

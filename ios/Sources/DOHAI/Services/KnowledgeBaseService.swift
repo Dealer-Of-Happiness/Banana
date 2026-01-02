@@ -1,6 +1,6 @@
 //
 //  KnowledgeBaseService.swift
-//  DOH AI
+//  AI goodbye
 //
 //  Personal knowledge base integrations (Calendar, Health, etc.)
 //

@@ -1,6 +1,6 @@
 //
 //  DOHAIWidgets.swift
-//  DOH AI Widgets
+//  AI goodbye Widgets
 //
 //  Home screen widgets for quick access
 //
@@ -76,7 +76,7 @@ struct VoiceWidgetView: View {
                         .font(.headline)
                         .foregroundStyle(.primary)
 
-                    Text("DOH AI")
+                    Text("AI goodbye")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -97,7 +97,7 @@ struct QuickTextWidget: Widget {
                 .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Quick Chat")
-        .description("Quick access to DOH AI chat")
+        .description("Quick access to AI goodbye chat")
         .supportedFamilies([.systemMedium, .systemLarge])
     }
 }
@@ -113,7 +113,7 @@ struct TextWidgetProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TextWidgetEntry>) -> Void) {
         // Load last chat from shared container
-        let lastChat = UserDefaults(suiteName: "group.com.dohai.app")?.string(forKey: "lastAIResponse")
+        let lastChat = UserDefaults(suiteName: "group.com.aigoodbye.app")?.string(forKey: "lastAIResponse")
 
         let entry = TextWidgetEntry(date: Date(), lastChat: lastChat)
         let timeline = Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(3600)))
@@ -137,7 +137,7 @@ struct TextWidgetView: View {
                 HStack {
                     Image(systemName: "brain.head.profile")
                         .foregroundStyle(.blue)
-                    Text("DOH AI")
+                    Text("AI goodbye")
                         .font(.headline)
                     Spacer()
                     Image(systemName: "arrow.up.right.circle.fill")

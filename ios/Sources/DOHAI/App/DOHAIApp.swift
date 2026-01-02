@@ -1,8 +1,9 @@
 //
-//  DOHAIApp.swift
-//  DOH AI - Dealer Of Happiness AI
+//  AIGoodbyeApp.swift
+//  AI goodbye - aigoodbye.ai
 //
-//  Privacy-first, offline-capable AI assistant
+//  Say goodbye to monthly subscriptions, sharing your private data,
+//  and requiring internet connection
 //
 
 import SwiftUI
@@ -10,7 +11,7 @@ import SwiftData
 import Combine
 
 @main
-struct DOHAIApp: App {
+struct AIGoodbyeApp: App {
     @StateObject private var appState = AppState()
     @AppStorage("hasAcceptedTerms") private var hasAcceptedTerms = false
 
@@ -179,7 +180,7 @@ struct LoadingView: View {
                     )
                 )
 
-            Text("DOH AI")
+            Text("AI goodbye")
                 .font(.largeTitle.bold())
 
             Text(appState.loadingMessage)

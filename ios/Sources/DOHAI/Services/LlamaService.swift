@@ -6,10 +6,11 @@
 //
 
 import Foundation
+import llmfarm_core
 
 actor LlamaService {
     private let settings: SettingsManager
-    private var model: LlamaModel?
+    private var ai: AI?
 
     private let modelFileName = "llama-3.2-3b-instruct-q4_k_m.gguf"
     private let modelURL = URL(string: "https://huggingface.co/lmstudio-community/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf")!
@@ -77,14 +78,24 @@ actor LlamaService {
             throw LlamaError.modelNotFound
         }
 
-        model = try LlamaModel(
-            path: modelPath.path,
-            contextLength: settings.contextWindow
-        )
+        // Initialize llmfarm_core AI
+        ai = AI(_modelPath: modelPath.path, _chatName: "DOH AI Chat")
+
+        guard let ai = ai else {
+            throw LlamaError.modelNotLoaded
+        }
+
+        // Configure model settings
+        ai.initModel(.LLama_gguf, contextParams: .default)
+
+        var params = ModelSampleParams.default
+        params.temp = Float(settings.temperature)
+        params.n_ctx = Int32(settings.contextWindow)
+        ai.model?.sampleParams = params
     }
 
     func unloadModel() {
-        model = nil
+        ai = nil
     }
 
     // MARK: - Text Generation
@@ -96,18 +107,16 @@ actor LlamaService {
         AsyncThrowingStream { continuation in
             Task {
                 do {
-                    let fullPrompt = buildPrompt(userMessage: prompt, history: history)
-
-                    guard let model = model else {
+                    guard let ai = ai else {
                         throw LlamaError.modelNotLoaded
                     }
 
-                    try await model.generate(
-                        prompt: fullPrompt,
-                        temperature: Float(settings.temperature),
-                        maxTokens: settings.contextWindow
-                    ) { token in
-                        continuation.yield(token)
+                    let fullPrompt = buildPrompt(userMessage: prompt, history: history)
+
+                    // Use llmfarm_core for generation
+                    let output = try await ai.conversation(fullPrompt) { str, time in
+                        continuation.yield(str)
+                        return .continue
                     }
 
                     continuation.finish()
@@ -119,101 +128,21 @@ actor LlamaService {
     }
 
     private func buildPrompt(userMessage: String, history: [(role: String, content: String)]) -> String {
-        var prompt = """
-        <|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-        You are DOH AI, a helpful, harmless, and honest AI assistant created by Dealer Of Happiness.
-        You run locally on the user's device for maximum privacy.
-        Provide accurate, helpful, and concise responses.
-        If you don't know something, say so honestly.
-        Respect user privacy and never ask for personal information unnecessarily.
-        <|eot_id|>
-        """
-
-        // Add conversation history
-        for message in history.suffix(10) {
-            let role = message.role == "user" ? "user" : "assistant"
-            prompt += "<|start_header_id|>\(role)<|end_header_id|>\n\n\(message.content)<|eot_id|>"
-        }
-
-        // Add current message
-        prompt += "<|start_header_id|>user<|end_header_id|>\n\n\(userMessage)<|eot_id|>"
-        prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n"
-
-        return prompt
+        // For llmfarm_core, we use a simpler prompt format
+        // The library handles conversation context internally
+        return userMessage
     }
 
     // MARK: - Vision Analysis
 
     func analyzeImage(_ imageData: Data, prompt: String) async throws -> String {
-        // Llama 3.2 3B supports vision
-        // In production, use the multimodal capabilities
-        guard let model = model else {
+        guard let ai = ai else {
             throw LlamaError.modelNotLoaded
         }
 
-        var result = ""
-        let visionPrompt = """
-        <|begin_of_text|><|start_header_id|>system<|end_header_id|>
-        You are analyzing an image. Describe what you see accurately.
-        <|eot_id|>
-        <|start_header_id|>user<|end_header_id|>
-        [Image attached]
-        \(prompt)
-        <|eot_id|>
-        <|start_header_id|>assistant<|end_header_id|>
-
-        """
-
-        try await model.generate(
-            prompt: visionPrompt,
-            temperature: Float(settings.temperature),
-            maxTokens: 1024
-        ) { token in
-            result += token
-        }
-
-        return result
-    }
-}
-
-// MARK: - Llama Model Wrapper
-
-class LlamaModel {
-    private let modelPath: String
-    private let contextLength: Int
-
-    init(path: String, contextLength: Int = 4096) throws {
-        self.modelPath = path
-        self.contextLength = contextLength
-
-        // In production, initialize llama.cpp context here
-        // llama_init_from_file(path, ...)
-    }
-
-    func generate(
-        prompt: String,
-        temperature: Float,
-        maxTokens: Int,
-        onToken: @escaping (String) -> Void
-    ) async throws {
-        // In production, this would use llama.cpp for inference
-        // For now, placeholder implementation
-
-        let sampleResponse = """
-        I'm DOH AI, your local AI assistant running entirely on your device. \
-        I can help you with questions, document analysis, and more - all while \
-        keeping your data private. How can I assist you today?
-        """
-
-        for char in sampleResponse {
-            try await Task.sleep(nanoseconds: 15_000_000) // 15ms per character
-            onToken(String(char))
-        }
-    }
-
-    deinit {
-        // Clean up llama.cpp resources
+        // For vision, we'd need a vision-capable model
+        // For now, return a placeholder
+        return "Image analysis requires a vision-capable model. Please describe what you'd like to know about the image."
     }
 }
 

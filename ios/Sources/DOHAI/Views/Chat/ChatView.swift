@@ -104,7 +104,7 @@ struct ChatView: View {
                 LazyVStack(spacing: 16) {
                     ForEach(viewModel.messages) { message in
                         MessageBubble(message: message)
-                            .id(message.id)
+                            .id(message.id.uuidString)
                             .contextMenu {
                                 Button {
                                     UIPasteboard.general.string = message.content
@@ -135,7 +135,7 @@ struct ChatView: View {
             }
             .onChange(of: viewModel.messages.count) { _, _ in
                 withAnimation {
-                    proxy.scrollTo(viewModel.messages.last?.id ?? "typing", anchor: .bottom)
+                    proxy.scrollTo(viewModel.messages.last?.id.uuidString ?? "typing", anchor: .bottom)
                 }
             }
         }
@@ -267,7 +267,7 @@ class ChatViewModel: ObservableObject {
             let assistantMessage = Message(role: .assistant, content: "")
             messages.append(assistantMessage)
 
-            for try await chunk in llamaService.generate(
+            for try await chunk in await llamaService.generate(
                 prompt: text,
                 history: messages.dropLast(2).map { ($0.role.rawValue, $0.content) }
             ) {

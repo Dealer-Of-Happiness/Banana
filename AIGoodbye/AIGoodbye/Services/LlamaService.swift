@@ -125,9 +125,6 @@ actor LlamaService {
                     // Build simple prompt for Llama 3 format
                     let fullPrompt = self.buildLlama3Prompt(prompt: prompt, history: history)
 
-                    // Clear any previous output
-                    bot.output = ""
-
                     // Generate response
                     await bot.respond(to: fullPrompt)
                     var response = bot.output
@@ -191,7 +188,6 @@ actor LlamaService {
         }
 
         let fullPrompt = buildLlama3Prompt(prompt: prompt, history: [])
-        bot.output = ""
         await bot.respond(to: fullPrompt)
         return bot.output
     }

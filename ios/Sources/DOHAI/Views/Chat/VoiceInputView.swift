@@ -234,27 +234,53 @@ class VoiceRecorder: ObservableObject {
 
     init() {
         speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+        // Check current permission status on init
+        checkCurrentPermissions()
+    }
+
+    private func checkCurrentPermissions() {
+        // Check microphone status
+        switch AVAudioSession.sharedInstance().recordPermission {
+        case .granted:
+            isMicrophoneAuthorized = true
+        case .denied:
+            isMicrophoneAuthorized = false
+        case .undetermined:
+            isMicrophoneAuthorized = false
+        @unknown default:
+            isMicrophoneAuthorized = false
+        }
+
+        // Check speech recognition status
+        switch SFSpeechRecognizer.authorizationStatus() {
+        case .authorized:
+            isSpeechAuthorized = true
+        case .denied, .restricted:
+            isSpeechAuthorized = false
+        case .notDetermined:
+            isSpeechAuthorized = false
+        @unknown default:
+            isSpeechAuthorized = false
+        }
     }
 
     func requestPermission() {
-        // Request BOTH Speech Recognition AND Microphone permissions
-
-        // 1. Request microphone permission first
-        AVAudioApplication.requestRecordPermission { [weak self] granted in
+        // Request microphone first using the older reliable API
+        AVAudioSession.sharedInstance().requestRecordPermission { [weak self] granted in
             DispatchQueue.main.async {
                 self?.isMicrophoneAuthorized = granted
                 if !granted {
-                    self?.errorMessage = "Microphone access is required for voice input. Please enable in Settings."
+                    self?.errorMessage = "Microphone access is required. Please enable in Settings."
                 }
             }
         }
 
-        // 2. Request speech recognition permission
+        // Request speech recognition permission
         SFSpeechRecognizer.requestAuthorization { [weak self] status in
             DispatchQueue.main.async {
                 self?.isSpeechAuthorized = status == .authorized
                 if status != .authorized {
-                    self?.errorMessage = "Speech recognition is required for voice input. Please enable in Settings."
+                    self?.errorMessage = "Speech recognition is required. Please enable in Settings."
                 }
             }
         }
@@ -262,14 +288,19 @@ class VoiceRecorder: ObservableObject {
 
     // Async version that waits for both permissions
     func requestPermissionAsync() async {
-        // Request microphone permission
-        let micGranted = await withCheckedContinuation { continuation in
-            AVAudioApplication.requestRecordPermission { granted in
-                continuation.resume(returning: granted)
-            }
+        // Check if already authorized
+        checkCurrentPermissions()
+        if isAuthorized {
+            return
         }
 
-        await MainActor.run {
+        // Request microphone permission using the older API (more reliable)
+        if !isMicrophoneAuthorized {
+            let micGranted = await withCheckedContinuation { continuation in
+                AVAudioSession.sharedInstance().requestRecordPermission { granted in
+                    continuation.resume(returning: granted)
+                }
+            }
             isMicrophoneAuthorized = micGranted
             if !micGranted {
                 errorMessage = "Microphone access is required. Please enable in Settings."
@@ -277,13 +308,12 @@ class VoiceRecorder: ObservableObject {
         }
 
         // Request speech recognition permission
-        let speechStatus = await withCheckedContinuation { continuation in
-            SFSpeechRecognizer.requestAuthorization { status in
-                continuation.resume(returning: status)
+        if !isSpeechAuthorized {
+            let speechStatus = await withCheckedContinuation { continuation in
+                SFSpeechRecognizer.requestAuthorization { status in
+                    continuation.resume(returning: status)
+                }
             }
-        }
-
-        await MainActor.run {
             isSpeechAuthorized = speechStatus == .authorized
             if speechStatus != .authorized && errorMessage == nil {
                 errorMessage = "Speech recognition is required. Please enable in Settings."

@@ -19,7 +19,7 @@ actor LlamaService {
     private let huggingFaceModel = HuggingFaceModel(
         "lmstudio-community/Llama-3.2-1B-Instruct-GGUF",
         .Q4_K_M,
-        template: .llama
+        template: .llama()
     )
 
     init(temperature: Double = 0.7, contextWindow: Int = 2048) {
@@ -77,9 +77,9 @@ actor LlamaService {
                         throw LlamaError.modelNotLoaded
                     }
 
-                    // Use simple respond method
-                    let response = await bot.respond(to: prompt)
-                    continuation.yield(response)
+                    // LLM.swift respond updates bot.output property
+                    await bot.respond(to: prompt)
+                    continuation.yield(bot.output)
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)
@@ -94,7 +94,8 @@ actor LlamaService {
             throw LlamaError.modelNotLoaded
         }
 
-        return await bot.respond(to: prompt)
+        await bot.respond(to: prompt)
+        return bot.output
     }
 
     // MARK: - Vision Analysis

@@ -8,6 +8,7 @@
 import Foundation
 import UIKit
 import Vision
+import Combine
 
 actor ImageAnalysisService {
 

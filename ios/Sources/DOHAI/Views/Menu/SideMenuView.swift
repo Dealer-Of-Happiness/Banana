@@ -166,27 +166,35 @@ struct SideMenuView: View {
                 .padding(.top, 12)
 
             // Folders list
-            ForEach(appState.conversationManager.folders) { folder in
-                FolderRow(
-                    folder: folder,
-                    onTap: {
-                        if folder.isLocked {
-                            folderToUnlock = folder
-                            showPasswordPrompt = true
-                        } else {
+            if appState.conversationManager.folders.isEmpty {
+                Text("No folders yet")
+                    .font(.subheadline)
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+            } else {
+                ForEach(appState.conversationManager.folders) { folder in
+                    FolderRow(
+                        folder: folder,
+                        onTap: {
+                            if folder.isLocked {
+                                folderToUnlock = folder
+                                showPasswordPrompt = true
+                            } else {
+                                selectedFolder = folder
+                            }
+                        },
+                        onLongPress: {
                             selectedFolder = folder
+                            showFolderOptions = true
                         }
-                    },
-                    onLongPress: {
-                        selectedFolder = folder
-                        showFolderOptions = true
-                    }
-                )
+                    )
+                }
             }
         }
         .confirmationDialog("Folder Options", isPresented: $showFolderOptions, presenting: selectedFolder) { folder in
             Button("Rename") {
-                // Handle rename
+                // TODO: Handle rename with alert
             }
 
             if folder.isLocked {
@@ -210,7 +218,7 @@ struct SideMenuView: View {
             }
 
             Button("Delete", role: .destructive) {
-                // Handle delete
+                appState.conversationManager.deleteFolder(folder, deleteContents: false)
             }
 
             Button("Cancel", role: .cancel) {}

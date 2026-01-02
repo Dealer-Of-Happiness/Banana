@@ -456,18 +456,27 @@ struct KnowledgeBaseRow: View {
     let permissionStatus: String
     var onToggle: ((Bool) -> Void)? = nil
 
+    // Check if this source is supported
+    private var isSupported: Bool {
+        source != .notes && source != .email
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Toggle(isOn: $isEnabled) {
                 HStack {
                     Image(systemName: source.iconName)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(isSupported ? .blue : .gray)
                         .frame(width: 24)
                     Text(source.displayName)
+                        .foregroundStyle(isSupported ? .primary : .secondary)
                 }
             }
+            .disabled(!isSupported)
             .onChange(of: isEnabled) { _, newValue in
-                onToggle?(newValue)
+                if isSupported {
+                    onToggle?(newValue)
+                }
             }
 
             HStack {
@@ -481,10 +490,28 @@ struct KnowledgeBaseRow: View {
                     .font(.caption2)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(permissionStatus == "Granted" ? Color.green.opacity(0.2) : Color.gray.opacity(0.2))
-                    .foregroundStyle(permissionStatus == "Granted" ? .green : .gray)
+                    .background(statusBackgroundColor)
+                    .foregroundStyle(statusTextColor)
                     .clipShape(Capsule())
             }
+        }
+    }
+
+    private var statusBackgroundColor: Color {
+        switch permissionStatus {
+        case "Granted": return Color.green.opacity(0.2)
+        case "Not Available": return Color.orange.opacity(0.2)
+        case "Denied": return Color.red.opacity(0.2)
+        default: return Color.gray.opacity(0.2)
+        }
+    }
+
+    private var statusTextColor: Color {
+        switch permissionStatus {
+        case "Granted": return .green
+        case "Not Available": return .orange
+        case "Denied": return .red
+        default: return .gray
         }
     }
 }

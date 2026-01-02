@@ -194,7 +194,8 @@ struct WaveformView: View {
 class VoiceRecorder: ObservableObject {
     @Published var transcribedText = ""
     @Published var audioLevel: CGFloat = 0.3
-    @Published var isAuthorized = false
+    @Published var isSpeechAuthorized = false
+    @Published var isMicrophoneAuthorized = false
     @Published var errorMessage: String?
 
     private var speechRecognizer: SFSpeechRecognizer?
@@ -202,14 +203,34 @@ class VoiceRecorder: ObservableObject {
     private var recognitionTask: SFSpeechRecognitionTask?
     private var audioEngine: AVAudioEngine?
 
+    var isAuthorized: Bool {
+        isSpeechAuthorized && isMicrophoneAuthorized
+    }
+
     init() {
         speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
     }
 
     func requestPermission() {
+        // Request BOTH Speech Recognition AND Microphone permissions
+
+        // 1. Request microphone permission first
+        AVAudioApplication.requestRecordPermission { [weak self] granted in
+            DispatchQueue.main.async {
+                self?.isMicrophoneAuthorized = granted
+                if !granted {
+                    self?.errorMessage = "Microphone access is required for voice input. Please enable in Settings."
+                }
+            }
+        }
+
+        // 2. Request speech recognition permission
         SFSpeechRecognizer.requestAuthorization { [weak self] status in
             DispatchQueue.main.async {
-                self?.isAuthorized = status == .authorized
+                self?.isSpeechAuthorized = status == .authorized
+                if status != .authorized {
+                    self?.errorMessage = "Speech recognition is required for voice input. Please enable in Settings."
+                }
             }
         }
     }
@@ -217,7 +238,14 @@ class VoiceRecorder: ObservableObject {
     func startRecording() {
         errorMessage = nil
 
-        guard isAuthorized else {
+        // Check microphone permission
+        guard isMicrophoneAuthorized else {
+            errorMessage = "Microphone access not authorized. Please enable in Settings."
+            return
+        }
+
+        // Check speech recognition permission
+        guard isSpeechAuthorized else {
             errorMessage = "Speech recognition not authorized. Please enable in Settings."
             return
         }

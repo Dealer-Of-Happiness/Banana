@@ -12,6 +12,7 @@ actor LlamaService {
     private var bot: LLM?
     private let temperature: Float
     private let maxTokens: Int
+    private var modelPathURL: URL?
 
     private let modelFileName = "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
     private let modelDownloadURL = URL(string: "https://huggingface.co/lmstudio-community/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf")!
@@ -46,6 +47,9 @@ actor LlamaService {
         if !isModelDownloaded() {
             try await downloadModelWithProgress()
         }
+
+        // Store the path for later use
+        modelPathURL = modelPath
 
         // Load from local file
         guard let llm = LLM(from: modelPath, template: .chatML()) else {
@@ -114,20 +118,28 @@ actor LlamaService {
         AsyncThrowingStream { continuation in
             Task {
                 do {
-                    guard let bot = self.bot else {
+                    // Create a fresh LLM instance for each request to avoid state issues
+                    guard let path = self.modelPathURL else {
+                        throw LlamaError.modelNotLoaded
+                    }
+
+                    guard let freshBot = LLM(from: path, template: .chatML()) else {
                         throw LlamaError.modelNotLoaded
                     }
 
                     // Build the prompt with context
                     let fullPrompt = self.buildPrompt(prompt: prompt, history: history)
 
-                    // Get completion from the model
-                    let processed = bot.preprocess(fullPrompt, [])
-                    let response = await bot.getCompletion(from: processed)
+                    // Use respond method - the standard LLM.swift API
+                    await freshBot.respond(to: fullPrompt)
+                    var response = freshBot.output
+
+                    // Clean up the response - remove any trailing artifacts
+                    response = response.trimmingCharacters(in: .whitespacesAndNewlines)
 
                     // Return the response
-                    if response.isEmpty {
-                        continuation.yield("I'm sorry, I couldn't generate a response. Please try again.")
+                    if response.isEmpty || response == "..." || response.count < 3 {
+                        continuation.yield("I'm still learning. Could you try asking your question differently?")
                     } else {
                         continuation.yield(response)
                     }
@@ -140,13 +152,13 @@ actor LlamaService {
     }
 
     private func buildPrompt(prompt: String, history: [(role: String, content: String)]) -> String {
-        var fullPrompt = ""
+        var fullPrompt = "You are DOH AI, a helpful assistant. Answer questions clearly and concisely.\n\n"
 
-        // Add conversation history
-        for message in history.suffix(10) { // Keep last 10 messages for context
+        // Add conversation history (keep last 6 messages)
+        for message in history.suffix(6) {
             if message.role == "user" {
                 fullPrompt += "User: \(message.content)\n"
-            } else {
+            } else if message.role == "assistant" {
                 fullPrompt += "Assistant: \(message.content)\n"
             }
         }
@@ -159,12 +171,16 @@ actor LlamaService {
 
     // Simple non-streaming response
     func getResponse(prompt: String) async throws -> String {
-        guard let bot = bot else {
+        guard let path = modelPathURL else {
             throw LlamaError.modelNotLoaded
         }
 
-        let processed = bot.preprocess(prompt, [])
-        return await bot.getCompletion(from: processed)
+        guard let freshBot = LLM(from: path, template: .chatML()) else {
+            throw LlamaError.modelNotLoaded
+        }
+
+        await freshBot.respond(to: prompt)
+        return freshBot.output
     }
 
     // MARK: - Vision Analysis

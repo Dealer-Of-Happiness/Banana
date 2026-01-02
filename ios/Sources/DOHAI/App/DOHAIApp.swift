@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import Combine
 
 @main
 struct DOHAIApp: App {
@@ -82,7 +83,7 @@ class AppState: ObservableObject {
 
         do {
             // Check if model exists
-            if !llamaService.isModelDownloaded() {
+            if await !llamaService.isModelDownloaded() {
                 loadingMessage = "Downloading AI model (first time only)..."
                 try await llamaService.downloadModel { progress in
                     Task { @MainActor in

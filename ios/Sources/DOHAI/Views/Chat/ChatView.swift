@@ -7,6 +7,8 @@
 
 import SwiftUI
 import PhotosUI
+import Combine
+import UIKit
 
 struct ChatView: View {
     @EnvironmentObject var appState: AppState

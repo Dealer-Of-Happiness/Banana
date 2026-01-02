@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 struct MainView: View {
     @EnvironmentObject var appState: AppState

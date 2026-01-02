@@ -118,28 +118,32 @@ actor LlamaService {
         AsyncThrowingStream { continuation in
             Task {
                 do {
-                    // Create a fresh LLM instance for each request to avoid state issues
-                    guard let path = self.modelPathURL else {
+                    guard let bot = self.bot else {
                         throw LlamaError.modelNotLoaded
                     }
 
-                    guard let freshBot = LLM(from: path, template: .chatML()) else {
-                        throw LlamaError.modelNotLoaded
+                    // Build simple prompt for Llama 3 format
+                    let fullPrompt = self.buildLlama3Prompt(prompt: prompt, history: history)
+
+                    // Clear any previous output
+                    bot.output = ""
+
+                    // Generate response
+                    await bot.respond(to: fullPrompt)
+                    var response = bot.output
+
+                    // Clean up the response
+                    response = response.trimmingCharacters(in: .whitespacesAndNewlines)
+
+                    // Remove any stop tokens that might appear
+                    if let range = response.range(of: "<|") {
+                        response = String(response[..<range.lowerBound])
                     }
-
-                    // Build the prompt with context
-                    let fullPrompt = self.buildPrompt(prompt: prompt, history: history)
-
-                    // Use respond method - the standard LLM.swift API
-                    await freshBot.respond(to: fullPrompt)
-                    var response = freshBot.output
-
-                    // Clean up the response - remove any trailing artifacts
                     response = response.trimmingCharacters(in: .whitespacesAndNewlines)
 
                     // Return the response
-                    if response.isEmpty || response == "..." || response.count < 3 {
-                        continuation.yield("I'm still learning. Could you try asking your question differently?")
+                    if response.isEmpty || response == "..." || response.count < 2 {
+                        continuation.yield("I couldn't generate a response. Please try again.")
                     } else {
                         continuation.yield(response)
                     }
@@ -151,36 +155,45 @@ actor LlamaService {
         }
     }
 
-    private func buildPrompt(prompt: String, history: [(role: String, content: String)]) -> String {
-        var fullPrompt = "You are DOH AI, a helpful assistant. Answer questions clearly and concisely.\n\n"
+    // Llama 3 chat format
+    private func buildLlama3Prompt(prompt: String, history: [(role: String, content: String)]) -> String {
+        var fullPrompt = "<|begin_of_text|>"
 
-        // Add conversation history (keep last 6 messages)
-        for message in history.suffix(6) {
+        // System message
+        fullPrompt += "<|start_header_id|>system<|end_header_id|>\n\n"
+        fullPrompt += "You are DOH AI, a helpful and friendly assistant. Be concise.<|eot_id|>"
+
+        // Add conversation history (keep last 4 exchanges for context window)
+        for message in history.suffix(4) {
             if message.role == "user" {
-                fullPrompt += "User: \(message.content)\n"
+                fullPrompt += "<|start_header_id|>user<|end_header_id|>\n\n"
+                fullPrompt += "\(message.content)<|eot_id|>"
             } else if message.role == "assistant" {
-                fullPrompt += "Assistant: \(message.content)\n"
+                fullPrompt += "<|start_header_id|>assistant<|end_header_id|>\n\n"
+                fullPrompt += "\(message.content)<|eot_id|>"
             }
         }
 
-        // Add current prompt
-        fullPrompt += "User: \(prompt)\nAssistant:"
+        // Current user message
+        fullPrompt += "<|start_header_id|>user<|end_header_id|>\n\n"
+        fullPrompt += "\(prompt)<|eot_id|>"
+
+        // Start assistant response
+        fullPrompt += "<|start_header_id|>assistant<|end_header_id|>\n\n"
 
         return fullPrompt
     }
 
     // Simple non-streaming response
     func getResponse(prompt: String) async throws -> String {
-        guard let path = modelPathURL else {
+        guard let bot = bot else {
             throw LlamaError.modelNotLoaded
         }
 
-        guard let freshBot = LLM(from: path, template: .chatML()) else {
-            throw LlamaError.modelNotLoaded
-        }
-
-        await freshBot.respond(to: prompt)
-        return freshBot.output
+        let fullPrompt = buildLlama3Prompt(prompt: prompt, history: [])
+        bot.output = ""
+        await bot.respond(to: fullPrompt)
+        return bot.output
     }
 
     // MARK: - Vision Analysis

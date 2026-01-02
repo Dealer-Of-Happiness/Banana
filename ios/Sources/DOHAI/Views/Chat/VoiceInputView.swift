@@ -17,6 +17,7 @@ struct VoiceInputView: View {
     @State private var isRecording = false
     @State private var transcribedText = ""
     @State private var waveformValues: [CGFloat] = Array(repeating: 0.3, count: 30)
+    @State private var isCheckingPermissions = true
 
     var body: some View {
         NavigationStack {
@@ -25,14 +26,28 @@ struct VoiceInputView: View {
 
                 // Status indicator
                 VStack(spacing: 8) {
-                    Image(systemName: isRecording ? "waveform" : "mic.fill")
-                        .font(.system(size: 60))
-                        .foregroundStyle(isRecording ? .red : .blue)
-                        .symbolEffect(.bounce, value: isRecording)
-
-                    Text(isRecording ? "Listening..." : "Tap to speak")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
+                    if isCheckingPermissions {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        Text("Requesting permissions...")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                    } else if !voiceRecorder.isAuthorized {
+                        Image(systemName: "mic.slash.fill")
+                            .font(.system(size: 60))
+                            .foregroundStyle(.red)
+                        Text("Permissions required")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Image(systemName: isRecording ? "waveform" : "mic.fill")
+                            .font(.system(size: 60))
+                            .foregroundStyle(isRecording ? .red : .blue)
+                            .symbolEffect(.bounce, value: isRecording)
+                        Text(isRecording ? "Listening..." : "Tap to speak")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 // Waveform visualization
@@ -89,7 +104,7 @@ struct VoiceInputView: View {
                     } label: {
                         ZStack {
                             Circle()
-                                .fill(isRecording ? .red : .blue)
+                                .fill(canRecord ? (isRecording ? .red : .blue) : .gray)
                                 .frame(width: 80, height: 80)
 
                             if isRecording {
@@ -98,11 +113,12 @@ struct VoiceInputView: View {
                                     .frame(width: 24, height: 24)
                             } else {
                                 Circle()
-                                    .fill(.white)
+                                    .fill(.white.opacity(canRecord ? 1 : 0.5))
                                     .frame(width: 60, height: 60)
                             }
                         }
                     }
+                    .disabled(!canRecord)
 
                     // Send button
                     Button {
@@ -128,7 +144,10 @@ struct VoiceInputView: View {
             }
         }
         .onAppear {
-            voiceRecorder.requestPermission()
+            Task {
+                await voiceRecorder.requestPermissionAsync()
+                isCheckingPermissions = false
+            }
         }
         .onDisappear {
             stopRecording()
@@ -141,7 +160,13 @@ struct VoiceInputView: View {
         }
     }
 
+    // Can only record when not checking permissions and authorized
+    private var canRecord: Bool {
+        !isCheckingPermissions && voiceRecorder.isAuthorized
+    }
+
     private func startRecording() {
+        guard canRecord else { return }
         isRecording = true
         voiceRecorder.startRecording()
     }
@@ -231,6 +256,37 @@ class VoiceRecorder: ObservableObject {
                 if status != .authorized {
                     self?.errorMessage = "Speech recognition is required for voice input. Please enable in Settings."
                 }
+            }
+        }
+    }
+
+    // Async version that waits for both permissions
+    func requestPermissionAsync() async {
+        // Request microphone permission
+        let micGranted = await withCheckedContinuation { continuation in
+            AVAudioApplication.requestRecordPermission { granted in
+                continuation.resume(returning: granted)
+            }
+        }
+
+        await MainActor.run {
+            isMicrophoneAuthorized = micGranted
+            if !micGranted {
+                errorMessage = "Microphone access is required. Please enable in Settings."
+            }
+        }
+
+        // Request speech recognition permission
+        let speechStatus = await withCheckedContinuation { continuation in
+            SFSpeechRecognizer.requestAuthorization { status in
+                continuation.resume(returning: status)
+            }
+        }
+
+        await MainActor.run {
+            isSpeechAuthorized = speechStatus == .authorized
+            if speechStatus != .authorized && errorMessage == nil {
+                errorMessage = "Speech recognition is required. Please enable in Settings."
             }
         }
     }

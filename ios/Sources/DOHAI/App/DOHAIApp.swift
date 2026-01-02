@@ -103,10 +103,11 @@ class AppState: ObservableObject {
 
         do {
             // LLM.swift handles downloading from HuggingFace automatically
-            loadingMessage = "Loading AI model (may download on first run)..."
-            loadingProgress = 0.3
+            // First download is ~800MB and may take 5-10 minutes
+            loadingMessage = "Downloading AI model (~800MB)...\nThis may take several minutes on first run."
+            loadingProgress = 0.1
             try await llamaService.loadModel()
-            loadingProgress = 0.8
+            loadingProgress = 0.9
 
             loadingMessage = "Initializing services..."
             await conversationManager.initialize()

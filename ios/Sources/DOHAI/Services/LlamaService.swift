@@ -52,11 +52,16 @@ actor LlamaService {
             return
         }
 
-        guard let llm = try? await LLM(from: huggingFaceModel) else {
-            throw LlamaError.modelNotLoaded
+        // LLM.swift downloads from HuggingFace automatically
+        // This may take several minutes on first run (~800MB)
+        do {
+            guard let llm = await LLM(from: huggingFaceModel) else {
+                throw LlamaError.modelNotLoaded
+            }
+            bot = llm
+        } catch {
+            throw LlamaError.downloadFailed("Download failed: \(error.localizedDescription)")
         }
-
-        bot = llm
     }
 
     func unloadModel() {

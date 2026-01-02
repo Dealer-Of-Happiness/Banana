@@ -7,6 +7,8 @@
 
 import Foundation
 import CloudKit
+import UIKit
+import CoreGraphics
 
 actor ICloudSyncService {
     private let settings: SettingsManager

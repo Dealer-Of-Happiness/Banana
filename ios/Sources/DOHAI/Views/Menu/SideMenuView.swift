@@ -20,11 +20,6 @@ struct SideMenuView: View {
     @State private var showSettings = false
     @State private var showSetPasswordSheet = false
     @State private var folderToLock: Folder?
-    @State private var folders: [Folder] = [
-        Folder(name: "Work", isLocked: false),
-        Folder(name: "Personal", isLocked: false),
-        Folder(name: "Research", isLocked: false)
-    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -86,10 +81,9 @@ struct SideMenuView: View {
                 folder: folderToLock,
                 onSuccess: { password in
                     // Lock the folder with password
-                    if let folder = folderToLock,
-                       let index = folders.firstIndex(where: { $0.id == folder.id }) {
-                        folders[index].isLocked = true
-                        folders[index].password = password
+                    if let folder = folderToLock {
+                        folder.isLocked = true
+                        folder.password = password
                     }
                     showSetPasswordSheet = false
                     folderToLock = nil
@@ -172,7 +166,7 @@ struct SideMenuView: View {
                 .padding(.top, 12)
 
             // Folders list
-            ForEach(folders) { folder in
+            ForEach(appState.conversationManager.folders) { folder in
                 FolderRow(
                     folder: folder,
                     onTap: {
@@ -201,10 +195,8 @@ struct SideMenuView: View {
                     showPasswordPrompt = true
                 }
                 Button("Remove Lock") {
-                    if let index = folders.firstIndex(where: { $0.id == folder.id }) {
-                        folders[index].isLocked = false
-                        folders[index].password = nil
-                    }
+                    folder.isLocked = false
+                    folder.password = nil
                 }
                 Button("Change Lock") {
                     folderToLock = folder
@@ -237,12 +229,19 @@ struct SideMenuView: View {
 
             ScrollView {
                 LazyVStack(spacing: 4) {
-                    ForEach(sampleChats) { chat in
-                        ChatRow(conversation: chat)
-                            .onTapGesture {
-                                appState.currentConversation = chat
-                                appState.toggleSideMenu()
-                            }
+                    if appState.conversationManager.conversations.isEmpty {
+                        Text("No chats yet")
+                            .font(.subheadline)
+                            .foregroundStyle(.tertiary)
+                            .padding()
+                    } else {
+                        ForEach(appState.conversationManager.conversations) { chat in
+                            ChatRow(conversation: chat)
+                                .onTapGesture {
+                                    appState.currentConversation = chat
+                                    appState.toggleSideMenu()
+                                }
+                        }
                     }
                 }
             }
@@ -266,19 +265,9 @@ struct SideMenuView: View {
 
     private func createFolder() {
         guard !newFolderName.isEmpty else { return }
-        // Create folder in SwiftData
+        // Create folder using ConversationManager
+        _ = appState.conversationManager.createFolder(name: newFolderName)
         newFolderName = ""
-    }
-
-    // MARK: - Sample Data
-
-    private var sampleChats: [Conversation] {
-        [
-            Conversation(title: "Chat about recipes"),
-            Conversation(title: "Photo analysis - car"),
-            Conversation(title: "Meeting notes review"),
-            Conversation(title: "Voice chat 12/15")
-        ]
     }
 }
 

@@ -7,12 +7,19 @@
 
 import SwiftUI
 import Combine
+import CloudKit
+import EventKit
+import HealthKit
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = SettingsViewModel()
     @State private var showClearCacheAlert = false
     @State private var showExportOptions = false
+    @State private var showICloudError = false
+    @State private var iCloudErrorMessage = ""
+    @State private var showPermissionDenied = false
+    @State private var permissionDeniedSource: KnowledgeBaseSource?
 
     var body: some View {
         Form {
@@ -68,6 +75,25 @@ struct SettingsView: View {
                 }
             }
             Button("Cancel", role: .cancel) {}
+        }
+        .alert("iCloud Not Available", isPresented: $showICloudError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(iCloudErrorMessage)
+        }
+        .alert("Permission Denied", isPresented: $showPermissionDenied) {
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            if let source = permissionDeniedSource {
+                Text("DOH AI needs access to \(source.displayName). Please enable it in Settings.")
+            } else {
+                Text("Permission was denied. Please enable it in Settings.")
+            }
         }
     }
 
@@ -202,7 +228,14 @@ struct SettingsView: View {
                 KnowledgeBaseRow(
                     source: source,
                     isEnabled: binding(for: source),
-                    permissionStatus: viewModel.permissionStatus(for: source)
+                    permissionStatus: viewModel.permissionStatus(for: source),
+                    onToggle: { isEnabled in
+                        if isEnabled {
+                            Task {
+                                await requestPermission(for: source)
+                            }
+                        }
+                    }
                 )
             }
         } header: {
@@ -223,11 +256,49 @@ struct SettingsView: View {
         }
     }
 
+    private func requestPermission(for source: KnowledgeBaseSource) async {
+        do {
+            let granted = try await appState.knowledgeBaseService.requestPermission(for: source)
+            if !granted {
+                await MainActor.run {
+                    // Turn off the toggle if permission not granted
+                    setToggle(for: source, to: false)
+                    permissionDeniedSource = source
+                    showPermissionDenied = true
+                }
+            }
+        } catch {
+            await MainActor.run {
+                setToggle(for: source, to: false)
+                permissionDeniedSource = source
+                showPermissionDenied = true
+            }
+        }
+    }
+
+    private func setToggle(for source: KnowledgeBaseSource, to value: Bool) {
+        switch source {
+        case .calendar: viewModel.calendarEnabled = value
+        case .health: viewModel.healthEnabled = value
+        case .fitness: viewModel.fitnessEnabled = value
+        case .notes: viewModel.notesEnabled = value
+        case .email: viewModel.emailEnabled = value
+        case .reminders: viewModel.remindersEnabled = value
+        }
+    }
+
     // MARK: - Data & Privacy Section
 
     private var dataPrivacySection: some View {
         Section {
             Toggle("iCloud Sync", isOn: $viewModel.iCloudSync)
+                .onChange(of: viewModel.iCloudSync) { _, newValue in
+                    if newValue {
+                        Task {
+                            await checkICloudAvailability()
+                        }
+                    }
+                }
 
             Button("Export All Conversations") {
                 showExportOptions = true
@@ -238,6 +309,47 @@ struct SettingsView: View {
             }
         } header: {
             Label("Data & Privacy", systemImage: "lock.shield")
+        }
+    }
+
+    private func checkICloudAvailability() async {
+        do {
+            let container = CKContainer.default()
+            let status = try await container.accountStatus()
+
+            await MainActor.run {
+                switch status {
+                case .available:
+                    // iCloud is available, sync will happen
+                    appState.settings.iCloudSyncEnabled = true
+                case .noAccount:
+                    viewModel.iCloudSync = false
+                    iCloudErrorMessage = "No iCloud account found. Please sign in to iCloud in Settings."
+                    showICloudError = true
+                case .restricted:
+                    viewModel.iCloudSync = false
+                    iCloudErrorMessage = "iCloud access is restricted on this device."
+                    showICloudError = true
+                case .couldNotDetermine:
+                    viewModel.iCloudSync = false
+                    iCloudErrorMessage = "Could not determine iCloud status. Please try again later."
+                    showICloudError = true
+                case .temporarilyUnavailable:
+                    viewModel.iCloudSync = false
+                    iCloudErrorMessage = "iCloud is temporarily unavailable. Please try again later."
+                    showICloudError = true
+                @unknown default:
+                    viewModel.iCloudSync = false
+                    iCloudErrorMessage = "iCloud is not available."
+                    showICloudError = true
+                }
+            }
+        } catch {
+            await MainActor.run {
+                viewModel.iCloudSync = false
+                iCloudErrorMessage = "Failed to check iCloud status: \(error.localizedDescription)"
+                showICloudError = true
+            }
         }
     }
 
@@ -342,6 +454,7 @@ struct KnowledgeBaseRow: View {
     let source: KnowledgeBaseSource
     @Binding var isEnabled: Bool
     let permissionStatus: String
+    var onToggle: ((Bool) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -352,6 +465,9 @@ struct KnowledgeBaseRow: View {
                         .frame(width: 24)
                     Text(source.displayName)
                 }
+            }
+            .onChange(of: isEnabled) { _, newValue in
+                onToggle?(newValue)
             }
 
             HStack {
@@ -451,14 +567,28 @@ class SettingsViewModel: ObservableObject {
     }
 
     func permissionStatus(for source: KnowledgeBaseSource) -> String {
-        // Check actual permission status
+        // Check actual permission status from the system
         switch source {
-        case .calendar: return calendarEnabled ? "Granted" : "Not Set"
-        case .health: return healthEnabled ? "Granted" : "Not Set"
-        case .fitness: return fitnessEnabled ? "Granted" : "Not Set"
-        case .notes: return notesEnabled ? "Granted" : "Not Set"
-        case .email: return emailEnabled ? "Granted" : "Not Set"
-        case .reminders: return remindersEnabled ? "Granted" : "Not Set"
+        case .calendar:
+            let status = EKEventStore.authorizationStatus(for: .event)
+            switch status {
+            case .fullAccess, .authorized: return "Granted"
+            case .denied, .restricted: return "Denied"
+            default: return "Not Set"
+            }
+        case .reminders:
+            let status = EKEventStore.authorizationStatus(for: .reminder)
+            switch status {
+            case .fullAccess, .authorized: return "Granted"
+            case .denied, .restricted: return "Denied"
+            default: return "Not Set"
+            }
+        case .health, .fitness:
+            return HKHealthStore.isHealthDataAvailable() ? (healthEnabled ? "Granted" : "Not Set") : "Not Available"
+        case .notes:
+            return "Not Available" // Notes doesn't have a public API
+        case .email:
+            return "Not Available" // Email requires custom integration
         }
     }
 

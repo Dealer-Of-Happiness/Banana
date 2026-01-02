@@ -16,6 +16,15 @@ actor LlamaService {
     private let modelFileName = "llama-3.2-3b-instruct-q4_k_m.gguf"
     private let modelURL = URL(string: "https://huggingface.co/lmstudio-community/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf")!
 
+    // Check if running in simulator
+    private var isSimulator: Bool {
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        return false
+        #endif
+    }
+
     init(temperature: Double = 0.7, contextWindow: Int = 4096) {
         self.temperature = Float(temperature)
         self.contextWindow = Int32(contextWindow)
@@ -76,6 +85,11 @@ actor LlamaService {
     }
 
     func loadModel() async throws {
+        // Check simulator limitation
+        #if targetEnvironment(simulator)
+        throw LlamaError.simulatorNotSupported
+        #endif
+
         guard isModelDownloaded() else {
             throw LlamaError.modelNotFound
         }
@@ -92,7 +106,11 @@ actor LlamaService {
         contextParams.use_metal = true
 
         // Load model with correct API
-        try ai.loadModel(ModelInference.LLama_gguf, contextParams: contextParams)
+        do {
+            try ai.loadModel(ModelInference.LLama_gguf, contextParams: contextParams)
+        } catch {
+            throw LlamaError.modelLoadFailed(error.localizedDescription)
+        }
 
         // Configure sampling parameters
         if let model = ai.model {
@@ -160,6 +178,8 @@ enum LlamaError: LocalizedError {
     case modelNotLoaded
     case downloadFailed(String)
     case generationFailed(String)
+    case modelLoadFailed(String)
+    case simulatorNotSupported
 
     var errorDescription: String? {
         switch self {
@@ -171,6 +191,10 @@ enum LlamaError: LocalizedError {
             return "Failed to download model: \(reason)"
         case .generationFailed(let reason):
             return "Failed to generate response: \(reason)"
+        case .modelLoadFailed(let reason):
+            return "Failed to load model: \(reason)"
+        case .simulatorNotSupported:
+            return "Local AI requires a physical iPhone device. The iOS Simulator doesn't support Metal GPU acceleration needed for AI inference. Please run on a real device."
         }
     }
 }

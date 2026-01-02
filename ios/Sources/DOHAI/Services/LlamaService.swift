@@ -118,9 +118,19 @@ actor LlamaService {
                         throw LlamaError.modelNotLoaded
                     }
 
-                    // LLM.swift respond updates bot.output property
-                    await bot.respond(to: prompt)
-                    continuation.yield(bot.output)
+                    // Build the prompt with context
+                    let fullPrompt = self.buildPrompt(prompt: prompt, history: history)
+
+                    // Get completion from the model
+                    let processed = bot.preprocess(fullPrompt, [])
+                    let response = await bot.getCompletion(from: processed)
+
+                    // Return the response
+                    if response.isEmpty {
+                        continuation.yield("I'm sorry, I couldn't generate a response. Please try again.")
+                    } else {
+                        continuation.yield(response)
+                    }
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)
@@ -129,14 +139,32 @@ actor LlamaService {
         }
     }
 
+    private func buildPrompt(prompt: String, history: [(role: String, content: String)]) -> String {
+        var fullPrompt = ""
+
+        // Add conversation history
+        for message in history.suffix(10) { // Keep last 10 messages for context
+            if message.role == "user" {
+                fullPrompt += "User: \(message.content)\n"
+            } else {
+                fullPrompt += "Assistant: \(message.content)\n"
+            }
+        }
+
+        // Add current prompt
+        fullPrompt += "User: \(prompt)\nAssistant:"
+
+        return fullPrompt
+    }
+
     // Simple non-streaming response
     func getResponse(prompt: String) async throws -> String {
         guard let bot = bot else {
             throw LlamaError.modelNotLoaded
         }
 
-        await bot.respond(to: prompt)
-        return bot.output
+        let processed = bot.preprocess(prompt, [])
+        return await bot.getCompletion(from: processed)
     }
 
     // MARK: - Vision Analysis

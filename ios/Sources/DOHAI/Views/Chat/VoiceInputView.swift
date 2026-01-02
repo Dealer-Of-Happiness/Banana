@@ -218,7 +218,12 @@ class VoiceRecorder: ObservableObject {
         errorMessage = nil
 
         guard isAuthorized else {
-            errorMessage = "Speech recognition not authorized"
+            errorMessage = "Speech recognition not authorized. Please enable in Settings."
+            return
+        }
+
+        guard speechRecognizer?.isAvailable == true else {
+            errorMessage = "Speech recognition is not available on this device."
             return
         }
 
@@ -232,19 +237,25 @@ class VoiceRecorder: ObservableObject {
             try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
             audioEngine = AVAudioEngine()
-            guard let audioEngine = audioEngine else { return }
+            guard let audioEngine = audioEngine else {
+                errorMessage = "Failed to initialize audio engine"
+                return
+            }
 
             recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
-            guard let recognitionRequest = recognitionRequest else { return }
+            guard let recognitionRequest = recognitionRequest else {
+                errorMessage = "Failed to create recognition request"
+                return
+            }
 
             recognitionRequest.shouldReportPartialResults = true
 
             let inputNode = audioEngine.inputNode
             let recordingFormat = inputNode.outputFormat(forBus: 0)
 
-            // Check if we're in simulator (sampleRate will be 0)
-            guard recordingFormat.sampleRate > 0 else {
-                errorMessage = "Microphone not available in Simulator. Test on a real device."
+            // Check if we're in simulator or no mic available
+            guard recordingFormat.sampleRate > 0 && recordingFormat.channelCount > 0 else {
+                errorMessage = "Microphone not available. Please test on a real device."
                 return
             }
 
@@ -255,7 +266,12 @@ class VoiceRecorder: ObservableObject {
                     }
                 }
 
-                if error != nil || result?.isFinal == true {
+                if let error = error {
+                    DispatchQueue.main.async {
+                        self?.errorMessage = "Recognition error: \(error.localizedDescription)"
+                        self?.stopRecording()
+                    }
+                } else if result?.isFinal == true {
                     DispatchQueue.main.async {
                         self?.stopRecording()
                     }
@@ -266,12 +282,13 @@ class VoiceRecorder: ObservableObject {
                 self?.recognitionRequest?.append(buffer)
 
                 // Calculate audio level for waveform
-                let channelData = buffer.floatChannelData?[0]
+                guard let channelData = buffer.floatChannelData?[0] else { return }
                 let frameLength = Int(buffer.frameLength)
+                guard frameLength > 0 else { return }
 
                 var sum: Float = 0
                 for i in 0..<frameLength {
-                    sum += abs(channelData?[i] ?? 0)
+                    sum += abs(channelData[i])
                 }
                 let average = sum / Float(frameLength)
 
@@ -284,18 +301,35 @@ class VoiceRecorder: ObservableObject {
             try audioEngine.start()
         } catch {
             errorMessage = "Recording failed: \(error.localizedDescription)"
+            stopRecording()
         }
     }
 
     func stopRecording() {
-        audioEngine?.stop()
+        // Safely stop the audio engine
+        if audioEngine?.isRunning == true {
+            audioEngine?.stop()
+        }
+
+        // End the recognition request
         recognitionRequest?.endAudio()
+
+        // Cancel any ongoing recognition task
         recognitionTask?.cancel()
 
+        // Remove the tap from input node
         if let inputNode = audioEngine?.inputNode {
             inputNode.removeTap(onBus: 0)
         }
 
+        // Deactivate audio session
+        do {
+            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            // Ignore errors when deactivating
+        }
+
+        // Clear references
         audioEngine = nil
         recognitionRequest = nil
         recognitionTask = nil

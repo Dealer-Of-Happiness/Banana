@@ -18,6 +18,13 @@ struct SideMenuView: View {
     @State private var passwordInput = ""
     @State private var folderToUnlock: Folder?
     @State private var showSettings = false
+    @State private var showSetPasswordSheet = false
+    @State private var folderToLock: Folder?
+    @State private var folders: [Folder] = [
+        Folder(name: "Work", isLocked: false),
+        Folder(name: "Personal", isLocked: false),
+        Folder(name: "Research", isLocked: false)
+    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -73,6 +80,25 @@ struct SideMenuView: View {
             NavigationStack {
                 SettingsView()
             }
+        }
+        .sheet(isPresented: $showSetPasswordSheet) {
+            SetPasswordView(
+                folder: folderToLock,
+                onSuccess: { password in
+                    // Lock the folder with password
+                    if let folder = folderToLock,
+                       let index = folders.firstIndex(where: { $0.id == folder.id }) {
+                        folders[index].isLocked = true
+                        folders[index].password = password
+                    }
+                    showSetPasswordSheet = false
+                    folderToLock = nil
+                },
+                onCancel: {
+                    showSetPasswordSheet = false
+                    folderToLock = nil
+                }
+            )
         }
     }
 
@@ -145,8 +171,8 @@ struct SideMenuView: View {
                 .padding(.horizontal)
                 .padding(.top, 12)
 
-            // Sample folders - in real app, fetch from SwiftData
-            ForEach(sampleFolders) { folder in
+            // Folders list
+            ForEach(folders) { folder in
                 FolderRow(
                     folder: folder,
                     onTap: {
@@ -175,14 +201,19 @@ struct SideMenuView: View {
                     showPasswordPrompt = true
                 }
                 Button("Remove Lock") {
-                    // Handle remove lock
+                    if let index = folders.firstIndex(where: { $0.id == folder.id }) {
+                        folders[index].isLocked = false
+                        folders[index].password = nil
+                    }
                 }
                 Button("Change Lock") {
-                    // Handle change lock
+                    folderToLock = folder
+                    showSetPasswordSheet = true
                 }
             } else {
                 Button("Lock") {
-                    // Handle add lock
+                    folderToLock = folder
+                    showSetPasswordSheet = true
                 }
             }
 
@@ -240,14 +271,6 @@ struct SideMenuView: View {
     }
 
     // MARK: - Sample Data
-
-    private var sampleFolders: [Folder] {
-        [
-            Folder(name: "Work", isLocked: true),
-            Folder(name: "Personal", isLocked: false),
-            Folder(name: "Research", isLocked: false)
-        ]
-    }
 
     private var sampleChats: [Conversation] {
         [
@@ -373,8 +396,8 @@ struct PasswordPromptView: View {
                 }
 
                 Button("Unlock") {
-                    // Verify password
-                    if password == "123456" { // Replace with actual verification
+                    // Verify password against folder's stored password
+                    if password == (folder?.password ?? "123456") {
                         onSuccess()
                     } else {
                         showError = true
@@ -383,6 +406,87 @@ struct PasswordPromptView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(password.count < 6)
+            }
+            .padding()
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", action: onCancel)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+}
+
+// MARK: - Set Password View
+
+struct SetPasswordView: View {
+    let folder: Folder?
+    let onSuccess: (String) -> Void
+    let onCancel: () -> Void
+
+    @State private var password = ""
+    @State private var confirmPassword = ""
+    @State private var showError = false
+    @State private var errorMessage = ""
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                Image(systemName: "lock.badge.plus")
+                    .font(.system(size: 50))
+                    .foregroundStyle(.blue)
+
+                Text("Set Password")
+                    .font(.title2.bold())
+
+                if let folder = folder {
+                    Text("Lock \"\(folder.name)\"")
+                        .foregroundStyle(.secondary)
+                }
+
+                VStack(spacing: 16) {
+                    SecureField("Enter 6-digit password", text: $password)
+                        .keyboardType(.numberPad)
+                        .textContentType(.newPassword)
+                        .multilineTextAlignment(.center)
+                        .font(.title3)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                    SecureField("Confirm password", text: $confirmPassword)
+                        .keyboardType(.numberPad)
+                        .textContentType(.newPassword)
+                        .multilineTextAlignment(.center)
+                        .font(.title3)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .frame(width: 250)
+
+                if showError {
+                    Text(errorMessage)
+                        .foregroundStyle(.red)
+                        .font(.caption)
+                }
+
+                Button("Lock Folder") {
+                    if password.count < 6 {
+                        errorMessage = "Password must be at least 6 digits"
+                        showError = true
+                    } else if password != confirmPassword {
+                        errorMessage = "Passwords don't match"
+                        showError = true
+                        confirmPassword = ""
+                    } else {
+                        onSuccess(password)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(password.count < 6 || confirmPassword.isEmpty)
             }
             .padding()
             .navigationBarTitleDisplayMode(.inline)

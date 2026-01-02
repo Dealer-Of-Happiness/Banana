@@ -17,6 +17,7 @@ struct SideMenuView: View {
     @State private var showPasswordPrompt = false
     @State private var passwordInput = ""
     @State private var folderToUnlock: Folder?
+    @State private var showSettings = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -67,6 +68,11 @@ struct SideMenuView: View {
                     folderToUnlock = nil
                 }
             )
+        }
+        .sheet(isPresented: $showSettings) {
+            NavigationStack {
+                SettingsView()
+            }
         }
     }
 
@@ -215,8 +221,8 @@ struct SideMenuView: View {
     // MARK: - Settings Button
 
     private var settingsButton: some View {
-        NavigationLink {
-            SettingsView()
+        Button {
+            showSettings = true
         } label: {
             Label("Settings", systemImage: "gear")
                 .frame(maxWidth: .infinity, alignment: .leading)

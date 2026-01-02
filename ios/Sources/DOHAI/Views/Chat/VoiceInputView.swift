@@ -42,6 +42,15 @@ struct VoiceInputView: View {
                         .padding(.horizontal)
                 }
 
+                // Error message
+                if let error = voiceRecorder.errorMessage {
+                    Text(error)
+                        .font(.callout)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+
                 // Transcribed text
                 if !transcribedText.isEmpty {
                     ScrollView {
@@ -186,11 +195,12 @@ class VoiceRecorder: ObservableObject {
     @Published var transcribedText = ""
     @Published var audioLevel: CGFloat = 0.3
     @Published var isAuthorized = false
+    @Published var errorMessage: String?
 
     private var speechRecognizer: SFSpeechRecognizer?
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
-    private let audioEngine = AVAudioEngine()
+    private var audioEngine: AVAudioEngine?
 
     init() {
         speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
@@ -205,68 +215,90 @@ class VoiceRecorder: ObservableObject {
     }
 
     func startRecording() {
-        guard isAuthorized else { return }
+        errorMessage = nil
+
+        guard isAuthorized else {
+            errorMessage = "Speech recognition not authorized"
+            return
+        }
 
         // Cancel any existing task
-        recognitionTask?.cancel()
-        recognitionTask = nil
+        stopRecording()
 
-        // Configure audio session
-        let audioSession = AVAudioSession.sharedInstance()
-        try? audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
-        try? audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+        do {
+            // Configure audio session
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
-        recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
+            audioEngine = AVAudioEngine()
+            guard let audioEngine = audioEngine else { return }
 
-        guard let recognitionRequest = recognitionRequest else { return }
+            recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
+            guard let recognitionRequest = recognitionRequest else { return }
 
-        recognitionRequest.shouldReportPartialResults = true
+            recognitionRequest.shouldReportPartialResults = true
 
-        let inputNode = audioEngine.inputNode
+            let inputNode = audioEngine.inputNode
+            let recordingFormat = inputNode.outputFormat(forBus: 0)
 
-        recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { [weak self] result, error in
-            if let result = result {
-                DispatchQueue.main.async {
-                    self?.transcribedText = result.bestTranscription.formattedString
+            // Check if we're in simulator (sampleRate will be 0)
+            guard recordingFormat.sampleRate > 0 else {
+                errorMessage = "Microphone not available in Simulator. Test on a real device."
+                return
+            }
+
+            recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { [weak self] result, error in
+                if let result = result {
+                    DispatchQueue.main.async {
+                        self?.transcribedText = result.bestTranscription.formattedString
+                    }
+                }
+
+                if error != nil || result?.isFinal == true {
+                    DispatchQueue.main.async {
+                        self?.stopRecording()
+                    }
                 }
             }
 
-            if error != nil || result?.isFinal == true {
-                self?.audioEngine.stop()
-                inputNode.removeTap(onBus: 0)
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { [weak self] buffer, _ in
+                self?.recognitionRequest?.append(buffer)
+
+                // Calculate audio level for waveform
+                let channelData = buffer.floatChannelData?[0]
+                let frameLength = Int(buffer.frameLength)
+
+                var sum: Float = 0
+                for i in 0..<frameLength {
+                    sum += abs(channelData?[i] ?? 0)
+                }
+                let average = sum / Float(frameLength)
+
+                DispatchQueue.main.async {
+                    self?.audioLevel = CGFloat(min(1, average * 10))
+                }
             }
+
+            audioEngine.prepare()
+            try audioEngine.start()
+        } catch {
+            errorMessage = "Recording failed: \(error.localizedDescription)"
         }
-
-        let recordingFormat = inputNode.outputFormat(forBus: 0)
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { [weak self] buffer, _ in
-            self?.recognitionRequest?.append(buffer)
-
-            // Calculate audio level for waveform
-            let channelData = buffer.floatChannelData?[0]
-            let frameLength = Int(buffer.frameLength)
-
-            var sum: Float = 0
-            for i in 0..<frameLength {
-                sum += abs(channelData?[i] ?? 0)
-            }
-            let average = sum / Float(frameLength)
-
-            DispatchQueue.main.async {
-                self?.audioLevel = CGFloat(min(1, average * 10))
-            }
-        }
-
-        audioEngine.prepare()
-        try? audioEngine.start()
     }
 
     func stopRecording() {
-        audioEngine.stop()
+        audioEngine?.stop()
         recognitionRequest?.endAudio()
         recognitionTask?.cancel()
 
-        let inputNode = audioEngine.inputNode
-        inputNode.removeTap(onBus: 0)
+        if let inputNode = audioEngine?.inputNode {
+            inputNode.removeTap(onBus: 0)
+        }
+
+        audioEngine = nil
+        recognitionRequest = nil
+        recognitionTask = nil
     }
 
     func setLanguage(_ locale: String) {

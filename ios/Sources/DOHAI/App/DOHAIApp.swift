@@ -99,21 +99,14 @@ class AppState: ObservableObject {
 
     func initialize() async {
         isLoading = true
-        loadingMessage = "Loading AI model..."
+        loadingMessage = "Initializing AI..."
 
         do {
-            // Check if model exists
-            if await !llamaService.isModelDownloaded() {
-                loadingMessage = "Downloading AI model (first time only)..."
-                try await llamaService.downloadModel { progress in
-                    Task { @MainActor in
-                        self.loadingProgress = progress
-                    }
-                }
-            }
-
-            loadingMessage = "Loading model into memory..."
+            // LLM.swift handles downloading from HuggingFace automatically
+            loadingMessage = "Loading AI model (may download on first run)..."
+            loadingProgress = 0.3
             try await llamaService.loadModel()
+            loadingProgress = 0.8
 
             loadingMessage = "Initializing services..."
             await conversationManager.initialize()
@@ -123,6 +116,7 @@ class AppState: ObservableObject {
                 try await iCloudService.sync()
             }
 
+            loadingProgress = 1.0
             isModelLoaded = true
             isLoading = false
 

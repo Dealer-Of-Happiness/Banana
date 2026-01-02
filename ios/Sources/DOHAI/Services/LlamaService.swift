@@ -2,32 +2,29 @@
 //  LlamaService.swift
 //  DOH AI
 //
-//  Local Llama 3.2 model inference service
+//  Local Llama model inference service using LLM.swift
 //
 
 import Foundation
-import llmfarm_core
+import LLM
 
 actor LlamaService {
-    private var ai: AI?
+    private var bot: LLM?
     private let temperature: Float
-    private let contextWindow: Int32
+    private let maxTokens: Int
 
-    private let modelFileName = "llama-3.2-3b-instruct-q4_k_m.gguf"
-    private let modelURL = URL(string: "https://huggingface.co/lmstudio-community/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf")!
+    private let modelFileName = "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
 
-    // Check if running in simulator
-    private var isSimulator: Bool {
-        #if targetEnvironment(simulator)
-        return true
-        #else
-        return false
-        #endif
-    }
+    // Using smaller 1B model for better mobile performance
+    private let huggingFaceModel = HuggingFaceModel(
+        "lmstudio-community/Llama-3.2-1B-Instruct-GGUF",
+        .Q4_K_M,
+        template: .llama3
+    )
 
-    init(temperature: Double = 0.7, contextWindow: Int = 4096) {
+    init(temperature: Double = 0.7, contextWindow: Int = 2048) {
         self.temperature = Float(temperature)
-        self.contextWindow = Int32(contextWindow)
+        self.maxTokens = contextWindow
     }
 
     // MARK: - Model Management
@@ -42,84 +39,39 @@ actor LlamaService {
     }
 
     func downloadModel(progress: @escaping (Double) -> Void) async throws {
-        // Create models directory
-        let modelsDir = modelPath.deletingLastPathComponent()
-        try FileManager.default.createDirectory(at: modelsDir, withIntermediateDirectories: true)
+        // LLM.swift handles downloading automatically when initializing from HuggingFace
+        // We'll use this to show progress indication
+        progress(0.1)
 
-        // Download with progress
-        let (asyncBytes, response) = try await URLSession.shared.bytes(from: modelURL)
-
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
-            throw LlamaError.downloadFailed("Invalid response")
+        // Initialize from HuggingFace - this downloads the model
+        guard let llm = await LLM(from: huggingFaceModel) else {
+            throw LlamaError.downloadFailed("Failed to download model from HuggingFace")
         }
 
-        let totalBytes = response.expectedContentLength
-        var downloadedBytes: Int64 = 0
-
-        // Create file
-        FileManager.default.createFile(atPath: modelPath.path, contents: nil)
-        let handle = try FileHandle(forWritingTo: modelPath)
-
-        var buffer = Data()
-        let bufferSize = 1024 * 1024 // 1MB buffer
-
-        for try await byte in asyncBytes {
-            buffer.append(byte)
-            downloadedBytes += 1
-
-            if buffer.count >= bufferSize {
-                try handle.write(contentsOf: buffer)
-                buffer.removeAll(keepingCapacity: true)
-                progress(Double(downloadedBytes) / Double(totalBytes))
-            }
-        }
-
-        // Write remaining buffer
-        if !buffer.isEmpty {
-            try handle.write(contentsOf: buffer)
-        }
-
-        try handle.close()
+        bot = llm
         progress(1.0)
     }
 
     func loadModel() async throws {
-        // Check simulator limitation
-        #if targetEnvironment(simulator)
-        throw LlamaError.simulatorNotSupported
-        #endif
-
-        guard isModelDownloaded() else {
-            throw LlamaError.modelNotFound
+        // If bot is already loaded, we're done
+        if bot != nil {
+            return
         }
 
-        // Initialize llmfarm_core AI
-        ai = AI(_modelPath: modelPath.path, _chatName: "DOH AI Chat")
-
-        guard let ai = ai else {
+        // Try to load from HuggingFace (handles caching internally)
+        guard let llm = await LLM(from: huggingFaceModel) else {
             throw LlamaError.modelNotLoaded
         }
 
-        // Configure context parameters
-        var contextParams = ModelAndContextParams.default
-        contextParams.use_metal = true
+        // Configure parameters
+        llm.maxTokenCount = maxTokens
+        llm.topP = 0.9
 
-        // Load model with correct API
-        do {
-            try ai.loadModel(ModelInference.LLama_gguf, contextParams: contextParams)
-        } catch {
-            throw LlamaError.modelLoadFailed(error.localizedDescription)
-        }
-
-        // Configure sampling parameters
-        if let model = ai.model {
-            model.sampleParams.temp = temperature
-        }
+        bot = llm
     }
 
     func unloadModel() {
-        ai = nil
+        bot = nil
     }
 
     // MARK: - Text Generation
@@ -131,17 +83,25 @@ actor LlamaService {
         AsyncThrowingStream { continuation in
             Task {
                 do {
-                    guard let ai = self.ai, let model = ai.model else {
+                    guard let bot = self.bot else {
                         throw LlamaError.modelNotLoaded
                     }
 
-                    let fullPrompt = self.buildPrompt(userMessage: prompt, history: history)
+                    // Build conversation history for context
+                    var messages: [Chat.Message] = history.map { msg in
+                        Chat.Message(
+                            role: msg.role == "user" ? .user : .bot,
+                            content: msg.content
+                        )
+                    }
 
-                    // Use llmfarm_core model.predict for generation
-                    // Callback returns Bool: true = stop, false = continue
-                    let _ = try model.predict(fullPrompt) { str, time in
-                        continuation.yield(str)
-                        return false // false = continue generating
+                    // Preprocess with history
+                    let processedPrompt = bot.preprocess(prompt, messages)
+
+                    // Get completion with streaming
+                    // LLM.swift's respond method handles streaming internally
+                    await bot.respond(to: prompt, with: messages) { delta in
+                        continuation.yield(delta)
                     }
 
                     continuation.finish()
@@ -152,21 +112,23 @@ actor LlamaService {
         }
     }
 
-    private func buildPrompt(userMessage: String, history: [(role: String, content: String)]) -> String {
-        // For llmfarm_core, we use a simpler prompt format
-        // The library handles conversation context internally
-        return userMessage
+    // Simple non-streaming response
+    func getResponse(prompt: String) async throws -> String {
+        guard let bot = bot else {
+            throw LlamaError.modelNotLoaded
+        }
+
+        return await bot.respond(to: prompt)
     }
 
     // MARK: - Vision Analysis
 
     func analyzeImage(_ imageData: Data, prompt: String) async throws -> String {
-        guard ai != nil else {
+        guard bot != nil else {
             throw LlamaError.modelNotLoaded
         }
 
-        // For vision, we'd need a vision-capable model
-        // For now, return a placeholder
+        // Vision requires a multimodal model
         return "Image analysis requires a vision-capable model. Please describe what you'd like to know about the image."
     }
 }

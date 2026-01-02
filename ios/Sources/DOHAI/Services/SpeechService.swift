@@ -11,18 +11,18 @@ import Combine
 import UIKit
 
 class SpeechService: NSObject, ObservableObject {
-    private let settings: SettingsManager
+    private var settings: SettingsManager?
     private let synthesizer = AVSpeechSynthesizer()
 
     @Published var isSpeaking = false
 
     override init() {
-        fatalError("Use init(settings:)")
+        super.init()
     }
 
-    init(settings: SettingsManager) {
+    convenience init(settings: SettingsManager) {
+        self.init()
         self.settings = settings
-        super.init()
         synthesizer.delegate = self
     }
 
@@ -31,11 +31,11 @@ class SpeechService: NSObject, ObservableObject {
     func speak(_ text: String, language: SupportedLanguage? = nil) {
         stop()
 
-        let lang = language ?? settings.outputLanguage
+        let lang = language ?? settings?.outputLanguage ?? .english
         let utterance = AVSpeechUtterance(string: text)
 
         utterance.voice = AVSpeechSynthesisVoice(language: lang.speechRecognitionLocale)
-        utterance.rate = Float(settings.speechRate) * AVSpeechUtteranceDefaultSpeechRate
+        utterance.rate = Float(settings?.speechRate ?? 1.0) * AVSpeechUtteranceDefaultSpeechRate
         utterance.pitchMultiplier = 1.0
         utterance.volume = 1.0
 
@@ -47,7 +47,7 @@ class SpeechService: NSObject, ObservableObject {
         isSpeaking = true
 
         // Haptic feedback if enabled
-        if settings.hapticFeedbackEnabled {
+        if settings?.hapticFeedbackEnabled ?? false {
             let generator = UIImpactFeedbackGenerator(style: .light)
             generator.impactOccurred()
         }

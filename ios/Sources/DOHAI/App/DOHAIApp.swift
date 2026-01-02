@@ -16,28 +16,36 @@ struct DOHAIApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if !hasAcceptedTerms {
-                    TermsView(hasAcceptedTerms: $hasAcceptedTerms)
-                } else if appState.isLoading {
-                    LoadingView(
-                        progress: appState.loadingProgress,
-                        message: appState.loadingMessage
-                    )
-                } else if let error = appState.errorMessage {
-                    ErrorView(message: error) {
+            contentView
+                .environmentObject(appState)
+                .task {
+                    if hasAcceptedTerms {
+                        await appState.initialize()
+                    }
+                }
+                .onChange(of: hasAcceptedTerms) { _, accepted in
+                    if accepted {
                         Task { await appState.initialize() }
                     }
-                } else {
-                    MainView()
-                        .environmentObject(appState)
                 }
+        }
+    }
+
+    @ViewBuilder
+    private var contentView: some View {
+        if !hasAcceptedTerms {
+            TermsView(hasAcceptedTerms: $hasAcceptedTerms)
+        } else if appState.isLoading {
+            LoadingView(
+                progress: appState.loadingProgress,
+                message: appState.loadingMessage
+            )
+        } else if let error = appState.errorMessage {
+            ErrorView(message: error) {
+                Task { await appState.initialize() }
             }
-            .task {
-                if hasAcceptedTerms {
-                    await appState.initialize()
-                }
-            }
+        } else {
+            MainView()
         }
     }
 }

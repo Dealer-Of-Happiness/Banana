@@ -59,7 +59,7 @@ open Package.swift
 
 ### 3. Configure Signing
 - Select your Team in Signing & Capabilities
-- Set Bundle ID: `com.aigoodbye.app`
+- Set Bundle ID: `com.aigoodbye`
 
 ### 4. Build & Run
 - Select your iPhone

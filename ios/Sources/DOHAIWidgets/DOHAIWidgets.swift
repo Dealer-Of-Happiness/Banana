@@ -113,7 +113,7 @@ struct TextWidgetProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TextWidgetEntry>) -> Void) {
         // Load last chat from shared container
-        let lastChat = UserDefaults(suiteName: "group.com.aigoodbye.app")?.string(forKey: "lastAIResponse")
+        let lastChat = UserDefaults(suiteName: "group.com.aigoodbye")?.string(forKey: "lastAIResponse")
 
         let entry = TextWidgetEntry(date: Date(), lastChat: lastChat)
         let timeline = Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(3600)))

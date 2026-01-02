@@ -7,6 +7,8 @@
 
 import SwiftUI
 import Speech
+import Combine
+import AVFoundation
 
 struct VoiceInputView: View {
     @ObservedObject var viewModel: ChatViewModel

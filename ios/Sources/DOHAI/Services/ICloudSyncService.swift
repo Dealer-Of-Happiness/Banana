@@ -10,21 +10,30 @@ import CloudKit
 import UIKit
 import CoreGraphics
 
-actor ICloudSyncService {
+class ICloudSyncService {
     private let settings: SettingsManager
-    private let container: CKContainer
-    private let database: CKDatabase
+    private var container: CKContainer?
+    private var database: CKDatabase?
 
     init(settings: SettingsManager) {
         self.settings = settings
-        self.container = CKContainer(identifier: "iCloud.com.dohai.app")
-        self.database = container.privateCloudDatabase
+        // Lazy initialization to avoid crash if iCloud not configured
+    }
+
+    private func setupCloudKit() {
+        if container == nil {
+            container = CKContainer.default()
+            database = container?.privateCloudDatabase
+        }
     }
 
     // MARK: - Sync
 
     func sync() async throws {
         guard settings.iCloudSyncEnabled else { return }
+
+        setupCloudKit()
+        guard let container = container else { return }
 
         // Check iCloud availability
         let status = try await container.accountStatus()
@@ -39,6 +48,8 @@ actor ICloudSyncService {
     // MARK: - Conversations
 
     private func syncConversations() async throws {
+        guard let database = database else { return }
+
         // Fetch remote changes
         let query = CKQuery(recordType: "Conversation", predicate: NSPredicate(value: true))
         let records = try await database.records(matching: query)
@@ -54,6 +65,8 @@ actor ICloudSyncService {
 
     func uploadConversation(_ conversation: Conversation) async throws {
         guard settings.iCloudSyncEnabled else { return }
+        setupCloudKit()
+        guard let database = database else { return }
 
         let record = CKRecord(recordType: "Conversation")
         record["id"] = conversation.id.uuidString
@@ -66,6 +79,8 @@ actor ICloudSyncService {
 
     func deleteConversation(id: UUID) async throws {
         guard settings.iCloudSyncEnabled else { return }
+        setupCloudKit()
+        guard let database = database else { return }
 
         let recordID = CKRecord.ID(recordName: id.uuidString)
         try await database.deleteRecord(withID: recordID)

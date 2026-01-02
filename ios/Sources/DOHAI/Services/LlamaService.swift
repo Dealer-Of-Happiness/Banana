@@ -19,7 +19,7 @@ actor LlamaService {
     private let huggingFaceModel = HuggingFaceModel(
         "lmstudio-community/Llama-3.2-1B-Instruct-GGUF",
         .Q4_K_M,
-        template: .llama()
+        template: .chatML()
     )
 
     init(temperature: Double = 0.7, contextWindow: Int = 2048) {

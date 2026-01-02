@@ -36,10 +36,7 @@ struct DOHAIApp: App {
         if !hasAcceptedTerms {
             TermsView(hasAcceptedTerms: $hasAcceptedTerms)
         } else if appState.isLoading {
-            LoadingView(
-                progress: appState.loadingProgress,
-                message: appState.loadingMessage
-            )
+            LoadingView(appState: appState)
         } else if let error = appState.errorMessage {
             ErrorView(message: error) {
                 Task { await appState.initialize() }
@@ -56,11 +53,14 @@ struct DOHAIApp: App {
 class AppState: ObservableObject {
     @Published var isModelLoaded = false
     @Published var isLoading = false
-    @Published var loadingProgress: Double = 0
+    @Published var downloadedMB: Double = 0
+    @Published var totalMB: Double = 0
     @Published var loadingMessage = "Initializing..."
     @Published var errorMessage: String?
     @Published var showSideMenu = false
     @Published var currentConversation: Conversation?
+
+    private var progressTimer: Timer?
 
     // Services
     let settings: SettingsManager
@@ -75,7 +75,6 @@ class AppState: ObservableObject {
 
     init() {
         self.settings = SettingsManager()
-        // Pass values directly to avoid actor isolation issues
         self.llamaService = LlamaService(
             temperature: settings.temperature,
             contextWindow: settings.contextWindow
@@ -99,16 +98,16 @@ class AppState: ObservableObject {
 
     func initialize() async {
         isLoading = true
-        loadingMessage = "Initializing AI..."
+        loadingMessage = "Checking for AI model..."
+
+        // Start progress monitoring timer
+        startProgressMonitoring()
 
         do {
-            // LLM.swift handles downloading from HuggingFace automatically
-            // First download is ~800MB and may take 5-10 minutes
-            loadingMessage = "Downloading AI model (~800MB)...\nThis may take several minutes on first run."
-            loadingProgress = 0.1
+            loadingMessage = "Downloading AI model..."
             try await llamaService.loadModel()
-            loadingProgress = 0.9
 
+            stopProgressMonitoring()
             loadingMessage = "Initializing services..."
             await conversationManager.initialize()
 
@@ -117,13 +116,38 @@ class AppState: ObservableObject {
                 try await iCloudService.sync()
             }
 
-            loadingProgress = 1.0
             isModelLoaded = true
             isLoading = false
 
         } catch {
+            stopProgressMonitoring()
             errorMessage = error.localizedDescription
             isLoading = false
+        }
+    }
+
+    private func startProgressMonitoring() {
+        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.updateDownloadProgress()
+            }
+        }
+    }
+
+    private func stopProgressMonitoring() {
+        progressTimer?.invalidate()
+        progressTimer = nil
+    }
+
+    private func updateDownloadProgress() {
+        let downloaded = LlamaService.downloadedBytes
+        let total = LlamaService.totalBytes
+
+        downloadedMB = Double(downloaded) / (1024 * 1024)
+        totalMB = Double(total) / (1024 * 1024)
+
+        if LlamaService.isDownloading && total > 0 {
+            loadingMessage = "Downloading AI model..."
         }
     }
 
@@ -141,8 +165,7 @@ class AppState: ObservableObject {
 // MARK: - Loading View
 
 struct LoadingView: View {
-    let progress: Double
-    let message: String
+    @ObservedObject var appState: AppState
 
     var body: some View {
         VStack(spacing: 30) {
@@ -159,22 +182,37 @@ struct LoadingView: View {
             Text("DOH AI")
                 .font(.largeTitle.bold())
 
-            Text(message)
+            Text(appState.loadingMessage)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            if progress > 0 {
-                VStack(spacing: 8) {
-                    ProgressView(value: progress)
+            // Show download progress as MB/MB
+            if appState.totalMB > 0 {
+                VStack(spacing: 12) {
+                    // Progress bar
+                    ProgressView(value: appState.downloadedMB, total: appState.totalMB)
                         .progressViewStyle(.linear)
-                        .frame(width: 200)
+                        .frame(width: 250)
 
-                    Text("\(Int(progress * 100))%")
+                    // MB counter
+                    Text("\(Int(appState.downloadedMB)) MB / \(Int(appState.totalMB)) MB")
+                        .font(.title3.monospacedDigit())
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.primary)
+
+                    // Percentage
+                    let percentage = appState.totalMB > 0 ? (appState.downloadedMB / appState.totalMB) * 100 : 0
+                    Text("\(Int(percentage))%")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             } else {
-                ProgressView()
+                VStack(spacing: 8) {
+                    ProgressView()
+                    Text("Connecting to server...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .padding()

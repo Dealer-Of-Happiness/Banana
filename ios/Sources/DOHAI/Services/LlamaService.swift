@@ -14,13 +14,12 @@ actor LlamaService {
     private let maxTokens: Int
 
     private let modelFileName = "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+    private let modelDownloadURL = URL(string: "https://huggingface.co/lmstudio-community/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf")!
 
-    // Using smaller 1B model for better mobile performance
-    private let huggingFaceModel = HuggingFaceModel(
-        "lmstudio-community/Llama-3.2-1B-Instruct-GGUF",
-        .Q4_K_M,
-        template: .chatML()
-    )
+    // Download state - observable from outside
+    nonisolated(unsafe) static var downloadedBytes: Int64 = 0
+    nonisolated(unsafe) static var totalBytes: Int64 = 0
+    nonisolated(unsafe) static var isDownloading: Bool = false
 
     init(temperature: Double = 0.7, contextWindow: Int = 2048) {
         self.temperature = Float(temperature)
@@ -38,30 +37,68 @@ actor LlamaService {
         FileManager.default.fileExists(atPath: modelPath.path)
     }
 
-    func downloadModel(progress: @escaping (Double) -> Void) async throws {
-        progress(0.1)
-        guard let llm = try? await LLM(from: huggingFaceModel) else {
-            throw LlamaError.downloadFailed("Failed to download model from HuggingFace")
-        }
-        bot = llm
-        progress(1.0)
-    }
-
     func loadModel() async throws {
         if bot != nil {
             return
         }
 
-        // LLM.swift downloads from HuggingFace automatically
-        // This may take several minutes on first run (~800MB)
-        do {
-            guard let llm = await LLM(from: huggingFaceModel) else {
-                throw LlamaError.modelNotLoaded
-            }
-            bot = llm
-        } catch {
-            throw LlamaError.downloadFailed("Download failed: \(error.localizedDescription)")
+        // Check if model already exists locally
+        if !isModelDownloaded() {
+            try await downloadModelWithProgress()
         }
+
+        // Load from local file
+        guard let llm = LLM(from: modelPath, template: .chatML()) else {
+            throw LlamaError.modelNotLoaded
+        }
+
+        bot = llm
+    }
+
+    private func downloadModelWithProgress() async throws {
+        // Create models directory
+        let modelsDir = modelPath.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: modelsDir, withIntermediateDirectories: true)
+
+        LlamaService.isDownloading = true
+        LlamaService.downloadedBytes = 0
+        LlamaService.totalBytes = 0
+
+        // Download with progress tracking
+        let (asyncBytes, response) = try await URLSession.shared.bytes(from: modelDownloadURL)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            LlamaService.isDownloading = false
+            throw LlamaError.downloadFailed("Server returned error")
+        }
+
+        LlamaService.totalBytes = response.expectedContentLength
+
+        // Create file and write
+        FileManager.default.createFile(atPath: modelPath.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: modelPath)
+
+        var buffer = Data()
+        let bufferSize = 1024 * 1024 // 1MB buffer
+
+        for try await byte in asyncBytes {
+            buffer.append(byte)
+            LlamaService.downloadedBytes += 1
+
+            if buffer.count >= bufferSize {
+                try handle.write(contentsOf: buffer)
+                buffer.removeAll(keepingCapacity: true)
+            }
+        }
+
+        // Write remaining buffer
+        if !buffer.isEmpty {
+            try handle.write(contentsOf: buffer)
+        }
+
+        try handle.close()
+        LlamaService.isDownloading = false
     }
 
     func unloadModel() {

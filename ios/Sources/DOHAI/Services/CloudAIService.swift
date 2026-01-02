@@ -8,10 +8,31 @@
 import Foundation
 
 actor CloudAIService {
-    private let settings: SettingsManager
+    // Store settings values directly to avoid actor isolation issues
+    private let chatGPTEnabled: Bool
+    private let chatGPTApiKey: String?
+    private let claudeEnabled: Bool
+    private let claudeApiKey: String?
+    private let googleEnabled: Bool
+    private let googleApiKey: String?
+    private let temperature: Double
 
-    init(settings: SettingsManager) {
-        self.settings = settings
+    init(
+        chatGPTEnabled: Bool = false,
+        chatGPTApiKey: String? = nil,
+        claudeEnabled: Bool = false,
+        claudeApiKey: String? = nil,
+        googleEnabled: Bool = false,
+        googleApiKey: String? = nil,
+        temperature: Double = 0.7
+    ) {
+        self.chatGPTEnabled = chatGPTEnabled
+        self.chatGPTApiKey = chatGPTApiKey
+        self.claudeEnabled = claudeEnabled
+        self.claudeApiKey = claudeApiKey
+        self.googleEnabled = googleEnabled
+        self.googleApiKey = googleApiKey
+        self.temperature = temperature
     }
 
     // MARK: - Generate Response
@@ -34,13 +55,13 @@ actor CloudAIService {
     }
 
     private func getDefaultProvider() -> CloudAIProvider {
-        if settings.chatGPTEnabled && settings.chatGPTApiKey != nil {
+        if chatGPTEnabled && chatGPTApiKey != nil {
             return .chatGPT
         }
-        if settings.claudeEnabled && settings.claudeApiKey != nil {
+        if claudeEnabled && claudeApiKey != nil {
             return .claude
         }
-        if settings.googleEnabled && settings.googleApiKey != nil {
+        if googleEnabled && googleApiKey != nil {
             return .google
         }
         return .chatGPT
@@ -54,7 +75,7 @@ actor CloudAIService {
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task {
-                guard let apiKey = settings.chatGPTApiKey else {
+                guard let apiKey = self.chatGPTApiKey else {
                     continuation.finish(throwing: CloudAIError.missingApiKey)
                     return
                 }
@@ -72,7 +93,7 @@ actor CloudAIService {
                     "messages": messages,
                     "stream": true,
                     "max_tokens": 2048,
-                    "temperature": settings.temperature
+                    "temperature": self.temperature
                 ]
 
                 request.httpBody = try? JSONSerialization.data(withJSONObject: body)
@@ -117,7 +138,7 @@ actor CloudAIService {
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task {
-                guard let apiKey = settings.claudeApiKey else {
+                guard let apiKey = self.claudeApiKey else {
                     continuation.finish(throwing: CloudAIError.missingApiKey)
                     return
                 }
@@ -184,7 +205,7 @@ actor CloudAIService {
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task {
-                guard let apiKey = settings.googleApiKey else {
+                guard let apiKey = self.googleApiKey else {
                     continuation.finish(throwing: CloudAIError.missingApiKey)
                     return
                 }

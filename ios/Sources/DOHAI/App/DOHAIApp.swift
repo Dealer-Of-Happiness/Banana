@@ -75,12 +75,24 @@ class AppState: ObservableObject {
 
     init() {
         self.settings = SettingsManager()
-        self.llamaService = LlamaService(settings: settings)
+        // Pass values directly to avoid actor isolation issues
+        self.llamaService = LlamaService(
+            temperature: settings.temperature,
+            contextWindow: settings.contextWindow
+        )
         self.speechService = SpeechService(settings: settings)
         self.documentService = DocumentService()
         self.imageService = ImageAnalysisService()
         self.knowledgeBaseService = KnowledgeBaseService()
-        self.cloudAIService = CloudAIService(settings: settings)
+        self.cloudAIService = CloudAIService(
+            chatGPTEnabled: settings.chatGPTEnabled,
+            chatGPTApiKey: settings.chatGPTApiKey,
+            claudeEnabled: settings.claudeEnabled,
+            claudeApiKey: settings.claudeApiKey,
+            googleEnabled: settings.googleEnabled,
+            googleApiKey: settings.googleApiKey,
+            temperature: settings.temperature
+        )
         self.iCloudService = ICloudSyncService(settings: settings)
         self.conversationManager = ConversationManager()
     }

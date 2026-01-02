@@ -10,15 +10,15 @@ import llmfarm_core
 
 actor LlamaService {
     private var ai: AI?
-    private var temperature: Float = 0.7
-    private var contextWindow: Int32 = 4096
+    private let temperature: Float
+    private let contextWindow: Int32
 
     private let modelFileName = "llama-3.2-3b-instruct-q4_k_m.gguf"
     private let modelURL = URL(string: "https://huggingface.co/lmstudio-community/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf")!
 
-    init(settings: SettingsManager) {
-        self.temperature = Float(settings.temperature)
-        self.contextWindow = Int32(settings.contextWindow)
+    init(temperature: Double = 0.7, contextWindow: Int = 4096) {
+        self.temperature = Float(temperature)
+        self.contextWindow = Int32(contextWindow)
     }
 
     // MARK: - Model Management

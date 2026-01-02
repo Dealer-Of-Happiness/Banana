@@ -40,7 +40,7 @@ actor LlamaService {
 
     func downloadModel(progress: @escaping (Double) -> Void) async throws {
         progress(0.1)
-        guard let llm = await LLM(from: huggingFaceModel) else {
+        guard let llm = try? await LLM(from: huggingFaceModel) else {
             throw LlamaError.downloadFailed("Failed to download model from HuggingFace")
         }
         bot = llm
@@ -52,11 +52,10 @@ actor LlamaService {
             return
         }
 
-        guard let llm = await LLM(from: huggingFaceModel) else {
+        guard let llm = try? await LLM(from: huggingFaceModel) else {
             throw LlamaError.modelNotLoaded
         }
 
-        llm.maxTokenCount = maxTokens
         bot = llm
     }
 

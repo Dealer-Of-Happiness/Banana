@@ -20,6 +20,8 @@ struct SideMenuView: View {
     @State private var showSettings = false
     @State private var showSetPasswordSheet = false
     @State private var folderToLock: Folder?
+    @State private var showRemoveLockPrompt = false
+    @State private var folderToRemoveLock: Folder?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -74,6 +76,7 @@ struct SideMenuView: View {
         .sheet(isPresented: $showSettings) {
             NavigationStack {
                 SettingsView()
+                    .environmentObject(appState)
             }
         }
         .sheet(isPresented: $showSetPasswordSheet) {
@@ -91,6 +94,24 @@ struct SideMenuView: View {
                 onCancel: {
                     showSetPasswordSheet = false
                     folderToLock = nil
+                }
+            )
+        }
+        .sheet(isPresented: $showRemoveLockPrompt) {
+            RemoveLockPromptView(
+                folder: folderToRemoveLock,
+                onSuccess: {
+                    // Remove the lock
+                    if let folder = folderToRemoveLock {
+                        folder.isLocked = false
+                        folder.password = nil
+                    }
+                    showRemoveLockPrompt = false
+                    folderToRemoveLock = nil
+                },
+                onCancel: {
+                    showRemoveLockPrompt = false
+                    folderToRemoveLock = nil
                 }
             )
         }
@@ -203,8 +224,8 @@ struct SideMenuView: View {
                     showPasswordPrompt = true
                 }
                 Button("Remove Lock") {
-                    folder.isLocked = false
-                    folder.password = nil
+                    folderToRemoveLock = folder
+                    showRemoveLockPrompt = true
                 }
                 Button("Change Lock") {
                     folderToLock = folder
@@ -394,7 +415,7 @@ struct PasswordPromptView: View {
 
                 Button("Unlock") {
                     // Verify password against folder's stored password
-                    if password == (folder?.password ?? "123456") {
+                    if password == folder?.password {
                         onSuccess()
                     } else {
                         showError = true
@@ -484,6 +505,73 @@ struct SetPasswordView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(password.count < 6 || confirmPassword.isEmpty)
+            }
+            .padding()
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", action: onCancel)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+}
+
+// MARK: - Remove Lock Prompt View
+
+struct RemoveLockPromptView: View {
+    let folder: Folder?
+    let onSuccess: () -> Void
+    let onCancel: () -> Void
+
+    @State private var password = ""
+    @State private var showError = false
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                Image(systemName: "lock.open.fill")
+                    .font(.system(size: 50))
+                    .foregroundStyle(.orange)
+
+                Text("Remove Lock")
+                    .font(.title2.bold())
+
+                if let folder = folder {
+                    Text("Enter password to remove lock from \"\(folder.name)\"")
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+
+                SecureField("6-digit password", text: $password)
+                    .keyboardType(.numberPad)
+                    .textContentType(.password)
+                    .multilineTextAlignment(.center)
+                    .font(.title)
+                    .frame(width: 200)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                if showError {
+                    Text("Incorrect password")
+                        .foregroundStyle(.red)
+                        .font(.caption)
+                }
+
+                Button("Remove Lock") {
+                    // Verify password against folder's stored password
+                    if password == folder?.password {
+                        onSuccess()
+                    } else {
+                        showError = true
+                        password = ""
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.orange)
+                .disabled(password.count < 6)
             }
             .padding()
             .navigationBarTitleDisplayMode(.inline)

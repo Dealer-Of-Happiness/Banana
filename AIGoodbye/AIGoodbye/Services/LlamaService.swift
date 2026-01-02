@@ -125,9 +125,14 @@ actor LlamaService {
                     // Build simple prompt for Llama 3 format
                     let fullPrompt = self.buildLlama3Prompt(prompt: prompt, history: history)
 
+                    // Store previous output length to extract only new content
+                    let previousOutputLength = bot.output.count
+
                     // Generate response
                     await bot.respond(to: fullPrompt)
-                    var response = bot.output
+
+                    // Extract only the new output (after previous output)
+                    var response = String(bot.output.dropFirst(previousOutputLength))
 
                     // Clean up the response
                     response = response.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -188,8 +193,9 @@ actor LlamaService {
         }
 
         let fullPrompt = buildLlama3Prompt(prompt: prompt, history: [])
+        let previousOutputLength = bot.output.count
         await bot.respond(to: fullPrompt)
-        return bot.output
+        return String(bot.output.dropFirst(previousOutputLength))
     }
 
     // MARK: - Vision Analysis

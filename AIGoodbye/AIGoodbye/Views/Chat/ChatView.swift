@@ -93,6 +93,10 @@ struct ChatView: View {
         }
         .onAppear {
             viewModel.appState = appState
+            viewModel.loadConversation(appState.currentConversation)
+        }
+        .onChange(of: appState.currentConversation) { _, newConversation in
+            viewModel.loadConversation(newConversation)
         }
     }
 
@@ -246,6 +250,20 @@ class ChatViewModel: ObservableObject {
     @Published var attachments: [String] = []
 
     var appState: AppState?
+    private var currentConversationId: UUID?
+
+    func loadConversation(_ conversation: Conversation?) {
+        // Clear messages when switching to a new or different conversation
+        if conversation?.id != currentConversationId {
+            messages.removeAll()
+            currentConversationId = conversation?.id
+
+            // Load messages from conversation if it exists
+            if let conversation = conversation {
+                messages = conversation.messages.sorted { $0.timestamp < $1.timestamp }
+            }
+        }
+    }
 
     func sendMessage() async {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -253,9 +271,25 @@ class ChatViewModel: ObservableObject {
 
         inputText = ""
 
-        // Add user message
-        let userMessage = Message(role: .user, content: text)
-        messages.append(userMessage)
+        // Ensure we have a conversation
+        var conversation = appState?.currentConversation
+        if conversation == nil {
+            conversation = appState?.conversationManager.createConversation()
+            appState?.currentConversation = conversation
+            currentConversationId = conversation?.id
+        }
+
+        // Add user message to conversation
+        if let conv = conversation {
+            let userMessage = appState?.conversationManager.addMessage(
+                to: conv,
+                role: .user,
+                content: text
+            )
+            if let msg = userMessage {
+                messages.append(msg)
+            }
+        }
 
         // Generate response
         isGenerating = true
@@ -264,16 +298,30 @@ class ChatViewModel: ObservableObject {
             guard let llamaService = appState?.llamaService else { return }
 
             var responseText = ""
-            let assistantMessage = Message(role: .assistant, content: "")
-            messages.append(assistantMessage)
+            let placeholderMessage = Message(role: .assistant, content: "")
+            messages.append(placeholderMessage)
 
             for try await chunk in await llamaService.generate(
                 prompt: text,
                 history: messages.dropLast(2).map { ($0.role.rawValue, $0.content) }
             ) {
                 responseText += chunk
-                if let index = messages.firstIndex(where: { $0.id == assistantMessage.id }) {
+                if let index = messages.firstIndex(where: { $0.id == placeholderMessage.id }) {
                     messages[index].content = responseText
+                }
+            }
+
+            // Remove placeholder and add actual response to conversation
+            messages.removeAll { $0.id == placeholderMessage.id }
+
+            if let conv = conversation {
+                let assistantMessage = appState?.conversationManager.addMessage(
+                    to: conv,
+                    role: .assistant,
+                    content: responseText
+                )
+                if let msg = assistantMessage {
+                    messages.append(msg)
                 }
             }
 
@@ -284,8 +332,16 @@ class ChatViewModel: ObservableObject {
             }
 
         } catch {
-            let errorMessage = Message(role: .system, content: "Error: \(error.localizedDescription)")
-            messages.append(errorMessage)
+            if let conv = conversation {
+                let errorMessage = appState?.conversationManager.addMessage(
+                    to: conv,
+                    role: .system,
+                    content: "Error: \(error.localizedDescription)"
+                )
+                if let msg = errorMessage {
+                    messages.append(msg)
+                }
+            }
         }
 
         isGenerating = false

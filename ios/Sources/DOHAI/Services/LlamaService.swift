@@ -9,14 +9,16 @@ import Foundation
 import llmfarm_core
 
 actor LlamaService {
-    private let settings: SettingsManager
     private var ai: AI?
+    private var temperature: Float = 0.7
+    private var contextWindow: Int32 = 4096
 
     private let modelFileName = "llama-3.2-3b-instruct-q4_k_m.gguf"
     private let modelURL = URL(string: "https://huggingface.co/lmstudio-community/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf")!
 
     init(settings: SettingsManager) {
-        self.settings = settings
+        self.temperature = Float(settings.temperature)
+        self.contextWindow = Int32(settings.contextWindow)
     }
 
     // MARK: - Model Management
@@ -85,13 +87,17 @@ actor LlamaService {
             throw LlamaError.modelNotLoaded
         }
 
-        // Configure model settings
-        ai.initModel(.LLama_gguf, contextParams: .default)
+        // Configure context parameters
+        var contextParams = ModelAndContextParams.default
+        contextParams.use_metal = true
 
-        var params = ModelSampleParams.default
-        params.temp = Float(settings.temperature)
-        params.n_ctx = Int32(settings.contextWindow)
-        ai.model?.sampleParams = params
+        // Load model with correct API
+        try ai.loadModel(ModelInference.LLama_gguf, contextParams: contextParams)
+
+        // Configure sampling parameters
+        if let model = ai.model {
+            model.sampleParams.temp = temperature
+        }
     }
 
     func unloadModel() {
@@ -107,16 +113,17 @@ actor LlamaService {
         AsyncThrowingStream { continuation in
             Task {
                 do {
-                    guard let ai = ai else {
+                    guard let ai = self.ai, let model = ai.model else {
                         throw LlamaError.modelNotLoaded
                     }
 
-                    let fullPrompt = buildPrompt(userMessage: prompt, history: history)
+                    let fullPrompt = self.buildPrompt(userMessage: prompt, history: history)
 
-                    // Use llmfarm_core for generation
-                    let output = try await ai.conversation(fullPrompt) { str, time in
+                    // Use llmfarm_core model.predict for generation
+                    // Callback returns Bool: true = stop, false = continue
+                    let _ = try model.predict(fullPrompt) { str, time in
                         continuation.yield(str)
-                        return .continue
+                        return false // false = continue generating
                     }
 
                     continuation.finish()
@@ -136,7 +143,7 @@ actor LlamaService {
     // MARK: - Vision Analysis
 
     func analyzeImage(_ imageData: Data, prompt: String) async throws -> String {
-        guard let ai = ai else {
+        guard ai != nil else {
             throw LlamaError.modelNotLoaded
         }
 

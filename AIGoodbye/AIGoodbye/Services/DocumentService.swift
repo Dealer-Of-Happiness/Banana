@@ -11,6 +11,7 @@ import PDFKit
 actor DocumentService {
     private let chunkSize = 500
     private let chunkOverlap = 50
+    static let maxFileSizeBytes: Int = 25 * 1024 * 1024 // 25 MB limit
 
     // MARK: - Process Document
 
@@ -19,6 +20,14 @@ actor DocumentService {
             throw DocumentError.accessDenied
         }
         defer { url.stopAccessingSecurityScopedResource() }
+
+        // Check file size limit
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        let fileSize = attributes[.size] as? Int ?? 0
+        guard fileSize <= Self.maxFileSizeBytes else {
+            let sizeMB = Double(fileSize) / (1024 * 1024)
+            throw DocumentError.fileTooLarge(String(format: "%.1f MB (max 25 MB)", sizeMB))
+        }
 
         let fileName = url.lastPathComponent
         let fileExtension = url.pathExtension.lowercased()
@@ -44,10 +53,6 @@ actor DocumentService {
 
         // Split into chunks for RAG
         let chunks = splitIntoChunks(content)
-
-        // Get file size
-        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
-        let fileSize = attributes[.size] as? Int ?? 0
 
         return ProcessedDocument(
             id: UUID(),
@@ -199,6 +204,7 @@ enum DocumentError: LocalizedError {
     case unsupportedFormat(String)
     case emptyDocument
     case failedToRead(String)
+    case fileTooLarge(String)
 
     var errorDescription: String? {
         switch self {
@@ -210,6 +216,8 @@ enum DocumentError: LocalizedError {
             return "The document is empty"
         case .failedToRead(let reason):
             return "Failed to read: \(reason)"
+        case .fileTooLarge(let size):
+            return "File too large: \(size)"
         }
     }
 }

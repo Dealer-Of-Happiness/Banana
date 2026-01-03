@@ -13,7 +13,7 @@ class ModelManager: ObservableObject {
     static let shared = ModelManager()
 
     @Published var downloadStates: [String: ModelDownloadState] = [:]
-    @Published var currentModelId: String = "tinyllama"
+    @Published var currentModelId: String = "ministral-8b"
     @Published var downloadProgress: Double = 0
     @Published var isDownloading = false
     @Published var downloadingModelId: String?

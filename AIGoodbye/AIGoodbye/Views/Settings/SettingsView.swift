@@ -8,27 +8,19 @@
 import SwiftUI
 import Combine
 import StoreKit
-import AVFAudio
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = SettingsViewModel()
     @StateObject private var donationService = DonationService()
-    @StateObject private var voiceService = VoiceAIService.shared
     @State private var showClearCacheAlert = false
     @State private var showExportOptions = false
     @State private var showDonationInfo = false
 
     var body: some View {
         Form {
-            // AI Configuration
-            aiConfigurationSection
-
             // Cloud Connections
             cloudConnectionsSection
-
-            // Voice AI
-            voiceAISection
 
             // Data & Privacy
             dataPrivacySection
@@ -45,12 +37,6 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .onAppear {
             viewModel.loadSettings(from: appState.settings)
-        }
-        .onChange(of: viewModel.temperature) { _, newValue in
-            appState.settings.temperature = newValue
-        }
-        .onChange(of: viewModel.contextWindow) { _, newValue in
-            appState.settings.contextWindow = Int(newValue)
         }
         .alert("Delete All Conversations?", isPresented: $showClearCacheAlert) {
             Button("Cancel", role: .cancel) {}
@@ -75,58 +61,7 @@ struct SettingsView: View {
         .alert("Donations Coming Soon", isPresented: $showDonationInfo) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("In-app purchases will be available once the app is published on the App Store. Thank you for your interest in supporting AI goodbye!")
-        }
-    }
-
-    // MARK: - AI Configuration Section
-
-    private var aiConfigurationSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Temperature")
-                    Spacer()
-                    Text(String(format: "%.1f", viewModel.temperature))
-                        .foregroundStyle(.secondary)
-                }
-
-                Slider(value: $viewModel.temperature, in: 0...2, step: 0.1)
-                    .tint(.blue)
-
-                Text("Controls creativity. Lower = more focused and deterministic. Higher = more creative and varied.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Context Window")
-                    Spacer()
-                    Text("\(Int(viewModel.contextWindow)) tokens")
-                        .foregroundStyle(.secondary)
-                }
-
-                Slider(value: $viewModel.contextWindow, in: 1024...8192, step: 512)
-                    .tint(.blue)
-
-                Text("How much conversation history the AI remembers. Higher = better context but slower responses.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            NavigationLink {
-                ModelsSettingsView()
-            } label: {
-                HStack {
-                    Text("AI Models")
-                    Spacer()
-                    Text(ModelManager.shared.currentModel.name)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        } header: {
-            Label("AI Configuration", systemImage: "brain")
+            Text("In-app purchases will be available once the app is published on the App Store. Thank you for your interest in supporting Locally AI!")
         }
     }
 
@@ -155,67 +90,6 @@ struct SettingsView: View {
             Label("Cloud Connections", systemImage: "cloud")
         } footer: {
             Text("Optional. Connect using your own API keys for enhanced capabilities.")
-        }
-    }
-
-    // MARK: - Voice AI Section
-
-    private var voiceAISection: some View {
-        Section {
-            Toggle("Enable Voice AI", isOn: $voiceService.isEnabled)
-                .onChange(of: voiceService.isEnabled) { _, _ in
-                    voiceService.savePreferences()
-                }
-
-            if voiceService.isEnabled {
-                // Voice Selection
-                Picker("Voice", selection: Binding(
-                    get: { voiceService.availableVoices.first { $0.voice == voiceService.selectedVoice } ?? voiceService.availableVoices.first! },
-                    set: { voiceService.selectVoice($0) }
-                )) {
-                    ForEach(voiceService.availableVoices) { voice in
-                        HStack {
-                            Text(voice.name)
-                            if voice.quality == .enhanced {
-                                Text("Enhanced")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .tag(voice)
-                    }
-                }
-
-                // Speech Rate
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Speech Rate")
-                        Spacer()
-                        Text(String(format: "%.1fx", voiceService.speechRate))
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Slider(value: $voiceService.speechRate, in: 0.3...1.0, step: 0.1)
-                        .tint(.blue)
-                        .onChange(of: voiceService.speechRate) { _, _ in
-                            voiceService.savePreferences()
-                        }
-                }
-
-                // Test Voice
-                Button {
-                    voiceService.speak("Hello! I'm AI goodbye, your personal AI assistant.")
-                } label: {
-                    HStack {
-                        Image(systemName: voiceService.isSpeaking ? "stop.fill" : "play.fill")
-                        Text(voiceService.isSpeaking ? "Stop" : "Test Voice")
-                    }
-                }
-            }
-        } header: {
-            Label("Voice AI", systemImage: "speaker.wave.2")
-        } footer: {
-            Text("Long-press any AI response to have it read aloud.")
         }
     }
 
@@ -503,7 +377,7 @@ struct TermsDetailView: View {
 
                     Text("If you have any questions about these Terms, please contact us at:")
 
-                    Link("support@aigoodbye.ai", destination: URL(string: "mailto:support@aigoodbye.ai")!)
+                    Link("marketing@dealerofhappiness.com", destination: URL(string: "mailto:marketing@dealerofhappiness.com")!)
                         .foregroundStyle(.blue)
                 }
             }

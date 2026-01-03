@@ -2,7 +2,7 @@
 //  ChatView.swift
 //  AIGoodbye
 //
-//  Main chat interface with voice and text input
+//  Main chat interface with text input
 //
 
 import SwiftUI
@@ -13,9 +13,7 @@ import UIKit
 struct ChatView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = ChatViewModel()
-    @StateObject private var voiceService = VoiceAIService.shared
     @FocusState private var isInputFocused: Bool
-    @State private var showVoiceInput = false
     @State private var showAttachmentOptions = false
     @State private var showDocumentPicker = false
     @State private var showImagePicker = false
@@ -54,37 +52,22 @@ struct ChatView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 12) {
-                        // Voice AI toggle
-                        if voiceService.isSpeaking {
-                            Button {
-                                voiceService.stop()
-                            } label: {
-                                Image(systemName: "speaker.slash.fill")
-                                    .foregroundStyle(.red)
-                            }
-                        }
-
-                        Menu {
-                            Button {
-                                viewModel.regenerateLastResponse()
-                            } label: {
-                                Label("Regenerate", systemImage: "arrow.clockwise")
-                            }
-
-                            Button(role: .destructive) {
-                                viewModel.clearConversation()
-                            } label: {
-                                Label("Clear Chat", systemImage: "trash")
-                            }
+                    Menu {
+                        Button {
+                            viewModel.regenerateLastResponse()
                         } label: {
-                            Image(systemName: "ellipsis.circle")
+                            Label("Regenerate", systemImage: "arrow.clockwise")
                         }
+
+                        Button(role: .destructive) {
+                            viewModel.clearConversation()
+                        } label: {
+                            Label("Clear Chat", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
                     }
                 }
-            }
-            .sheet(isPresented: $showVoiceInput) {
-                VoiceInputView(viewModel: viewModel)
             }
             .sheet(isPresented: $showDocumentPicker) {
                 DocumentPickerView { urls in
@@ -143,12 +126,6 @@ struct ChatView: View {
                                 }
 
                                 if message.role == .assistant {
-                                    Button {
-                                        VoiceAIService.shared.speak(message.content)
-                                    } label: {
-                                        Label("Read Aloud", systemImage: "speaker.wave.2")
-                                    }
-
                                     Button {
                                         viewModel.regenerateResponse(for: message)
                                     } label: {
@@ -272,25 +249,16 @@ struct ChatView: View {
                     .background(Color(.systemGray6))
                     .clipShape(RoundedRectangle(cornerRadius: 20))
 
-                // Voice/Send button
-                if viewModel.inputText.isEmpty {
-                    Button {
-                        showVoiceInput = true
-                    } label: {
-                        Image(systemName: "mic.fill")
-                            .font(.title2)
-                            .foregroundStyle(.blue)
-                    }
-                } else {
-                    Button {
-                        isInputFocused = false
-                        Task { await viewModel.sendMessage() }
-                    } label: {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.title)
-                            .foregroundStyle(.blue)
-                    }
+                // Send button
+                Button {
+                    isInputFocused = false
+                    Task { await viewModel.sendMessage() }
+                } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.title)
+                        .foregroundStyle(viewModel.inputText.isEmpty ? .gray : .blue)
                 }
+                .disabled(viewModel.inputText.isEmpty)
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
@@ -425,11 +393,6 @@ class ChatViewModel: ObservableObject {
         attachments.removeAll()
     }
 
-    func sendVoiceMessage(_ text: String) async {
-        inputText = text
-        await sendMessage()
-    }
-
     func processDocuments(_ urls: [URL]) async {
         for url in urls {
             attachments.append(url.lastPathComponent)
@@ -493,16 +456,6 @@ struct MessageBubble: View {
                     .background(backgroundColor)
                     .foregroundStyle(foregroundColor)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
-
-                // Voice indicator
-                if message.isVoiceMessage {
-                    HStack(spacing: 4) {
-                        Image(systemName: "waveform")
-                        Text("Voice message")
-                    }
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                }
 
                 // Timestamp (shown on tap)
                 Text(message.timestamp.formatted(date: .omitted, time: .shortened))

@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import AVFAudio
 
 struct ModelsSettingsView: View {
     @StateObject private var modelManager = ModelManager.shared
@@ -43,19 +42,6 @@ struct ModelsSettingsView: View {
                 Label("Available Models", systemImage: "square.stack.3d.up")
             } footer: {
                 Text("Models are stored locally on your device. Total: \(modelManager.formattedTotalSize)")
-            }
-
-            // Voice AI Section
-            Section {
-                NavigationLink {
-                    VoiceSettingsView()
-                } label: {
-                    Label("Voice AI Settings", systemImage: "waveform")
-                }
-            } header: {
-                Label("Voice AI", systemImage: "speaker.wave.3")
-            } footer: {
-                Text("Configure text-to-speech for AI responses")
             }
         }
         .navigationTitle("AI Models")
@@ -263,95 +249,6 @@ struct CapabilityBadge: View {
         .padding(.vertical, 4)
         .background(Color(.systemGray5))
         .clipShape(Capsule())
-    }
-}
-
-// MARK: - Voice Settings View
-
-struct VoiceSettingsView: View {
-    @StateObject private var voiceService = VoiceAIService.shared
-    @State private var testText = "Hello! I'm AI goodbye, your personal AI assistant."
-
-    var body: some View {
-        List {
-            // Enable/Disable
-            Section {
-                Toggle("Enable Voice AI", isOn: $voiceService.isEnabled)
-                    .onChange(of: voiceService.isEnabled) { _, _ in
-                        voiceService.savePreferences()
-                    }
-            } footer: {
-                Text("When enabled, AI responses will be read aloud automatically.")
-            }
-
-            // Voice Selection
-            Section {
-                ForEach(voiceService.availableVoices) { voice in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(voice.name)
-                            Text(voice.quality.rawValue)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        if voiceService.selectedVoice?.identifier == voice.id {
-                            Image(systemName: "checkmark")
-                                .foregroundStyle(.blue)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        voiceService.selectVoice(voice)
-                    }
-                }
-            } header: {
-                Label("Voice", systemImage: "person.wave.2")
-            }
-
-            // Speed
-            Section {
-                VStack(alignment: .leading) {
-                    Text("Speech Rate: \(String(format: "%.1fx", voiceService.speechRate * 2))")
-                    Slider(value: $voiceService.speechRate, in: 0.25...1.0)
-                        .onChange(of: voiceService.speechRate) { _, _ in
-                            voiceService.savePreferences()
-                        }
-                }
-
-                VStack(alignment: .leading) {
-                    Text("Pitch: \(String(format: "%.1f", voiceService.speechPitch))")
-                    Slider(value: $voiceService.speechPitch, in: 0.5...2.0)
-                        .onChange(of: voiceService.speechPitch) { _, _ in
-                            voiceService.savePreferences()
-                        }
-                }
-            } header: {
-                Label("Adjustments", systemImage: "slider.horizontal.3")
-            }
-
-            // Test
-            Section {
-                Button {
-                    if voiceService.isSpeaking {
-                        voiceService.stop()
-                    } else {
-                        voiceService.speak(testText)
-                    }
-                } label: {
-                    HStack {
-                        Image(systemName: voiceService.isSpeaking ? "stop.fill" : "play.fill")
-                        Text(voiceService.isSpeaking ? "Stop" : "Test Voice")
-                    }
-                }
-            } header: {
-                Label("Preview", systemImage: "speaker.wave.2")
-            }
-        }
-        .navigationTitle("Voice AI")
-        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

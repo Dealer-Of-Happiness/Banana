@@ -19,7 +19,8 @@ actor LlamaService {
     nonisolated(unsafe) static var totalBytes: Int64 = 0
     nonisolated(unsafe) static var isDownloading: Bool = false
 
-    init(temperature: Double = 0.7, contextWindow: Int = 2048) {
+    // Default: low temperature for consistent responses, max context for file analysis
+    init(temperature: Double = 0.3, contextWindow: Int = 8192) {
         self.temperature = Float(temperature)
         self.maxTokens = contextWindow
     }
@@ -44,30 +45,8 @@ actor LlamaService {
         bot = nil
         currentModelId = nil
 
-        // Try to load the model, with fallback to TinyLlama if main model fails
-        // Access allModels on MainActor to avoid Swift 6 isolation issues
-        let allModels = await MainActor.run { AIModel.allModels }
-        var modelsToTry = [model]
-        if let tinyLlama = allModels.first(where: { $0.id == "tinyllama" }), model.id != "tinyllama" {
-            modelsToTry.append(tinyLlama)
-        }
-
-        var lastError: Error?
-        for modelToTry in modelsToTry {
-            do {
-                try await loadModelInternal(modelToTry)
-                return // Success!
-            } catch {
-                lastError = error
-                // Try next model
-                continue
-            }
-        }
-
-        // All models failed
-        if let error = lastError {
-            throw error
-        }
+        // Load the single model (Ministral 8B)
+        try await loadModelInternal(model)
     }
 
     private func loadModelInternal(_ model: AIModel) async throws {
@@ -160,13 +139,14 @@ actor LlamaService {
 
     private func templateForModel(_ model: AIModel) -> Template {
         switch model.templateType {
+        case .mistral:
+            // Mistral uses its own template format
+            return .mistral
         case .llama3:
-            // Use chatML as fallback for llama3
             return .chatML()
         case .gemma:
             return .gemma
         case .phi:
-            // Use chatML as fallback for phi
             return .chatML()
         case .chatml:
             return .chatML()

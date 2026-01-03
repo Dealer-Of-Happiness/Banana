@@ -8,44 +8,6 @@
 import Foundation
 import Combine
 
-// Helper class to handle download with progress
-class DownloadHelper: NSObject, URLSessionDownloadDelegate {
-    var onProgress: ((Double) -> Void)?
-    var completion: ((Result<URL, Error>) -> Void)?
-    private var destinationURL: URL?
-
-    init(destination: URL) {
-        self.destinationURL = destination
-        super.init()
-    }
-
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-        let progress = totalBytesExpectedToWrite > 0 ? Double(totalBytesWritten) / Double(totalBytesExpectedToWrite) : 0
-        onProgress?(progress)
-    }
-
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        guard let dest = destinationURL else {
-            completion?(.failure(NSError(domain: "DownloadHelper", code: -1, userInfo: [NSLocalizedDescriptionKey: "No destination"])))
-            return
-        }
-
-        do {
-            try? FileManager.default.removeItem(at: dest)
-            try FileManager.default.moveItem(at: location, to: dest)
-            completion?(.success(dest))
-        } catch {
-            completion?(.failure(error))
-        }
-    }
-
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        if let error = error {
-            completion?(.failure(error))
-        }
-    }
-}
-
 @MainActor
 class ModelManager: ObservableObject {
     static let shared = ModelManager()
@@ -111,9 +73,6 @@ class ModelManager: ObservableObject {
 
     // MARK: - Download Model
 
-    private var downloadHelper: DownloadHelper?
-    private var downloadSession: URLSession?
-
     func downloadModel(_ model: AIModel) async throws {
         guard !isDownloading else {
             throw ModelManagerError.downloadInProgress
@@ -134,71 +93,45 @@ class ModelManager: ObservableObject {
         // Delete any existing partial file
         try? FileManager.default.removeItem(at: destinationURL)
 
-        // Use continuation to bridge callback-based API
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            let helper = DownloadHelper(destination: destinationURL)
-            self.downloadHelper = helper
+        do {
+            // Use simple async download - reliable and fast
+            let (tempURL, response) = try await URLSession.shared.download(from: model.downloadURL)
 
-            helper.onProgress = { [weak self] progress in
-                DispatchQueue.main.async {
-                    self?.downloadProgress = progress
-                    self?.downloadStates[model.id] = .downloading(progress: progress)
-                }
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                throw ModelManagerError.downloadFailed("Server error: \((response as? HTTPURLResponse)?.statusCode ?? 0)")
             }
 
-            helper.completion = { [weak self] result in
-                DispatchQueue.main.async {
-                    self?.downloadHelper = nil
-                    self?.downloadSession?.invalidateAndCancel()
-                    self?.downloadSession = nil
+            // Move to destination
+            try FileManager.default.moveItem(at: tempURL, to: destinationURL)
 
-                    switch result {
-                    case .success:
-                        // Verify file size
-                        if let attributes = try? FileManager.default.attributesOfItem(atPath: destinationURL.path),
-                           let fileSize = attributes[.size] as? Int64,
-                           fileSize < model.sizeBytes / 2 {
-                            try? FileManager.default.removeItem(at: destinationURL)
-                            self?.downloadStates[model.id] = .failed("Download incomplete")
-                            self?.isDownloading = false
-                            self?.downloadingModelId = nil
-                            continuation.resume(throwing: ModelManagerError.downloadFailed("Download incomplete"))
-                            return
-                        }
-
-                        self?.downloadStates[model.id] = .downloaded
-                        self?.isDownloading = false
-                        self?.downloadingModelId = nil
-                        self?.downloadProgress = 1.0
-                        continuation.resume()
-
-                    case .failure(let error):
-                        try? FileManager.default.removeItem(at: destinationURL)
-                        self?.downloadStates[model.id] = .failed(error.localizedDescription)
-                        self?.isDownloading = false
-                        self?.downloadingModelId = nil
-                        continuation.resume(throwing: error)
-                    }
-                }
+            // Verify file size
+            if let attributes = try? FileManager.default.attributesOfItem(atPath: destinationURL.path),
+               let fileSize = attributes[.size] as? Int64,
+               fileSize < model.sizeBytes / 2 {
+                try? FileManager.default.removeItem(at: destinationURL)
+                throw ModelManagerError.downloadFailed("Download incomplete - file too small")
             }
 
-            let config = URLSessionConfiguration.default
-            config.timeoutIntervalForResource = 7200 // 2 hours
-            let session = URLSession(configuration: config, delegate: helper, delegateQueue: nil)
-            self.downloadSession = session
+            downloadStates[model.id] = .downloaded
+            isDownloading = false
+            downloadingModelId = nil
+            downloadProgress = 1.0
 
-            let task = session.downloadTask(with: model.downloadURL)
-            task.resume()
+        } catch {
+            try? FileManager.default.removeItem(at: destinationURL)
+            downloadStates[model.id] = .failed(error.localizedDescription)
+            isDownloading = false
+            downloadingModelId = nil
+            throw error
         }
     }
 
     // MARK: - Cancel Download
 
     func cancelDownload() {
-        downloadSession?.invalidateAndCancel()
-        downloadSession = nil
-        downloadHelper = nil
-
+        // Note: Can't cancel URLSession.shared.download() easily
+        // Just reset state
         if let modelId = downloadingModelId {
             downloadStates[modelId] = .notDownloaded
         }

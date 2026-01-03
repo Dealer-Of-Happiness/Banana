@@ -52,11 +52,16 @@ actor LlamaService {
         }
 
         // Get model path and load
-        let modelPath = await manager.modelPath(for: model)
+        let modelURL = await manager.modelPath(for: model)
         let template = templateForModel(model)
 
-        guard let llm = LLM(from: modelPath, template: template) else {
-            throw LlamaError.modelNotLoaded
+        // Verify file exists
+        guard FileManager.default.fileExists(atPath: modelURL.path) else {
+            throw LlamaError.modelNotFound
+        }
+
+        guard let llm = LLM(from: modelURL, template: template) else {
+            throw LlamaError.modelLoadFailed("Failed to initialize LLM from: \(modelURL.path)")
         }
 
         bot = llm
@@ -69,11 +74,16 @@ actor LlamaService {
         currentModelId = nil
 
         let manager = await getModelManager()
-        let modelPath = await manager.modelPath(for: model)
+        let modelURL = await manager.modelPath(for: model)
         let template = templateForModel(model)
 
-        guard let llm = LLM(from: modelPath, template: template) else {
-            throw LlamaError.modelNotLoaded
+        // Verify file exists
+        guard FileManager.default.fileExists(atPath: modelURL.path) else {
+            throw LlamaError.modelNotFound
+        }
+
+        guard let llm = LLM(from: modelURL, template: template) else {
+            throw LlamaError.modelLoadFailed("Failed to initialize LLM from: \(modelURL.path)")
         }
 
         bot = llm

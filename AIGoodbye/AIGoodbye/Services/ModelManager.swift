@@ -96,19 +96,48 @@ class ModelManager: ObservableObject {
         try? FileManager.default.removeItem(at: destinationURL)
 
         do {
-            // Show downloading state (progress will update when complete)
-            downloadStates[model.id] = .downloading(progress: 0.1)
+            var request = URLRequest(url: model.downloadURL)
+            request.timeoutInterval = 3600 // 1 hour timeout
 
-            // Use simple async download - this is reliable
-            let (tempURL, response) = try await URLSession.shared.download(from: model.downloadURL)
+            let (asyncBytes, response) = try await URLSession.shared.bytes(for: request)
 
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {
                 throw ModelManagerError.downloadFailed("Server error: \((response as? HTTPURLResponse)?.statusCode ?? 0)")
             }
 
-            // Move to destination
-            try FileManager.default.moveItem(at: tempURL, to: destinationURL)
+            let totalBytes = response.expectedContentLength > 0 ? response.expectedContentLength : model.sizeBytes
+
+            // Create file for writing
+            FileManager.default.createFile(atPath: destinationURL.path, contents: nil)
+            let handle = try FileHandle(forWritingTo: destinationURL)
+
+            var downloadedBytes: Int64 = 0
+            let chunkSize = 256 * 1024 // 256KB chunks
+            var buffer = Data(capacity: chunkSize)
+
+            for try await byte in asyncBytes {
+                buffer.append(byte)
+
+                if buffer.count >= chunkSize {
+                    try handle.write(contentsOf: buffer)
+                    downloadedBytes += Int64(buffer.count)
+                    buffer.removeAll(keepingCapacity: true)
+
+                    // Update progress on main actor
+                    let progress = Double(downloadedBytes) / Double(totalBytes)
+                    self.downloadProgress = progress
+                    self.downloadStates[model.id] = .downloading(progress: progress)
+                }
+            }
+
+            // Write remaining data
+            if !buffer.isEmpty {
+                try handle.write(contentsOf: buffer)
+                downloadedBytes += Int64(buffer.count)
+            }
+
+            try handle.close()
 
             // Verify file size
             if let attributes = try? FileManager.default.attributesOfItem(atPath: destinationURL.path),
@@ -124,6 +153,7 @@ class ModelManager: ObservableObject {
             downloadProgress = 1.0
 
         } catch {
+            try? FileManager.default.removeItem(at: destinationURL)
             downloadStates[model.id] = .failed(error.localizedDescription)
             isDownloading = false
             downloadingModelId = nil

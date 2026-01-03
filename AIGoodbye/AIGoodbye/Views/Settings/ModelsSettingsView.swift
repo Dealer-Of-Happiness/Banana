@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AVFAudio
 
 struct ModelsSettingsView: View {
     @StateObject private var modelManager = ModelManager.shared
@@ -233,7 +234,7 @@ struct ModelRow: View {
                 .controlSize(.small)
             }
 
-        case .failed(let error):
+        case .failed:
             VStack {
                 Image(systemName: "exclamationmark.circle")
                     .foregroundStyle(.red)

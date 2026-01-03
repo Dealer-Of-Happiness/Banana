@@ -215,10 +215,12 @@ actor KnowledgeBaseService {
                 }
 
                 let workouts = (samples as? [HKWorkout] ?? []).map { workout in
-                    WorkoutSummary(
+                    let energyType = HKQuantityType(.activeEnergyBurned)
+                    let calories = workout.statistics(for: energyType)?.sumQuantity()?.doubleValue(for: .kilocalorie()) ?? 0
+                    return WorkoutSummary(
                         type: workout.workoutActivityType.name,
                         duration: workout.duration,
-                        calories: workout.totalEnergyBurned?.doubleValue(for: .kilocalorie()) ?? 0,
+                        calories: calories,
                         date: workout.startDate
                     )
                 }

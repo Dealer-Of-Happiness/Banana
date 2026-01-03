@@ -83,7 +83,7 @@ class DonationService: ObservableObject {
     // MARK: - Transaction Listener
 
     private func listenForTransactions() -> Task<Void, Error> {
-        Task.detached { [weak self] in
+        Task.detached {
             for await result in Transaction.updates {
                 do {
                     let transaction = try Self.checkVerified(result)

@@ -149,7 +149,6 @@ actor DocumentService {
 
     private func splitIntoSentences(_ text: String) -> [String] {
         var sentences: [String] = []
-        let cleanedText = text.replacingOccurrences(of: "\n", with: " ")
 
         text.enumerateSubstrings(in: text.startIndex..., options: .bySentences) { substring, _, _, _ in
             if let sentence = substring?.trimmingCharacters(in: .whitespaces), !sentence.isEmpty {

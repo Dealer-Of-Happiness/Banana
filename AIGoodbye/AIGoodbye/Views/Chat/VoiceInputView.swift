@@ -239,8 +239,8 @@ class VoiceRecorder: ObservableObject {
     }
 
     private func checkCurrentPermissions() {
-        // Check microphone status
-        switch AVAudioSession.sharedInstance().recordPermission {
+        // Check microphone status using modern API
+        switch AVAudioApplication.shared.recordPermission {
         case .granted:
             isMicrophoneAuthorized = true
         case .denied:
@@ -265,8 +265,8 @@ class VoiceRecorder: ObservableObject {
     }
 
     func requestPermission() {
-        // Request microphone first using the older reliable API
-        AVAudioSession.sharedInstance().requestRecordPermission { [weak self] granted in
+        // Request microphone first using modern API
+        AVAudioApplication.requestRecordPermission { [weak self] granted in
             DispatchQueue.main.async {
                 self?.isMicrophoneAuthorized = granted
                 if !granted {
@@ -294,10 +294,10 @@ class VoiceRecorder: ObservableObject {
             return
         }
 
-        // Request microphone permission using the older API (more reliable)
+        // Request microphone permission using modern API
         if !isMicrophoneAuthorized {
             let micGranted = await withCheckedContinuation { continuation in
-                AVAudioSession.sharedInstance().requestRecordPermission { granted in
+                AVAudioApplication.requestRecordPermission { granted in
                     continuation.resume(returning: granted)
                 }
             }

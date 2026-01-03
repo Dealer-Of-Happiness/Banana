@@ -128,8 +128,8 @@ class AppState: ObservableObject {
     }
 
     private func startProgressMonitoring() {
-        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+            Task { @MainActor [weak self] in
                 self?.updateDownloadProgress()
             }
         }

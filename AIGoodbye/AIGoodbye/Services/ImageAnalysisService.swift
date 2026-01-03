@@ -15,10 +15,6 @@ actor ImageAnalysisService {
     // MARK: - Analyze Image
 
     func analyzeImage(_ image: UIImage, prompt: String? = nil) async throws -> ImageAnalysis {
-        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
-            throw ImageError.invalidImage
-        }
-
         // Resize for efficient processing
         let resizedImage = resizeImage(image, maxDimension: 1024)
         guard let resizedData = resizedImage.jpegData(compressionQuality: 0.8) else {

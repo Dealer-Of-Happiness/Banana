@@ -361,7 +361,7 @@ class ChatViewModel: ObservableObject {
     }
 
     func processPhoto(_ item: PhotosPickerItem) async {
-        if let data = try? await item.loadTransferable(type: Data.self) {
+        if (try? await item.loadTransferable(type: Data.self)) != nil {
             attachments.append("Photo")
             // Process image
         }

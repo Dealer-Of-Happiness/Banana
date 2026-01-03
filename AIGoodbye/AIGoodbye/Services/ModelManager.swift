@@ -8,32 +8,6 @@
 import Foundation
 import Combine
 
-// Download delegate for progress tracking
-class DownloadDelegate: NSObject, URLSessionDownloadDelegate {
-    var onProgress: ((Double) -> Void)?
-    var onComplete: ((URL) -> Void)?
-    var onError: ((Error) -> Void)?
-
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-        let progress = totalBytesExpectedToWrite > 0 ? Double(totalBytesWritten) / Double(totalBytesExpectedToWrite) : 0
-        DispatchQueue.main.async {
-            self.onProgress?(progress)
-        }
-    }
-
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        onComplete?(location)
-    }
-
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        if let error = error {
-            DispatchQueue.main.async {
-                self.onError?(error)
-            }
-        }
-    }
-}
-
 @MainActor
 class ModelManager: ObservableObject {
     static let shared = ModelManager()
@@ -44,8 +18,7 @@ class ModelManager: ObservableObject {
     @Published var isDownloading = false
     @Published var downloadingModelId: String?
 
-    private var downloadTask: URLSessionDownloadTask?
-    private var observation: NSKeyValueObservation?
+    private var currentDownloadTask: Task<Void, Error>?
 
     private let modelsDirectory: URL
 
@@ -102,9 +75,6 @@ class ModelManager: ObservableObject {
 
     // MARK: - Download Model
 
-    private var downloadDelegate: DownloadDelegate?
-    private var activeSession: URLSession?
-
     func downloadModel(_ model: AIModel) async throws {
         guard !isDownloading else {
             throw ModelManagerError.downloadInProgress
@@ -125,89 +95,58 @@ class ModelManager: ObservableObject {
         // Delete any existing partial file
         try? FileManager.default.removeItem(at: destinationURL)
 
-        // Use continuation to bridge delegate-based API with async/await
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            let delegate = DownloadDelegate()
-            self.downloadDelegate = delegate
-
-            delegate.onProgress = { [weak self] progress in
+        do {
+            // Start a timer to show activity (progress will jump when done)
+            var fakeProgress = 0.0
+            let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
                 Task { @MainActor in
-                    self?.downloadProgress = progress
-                    self?.downloadStates[model.id] = .downloading(progress: progress)
+                    // Slowly increment fake progress to show activity
+                    fakeProgress = min(0.95, fakeProgress + 0.02)
+                    self?.downloadProgress = fakeProgress
+                    self?.downloadStates[model.id] = .downloading(progress: fakeProgress)
                 }
             }
+            RunLoop.main.add(timer, forMode: .common)
 
-            var didComplete = false
+            // Use simple async download - this is reliable
+            let (tempURL, response) = try await URLSession.shared.download(from: model.downloadURL)
 
-            delegate.onComplete = { [weak self] tempURL in
-                guard !didComplete else { return }
-                didComplete = true
+            timer.invalidate()
 
-                do {
-                    // Move to destination
-                    try FileManager.default.moveItem(at: tempURL, to: destinationURL)
-
-                    // Verify file size
-                    if let attributes = try? FileManager.default.attributesOfItem(atPath: destinationURL.path),
-                       let fileSize = attributes[.size] as? Int64,
-                       fileSize < model.sizeBytes / 2 {
-                        try? FileManager.default.removeItem(at: destinationURL)
-                        continuation.resume(throwing: ModelManagerError.downloadFailed("Download incomplete"))
-                        return
-                    }
-
-                    Task { @MainActor in
-                        self?.downloadStates[model.id] = .downloaded
-                        self?.isDownloading = false
-                        self?.downloadingModelId = nil
-                        self?.downloadProgress = 1.0
-                    }
-                    continuation.resume()
-                } catch {
-                    Task { @MainActor in
-                        self?.downloadStates[model.id] = .failed(error.localizedDescription)
-                        self?.isDownloading = false
-                        self?.downloadingModelId = nil
-                    }
-                    continuation.resume(throwing: error)
-                }
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                throw ModelManagerError.downloadFailed("Server error: \((response as? HTTPURLResponse)?.statusCode ?? 0)")
             }
 
-            delegate.onError = { [weak self] error in
-                guard !didComplete else { return }
-                didComplete = true
+            // Move to destination
+            try FileManager.default.moveItem(at: tempURL, to: destinationURL)
 
-                Task { @MainActor in
-                    self?.downloadStates[model.id] = .failed(error.localizedDescription)
-                    self?.isDownloading = false
-                    self?.downloadingModelId = nil
-                }
-                continuation.resume(throwing: error)
+            // Verify file size
+            if let attributes = try? FileManager.default.attributesOfItem(atPath: destinationURL.path),
+               let fileSize = attributes[.size] as? Int64,
+               fileSize < model.sizeBytes / 2 {
+                try? FileManager.default.removeItem(at: destinationURL)
+                throw ModelManagerError.downloadFailed("Download incomplete - file too small")
             }
 
-            let configuration = URLSessionConfiguration.default
-            configuration.timeoutIntervalForRequest = 120
-            configuration.timeoutIntervalForResource = 7200 // 2 hours for large files
+            downloadStates[model.id] = .downloaded
+            isDownloading = false
+            downloadingModelId = nil
+            downloadProgress = 1.0
 
-            let session = URLSession(configuration: configuration, delegate: delegate, delegateQueue: .main)
-            self.activeSession = session
-
-            let task = session.downloadTask(with: model.downloadURL)
-            self.downloadTask = task
-            task.resume()
+        } catch {
+            downloadStates[model.id] = .failed(error.localizedDescription)
+            isDownloading = false
+            downloadingModelId = nil
+            throw error
         }
     }
 
     // MARK: - Cancel Download
 
     func cancelDownload() {
-        downloadTask?.cancel()
-        downloadTask = nil
-        activeSession?.invalidateAndCancel()
-        activeSession = nil
-        downloadDelegate = nil
-        observation?.invalidate()
-        observation = nil
+        currentDownloadTask?.cancel()
+        currentDownloadTask = nil
 
         if let modelId = downloadingModelId {
             downloadStates[modelId] = .notDownloaded

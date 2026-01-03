@@ -45,8 +45,10 @@ actor LlamaService {
         currentModelId = nil
 
         // Try to load the model, with fallback to TinyLlama if main model fails
+        // Access allModels on MainActor to avoid Swift 6 isolation issues
+        let allModels = await MainActor.run { AIModel.allModels }
         var modelsToTry = [model]
-        if let tinyLlama = AIModel.allModels.first(where: { $0.id == "tinyllama" }), model.id != "tinyllama" {
+        if let tinyLlama = allModels.first(where: { $0.id == "tinyllama" }), model.id != "tinyllama" {
             modelsToTry.append(tinyLlama)
         }
 

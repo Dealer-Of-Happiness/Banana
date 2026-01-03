@@ -72,8 +72,8 @@ struct ModelSelectionView: View {
 
                 // Start Chat Button
                 Button {
-                    if let modelId = selectedModelId ?? modelManager.currentModelId,
-                       let model = AIModel.model(withId: modelId) {
+                    let modelId = selectedModelId ?? modelManager.currentModelId
+                    if let model = AIModel.model(withId: modelId) {
                         modelManager.selectModel(model)
                     }
                     onStartChat()
@@ -209,7 +209,7 @@ struct QuickModelPicker: View {
         .sheet(isPresented: $showModelSelection) {
             ModelSelectionView(
                 isPresented: $showModelSelection,
-                selectedModelId: .constant(modelManager.currentModelId),
+                selectedModelId: .constant(nil),
                 onStartChat: {}
             )
         }

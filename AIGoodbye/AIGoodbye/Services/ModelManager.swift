@@ -96,22 +96,11 @@ class ModelManager: ObservableObject {
         try? FileManager.default.removeItem(at: destinationURL)
 
         do {
-            // Start a timer to show activity (progress will jump when done)
-            var fakeProgress = 0.0
-            let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-                Task { @MainActor in
-                    // Slowly increment fake progress to show activity
-                    fakeProgress = min(0.95, fakeProgress + 0.02)
-                    self?.downloadProgress = fakeProgress
-                    self?.downloadStates[model.id] = .downloading(progress: fakeProgress)
-                }
-            }
-            RunLoop.main.add(timer, forMode: .common)
+            // Show downloading state (progress will update when complete)
+            downloadStates[model.id] = .downloading(progress: 0.1)
 
             // Use simple async download - this is reliable
             let (tempURL, response) = try await URLSession.shared.download(from: model.downloadURL)
-
-            timer.invalidate()
 
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {

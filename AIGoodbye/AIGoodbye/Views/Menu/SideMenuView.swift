@@ -8,6 +8,7 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+import Combine
 
 struct SideMenuView: View {
     @EnvironmentObject var appState: AppState

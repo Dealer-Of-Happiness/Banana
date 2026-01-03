@@ -424,27 +424,18 @@ struct KnowledgeBaseRow: View {
     let permissionStatus: String
     var onToggle: ((Bool) -> Void)? = nil
 
-    // Check if this source is supported
-    private var isSupported: Bool {
-        source != .notes && source != .email
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Toggle(isOn: $isEnabled) {
                 HStack {
                     Image(systemName: source.iconName)
-                        .foregroundStyle(isSupported ? .blue : .gray)
+                        .foregroundStyle(.blue)
                         .frame(width: 24)
                     Text(source.displayName)
-                        .foregroundStyle(isSupported ? .primary : .secondary)
                 }
             }
-            .disabled(!isSupported)
             .onChange(of: isEnabled) { _, newValue in
-                if isSupported {
-                    onToggle?(newValue)
-                }
+                onToggle?(newValue)
             }
 
             HStack {

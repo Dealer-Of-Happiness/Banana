@@ -210,47 +210,36 @@ actor LlamaService {
             Task {
                 do {
                     guard let bot = self.bot else {
-                        throw LlamaError.modelNotLoaded
+                        continuation.yield("Error: AI model is not loaded. Please restart the app.")
+                        continuation.finish()
+                        return
                     }
 
                     // Clear previous history
                     bot.history.removeAll()
 
-                    // Build a simple prompt without role labels
-                    var contextPrompt = ""
-
-                    // Add minimal context
-                    if !history.isEmpty {
-                        for message in history.suffix(2) {
-                            if message.role == "user" {
-                                contextPrompt += "Q: \(message.content)\n"
-                            } else if message.role == "assistant" {
-                                contextPrompt += "A: \(message.content)\n"
-                            }
-                        }
-                    }
-
-                    // Add current question
-                    contextPrompt += "Q: \(prompt)\nA:"
+                    // Simple direct prompt for best compatibility
+                    let directPrompt = prompt
 
                     // Generate response
-                    await bot.respond(to: contextPrompt)
+                    await bot.respond(to: directPrompt)
 
                     // Get the response from bot's output
                     var response = bot.output
 
-                    // Aggressive cleanup of response
-                    response = self.cleanResponse(response)
+                    // Basic cleanup
+                    response = response.trimmingCharacters(in: .whitespacesAndNewlines)
 
                     // Return the response
-                    if response.isEmpty || response == "..." || response.count < 2 {
-                        continuation.yield("I couldn't generate a response. Please try again.")
+                    if response.isEmpty {
+                        continuation.yield("I couldn't generate a response. The model may need to be reloaded.")
                     } else {
                         continuation.yield(response)
                     }
                     continuation.finish()
                 } catch {
-                    continuation.finish(throwing: error)
+                    continuation.yield("Error: \(error.localizedDescription)")
+                    continuation.finish()
                 }
             }
         }

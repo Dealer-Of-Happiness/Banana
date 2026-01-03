@@ -8,6 +8,44 @@
 import Foundation
 import Combine
 
+// Helper class to handle download with progress
+class DownloadHelper: NSObject, URLSessionDownloadDelegate {
+    var onProgress: ((Double) -> Void)?
+    var completion: ((Result<URL, Error>) -> Void)?
+    private var destinationURL: URL?
+
+    init(destination: URL) {
+        self.destinationURL = destination
+        super.init()
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+        let progress = totalBytesExpectedToWrite > 0 ? Double(totalBytesWritten) / Double(totalBytesExpectedToWrite) : 0
+        onProgress?(progress)
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+        guard let dest = destinationURL else {
+            completion?(.failure(NSError(domain: "DownloadHelper", code: -1, userInfo: [NSLocalizedDescriptionKey: "No destination"])))
+            return
+        }
+
+        do {
+            try? FileManager.default.removeItem(at: dest)
+            try FileManager.default.moveItem(at: location, to: dest)
+            completion?(.success(dest))
+        } catch {
+            completion?(.failure(error))
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let error = error {
+            completion?(.failure(error))
+        }
+    }
+}
+
 @MainActor
 class ModelManager: ObservableObject {
     static let shared = ModelManager()
@@ -17,8 +55,6 @@ class ModelManager: ObservableObject {
     @Published var downloadProgress: Double = 0
     @Published var isDownloading = false
     @Published var downloadingModelId: String?
-
-    private var currentDownloadTask: Task<Void, Error>?
 
     private let modelsDirectory: URL
 
@@ -75,6 +111,9 @@ class ModelManager: ObservableObject {
 
     // MARK: - Download Model
 
+    private var downloadHelper: DownloadHelper?
+    private var downloadSession: URLSession?
+
     func downloadModel(_ model: AIModel) async throws {
         guard !isDownloading else {
             throw ModelManagerError.downloadInProgress
@@ -95,77 +134,70 @@ class ModelManager: ObservableObject {
         // Delete any existing partial file
         try? FileManager.default.removeItem(at: destinationURL)
 
-        do {
-            var request = URLRequest(url: model.downloadURL)
-            request.timeoutInterval = 3600 // 1 hour timeout
+        // Use continuation to bridge callback-based API
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let helper = DownloadHelper(destination: destinationURL)
+            self.downloadHelper = helper
 
-            let (asyncBytes, response) = try await URLSession.shared.bytes(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else {
-                throw ModelManagerError.downloadFailed("Server error: \((response as? HTTPURLResponse)?.statusCode ?? 0)")
-            }
-
-            let totalBytes = response.expectedContentLength > 0 ? response.expectedContentLength : model.sizeBytes
-
-            // Create file for writing
-            FileManager.default.createFile(atPath: destinationURL.path, contents: nil)
-            let handle = try FileHandle(forWritingTo: destinationURL)
-
-            var downloadedBytes: Int64 = 0
-            let chunkSize = 256 * 1024 // 256KB chunks
-            var buffer = Data(capacity: chunkSize)
-
-            for try await byte in asyncBytes {
-                buffer.append(byte)
-
-                if buffer.count >= chunkSize {
-                    try handle.write(contentsOf: buffer)
-                    downloadedBytes += Int64(buffer.count)
-                    buffer.removeAll(keepingCapacity: true)
-
-                    // Update progress on main actor
-                    let progress = Double(downloadedBytes) / Double(totalBytes)
-                    self.downloadProgress = progress
-                    self.downloadStates[model.id] = .downloading(progress: progress)
+            helper.onProgress = { [weak self] progress in
+                DispatchQueue.main.async {
+                    self?.downloadProgress = progress
+                    self?.downloadStates[model.id] = .downloading(progress: progress)
                 }
             }
 
-            // Write remaining data
-            if !buffer.isEmpty {
-                try handle.write(contentsOf: buffer)
-                downloadedBytes += Int64(buffer.count)
+            helper.completion = { [weak self] result in
+                DispatchQueue.main.async {
+                    self?.downloadHelper = nil
+                    self?.downloadSession?.invalidateAndCancel()
+                    self?.downloadSession = nil
+
+                    switch result {
+                    case .success:
+                        // Verify file size
+                        if let attributes = try? FileManager.default.attributesOfItem(atPath: destinationURL.path),
+                           let fileSize = attributes[.size] as? Int64,
+                           fileSize < model.sizeBytes / 2 {
+                            try? FileManager.default.removeItem(at: destinationURL)
+                            self?.downloadStates[model.id] = .failed("Download incomplete")
+                            self?.isDownloading = false
+                            self?.downloadingModelId = nil
+                            continuation.resume(throwing: ModelManagerError.downloadFailed("Download incomplete"))
+                            return
+                        }
+
+                        self?.downloadStates[model.id] = .downloaded
+                        self?.isDownloading = false
+                        self?.downloadingModelId = nil
+                        self?.downloadProgress = 1.0
+                        continuation.resume()
+
+                    case .failure(let error):
+                        try? FileManager.default.removeItem(at: destinationURL)
+                        self?.downloadStates[model.id] = .failed(error.localizedDescription)
+                        self?.isDownloading = false
+                        self?.downloadingModelId = nil
+                        continuation.resume(throwing: error)
+                    }
+                }
             }
 
-            try handle.close()
+            let config = URLSessionConfiguration.default
+            config.timeoutIntervalForResource = 7200 // 2 hours
+            let session = URLSession(configuration: config, delegate: helper, delegateQueue: nil)
+            self.downloadSession = session
 
-            // Verify file size
-            if let attributes = try? FileManager.default.attributesOfItem(atPath: destinationURL.path),
-               let fileSize = attributes[.size] as? Int64,
-               fileSize < model.sizeBytes / 2 {
-                try? FileManager.default.removeItem(at: destinationURL)
-                throw ModelManagerError.downloadFailed("Download incomplete - file too small")
-            }
-
-            downloadStates[model.id] = .downloaded
-            isDownloading = false
-            downloadingModelId = nil
-            downloadProgress = 1.0
-
-        } catch {
-            try? FileManager.default.removeItem(at: destinationURL)
-            downloadStates[model.id] = .failed(error.localizedDescription)
-            isDownloading = false
-            downloadingModelId = nil
-            throw error
+            let task = session.downloadTask(with: model.downloadURL)
+            task.resume()
         }
     }
 
     // MARK: - Cancel Download
 
     func cancelDownload() {
-        currentDownloadTask?.cancel()
-        currentDownloadTask = nil
+        downloadSession?.invalidateAndCancel()
+        downloadSession = nil
+        downloadHelper = nil
 
         if let modelId = downloadingModelId {
             downloadStates[modelId] = .notDownloaded

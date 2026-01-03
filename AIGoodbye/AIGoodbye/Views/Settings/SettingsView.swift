@@ -7,10 +7,12 @@
 
 import SwiftUI
 import Combine
+import StoreKit
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = SettingsViewModel()
+    @StateObject private var donationService = DonationService()
     @State private var showClearCacheAlert = false
     @State private var showExportOptions = false
     @State private var showICloudError = false
@@ -32,6 +34,9 @@ struct SettingsView: View {
 
             // Data & Privacy
             dataPrivacySection
+
+            // Support AI goodbye
+            supportSection
 
             // About
             aboutSection
@@ -69,6 +74,17 @@ struct SettingsView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(iCloudErrorMessage)
+        }
+        .sheet(isPresented: $donationService.showThankYou) {
+            ThankYouView(isPresented: $donationService.showThankYou)
+        }
+        .alert("Purchase Error", isPresented: .init(
+            get: { donationService.purchaseError != nil },
+            set: { if !$0 { donationService.purchaseError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(donationService.purchaseError ?? "")
         }
     }
 
@@ -233,6 +249,28 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Support Section
+
+    private var supportSection: some View {
+        Section {
+            ForEach(DonationTier.allCases) { tier in
+                DonationRow(
+                    tier: tier,
+                    product: donationService.products.first { $0.id == tier.rawValue },
+                    isLoading: donationService.purchaseInProgress
+                ) {
+                    Task {
+                        await donationService.purchase(tier)
+                    }
+                }
+            }
+        } header: {
+            Label("Support AI goodbye", systemImage: "heart.fill")
+        } footer: {
+            Text("Your support helps keep AI goodbye free and ad-free for everyone. Thank you!")
+        }
+    }
+
     // MARK: - About Section
 
     private var aboutSection: some View {
@@ -309,6 +347,52 @@ struct CloudConnectionRow: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
         }
+    }
+}
+
+// MARK: - Donation Row
+
+struct DonationRow: View {
+    let tier: DonationTier
+    let product: Product?
+    let isLoading: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Text(tier.emoji)
+                    .font(.title2)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tier.displayName)
+                        .font(.body)
+
+                    if let product = product {
+                        Text(product.displayPrice)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(tier.price)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .foregroundStyle(.primary)
+        .disabled(isLoading)
     }
 }
 

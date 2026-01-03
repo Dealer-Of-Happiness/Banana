@@ -54,14 +54,10 @@ struct AIGoodbyeApp: App {
 class AppState: ObservableObject {
     @Published var isModelLoaded = false
     @Published var isLoading = false
-    @Published var downloadedMB: Double = 0
-    @Published var totalMB: Double = 0
     @Published var loadingMessage = "Initializing..."
     @Published var errorMessage: String?
     @Published var showSideMenu = false
     @Published var currentConversation: Conversation?
-
-    private var progressTimer: Timer?
 
     // Services
     let settings: SettingsManager
@@ -101,14 +97,10 @@ class AppState: ObservableObject {
         isLoading = true
         loadingMessage = "Checking for AI model..."
 
-        // Start progress monitoring timer
-        startProgressMonitoring()
-
         do {
-            loadingMessage = "Downloading AI model..."
+            loadingMessage = "Loading AI model..."
             try await llamaService.loadModel()
 
-            stopProgressMonitoring()
             loadingMessage = "Initializing services..."
             await conversationManager.initialize()
 
@@ -121,34 +113,8 @@ class AppState: ObservableObject {
             isLoading = false
 
         } catch {
-            stopProgressMonitoring()
             errorMessage = error.localizedDescription
             isLoading = false
-        }
-    }
-
-    private func startProgressMonitoring() {
-        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-            Task { @MainActor [weak self] in
-                self?.updateDownloadProgress()
-            }
-        }
-    }
-
-    private func stopProgressMonitoring() {
-        progressTimer?.invalidate()
-        progressTimer = nil
-    }
-
-    private func updateDownloadProgress() {
-        let downloaded = LlamaService.downloadedBytes
-        let total = LlamaService.totalBytes
-
-        downloadedMB = Double(downloaded) / (1024 * 1024)
-        totalMB = Double(total) / (1024 * 1024)
-
-        if LlamaService.isDownloading && total > 0 {
-            loadingMessage = "Downloading AI model..."
         }
     }
 
@@ -167,6 +133,7 @@ class AppState: ObservableObject {
 
 struct LoadingView: View {
     @ObservedObject var appState: AppState
+    @ObservedObject var modelManager = ModelManager.shared
 
     var body: some View {
         VStack(spacing: 30) {
@@ -187,33 +154,32 @@ struct LoadingView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            // Show download progress as MB/MB
-            if appState.totalMB > 0 {
+            // Show download progress from ModelManager
+            if modelManager.isDownloading {
                 VStack(spacing: 12) {
                     // Progress bar
-                    ProgressView(value: appState.downloadedMB, total: appState.totalMB)
+                    ProgressView(value: modelManager.downloadProgress)
                         .progressViewStyle(.linear)
                         .frame(width: 250)
 
-                    // MB counter
-                    Text("\(Int(appState.downloadedMB)) MB / \(Int(appState.totalMB)) MB")
-                        .font(.title3.monospacedDigit())
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.primary)
+                    // Status text
+                    if modelManager.downloadProgress > 0 {
+                        Text("\(Int(modelManager.downloadProgress * 100))%")
+                            .font(.title3.monospacedDigit())
+                            .fontWeight(.semibold)
+                    } else {
+                        Text("Downloading... please wait")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
 
-                    // Percentage
-                    let percentage = appState.totalMB > 0 ? (appState.downloadedMB / appState.totalMB) * 100 : 0
-                    Text("\(Int(percentage))%")
+                    // Model name
+                    Text(modelManager.currentModel.name)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             } else {
-                VStack(spacing: 8) {
-                    ProgressView()
-                    Text("Connecting to server...")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                ProgressView()
             }
         }
         .padding()

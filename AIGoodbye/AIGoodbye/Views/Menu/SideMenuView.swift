@@ -406,6 +406,14 @@ struct PasswordPromptView: View {
                     .padding()
                     .background(Color(.systemGray6))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .onChange(of: password) { _, newValue in
+                        let filtered = newValue.filter { $0.isNumber }
+                        if filtered.count > 6 {
+                            password = String(filtered.prefix(6))
+                        } else if filtered != newValue {
+                            password = filtered
+                        }
+                    }
 
                 if showError {
                     Text("Incorrect password")
@@ -423,7 +431,7 @@ struct PasswordPromptView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(password.count < 6)
+                .disabled(password.count != 6)
             }
             .padding()
             .navigationBarTitleDisplayMode(.inline)
@@ -473,6 +481,15 @@ struct SetPasswordView: View {
                         .padding()
                         .background(Color(.systemGray6))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .onChange(of: password) { _, newValue in
+                            // Limit to 6 digits only
+                            let filtered = newValue.filter { $0.isNumber }
+                            if filtered.count > 6 {
+                                password = String(filtered.prefix(6))
+                            } else if filtered != newValue {
+                                password = filtered
+                            }
+                        }
 
                     SecureField("Confirm password", text: $confirmPassword)
                         .keyboardType(.numberPad)
@@ -482,6 +499,15 @@ struct SetPasswordView: View {
                         .padding()
                         .background(Color(.systemGray6))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .onChange(of: confirmPassword) { _, newValue in
+                            // Limit to 6 digits only
+                            let filtered = newValue.filter { $0.isNumber }
+                            if filtered.count > 6 {
+                                confirmPassword = String(filtered.prefix(6))
+                            } else if filtered != newValue {
+                                confirmPassword = filtered
+                            }
+                        }
                 }
                 .frame(width: 250)
 
@@ -492,8 +518,8 @@ struct SetPasswordView: View {
                 }
 
                 Button("Lock Folder") {
-                    if password.count < 6 {
-                        errorMessage = "Password must be at least 6 digits"
+                    if password.count != 6 {
+                        errorMessage = "Password must be exactly 6 digits"
                         showError = true
                     } else if password != confirmPassword {
                         errorMessage = "Passwords don't match"
@@ -504,7 +530,7 @@ struct SetPasswordView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(password.count < 6 || confirmPassword.isEmpty)
+                .disabled(password.count != 6 || confirmPassword.count != 6)
             }
             .padding()
             .navigationBarTitleDisplayMode(.inline)
@@ -553,6 +579,14 @@ struct RemoveLockPromptView: View {
                     .padding()
                     .background(Color(.systemGray6))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .onChange(of: password) { _, newValue in
+                        let filtered = newValue.filter { $0.isNumber }
+                        if filtered.count > 6 {
+                            password = String(filtered.prefix(6))
+                        } else if filtered != newValue {
+                            password = filtered
+                        }
+                    }
 
                 if showError {
                     Text("Incorrect password")
@@ -571,7 +605,7 @@ struct RemoveLockPromptView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.orange)
-                .disabled(password.count < 6)
+                .disabled(password.count != 6)
             }
             .padding()
             .navigationBarTitleDisplayMode(.inline)

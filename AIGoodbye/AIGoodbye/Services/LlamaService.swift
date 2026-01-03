@@ -51,8 +51,8 @@ actor LlamaService {
         // Store the path for later use
         modelPathURL = modelPath
 
-        // Load from local file
-        guard let llm = LLM(from: modelPath, template: .chatML()) else {
+        // Load from local file - use llama3 template for proper formatting
+        guard let llm = LLM(from: modelPath, template: .llama3) else {
             throw LlamaError.modelNotLoaded
         }
 
@@ -122,17 +122,31 @@ actor LlamaService {
                         throw LlamaError.modelNotLoaded
                     }
 
-                    // Build simple prompt for Llama 3 format
-                    let fullPrompt = self.buildLlama3Prompt(prompt: prompt, history: history)
+                    // Set system prompt
+                    bot.setSystemPrompt("You are AI goodbye, a helpful and friendly assistant. Be concise and helpful.")
 
-                    // Store previous output length to extract only new content
-                    let previousOutputLength = bot.output.count
+                    // Add history to bot's chat context
+                    for message in history.suffix(4) {
+                        if message.role == "user" {
+                            bot.history.append(.user(message.content))
+                        } else if message.role == "assistant" {
+                            bot.history.append(.bot(message.content))
+                        }
+                    }
 
-                    // Generate response
-                    await bot.respond(to: fullPrompt)
+                    // Generate response using the library's respond method
+                    await bot.respond(to: prompt)
 
-                    // Extract only the new output (after previous output)
-                    var response = String(bot.output.dropFirst(previousOutputLength))
+                    // Get the latest bot response from history
+                    var response = ""
+                    if let lastMessage = bot.history.last {
+                        switch lastMessage {
+                        case .bot(let text):
+                            response = text
+                        default:
+                            break
+                        }
+                    }
 
                     // Clean up the response
                     response = response.trimmingCharacters(in: .whitespacesAndNewlines)

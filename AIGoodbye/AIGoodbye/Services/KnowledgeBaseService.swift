@@ -23,10 +23,6 @@ actor KnowledgeBaseService {
             return EKEventStore.authorizationStatus(for: .reminder) == .fullAccess
         case .health, .fitness:
             return HKHealthStore.isHealthDataAvailable()
-        case .notes:
-            return false // Notes doesn't have a public API
-        case .email:
-            return false // Email requires custom integration
         }
     }
 
@@ -41,8 +37,6 @@ actor KnowledgeBaseService {
         case .health, .fitness:
             try await requestHealthPermissions()
             return true
-        case .notes, .email:
-            throw KnowledgeBaseError.notSupported
         }
     }
 

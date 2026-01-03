@@ -250,8 +250,6 @@ struct SettingsView: View {
         case .calendar: return $viewModel.calendarEnabled
         case .health: return $viewModel.healthEnabled
         case .fitness: return $viewModel.fitnessEnabled
-        case .notes: return $viewModel.notesEnabled
-        case .email: return $viewModel.emailEnabled
         case .reminders: return $viewModel.remindersEnabled
         }
     }
@@ -281,8 +279,6 @@ struct SettingsView: View {
         case .calendar: viewModel.calendarEnabled = value
         case .health: viewModel.healthEnabled = value
         case .fitness: viewModel.fitnessEnabled = value
-        case .notes: viewModel.notesEnabled = value
-        case .email: viewModel.emailEnabled = value
         case .reminders: viewModel.remindersEnabled = value
         }
     }
@@ -313,43 +309,11 @@ struct SettingsView: View {
     }
 
     private func checkICloudAvailability() async {
-        do {
-            let container = CKContainer.default()
-            let status = try await container.accountStatus()
-
-            await MainActor.run {
-                switch status {
-                case .available:
-                    // iCloud is available, sync will happen
-                    appState.settings.iCloudSyncEnabled = true
-                case .noAccount:
-                    viewModel.iCloudSync = false
-                    iCloudErrorMessage = "No iCloud account found. Please sign in to iCloud in Settings."
-                    showICloudError = true
-                case .restricted:
-                    viewModel.iCloudSync = false
-                    iCloudErrorMessage = "iCloud access is restricted on this device."
-                    showICloudError = true
-                case .couldNotDetermine:
-                    viewModel.iCloudSync = false
-                    iCloudErrorMessage = "Could not determine iCloud status. Please try again later."
-                    showICloudError = true
-                case .temporarilyUnavailable:
-                    viewModel.iCloudSync = false
-                    iCloudErrorMessage = "iCloud is temporarily unavailable. Please try again later."
-                    showICloudError = true
-                @unknown default:
-                    viewModel.iCloudSync = false
-                    iCloudErrorMessage = "iCloud is not available."
-                    showICloudError = true
-                }
-            }
-        } catch {
-            await MainActor.run {
-                viewModel.iCloudSync = false
-                iCloudErrorMessage = "Failed to check iCloud status: \(error.localizedDescription)"
-                showICloudError = true
-            }
+        // iCloud sync is not yet implemented - show message
+        await MainActor.run {
+            viewModel.iCloudSync = false
+            iCloudErrorMessage = "iCloud sync is coming soon in a future update."
+            showICloudError = true
         }
     }
 
@@ -574,8 +538,6 @@ class SettingsViewModel: ObservableObject {
     @Published var calendarEnabled = false
     @Published var healthEnabled = false
     @Published var fitnessEnabled = false
-    @Published var notesEnabled = false
-    @Published var emailEnabled = false
     @Published var remindersEnabled = false
 
     // Data & Privacy
@@ -612,10 +574,6 @@ class SettingsViewModel: ObservableObject {
             }
         case .health, .fitness:
             return HKHealthStore.isHealthDataAvailable() ? (healthEnabled ? "Granted" : "Not Set") : "Not Available"
-        case .notes:
-            return "Not Available" // Notes doesn't have a public API
-        case .email:
-            return "Not Available" // Email requires custom integration
         }
     }
 

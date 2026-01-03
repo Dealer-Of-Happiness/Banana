@@ -126,8 +126,6 @@ enum KnowledgeBaseSource: String, CaseIterable, Identifiable {
     case calendar
     case health
     case fitness
-    case notes
-    case email
     case reminders
 
     var id: String { rawValue }
@@ -137,8 +135,6 @@ enum KnowledgeBaseSource: String, CaseIterable, Identifiable {
         case .calendar: return "Calendar"
         case .health: return "Health"
         case .fitness: return "Fitness"
-        case .notes: return "Notes"
-        case .email: return "Email"
         case .reminders: return "Reminders"
         }
     }
@@ -148,8 +144,6 @@ enum KnowledgeBaseSource: String, CaseIterable, Identifiable {
         case .calendar: return "calendar"
         case .health: return "heart.fill"
         case .fitness: return "figure.run"
-        case .notes: return "note.text"
-        case .email: return "envelope.fill"
         case .reminders: return "checklist"
         }
     }
@@ -159,8 +153,6 @@ enum KnowledgeBaseSource: String, CaseIterable, Identifiable {
         case .calendar: return "Access your calendar events and schedule"
         case .health: return "Read health metrics like heart rate and steps"
         case .fitness: return "Access workout history and fitness data"
-        case .notes: return "Search and read your notes"
-        case .email: return "Summarize and search emails"
         case .reminders: return "Manage your reminders"
         }
     }

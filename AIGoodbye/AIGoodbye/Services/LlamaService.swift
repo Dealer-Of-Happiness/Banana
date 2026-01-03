@@ -12,10 +12,7 @@ actor LlamaService {
     private var bot: LLM?
     private let temperature: Float
     private let maxTokens: Int
-    private var modelPathURL: URL?
-
-    private let modelFileName = "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
-    private let modelDownloadURL = URL(string: "https://huggingface.co/lmstudio-community/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf")!
+    private var currentModelId: String?
 
     // Download state - observable from outside
     nonisolated(unsafe) static var downloadedBytes: Int64 = 0
@@ -29,84 +26,98 @@ actor LlamaService {
 
     // MARK: - Model Management
 
-    var modelPath: URL {
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        return documentsPath.appendingPathComponent("models/\(modelFileName)")
-    }
-
-    func isModelDownloaded() -> Bool {
-        FileManager.default.fileExists(atPath: modelPath.path)
+    @MainActor
+    private func getModelManager() -> ModelManager {
+        ModelManager.shared
     }
 
     func loadModel() async throws {
-        if bot != nil {
+        let manager = await getModelManager()
+        let model = await manager.currentModel
+
+        // If already loaded with same model, skip
+        if bot != nil && currentModelId == model.id {
             return
         }
 
-        // Check if model already exists locally
-        if !isModelDownloaded() {
-            try await downloadModelWithProgress()
+        // Unload previous model
+        bot = nil
+        currentModelId = nil
+
+        // Check if model is downloaded
+        let isDownloaded = await manager.isModelDownloaded(model)
+        if !isDownloaded {
+            // Download the default model
+            try await downloadModel(model)
         }
 
-        // Store the path for later use
-        modelPathURL = modelPath
+        // Get model path and load
+        let modelPath = await manager.modelPath(for: model)
+        let template = templateForModel(model)
 
-        // Load from local file - use llama3 template for proper formatting
-        guard let llm = LLM(from: modelPath, template: .llama3) else {
+        guard let llm = LLM(from: modelPath, template: template) else {
             throw LlamaError.modelNotLoaded
         }
 
         bot = llm
+        currentModelId = model.id
     }
 
-    private func downloadModelWithProgress() async throws {
-        // Create models directory
-        let modelsDir = modelPath.deletingLastPathComponent()
-        try FileManager.default.createDirectory(at: modelsDir, withIntermediateDirectories: true)
+    func loadSpecificModel(_ model: AIModel) async throws {
+        // Unload previous model
+        bot = nil
+        currentModelId = nil
+
+        let manager = await getModelManager()
+        let modelPath = await manager.modelPath(for: model)
+        let template = templateForModel(model)
+
+        guard let llm = LLM(from: modelPath, template: template) else {
+            throw LlamaError.modelNotLoaded
+        }
+
+        bot = llm
+        currentModelId = model.id
+    }
+
+    private func templateForModel(_ model: AIModel) -> Template {
+        switch model.templateType {
+        case .llama3:
+            return .llama3
+        case .gemma:
+            return .gemma
+        case .phi:
+            return .phi
+        case .chatml:
+            return .chatML()
+        case .alpaca:
+            return .alpaca
+        }
+    }
+
+    private func downloadModel(_ model: AIModel) async throws {
+        let manager = await getModelManager()
 
         LlamaService.isDownloading = true
         LlamaService.downloadedBytes = 0
-        LlamaService.totalBytes = 0
+        LlamaService.totalBytes = model.sizeBytes
 
-        // Download with progress tracking
-        let (asyncBytes, response) = try await URLSession.shared.bytes(from: modelDownloadURL)
-
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
+        do {
+            try await manager.downloadModel(model)
             LlamaService.isDownloading = false
-            throw LlamaError.downloadFailed("Server returned error")
+        } catch {
+            LlamaService.isDownloading = false
+            throw error
         }
-
-        LlamaService.totalBytes = response.expectedContentLength
-
-        // Create file and write
-        FileManager.default.createFile(atPath: modelPath.path, contents: nil)
-        let handle = try FileHandle(forWritingTo: modelPath)
-
-        var buffer = Data()
-        let bufferSize = 1024 * 1024 // 1MB buffer
-
-        for try await byte in asyncBytes {
-            buffer.append(byte)
-            LlamaService.downloadedBytes += 1
-
-            if buffer.count >= bufferSize {
-                try handle.write(contentsOf: buffer)
-                buffer.removeAll(keepingCapacity: true)
-            }
-        }
-
-        // Write remaining buffer
-        if !buffer.isEmpty {
-            try handle.write(contentsOf: buffer)
-        }
-
-        try handle.close()
-        LlamaService.isDownloading = false
     }
 
     func unloadModel() {
         bot = nil
+        currentModelId = nil
+    }
+
+    func isModelLoaded() -> Bool {
+        bot != nil
     }
 
     // MARK: - Text Generation
@@ -121,6 +132,9 @@ actor LlamaService {
                     guard let bot = self.bot else {
                         throw LlamaError.modelNotLoaded
                     }
+
+                    // Clear previous history and set fresh context
+                    bot.history.removeAll()
 
                     // Set system prompt
                     bot.setSystemPrompt("You are AI goodbye, a helpful and friendly assistant. Be concise and helpful.")
@@ -171,45 +185,27 @@ actor LlamaService {
         }
     }
 
-    // Llama 3 chat format
-    private func buildLlama3Prompt(prompt: String, history: [(role: String, content: String)]) -> String {
-        var fullPrompt = "<|begin_of_text|>"
-
-        // System message
-        fullPrompt += "<|start_header_id|>system<|end_header_id|>\n\n"
-        fullPrompt += "You are AI goodbye, a helpful and friendly assistant. Be concise.<|eot_id|>"
-
-        // Add conversation history (keep last 4 exchanges for context window)
-        for message in history.suffix(4) {
-            if message.role == "user" {
-                fullPrompt += "<|start_header_id|>user<|end_header_id|>\n\n"
-                fullPrompt += "\(message.content)<|eot_id|>"
-            } else if message.role == "assistant" {
-                fullPrompt += "<|start_header_id|>assistant<|end_header_id|>\n\n"
-                fullPrompt += "\(message.content)<|eot_id|>"
-            }
-        }
-
-        // Current user message
-        fullPrompt += "<|start_header_id|>user<|end_header_id|>\n\n"
-        fullPrompt += "\(prompt)<|eot_id|>"
-
-        // Start assistant response
-        fullPrompt += "<|start_header_id|>assistant<|end_header_id|>\n\n"
-
-        return fullPrompt
-    }
-
     // Simple non-streaming response
     func getResponse(prompt: String) async throws -> String {
         guard let bot = bot else {
             throw LlamaError.modelNotLoaded
         }
 
-        let fullPrompt = buildLlama3Prompt(prompt: prompt, history: [])
-        let previousOutputLength = bot.output.count
-        await bot.respond(to: fullPrompt)
-        return String(bot.output.dropFirst(previousOutputLength))
+        bot.history.removeAll()
+        bot.setSystemPrompt("You are AI goodbye, a helpful and friendly assistant. Be concise.")
+
+        await bot.respond(to: prompt)
+
+        if let lastMessage = bot.history.last {
+            switch lastMessage {
+            case .bot(let text):
+                return text.trimmingCharacters(in: .whitespacesAndNewlines)
+            default:
+                break
+            }
+        }
+
+        return ""
     }
 
     // MARK: - Vision Analysis

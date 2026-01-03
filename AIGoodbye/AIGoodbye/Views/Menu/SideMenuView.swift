@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct SideMenuView: View {
     @EnvironmentObject var appState: AppState
@@ -22,6 +23,8 @@ struct SideMenuView: View {
     @State private var folderToLock: Folder?
     @State private var showRemoveLockPrompt = false
     @State private var folderToRemoveLock: Folder?
+    @State private var draggedConversation: Conversation?
+    @State private var targetedFolderId: UUID?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -197,6 +200,7 @@ struct SideMenuView: View {
                 ForEach(appState.conversationManager.folders) { folder in
                     FolderRow(
                         folder: folder,
+                        isDropTarget: targetedFolderId == folder.id && !folder.isLocked,
                         onTap: {
                             if folder.isLocked {
                                 folderToUnlock = folder
@@ -210,6 +214,29 @@ struct SideMenuView: View {
                             showFolderOptions = true
                         }
                     )
+                    .dropDestination(for: String.self) { items, _ in
+                        guard let conversationIdString = items.first,
+                              let conversation = appState.conversationManager.conversations.first(where: { $0.id.uuidString == conversationIdString }) else {
+                            return false
+                        }
+
+                        // Don't allow dropping into locked folders
+                        if folder.isLocked {
+                            return false
+                        }
+
+                        // Move conversation to folder
+                        appState.conversationManager.moveConversation(conversation, to: folder)
+                        draggedConversation = nil
+                        targetedFolderId = nil
+                        return true
+                    } isTargeted: { isTargeted in
+                        if isTargeted {
+                            targetedFolderId = folder.id
+                        } else if targetedFolderId == folder.id {
+                            targetedFolderId = nil
+                        }
+                    }
                 }
             }
         }
@@ -265,10 +292,18 @@ struct SideMenuView: View {
                             .padding()
                     } else {
                         ForEach(appState.conversationManager.conversations) { chat in
-                            ChatRow(conversation: chat)
+                            ChatRow(conversation: chat, isDragging: draggedConversation?.id == chat.id)
                                 .onTapGesture {
                                     appState.currentConversation = chat
                                     appState.toggleSideMenu()
+                                }
+                                .draggable(chat.id.uuidString) {
+                                    // Drag preview
+                                    ChatDragPreview(title: chat.title)
+                                }
+                                .onDrag {
+                                    draggedConversation = chat
+                                    return NSItemProvider(object: chat.id.uuidString as NSString)
                                 }
                         }
                     }
@@ -304,6 +339,7 @@ struct SideMenuView: View {
 
 struct FolderRow: View {
     let folder: Folder
+    var isDropTarget: Bool = false
     let onTap: () -> Void
     let onLongPress: () -> Void
 
@@ -312,8 +348,8 @@ struct FolderRow: View {
             onTap()
         } label: {
             HStack {
-                Image(systemName: "folder.fill")
-                    .foregroundStyle(.yellow)
+                Image(systemName: isDropTarget ? "folder.fill.badge.plus" : "folder.fill")
+                    .foregroundStyle(isDropTarget ? .blue : .yellow)
 
                 Text(folder.name)
                     .foregroundStyle(.primary)
@@ -326,12 +362,23 @@ struct FolderRow: View {
 
                 Spacer()
 
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                if isDropTarget {
+                    Text("Drop here")
+                        .font(.caption)
+                        .foregroundStyle(.blue)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
             }
             .padding(.horizontal)
             .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isDropTarget ? Color.blue.opacity(0.1) : Color.clear)
+            )
+            .animation(.easeInOut(duration: 0.15), value: isDropTarget)
         }
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.5)
@@ -346,9 +393,15 @@ struct FolderRow: View {
 
 struct ChatRow: View {
     let conversation: Conversation
+    var isDragging: Bool = false
 
     var body: some View {
         HStack {
+            // Drag handle indicator
+            Image(systemName: "line.3.horizontal")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(conversation.title)
                     .font(.subheadline)
@@ -362,6 +415,12 @@ struct ChatRow: View {
 
             Spacer()
 
+            if conversation.folderId != nil {
+                Image(systemName: "folder.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.yellow)
+            }
+
             Text(conversation.updatedAt.formatted(date: .abbreviated, time: .omitted))
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
@@ -369,6 +428,31 @@ struct ChatRow: View {
         .padding(.horizontal)
         .padding(.vertical, 8)
         .contentShape(Rectangle())
+        .opacity(isDragging ? 0.5 : 1.0)
+    }
+}
+
+// MARK: - Chat Drag Preview
+
+struct ChatDragPreview: View {
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "bubble.left.fill")
+                .foregroundStyle(.blue)
+
+            Text(title)
+                .font(.subheadline)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+        )
     }
 }
 

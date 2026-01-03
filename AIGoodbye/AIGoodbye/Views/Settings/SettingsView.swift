@@ -133,11 +133,15 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            HStack {
-                Text("Active Model")
-                Spacer()
-                Text("Llama 3.2 3B")
-                    .foregroundStyle(.secondary)
+            NavigationLink {
+                ModelsSettingsView()
+            } label: {
+                HStack {
+                    Text("AI Models")
+                    Spacer()
+                    Text(ModelManager.shared.currentModel.name)
+                        .foregroundStyle(.secondary)
+                }
             }
         } header: {
             Label("AI Configuration", systemImage: "brain")

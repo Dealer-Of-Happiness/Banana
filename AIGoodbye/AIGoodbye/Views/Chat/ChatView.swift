@@ -13,19 +13,25 @@ import UIKit
 struct ChatView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = ChatViewModel()
+    @StateObject private var voiceService = VoiceAIService.shared
     @FocusState private var isInputFocused: Bool
     @State private var showVoiceInput = false
     @State private var showAttachmentOptions = false
     @State private var showDocumentPicker = false
     @State private var showImagePicker = false
     @State private var showCamera = false
+    @State private var showModelSelection = false
     @State private var selectedPhoto: PhotosPickerItem?
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Chat messages
-                messagesScrollView
+                // Show model picker or empty state when no messages
+                if viewModel.messages.isEmpty {
+                    emptyStateView
+                } else {
+                    messagesScrollView
+                }
 
                 Divider()
 
@@ -43,21 +49,37 @@ struct ChatView: View {
                     }
                 }
 
+                ToolbarItem(placement: .principal) {
+                    QuickModelPicker()
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button {
-                            viewModel.regenerateLastResponse()
-                        } label: {
-                            Label("Regenerate", systemImage: "arrow.clockwise")
+                    HStack(spacing: 12) {
+                        // Voice AI toggle
+                        if voiceService.isSpeaking {
+                            Button {
+                                voiceService.stop()
+                            } label: {
+                                Image(systemName: "speaker.slash.fill")
+                                    .foregroundStyle(.red)
+                            }
                         }
 
-                        Button(role: .destructive) {
-                            viewModel.clearConversation()
+                        Menu {
+                            Button {
+                                viewModel.regenerateLastResponse()
+                            } label: {
+                                Label("Regenerate", systemImage: "arrow.clockwise")
+                            }
+
+                            Button(role: .destructive) {
+                                viewModel.clearConversation()
+                            } label: {
+                                Label("Clear Chat", systemImage: "trash")
+                            }
                         } label: {
-                            Label("Clear Chat", systemImage: "trash")
+                            Image(systemName: "ellipsis.circle")
                         }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
                     }
                 }
             }
@@ -122,6 +144,12 @@ struct ChatView: View {
 
                                 if message.role == .assistant {
                                     Button {
+                                        VoiceAIService.shared.speak(message.content)
+                                    } label: {
+                                        Label("Read Aloud", systemImage: "speaker.wave.2")
+                                    }
+
+                                    Button {
                                         viewModel.regenerateResponse(for: message)
                                     } label: {
                                         Label("Regenerate", systemImage: "arrow.clockwise")
@@ -142,6 +170,55 @@ struct ChatView: View {
                     proxy.scrollTo(viewModel.messages.last?.id.uuidString ?? "typing", anchor: .bottom)
                 }
             }
+        }
+    }
+
+    // MARK: - Empty State View
+
+    private var emptyStateView: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                Spacer(minLength: 60)
+
+                // Logo
+                Image(systemName: "bubble.left.and.bubble.right.fill")
+                    .font(.system(size: 60))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.blue, .purple],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                Text("Start a Conversation")
+                    .font(.title2.bold())
+
+                Text("Ask me anything! I'm powered by \(ModelManager.shared.currentModel.name).")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+
+                // Quick suggestions
+                VStack(spacing: 12) {
+                    SuggestionButton(text: "Explain quantum computing simply") {
+                        viewModel.inputText = "Explain quantum computing simply"
+                    }
+
+                    SuggestionButton(text: "Help me write a professional email") {
+                        viewModel.inputText = "Help me write a professional email"
+                    }
+
+                    SuggestionButton(text: "What's a good recipe for dinner?") {
+                        viewModel.inputText = "What's a good recipe for dinner?"
+                    }
+                }
+                .padding(.top, 8)
+
+                Spacer()
+            }
+            .padding()
         }
     }
 
@@ -583,6 +660,27 @@ struct CameraView: UIViewControllerRepresentable {
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             dismiss()
         }
+    }
+}
+
+// MARK: - Suggestion Button
+
+struct SuggestionButton: View {
+    let text: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity)
+                .background(Color(.systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
     }
 }
 

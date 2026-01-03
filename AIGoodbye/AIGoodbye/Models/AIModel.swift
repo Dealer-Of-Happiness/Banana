@@ -144,7 +144,8 @@ extension AIModel {
     ]
 
     static var defaultModel: AIModel {
-        allModels.first { $0.id == "llama-3.2-1b" }!
+        // TinyLlama is smaller and more compatible
+        allModels.first { $0.id == "tinyllama" }!
     }
 
     static func model(withId id: String) -> AIModel? {

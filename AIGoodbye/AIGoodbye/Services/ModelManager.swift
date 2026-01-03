@@ -13,7 +13,7 @@ class ModelManager: ObservableObject {
     static let shared = ModelManager()
 
     @Published var downloadStates: [String: ModelDownloadState] = [:]
-    @Published var currentModelId: String = "llama-3.2-1b"
+    @Published var currentModelId: String = "tinyllama"
     @Published var downloadProgress: Double = 0
     @Published var isDownloading = false
     @Published var downloadingModelId: String?
@@ -185,6 +185,22 @@ class ModelManager: ObservableObject {
                 selectModel(defaultModel)
             }
         }
+    }
+
+    // Delete all downloaded models
+    func clearAllModels() {
+        for model in AIModel.allModels {
+            let path = modelPath(for: model)
+            try? FileManager.default.removeItem(at: path)
+            downloadStates[model.id] = .notDownloaded
+        }
+    }
+
+    // Force delete a specific model file (even if it appears valid)
+    func forceDeleteModel(_ model: AIModel) {
+        let path = modelPath(for: model)
+        try? FileManager.default.removeItem(at: path)
+        downloadStates[model.id] = .notDownloaded
     }
 
     // MARK: - Select Model

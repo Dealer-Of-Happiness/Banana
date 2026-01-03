@@ -44,31 +44,60 @@ actor LlamaService {
         bot = nil
         currentModelId = nil
 
-        // Get model path
+        // Try to load the model, with fallback to TinyLlama if main model fails
+        var modelsToTry = [model]
+        if let tinyLlama = AIModel.allModels.first(where: { $0.id == "tinyllama" }), model.id != "tinyllama" {
+            modelsToTry.append(tinyLlama)
+        }
+
+        var lastError: Error?
+        for modelToTry in modelsToTry {
+            do {
+                try await loadModelInternal(modelToTry)
+                return // Success!
+            } catch {
+                lastError = error
+                // Try next model
+                continue
+            }
+        }
+
+        // All models failed
+        if let error = lastError {
+            throw error
+        }
+    }
+
+    private func loadModelInternal(_ model: AIModel) async throws {
+        let manager = await getModelManager()
         let modelURL = await manager.modelPath(for: model)
         let fileManager = FileManager.default
 
-        // Check if model is downloaded and valid
-        var needsDownload = false
+        // Always delete existing file if we're retrying after a failure
+        // Check UserDefaults for last failed model
+        let lastFailedKey = "lastFailedModelId"
+        if UserDefaults.standard.string(forKey: lastFailedKey) == model.id {
+            // This model failed before, delete and redownload
+            try? fileManager.removeItem(at: modelURL)
+            UserDefaults.standard.removeObject(forKey: lastFailedKey)
+        }
 
-        if fileManager.fileExists(atPath: modelURL.path) {
+        // Check if model is downloaded and valid
+        var needsDownload = !fileManager.fileExists(atPath: modelURL.path)
+
+        if !needsDownload {
             // Check file size - if too small, the download was incomplete
             if let attributes = try? fileManager.attributesOfItem(atPath: modelURL.path),
                let fileSize = attributes[.size] as? Int64 {
-                // Minimum expected size is about 50% of stated size (to account for compression)
                 let minimumSize = model.sizeBytes / 2
                 if fileSize < minimumSize {
-                    // File is too small, likely corrupted or incomplete
                     try? fileManager.removeItem(at: modelURL)
                     needsDownload = true
                 }
             }
-        } else {
-            needsDownload = true
         }
 
         if needsDownload {
-            // Download the model
             try await downloadModel(model)
         }
 
@@ -82,10 +111,11 @@ actor LlamaService {
 
         // Try to load the model
         guard let llm = LLM(from: modelURL, template: template) else {
-            // Model failed to load - file may be corrupted
-            // Delete and ask user to retry
+            // Mark this model as failed so we delete it next time
+            UserDefaults.standard.set(model.id, forKey: lastFailedKey)
+            // Delete the file
             try? fileManager.removeItem(at: modelURL)
-            throw LlamaError.modelLoadFailed("Model file may be corrupted. Please restart the app to re-download.")
+            throw LlamaError.modelLoadFailed("Model failed to initialize. File deleted - restart app to re-download.")
         }
 
         bot = llm

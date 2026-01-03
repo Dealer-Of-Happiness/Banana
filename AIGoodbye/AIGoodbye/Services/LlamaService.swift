@@ -138,20 +138,22 @@ actor LlamaService {
                     // Clear previous history
                     bot.history.removeAll()
 
-                    // Build context with history
-                    var contextPrompt = "You are AI goodbye, a helpful and friendly assistant. Be concise and helpful.\n\n"
+                    // Build a simple prompt without role labels
+                    var contextPrompt = ""
 
-                    // Add recent history
-                    for message in history.suffix(4) {
-                        if message.role == "user" {
-                            contextPrompt += "User: \(message.content)\n"
-                        } else if message.role == "assistant" {
-                            contextPrompt += "Assistant: \(message.content)\n"
+                    // Add minimal context
+                    if !history.isEmpty {
+                        for message in history.suffix(2) {
+                            if message.role == "user" {
+                                contextPrompt += "Q: \(message.content)\n"
+                            } else if message.role == "assistant" {
+                                contextPrompt += "A: \(message.content)\n"
+                            }
                         }
                     }
 
-                    // Add current prompt
-                    contextPrompt += "User: \(prompt)\nAssistant:"
+                    // Add current question
+                    contextPrompt += "Q: \(prompt)\nA:"
 
                     // Generate response
                     await bot.respond(to: contextPrompt)
@@ -159,17 +161,8 @@ actor LlamaService {
                     // Get the response from bot's output
                     var response = bot.output
 
-                    // Clean up the response
-                    response = response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-
-                    // Remove any stop tokens that might appear
-                    if let range = response.range(of: "<|") {
-                        response = String(response[..<range.lowerBound])
-                    }
-                    if let range = response.range(of: "User:") {
-                        response = String(response[..<range.lowerBound])
-                    }
-                    response = response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+                    // Aggressive cleanup of response
+                    response = self.cleanResponse(response)
 
                     // Return the response
                     if response.isEmpty || response == "..." || response.count < 2 {
@@ -183,6 +176,70 @@ actor LlamaService {
                 }
             }
         }
+    }
+
+    private func cleanResponse(_ response: String) -> String {
+        var cleaned = response
+
+        // Remove common artifacts from the response
+        let patternsToRemove = [
+            "assistant", "Assistant:", "Assistant",
+            "user", "User:", "User",
+            "Q:", "A:",
+            "<|", "|>",
+            "Human:", "AI:",
+            "###", "```",
+            "[INST]", "[/INST]",
+            "<<SYS>>", "<</SYS>>"
+        ]
+
+        for pattern in patternsToRemove {
+            cleaned = cleaned.replacingOccurrences(of: pattern, with: "")
+        }
+
+        // Remove lines that are just role labels
+        let lines = cleaned.components(separatedBy: "\n")
+        var cleanedLines: [String] = []
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            // Skip empty lines or lines that look like role markers
+            if trimmed.isEmpty { continue }
+            if trimmed.lowercased() == "assistant" { continue }
+            if trimmed.lowercased() == "user" { continue }
+            if trimmed.hasPrefix("Q:") || trimmed.hasPrefix("A:") { continue }
+
+            cleanedLines.append(line)
+        }
+
+        cleaned = cleanedLines.joined(separator: "\n")
+
+        // Final trim
+        cleaned = cleaned.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+
+        // If response is repeating, take only the first unique part
+        if let firstOccurrence = findRepeatingPattern(in: cleaned) {
+            cleaned = firstOccurrence
+        }
+
+        return cleaned
+    }
+
+    private func findRepeatingPattern(in text: String) -> String? {
+        let words = text.components(separatedBy: .whitespaces)
+        guard words.count > 10 else { return nil }
+
+        // Look for repetition by finding duplicate phrases
+        let halfLength = words.count / 2
+        let firstHalf = words.prefix(halfLength).joined(separator: " ")
+        let secondHalf = words.suffix(halfLength).joined(separator: " ")
+
+        // If first half appears in second half, likely repeating
+        if secondHalf.contains(firstHalf.prefix(50)) {
+            return firstHalf.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+        }
+
+        return nil
     }
 
     // Simple non-streaming response

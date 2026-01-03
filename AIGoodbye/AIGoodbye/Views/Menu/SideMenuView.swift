@@ -23,6 +23,8 @@ struct SideMenuView: View {
     @State private var conversationToMove: Conversation?
     @State private var showDeleteConfirmation = false
     @State private var conversationToDelete: Conversation?
+    @State private var showFolderContents = false
+    @State private var folderToView: Folder?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -100,6 +102,29 @@ struct SideMenuView: View {
             }
         } message: {
             Text("This conversation will be permanently deleted.")
+        }
+        .sheet(isPresented: $showFolderContents) {
+            if let folder = folderToView {
+                FolderContentsView(
+                    folder: folder,
+                    conversations: appState.conversationManager.conversations.filter { $0.folderId == folder.id },
+                    onSelectChat: { chat in
+                        appState.currentConversation = chat
+                        showFolderContents = false
+                        appState.toggleSideMenu()
+                    },
+                    onRemoveFromFolder: { chat in
+                        appState.conversationManager.moveConversation(chat, to: nil)
+                        appState.objectWillChange.send()
+                    },
+                    onDeleteChat: { chat in
+                        appState.conversationManager.deleteConversation(chat)
+                        if appState.currentConversation?.id == chat.id {
+                            appState.currentConversation = nil
+                        }
+                    }
+                )
+            }
         }
     }
 
@@ -184,8 +209,10 @@ struct SideMenuView: View {
                     FolderRow(
                         folder: folder,
                         isDropTarget: targetedFolderId == folder.id,
+                        chatCount: appState.conversationManager.conversations.filter { $0.folderId == folder.id }.count,
                         onTap: {
-                            selectedFolder = folder
+                            folderToView = folder
+                            showFolderContents = true
                         },
                         onLongPress: {
                             selectedFolder = folder
@@ -320,6 +347,7 @@ struct SideMenuView: View {
 struct FolderRow: View {
     let folder: Folder
     var isDropTarget: Bool = false
+    var chatCount: Int = 0
     let onTap: () -> Void
     let onLongPress: () -> Void
 
@@ -333,6 +361,16 @@ struct FolderRow: View {
 
                 Text(folder.name)
                     .foregroundStyle(.primary)
+
+                if chatCount > 0 {
+                    Text("\(chatCount)")
+                        .font(.caption2)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.blue)
+                        .clipShape(Capsule())
+                }
 
                 Spacer()
 
@@ -473,6 +511,101 @@ struct MoveToFolderSheet: View {
             }
         }
         .presentationDetents([.medium])
+    }
+}
+
+// MARK: - Folder Contents View
+
+struct FolderContentsView: View {
+    let folder: Folder
+    let conversations: [Conversation]
+    let onSelectChat: (Conversation) -> Void
+    let onRemoveFromFolder: (Conversation) -> Void
+    let onDeleteChat: (Conversation) -> Void
+
+    @State private var showDeleteAlert = false
+    @State private var chatToDelete: Conversation?
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if conversations.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "folder")
+                            .font(.system(size: 40))
+                            .foregroundStyle(.secondary)
+                        Text("This folder is empty")
+                            .foregroundStyle(.secondary)
+                        Text("Drag chats here or use the context menu to move them")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+                    .listRowBackground(Color.clear)
+                } else {
+                    ForEach(conversations) { chat in
+                        Button {
+                            onSelectChat(chat)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(chat.title)
+                                    .font(.body)
+                                    .foregroundStyle(.primary)
+
+                                Text(chat.previewText)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+
+                                Text(chat.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .contextMenu {
+                            Button {
+                                onRemoveFromFolder(chat)
+                            } label: {
+                                Label("Remove from Folder", systemImage: "folder.badge.minus")
+                            }
+
+                            Button(role: .destructive) {
+                                chatToDelete = chat
+                                showDeleteAlert = true
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle(folder.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+            .alert("Delete Conversation?", isPresented: $showDeleteAlert) {
+                Button("Cancel", role: .cancel) {
+                    chatToDelete = nil
+                }
+                Button("Delete", role: .destructive) {
+                    if let chat = chatToDelete {
+                        onDeleteChat(chat)
+                    }
+                    chatToDelete = nil
+                }
+            } message: {
+                Text("This conversation will be permanently deleted.")
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }
 

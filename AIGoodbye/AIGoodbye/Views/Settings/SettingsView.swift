@@ -8,15 +8,16 @@
 import SwiftUI
 import Combine
 import StoreKit
+import AVFAudio
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = SettingsViewModel()
     @StateObject private var donationService = DonationService()
+    @StateObject private var voiceService = VoiceAIService.shared
     @State private var showClearCacheAlert = false
     @State private var showExportOptions = false
-    @State private var showICloudError = false
-    @State private var iCloudErrorMessage = ""
+    @State private var showDonationInfo = false
 
     var body: some View {
         Form {
@@ -26,11 +27,8 @@ struct SettingsView: View {
             // Cloud Connections
             cloudConnectionsSection
 
-            // Language
-            languageSection
-
-            // Voice & Sound
-            voiceSoundSection
+            // Voice AI
+            voiceAISection
 
             // Data & Privacy
             dataPrivacySection
@@ -57,10 +55,11 @@ struct SettingsView: View {
         .alert("Delete All Conversations?", isPresented: $showClearCacheAlert) {
             Button("Cancel", role: .cancel) {}
             Button("Delete All", role: .destructive) {
-                Task { await viewModel.clearCache() }
+                appState.conversationManager.clearAllData()
+                appState.currentConversation = nil
             }
         } message: {
-            Text("This will permanently delete all your chat history, including chats in locked folders. This action cannot be undone.")
+            Text("This will permanently delete all your chat history and folders. This action cannot be undone.")
         }
         .confirmationDialog("Export Format", isPresented: $showExportOptions) {
             ForEach(ExportFormat.allCases, id: \.self) { format in
@@ -70,21 +69,13 @@ struct SettingsView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
-        .alert("iCloud Not Available", isPresented: $showICloudError) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(iCloudErrorMessage)
-        }
         .sheet(isPresented: $donationService.showThankYou) {
             ThankYouView(isPresented: $donationService.showThankYou)
         }
-        .alert("Purchase Error", isPresented: .init(
-            get: { donationService.purchaseError != nil },
-            set: { if !$0 { donationService.purchaseError = nil } }
-        )) {
+        .alert("Donations Coming Soon", isPresented: $showDonationInfo) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text(donationService.purchaseError ?? "")
+            Text("In-app purchases will be available once the app is published on the App Store. Thank you for your interest in supporting AI goodbye!")
         }
     }
 
@@ -167,51 +158,64 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Language Section
+    // MARK: - Voice AI Section
 
-    private var languageSection: some View {
+    private var voiceAISection: some View {
         Section {
-            Picker("Input Language", selection: $viewModel.inputLanguage) {
-                ForEach(SupportedLanguage.allCases) { language in
-                    Text(language.displayName).tag(language)
+            Toggle("Enable Voice AI", isOn: $voiceService.isEnabled)
+                .onChange(of: voiceService.isEnabled) { _, _ in
+                    voiceService.savePreferences()
                 }
-            }
 
-            Picker("Output Language", selection: $viewModel.outputLanguage) {
-                ForEach(SupportedLanguage.allCases) { language in
-                    Text(language.displayName).tag(language)
+            if voiceService.isEnabled {
+                // Voice Selection
+                Picker("Voice", selection: Binding(
+                    get: { voiceService.availableVoices.first { $0.voice == voiceService.selectedVoice } ?? voiceService.availableVoices.first! },
+                    set: { voiceService.selectVoice($0) }
+                )) {
+                    ForEach(voiceService.availableVoices) { voice in
+                        HStack {
+                            Text(voice.name)
+                            if voice.quality == .enhanced {
+                                Text("Enhanced")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .tag(voice)
+                    }
+                }
+
+                // Speech Rate
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Speech Rate")
+                        Spacer()
+                        Text(String(format: "%.1fx", voiceService.speechRate))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Slider(value: $voiceService.speechRate, in: 0.3...1.0, step: 0.1)
+                        .tint(.blue)
+                        .onChange(of: voiceService.speechRate) { _, _ in
+                            voiceService.savePreferences()
+                        }
+                }
+
+                // Test Voice
+                Button {
+                    voiceService.speak("Hello! I'm AI goodbye, your personal AI assistant.")
+                } label: {
+                    HStack {
+                        Image(systemName: voiceService.isSpeaking ? "stop.fill" : "play.fill")
+                        Text(voiceService.isSpeaking ? "Stop" : "Test Voice")
+                    }
                 }
             }
         } header: {
-            Label("Language", systemImage: "globe")
-        }
-    }
-
-    // MARK: - Voice & Sound Section
-
-    private var voiceSoundSection: some View {
-        Section {
-            Toggle("Haptic Feedback", isOn: $viewModel.hapticFeedback)
-
-            Picker("Voice Input Mode", selection: $viewModel.voiceInputMode) {
-                ForEach(VoiceInputMode.allCases, id: \.self) { mode in
-                    Text(mode.displayName).tag(mode)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Speech Rate")
-                    Spacer()
-                    Text(String(format: "%.1fx", viewModel.speechRate))
-                        .foregroundStyle(.secondary)
-                }
-
-                Slider(value: $viewModel.speechRate, in: 0.5...2.0, step: 0.1)
-                    .tint(.blue)
-            }
-        } header: {
-            Label("Voice & Sound", systemImage: "speaker.wave.2")
+            Label("Voice AI", systemImage: "speaker.wave.2")
+        } footer: {
+            Text("Long-press any AI response to have it read aloud.")
         }
     }
 
@@ -219,33 +223,15 @@ struct SettingsView: View {
 
     private var dataPrivacySection: some View {
         Section {
-            Toggle("iCloud Sync", isOn: $viewModel.iCloudSync)
-                .onChange(of: viewModel.iCloudSync) { _, newValue in
-                    if newValue {
-                        Task {
-                            await checkICloudAvailability()
-                        }
-                    }
-                }
-
             Button("Export All Conversations") {
                 showExportOptions = true
             }
 
-            Button("Clear Cache (Delete All Chats)", role: .destructive) {
+            Button("Delete All Chats", role: .destructive) {
                 showClearCacheAlert = true
             }
         } header: {
             Label("Data & Privacy", systemImage: "lock.shield")
-        }
-    }
-
-    private func checkICloudAvailability() async {
-        // iCloud sync is not yet implemented - show message
-        await MainActor.run {
-            viewModel.iCloudSync = false
-            iCloudErrorMessage = "iCloud sync is coming soon in a future update."
-            showICloudError = true
         }
     }
 
@@ -254,15 +240,48 @@ struct SettingsView: View {
     private var supportSection: some View {
         Section {
             ForEach(DonationTier.allCases) { tier in
-                DonationRow(
-                    tier: tier,
-                    product: donationService.products.first { $0.id == tier.rawValue },
-                    isLoading: donationService.purchaseInProgress
-                ) {
-                    Task {
-                        await donationService.purchase(tier)
+                Button {
+                    if donationService.products.isEmpty {
+                        showDonationInfo = true
+                    } else {
+                        Task {
+                            await donationService.purchase(tier)
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text(tier.emoji)
+                            .font(.title2)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(tier.displayName)
+                                .font(.body)
+
+                            if let product = donationService.products.first(where: { $0.id == tier.rawValue }) {
+                                Text(product.displayPrice)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text(tier.price)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        Spacer()
+
+                        if donationService.purchaseInProgress {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                 }
+                .foregroundStyle(.primary)
+                .disabled(donationService.purchaseInProgress)
             }
         } header: {
             Label("Support AI goodbye", systemImage: "heart.fill")
@@ -326,7 +345,6 @@ struct CloudConnectionRow: View {
     let provider: CloudAIProvider
     @Binding var isEnabled: Bool
     @Binding var apiKey: String
-    @State private var showApiKeyField = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -350,52 +368,6 @@ struct CloudConnectionRow: View {
     }
 }
 
-// MARK: - Donation Row
-
-struct DonationRow: View {
-    let tier: DonationTier
-    let product: Product?
-    let isLoading: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Text(tier.emoji)
-                    .font(.title2)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(tier.displayName)
-                        .font(.body)
-
-                    if let product = product {
-                        Text(product.displayPrice)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text(tier.price)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Spacer()
-
-                if isLoading {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                } else {
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-            }
-        }
-        .foregroundStyle(.primary)
-        .disabled(isLoading)
-    }
-}
-
 // MARK: - Settings View Model
 
 @MainActor
@@ -412,32 +384,12 @@ class SettingsViewModel: ObservableObject {
     @Published var googleEnabled = false
     @Published var googleApiKey = ""
 
-    // Language
-    @Published var inputLanguage: SupportedLanguage = .english
-    @Published var outputLanguage: SupportedLanguage = .english
-
-    // Voice & Sound
-    @Published var hapticFeedback = true
-    @Published var voiceInputMode: VoiceInputMode = .pushToTalk
-    @Published var speechRate: Double = 1.0
-
-    // Data & Privacy
-    @Published var iCloudSync = false
-
     // Watch
     @Published var watchAppStatus = "Not Connected"
 
     func loadSettings(from settings: SettingsManager) {
         temperature = settings.temperature
         contextWindow = Double(settings.contextWindow)
-        hapticFeedback = settings.hapticFeedbackEnabled
-        iCloudSync = settings.iCloudSyncEnabled
-        inputLanguage = settings.inputLanguage
-        outputLanguage = settings.outputLanguage
-    }
-
-    func clearCache() async {
-        // Clear all conversations and cached data
     }
 
     func exportConversations(format: ExportFormat) async {
@@ -600,7 +552,6 @@ struct PrivacyPolicyView: View {
                 - Documents are stored locally and encrypted
                 - Conversations stay on your device
                 - Personal knowledge base access is optional and revocable
-                - iCloud sync is optional and encrypted
 
                 **Cloud Services**
                 When you enable cloud AI (ChatGPT, Claude, Google), your queries are sent to those services. You use your own API keys and are subject to their privacy policies.

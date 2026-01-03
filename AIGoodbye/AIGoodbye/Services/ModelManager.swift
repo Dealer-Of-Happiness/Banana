@@ -46,7 +46,20 @@ class ModelManager: ObservableObject {
     }
 
     func isModelDownloaded(_ model: AIModel) -> Bool {
-        FileManager.default.fileExists(atPath: modelPath(for: model).path)
+        let path = modelPath(for: model)
+        guard FileManager.default.fileExists(atPath: path.path) else {
+            return false
+        }
+
+        // Also check file size to detect incomplete downloads
+        if let attributes = try? FileManager.default.attributesOfItem(atPath: path.path),
+           let fileSize = attributes[.size] as? Int64 {
+            // File should be at least 50% of expected size
+            let minimumSize = model.sizeBytes / 2
+            return fileSize >= minimumSize
+        }
+
+        return false
     }
 
     // MARK: - Refresh States

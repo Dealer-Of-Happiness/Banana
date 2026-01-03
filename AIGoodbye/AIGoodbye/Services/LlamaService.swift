@@ -44,24 +44,48 @@ actor LlamaService {
         bot = nil
         currentModelId = nil
 
-        // Check if model is downloaded
-        let isDownloaded = await manager.isModelDownloaded(model)
-        if !isDownloaded {
-            // Download the default model
+        // Get model path
+        let modelURL = await manager.modelPath(for: model)
+        let fileManager = FileManager.default
+
+        // Check if model is downloaded and valid
+        var needsDownload = false
+
+        if fileManager.fileExists(atPath: modelURL.path) {
+            // Check file size - if too small, the download was incomplete
+            if let attributes = try? fileManager.attributesOfItem(atPath: modelURL.path),
+               let fileSize = attributes[.size] as? Int64 {
+                // Minimum expected size is about 50% of stated size (to account for compression)
+                let minimumSize = model.sizeBytes / 2
+                if fileSize < minimumSize {
+                    // File is too small, likely corrupted or incomplete
+                    try? fileManager.removeItem(at: modelURL)
+                    needsDownload = true
+                }
+            }
+        } else {
+            needsDownload = true
+        }
+
+        if needsDownload {
+            // Download the model
             try await downloadModel(model)
         }
 
-        // Get model path and load
-        let modelURL = await manager.modelPath(for: model)
+        // Get template for the model
         let template = templateForModel(model)
 
-        // Verify file exists
-        guard FileManager.default.fileExists(atPath: modelURL.path) else {
+        // Verify file exists after potential download
+        guard fileManager.fileExists(atPath: modelURL.path) else {
             throw LlamaError.modelNotFound
         }
 
+        // Try to load the model
         guard let llm = LLM(from: modelURL, template: template) else {
-            throw LlamaError.modelLoadFailed("Failed to initialize LLM from: \(modelURL.path)")
+            // Model failed to load - file may be corrupted
+            // Delete and ask user to retry
+            try? fileManager.removeItem(at: modelURL)
+            throw LlamaError.modelLoadFailed("Model file may be corrupted. Please restart the app to re-download.")
         }
 
         bot = llm
@@ -76,14 +100,26 @@ actor LlamaService {
         let manager = await getModelManager()
         let modelURL = await manager.modelPath(for: model)
         let template = templateForModel(model)
+        let fileManager = FileManager.default
 
-        // Verify file exists
-        guard FileManager.default.fileExists(atPath: modelURL.path) else {
+        // Verify file exists and has valid size
+        guard fileManager.fileExists(atPath: modelURL.path) else {
             throw LlamaError.modelNotFound
         }
 
+        // Check file size
+        if let attributes = try? fileManager.attributesOfItem(atPath: modelURL.path),
+           let fileSize = attributes[.size] as? Int64 {
+            let minimumSize = model.sizeBytes / 2
+            if fileSize < minimumSize {
+                try? fileManager.removeItem(at: modelURL)
+                throw LlamaError.modelLoadFailed("Model file is incomplete. Please download again.")
+            }
+        }
+
         guard let llm = LLM(from: modelURL, template: template) else {
-            throw LlamaError.modelLoadFailed("Failed to initialize LLM from: \(modelURL.path)")
+            try? fileManager.removeItem(at: modelURL)
+            throw LlamaError.modelLoadFailed("Model file may be corrupted. Please download again.")
         }
 
         bot = llm

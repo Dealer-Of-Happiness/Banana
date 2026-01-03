@@ -83,15 +83,17 @@ actor LlamaService {
     private func templateForModel(_ model: AIModel) -> Template {
         switch model.templateType {
         case .llama3:
-            return .llama3
+            // Use chatML as fallback for llama3
+            return .chatML()
         case .gemma:
             return .gemma
         case .phi:
-            return .phi
+            // Use chatML as fallback for phi
+            return .chatML()
         case .chatml:
             return .chatML()
         case .alpaca:
-            return .alpaca
+            return .alpaca()
         }
     }
 
@@ -133,43 +135,41 @@ actor LlamaService {
                         throw LlamaError.modelNotLoaded
                     }
 
-                    // Clear previous history and set fresh context
+                    // Clear previous history
                     bot.history.removeAll()
 
-                    // Set system prompt
-                    bot.setSystemPrompt("You are AI goodbye, a helpful and friendly assistant. Be concise and helpful.")
+                    // Build context with history
+                    var contextPrompt = "You are AI goodbye, a helpful and friendly assistant. Be concise and helpful.\n\n"
 
-                    // Add history to bot's chat context
+                    // Add recent history
                     for message in history.suffix(4) {
                         if message.role == "user" {
-                            bot.history.append(.user(message.content))
+                            contextPrompt += "User: \(message.content)\n"
                         } else if message.role == "assistant" {
-                            bot.history.append(.bot(message.content))
+                            contextPrompt += "Assistant: \(message.content)\n"
                         }
                     }
 
-                    // Generate response using the library's respond method
-                    await bot.respond(to: prompt)
+                    // Add current prompt
+                    contextPrompt += "User: \(prompt)\nAssistant:"
 
-                    // Get the latest bot response from history
-                    var response = ""
-                    if let lastMessage = bot.history.last {
-                        switch lastMessage {
-                        case .bot(let text):
-                            response = text
-                        default:
-                            break
-                        }
-                    }
+                    // Generate response
+                    await bot.respond(to: contextPrompt)
+
+                    // Get the response from bot's output
+                    var response = bot.output
 
                     // Clean up the response
-                    response = response.trimmingCharacters(in: .whitespacesAndNewlines)
+                    response = response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 
                     // Remove any stop tokens that might appear
                     if let range = response.range(of: "<|") {
                         response = String(response[..<range.lowerBound])
                     }
-                    response = response.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if let range = response.range(of: "User:") {
+                        response = String(response[..<range.lowerBound])
+                    }
+                    response = response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 
                     // Return the response
                     if response.isEmpty || response == "..." || response.count < 2 {
@@ -192,20 +192,18 @@ actor LlamaService {
         }
 
         bot.history.removeAll()
-        bot.setSystemPrompt("You are AI goodbye, a helpful and friendly assistant. Be concise.")
 
-        await bot.respond(to: prompt)
+        let contextPrompt = "You are AI goodbye, a helpful assistant. Be concise.\n\nUser: \(prompt)\nAssistant:"
+        await bot.respond(to: contextPrompt)
 
-        if let lastMessage = bot.history.last {
-            switch lastMessage {
-            case .bot(let text):
-                return text.trimmingCharacters(in: .whitespacesAndNewlines)
-            default:
-                break
-            }
+        var response = bot.output
+        response = response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+
+        if let range = response.range(of: "User:") {
+            response = String(response[..<range.lowerBound])
         }
 
-        return ""
+        return response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }
 
     // MARK: - Vision Analysis

@@ -345,9 +345,9 @@ class VoiceRecorder: ObservableObject {
         stopRecording()
 
         do {
-            // Configure audio session
+            // Configure audio session on main thread
             let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
+            try audioSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
             try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
             audioEngine = AVAudioEngine()
@@ -374,26 +374,29 @@ class VoiceRecorder: ObservableObject {
             }
 
             recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { [weak self] result, error in
+                guard let self = self else { return }
+
                 if let result = result {
-                    DispatchQueue.main.async {
-                        self?.transcribedText = result.bestTranscription.formattedString
+                    Task { @MainActor in
+                        self.transcribedText = result.bestTranscription.formattedString
                     }
                 }
 
                 if let error = error {
-                    DispatchQueue.main.async {
-                        self?.errorMessage = "Recognition error: \(error.localizedDescription)"
-                        self?.stopRecording()
+                    Task { @MainActor in
+                        self.errorMessage = "Recognition error: \(error.localizedDescription)"
+                        self.stopRecording()
                     }
                 } else if result?.isFinal == true {
-                    DispatchQueue.main.async {
-                        self?.stopRecording()
+                    Task { @MainActor in
+                        self.stopRecording()
                     }
                 }
             }
 
             inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { [weak self] buffer, _ in
-                self?.recognitionRequest?.append(buffer)
+                guard let self = self else { return }
+                self.recognitionRequest?.append(buffer)
 
                 // Calculate audio level for waveform
                 guard let channelData = buffer.floatChannelData?[0] else { return }
@@ -406,8 +409,8 @@ class VoiceRecorder: ObservableObject {
                 }
                 let average = sum / Float(frameLength)
 
-                DispatchQueue.main.async {
-                    self?.audioLevel = CGFloat(min(1, average * 10))
+                Task { @MainActor in
+                    self.audioLevel = CGFloat(min(1, average * 10))
                 }
             }
 
@@ -420,9 +423,9 @@ class VoiceRecorder: ObservableObject {
     }
 
     func stopRecording() {
-        // Safely stop the audio engine
-        if audioEngine?.isRunning == true {
-            audioEngine?.stop()
+        // Remove tap first (must be done before stopping engine)
+        if let inputNode = audioEngine?.inputNode {
+            inputNode.removeTap(onBus: 0)
         }
 
         // End the recognition request
@@ -431,17 +434,13 @@ class VoiceRecorder: ObservableObject {
         // Cancel any ongoing recognition task
         recognitionTask?.cancel()
 
-        // Remove the tap from input node
-        if let inputNode = audioEngine?.inputNode {
-            inputNode.removeTap(onBus: 0)
+        // Safely stop the audio engine
+        if audioEngine?.isRunning == true {
+            audioEngine?.stop()
         }
 
-        // Deactivate audio session
-        do {
-            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        } catch {
-            // Ignore errors when deactivating
-        }
+        // Deactivate audio session (ignore errors)
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
 
         // Clear references
         audioEngine = nil

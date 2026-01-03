@@ -56,9 +56,18 @@ class VoiceAIService: NSObject, ObservableObject {
     private func loadAvailableVoices() {
         let voices = AVSpeechSynthesisVoice.speechVoices()
 
-        // Filter for English voices and sort by quality
+        // Filter for English voices, remove duplicates by name, and sort by quality
+        var seenNames: Set<String> = []
         availableVoices = voices
             .filter { $0.language.starts(with: "en") }
+            .filter { voice in
+                // Only keep first occurrence of each voice name
+                if seenNames.contains(voice.name) {
+                    return false
+                }
+                seenNames.insert(voice.name)
+                return true
+            }
             .map { voice in
                 let quality: VoiceOption.Quality = voice.quality == .enhanced ? .enhanced : .standard
                 return VoiceOption(

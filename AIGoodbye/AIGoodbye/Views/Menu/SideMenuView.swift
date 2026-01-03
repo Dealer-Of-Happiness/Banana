@@ -15,16 +15,13 @@ struct SideMenuView: View {
     @State private var newFolderName = ""
     @State private var selectedFolder: Folder?
     @State private var showFolderOptions = false
-    @State private var showPasswordPrompt = false
-    @State private var passwordInput = ""
-    @State private var folderToUnlock: Folder?
     @State private var showSettings = false
-    @State private var showSetPasswordSheet = false
-    @State private var folderToLock: Folder?
-    @State private var showRemoveLockPrompt = false
-    @State private var folderToRemoveLock: Folder?
     @State private var draggedConversation: Conversation?
     @State private var targetedFolderId: UUID?
+    @State private var showMoveToFolder = false
+    @State private var conversationToMove: Conversation?
+    @State private var showDeleteConfirmation = false
+    @State private var conversationToDelete: Conversation?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -63,60 +60,45 @@ struct SideMenuView: View {
                 createFolder()
             }
         }
-        .sheet(isPresented: $showPasswordPrompt) {
-            PasswordPromptView(
-                folder: folderToUnlock,
-                onSuccess: {
-                    // Folder unlocked, show contents
-                    showPasswordPrompt = false
-                },
-                onCancel: {
-                    showPasswordPrompt = false
-                    folderToUnlock = nil
-                }
-            )
-        }
         .sheet(isPresented: $showSettings) {
             NavigationStack {
                 SettingsView()
                     .environmentObject(appState)
             }
         }
-        .sheet(isPresented: $showSetPasswordSheet) {
-            SetPasswordView(
-                folder: folderToLock,
-                onSuccess: { password in
-                    // Lock the folder with password
-                    if let folder = folderToLock {
-                        folder.isLocked = true
-                        folder.password = password
+        .sheet(isPresented: $showMoveToFolder) {
+            MoveToFolderSheet(
+                conversation: conversationToMove,
+                folders: appState.conversationManager.folders,
+                onMove: { folder in
+                    if let conversation = conversationToMove {
+                        appState.conversationManager.moveConversation(conversation, to: folder)
+                        appState.objectWillChange.send()
                     }
-                    showSetPasswordSheet = false
-                    folderToLock = nil
+                    showMoveToFolder = false
+                    conversationToMove = nil
                 },
                 onCancel: {
-                    showSetPasswordSheet = false
-                    folderToLock = nil
+                    showMoveToFolder = false
+                    conversationToMove = nil
                 }
             )
         }
-        .sheet(isPresented: $showRemoveLockPrompt) {
-            RemoveLockPromptView(
-                folder: folderToRemoveLock,
-                onSuccess: {
-                    // Remove the lock
-                    if let folder = folderToRemoveLock {
-                        folder.isLocked = false
-                        folder.password = nil
+        .alert("Delete Conversation?", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {
+                conversationToDelete = nil
+            }
+            Button("Delete", role: .destructive) {
+                if let conversation = conversationToDelete {
+                    appState.conversationManager.deleteConversation(conversation)
+                    if appState.currentConversation?.id == conversation.id {
+                        appState.currentConversation = nil
                     }
-                    showRemoveLockPrompt = false
-                    folderToRemoveLock = nil
-                },
-                onCancel: {
-                    showRemoveLockPrompt = false
-                    folderToRemoveLock = nil
                 }
-            )
+                conversationToDelete = nil
+            }
+        } message: {
+            Text("This conversation will be permanently deleted.")
         }
     }
 
@@ -200,14 +182,9 @@ struct SideMenuView: View {
                 ForEach(appState.conversationManager.folders) { folder in
                     FolderRow(
                         folder: folder,
-                        isDropTarget: targetedFolderId == folder.id && !folder.isLocked,
+                        isDropTarget: targetedFolderId == folder.id,
                         onTap: {
-                            if folder.isLocked {
-                                folderToUnlock = folder
-                                showPasswordPrompt = true
-                            } else {
-                                selectedFolder = folder
-                            }
+                            selectedFolder = folder
                         },
                         onLongPress: {
                             selectedFolder = folder
@@ -220,13 +197,9 @@ struct SideMenuView: View {
                             return false
                         }
 
-                        // Don't allow dropping into locked folders
-                        if folder.isLocked {
-                            return false
-                        }
-
                         // Move conversation to folder
                         appState.conversationManager.moveConversation(conversation, to: folder)
+                        appState.objectWillChange.send()
                         draggedConversation = nil
                         targetedFolderId = nil
                         return true
@@ -243,26 +216,6 @@ struct SideMenuView: View {
         .confirmationDialog("Folder Options", isPresented: $showFolderOptions, presenting: selectedFolder) { folder in
             Button("Rename") {
                 // TODO: Handle rename with alert
-            }
-
-            if folder.isLocked {
-                Button("Unlock") {
-                    folderToUnlock = folder
-                    showPasswordPrompt = true
-                }
-                Button("Remove Lock") {
-                    folderToRemoveLock = folder
-                    showRemoveLockPrompt = true
-                }
-                Button("Change Lock") {
-                    folderToLock = folder
-                    showSetPasswordSheet = true
-                }
-            } else {
-                Button("Lock") {
-                    folderToLock = folder
-                    showSetPasswordSheet = true
-                }
             }
 
             Button("Delete", role: .destructive) {
@@ -296,6 +249,32 @@ struct SideMenuView: View {
                                 .onTapGesture {
                                     appState.currentConversation = chat
                                     appState.toggleSideMenu()
+                                }
+                                .contextMenu {
+                                    Button {
+                                        conversationToMove = chat
+                                        showMoveToFolder = true
+                                    } label: {
+                                        Label("Move to Folder", systemImage: "folder")
+                                    }
+
+                                    if chat.folderId != nil {
+                                        Button {
+                                            appState.conversationManager.moveConversation(chat, to: nil)
+                                            appState.objectWillChange.send()
+                                        } label: {
+                                            Label("Remove from Folder", systemImage: "folder.badge.minus")
+                                        }
+                                    }
+
+                                    Divider()
+
+                                    Button(role: .destructive) {
+                                        conversationToDelete = chat
+                                        showDeleteConfirmation = true
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
                                 .draggable(chat.id.uuidString) {
                                     // Drag preview
@@ -353,12 +332,6 @@ struct FolderRow: View {
 
                 Text(folder.name)
                     .foregroundStyle(.primary)
-
-                if folder.isLocked {
-                    Image(systemName: "lock.fill")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
 
                 Spacer()
 
@@ -456,242 +429,41 @@ struct ChatDragPreview: View {
     }
 }
 
-// MARK: - Password Prompt View
+// MARK: - Move to Folder Sheet
 
-struct PasswordPromptView: View {
-    let folder: Folder?
-    let onSuccess: () -> Void
+struct MoveToFolderSheet: View {
+    let conversation: Conversation?
+    let folders: [Folder]
+    let onMove: (Folder?) -> Void
     let onCancel: () -> Void
-
-    @State private var password = ""
-    @State private var showError = false
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 50))
-                    .foregroundStyle(.blue)
-
-                Text("Enter Password")
-                    .font(.title2.bold())
-
-                if let folder = folder {
-                    Text("Unlock \"\(folder.name)\"")
+            List {
+                if folders.isEmpty {
+                    Text("No folders yet. Create a folder first.")
                         .foregroundStyle(.secondary)
-                }
-
-                SecureField("6-digit password", text: $password)
-                    .keyboardType(.numberPad)
-                    .textContentType(.password)
-                    .multilineTextAlignment(.center)
-                    .font(.title)
-                    .frame(width: 200)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .onChange(of: password) { _, newValue in
-                        let filtered = newValue.filter { $0.isNumber }
-                        if filtered.count > 6 {
-                            password = String(filtered.prefix(6))
-                        } else if filtered != newValue {
-                            password = filtered
-                        }
-                    }
-
-                if showError {
-                    Text("Incorrect password")
-                        .foregroundStyle(.red)
-                        .font(.caption)
-                }
-
-                Button("Unlock") {
-                    // Verify password against folder's stored password
-                    if password == folder?.password {
-                        onSuccess()
-                    } else {
-                        showError = true
-                        password = ""
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(password.count != 6)
-            }
-            .padding()
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
-}
-
-// MARK: - Set Password View
-
-struct SetPasswordView: View {
-    let folder: Folder?
-    let onSuccess: (String) -> Void
-    let onCancel: () -> Void
-
-    @State private var password = ""
-    @State private var confirmPassword = ""
-    @State private var showError = false
-    @State private var errorMessage = ""
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                Image(systemName: "lock.badge.plus")
-                    .font(.system(size: 50))
-                    .foregroundStyle(.blue)
-
-                Text("Set Password")
-                    .font(.title2.bold())
-
-                if let folder = folder {
-                    Text("Lock \"\(folder.name)\"")
-                        .foregroundStyle(.secondary)
-                }
-
-                VStack(spacing: 16) {
-                    SecureField("Enter 6-digit password", text: $password)
-                        .keyboardType(.numberPad)
-                        .textContentType(.newPassword)
-                        .multilineTextAlignment(.center)
-                        .font(.title3)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .onChange(of: password) { _, newValue in
-                            // Limit to 6 digits only
-                            let filtered = newValue.filter { $0.isNumber }
-                            if filtered.count > 6 {
-                                password = String(filtered.prefix(6))
-                            } else if filtered != newValue {
-                                password = filtered
+                } else {
+                    ForEach(folders) { folder in
+                        Button {
+                            onMove(folder)
+                        } label: {
+                            HStack {
+                                Image(systemName: "folder.fill")
+                                    .foregroundStyle(.yellow)
+                                Text(folder.name)
+                                Spacer()
+                                if conversation?.folderId == folder.id {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.blue)
+                                }
                             }
                         }
-
-                    SecureField("Confirm password", text: $confirmPassword)
-                        .keyboardType(.numberPad)
-                        .textContentType(.newPassword)
-                        .multilineTextAlignment(.center)
-                        .font(.title3)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .onChange(of: confirmPassword) { _, newValue in
-                            // Limit to 6 digits only
-                            let filtered = newValue.filter { $0.isNumber }
-                            if filtered.count > 6 {
-                                confirmPassword = String(filtered.prefix(6))
-                            } else if filtered != newValue {
-                                confirmPassword = filtered
-                            }
-                        }
-                }
-                .frame(width: 250)
-
-                if showError {
-                    Text(errorMessage)
-                        .foregroundStyle(.red)
-                        .font(.caption)
-                }
-
-                Button("Lock Folder") {
-                    if password.count != 6 {
-                        errorMessage = "Password must be exactly 6 digits"
-                        showError = true
-                    } else if password != confirmPassword {
-                        errorMessage = "Passwords don't match"
-                        showError = true
-                        confirmPassword = ""
-                    } else {
-                        onSuccess(password)
+                        .foregroundStyle(.primary)
                     }
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(password.count != 6 || confirmPassword.count != 6)
             }
-            .padding()
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
-}
-
-// MARK: - Remove Lock Prompt View
-
-struct RemoveLockPromptView: View {
-    let folder: Folder?
-    let onSuccess: () -> Void
-    let onCancel: () -> Void
-
-    @State private var password = ""
-    @State private var showError = false
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                Image(systemName: "lock.open.fill")
-                    .font(.system(size: 50))
-                    .foregroundStyle(.orange)
-
-                Text("Remove Lock")
-                    .font(.title2.bold())
-
-                if let folder = folder {
-                    Text("Enter password to remove lock from \"\(folder.name)\"")
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-
-                SecureField("6-digit password", text: $password)
-                    .keyboardType(.numberPad)
-                    .textContentType(.password)
-                    .multilineTextAlignment(.center)
-                    .font(.title)
-                    .frame(width: 200)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .onChange(of: password) { _, newValue in
-                        let filtered = newValue.filter { $0.isNumber }
-                        if filtered.count > 6 {
-                            password = String(filtered.prefix(6))
-                        } else if filtered != newValue {
-                            password = filtered
-                        }
-                    }
-
-                if showError {
-                    Text("Incorrect password")
-                        .foregroundStyle(.red)
-                        .font(.caption)
-                }
-
-                Button("Remove Lock") {
-                    // Verify password against folder's stored password
-                    if password == folder?.password {
-                        onSuccess()
-                    } else {
-                        showError = true
-                        password = ""
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.orange)
-                .disabled(password.count != 6)
-            }
-            .padding()
+            .navigationTitle("Move to Folder")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

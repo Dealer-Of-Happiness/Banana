@@ -7,9 +7,6 @@
 
 import SwiftUI
 import Combine
-import CloudKit
-import EventKit
-import HealthKit
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
@@ -18,8 +15,6 @@ struct SettingsView: View {
     @State private var showExportOptions = false
     @State private var showICloudError = false
     @State private var iCloudErrorMessage = ""
-    @State private var showPermissionDenied = false
-    @State private var permissionDeniedSource: KnowledgeBaseSource?
 
     var body: some View {
         Form {
@@ -35,14 +30,8 @@ struct SettingsView: View {
             // Voice & Sound
             voiceSoundSection
 
-            // Personal Knowledge Base
-            knowledgeBaseSection
-
             // Data & Privacy
             dataPrivacySection
-
-            // Support AI goodbye
-            supportSection
 
             // About
             aboutSection
@@ -80,20 +69,6 @@ struct SettingsView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(iCloudErrorMessage)
-        }
-        .alert("Permission Denied", isPresented: $showPermissionDenied) {
-            Button("Open Settings") {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            if let source = permissionDeniedSource {
-                Text("AI goodbye needs access to \(source.displayName). Please enable it in Settings.")
-            } else {
-                Text("Permission was denied. Please enable it in Settings.")
-            }
         }
     }
 
@@ -224,69 +199,6 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Knowledge Base Section
-
-    private var knowledgeBaseSection: some View {
-        Section {
-            ForEach(KnowledgeBaseSource.allCases) { source in
-                KnowledgeBaseRow(
-                    source: source,
-                    isEnabled: binding(for: source),
-                    permissionStatus: viewModel.permissionStatus(for: source),
-                    onToggle: { isEnabled in
-                        if isEnabled {
-                            Task {
-                                await requestPermission(for: source)
-                            }
-                        }
-                    }
-                )
-            }
-        } header: {
-            Label("Personal Knowledge Base", systemImage: "brain.head.profile")
-        } footer: {
-            Text("Allow AI goodbye to access your personal data to provide more relevant responses.")
-        }
-    }
-
-    private func binding(for source: KnowledgeBaseSource) -> Binding<Bool> {
-        switch source {
-        case .calendar: return $viewModel.calendarEnabled
-        case .health: return $viewModel.healthEnabled
-        case .fitness: return $viewModel.fitnessEnabled
-        case .reminders: return $viewModel.remindersEnabled
-        }
-    }
-
-    private func requestPermission(for source: KnowledgeBaseSource) async {
-        do {
-            let granted = try await appState.knowledgeBaseService.requestPermission(for: source)
-            if !granted {
-                await MainActor.run {
-                    // Turn off the toggle if permission not granted
-                    setToggle(for: source, to: false)
-                    permissionDeniedSource = source
-                    showPermissionDenied = true
-                }
-            }
-        } catch {
-            await MainActor.run {
-                setToggle(for: source, to: false)
-                permissionDeniedSource = source
-                showPermissionDenied = true
-            }
-        }
-    }
-
-    private func setToggle(for source: KnowledgeBaseSource, to value: Bool) {
-        switch source {
-        case .calendar: viewModel.calendarEnabled = value
-        case .health: viewModel.healthEnabled = value
-        case .fitness: viewModel.fitnessEnabled = value
-        case .reminders: viewModel.remindersEnabled = value
-        }
-    }
-
     // MARK: - Data & Privacy Section
 
     private var dataPrivacySection: some View {
@@ -318,22 +230,6 @@ struct SettingsView: View {
             viewModel.iCloudSync = false
             iCloudErrorMessage = "iCloud sync is coming soon in a future update."
             showICloudError = true
-        }
-    }
-
-    // MARK: - Support Section
-
-    private var supportSection: some View {
-        Section {
-            ForEach(DonationTier.allCases) { tier in
-                DonationRow(tier: tier) {
-                    Task { await viewModel.purchase(tier) }
-                }
-            }
-        } header: {
-            Label("Support AI goodbye", systemImage: "heart.fill")
-        } footer: {
-            Text("Your support helps us improve AI goodbye. All features remain free.")
         }
     }
 
@@ -416,94 +312,6 @@ struct CloudConnectionRow: View {
     }
 }
 
-// MARK: - Knowledge Base Row
-
-struct KnowledgeBaseRow: View {
-    let source: KnowledgeBaseSource
-    @Binding var isEnabled: Bool
-    let permissionStatus: String
-    var onToggle: ((Bool) -> Void)? = nil
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Toggle(isOn: $isEnabled) {
-                HStack {
-                    Image(systemName: source.iconName)
-                        .foregroundStyle(.blue)
-                        .frame(width: 24)
-                    Text(source.displayName)
-                }
-            }
-            .onChange(of: isEnabled) { _, newValue in
-                onToggle?(newValue)
-            }
-
-            HStack {
-                Text(source.description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                Text(permissionStatus)
-                    .font(.caption2)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(statusBackgroundColor)
-                    .foregroundStyle(statusTextColor)
-                    .clipShape(Capsule())
-            }
-        }
-    }
-
-    private var statusBackgroundColor: Color {
-        switch permissionStatus {
-        case "Granted": return Color.green.opacity(0.2)
-        case "Not Available": return Color.orange.opacity(0.2)
-        case "Denied": return Color.red.opacity(0.2)
-        default: return Color.gray.opacity(0.2)
-        }
-    }
-
-    private var statusTextColor: Color {
-        switch permissionStatus {
-        case "Granted": return .green
-        case "Not Available": return .orange
-        case "Denied": return .red
-        default: return .gray
-        }
-    }
-}
-
-// MARK: - Donation Row
-
-struct DonationRow: View {
-    let tier: DonationTier
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Text(tier.emoji)
-                    .font(.title2)
-
-                VStack(alignment: .leading) {
-                    Text(tier.displayName)
-                    Text(tier.price)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .foregroundStyle(.primary)
-    }
-}
-
 // MARK: - Settings View Model
 
 @MainActor
@@ -529,12 +337,6 @@ class SettingsViewModel: ObservableObject {
     @Published var voiceInputMode: VoiceInputMode = .pushToTalk
     @Published var speechRate: Double = 1.0
 
-    // Knowledge Base
-    @Published var calendarEnabled = false
-    @Published var healthEnabled = false
-    @Published var fitnessEnabled = false
-    @Published var remindersEnabled = false
-
     // Data & Privacy
     @Published var iCloudSync = false
 
@@ -550,38 +352,12 @@ class SettingsViewModel: ObservableObject {
         outputLanguage = settings.outputLanguage
     }
 
-    func permissionStatus(for source: KnowledgeBaseSource) -> String {
-        // Check actual permission status from the system
-        switch source {
-        case .calendar:
-            let status = EKEventStore.authorizationStatus(for: .event)
-            switch status {
-            case .fullAccess, .authorized: return "Granted"
-            case .denied, .restricted: return "Denied"
-            default: return "Not Set"
-            }
-        case .reminders:
-            let status = EKEventStore.authorizationStatus(for: .reminder)
-            switch status {
-            case .fullAccess, .authorized: return "Granted"
-            case .denied, .restricted: return "Denied"
-            default: return "Not Set"
-            }
-        case .health, .fitness:
-            return HKHealthStore.isHealthDataAvailable() ? (healthEnabled ? "Granted" : "Not Set") : "Not Available"
-        }
-    }
-
     func clearCache() async {
         // Clear all conversations and cached data
     }
 
     func exportConversations(format: ExportFormat) async {
         // Export conversations in selected format
-    }
-
-    func purchase(_ tier: DonationTier) async {
-        // Handle In-App Purchase
     }
 }
 
@@ -590,11 +366,134 @@ class SettingsViewModel: ObservableObject {
 struct TermsDetailView: View {
     var body: some View {
         ScrollView {
-            Text("Terms and Conditions content here...")
-                .padding()
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Effective Date: January 1, 2026")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Group {
+                    sectionTitle("Welcome to AI goodbye!")
+
+                    Text("""
+                    These Terms and Conditions ("Terms") constitute a legally binding agreement between you and AI goodbye regarding your use of our application and services. By accessing or using AI goodbye, you agree to comply with and be bound by these Terms.
+                    """)
+
+                    sectionTitle("Acceptance of Terms")
+
+                    Text("""
+                    By using AI goodbye, you confirm that you are of legal age and capacity to enter into these Terms. If you do not agree to these Terms, you must not use our app.
+                    """)
+
+                    sectionTitle("AI Model Limitations and Disclaimers")
+
+                    Text("You acknowledge and agree that:")
+                        .fontWeight(.medium)
+
+                    bulletPoints([
+                        "The AI models in AI goodbye may generate content that is incorrect, incomplete, misleading, or inappropriate.",
+                        "You should not rely on AI-generated content for medical, legal, financial, or other professional advice.",
+                        "The AI models may occasionally produce biased, offensive, or harmful content despite our best efforts to prevent such outputs.",
+                        "You are solely responsible for verifying any information or content generated by the AI models before acting upon it.",
+                        "AI goodbye is not responsible for any decisions, actions, or consequences resulting from your use of AI-generated content."
+                    ])
+                }
+
+                Group {
+                    sectionTitle("Data and Privacy")
+
+                    Text("Regarding data privacy and processing:")
+                        .fontWeight(.medium)
+
+                    bulletPoints([
+                        "When using local models, all processing occurs on your device with no data sent to external servers",
+                        "When using cloud models, your conversations and prompts are sent to external servers",
+                        "You are responsible for the security of your device and any data you input into the app",
+                        "You are responsible for ensuring you have the right to use any content you input into the app"
+                    ])
+
+                    sectionTitle("Third-Party Services")
+
+                    Text("Regarding third-party services:")
+                        .fontWeight(.medium)
+
+                    bulletPoints([
+                        "The integration allows you to access third-party AI models through their APIs",
+                        "Your use of third-party services is subject to their terms of service and privacy policy",
+                        "AI goodbye is not responsible for the practices, policies, or content of third-party providers",
+                        "Your API keys and account management are your responsibility"
+                    ])
+                }
+
+                Group {
+                    sectionTitle("Prohibited Uses")
+
+                    Text("You agree not to use AI goodbye:")
+                        .fontWeight(.medium)
+
+                    bulletPoints([
+                        "For any unlawful purpose or to generate content that promotes illegal activities",
+                        "To generate content that is discriminatory, hateful, or promotes harm against individuals or groups",
+                        "To create misleading or fraudulent content",
+                        "To generate spam, malware, or other malicious content"
+                    ])
+
+                    sectionTitle("Disclaimer of Warranties")
+
+                    Text("""
+                    AI GOODBYE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT ANY WARRANTIES OF ANY KIND, WHETHER EXPRESS OR IMPLIED. We specifically disclaim any implied warranties of merchantability, fitness for a particular purpose, and non-infringement.
+                    """)
+                    .fontWeight(.medium)
+                }
+
+                Group {
+                    sectionTitle("Limitation of Liability")
+
+                    Text("TO THE MAXIMUM EXTENT PERMITTED BY LAW:")
+                        .fontWeight(.bold)
+
+                    bulletPoints([
+                        "AI GOODBYE SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES",
+                        "OUR TOTAL LIABILITY FOR ANY CLAIMS ARISING FROM OR RELATED TO YOUR USE OF THE APP SHALL NOT EXCEED THE AMOUNT YOU PAID FOR THE APP",
+                        "WE ARE NOT LIABLE FOR ANY ACTIONS YOU TAKE OR REFRAIN FROM TAKING BASED ON AI-GENERATED CONTENT"
+                    ])
+
+                    sectionTitle("Changes to Terms")
+
+                    Text("""
+                    We reserve the right to modify these Terms at any time. We will notify you of material changes through the app or website. Your continued use after such modifications constitutes acceptance of the updated Terms.
+                    """)
+
+                    sectionTitle("Contact Us")
+
+                    Text("If you have any questions about these Terms, please contact us at:")
+
+                    Link("support@aigoodbye.ai", destination: URL(string: "mailto:support@aigoodbye.ai")!)
+                        .foregroundStyle(.blue)
+                }
+            }
+            .font(.body)
+            .padding()
         }
         .navigationTitle("Terms and Conditions")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func sectionTitle(_ text: String) -> some View {
+        Text(text)
+            .font(.headline)
+            .padding(.top, 8)
+    }
+
+    private func bulletPoints(_ points: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(points, id: \.self) { point in
+                HStack(alignment: .top, spacing: 8) {
+                    Text("•")
+                    Text(point)
+                }
+            }
+        }
+        .padding(.leading, 8)
     }
 }
 

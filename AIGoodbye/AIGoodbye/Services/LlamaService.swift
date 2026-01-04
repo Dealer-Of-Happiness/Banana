@@ -254,24 +254,39 @@ class LlamaService {
                     return
                 }
 
-                // Clear any existing history - start fresh each time
+                // CRITICAL FIX: Don't use the library's history mechanism at all
+                // It causes KV cache corruption. Instead, always keep history empty
+                // and format the conversation context ourselves into the prompt.
                 bot.history.removeAll()
 
-                // Repopulate history from our external storage (limit to recent messages)
-                let recentHistory = history.suffix(20)
-                for message in recentHistory {
-                    let role = message.role.lowercased()
-                    if role == "user" {
-                        bot.history.append((.user, message.content))
-                    } else if role == "assistant" {
-                        bot.history.append((.bot, message.content))
-                    }
-                }
-                print("[LlamaService] Populated bot.history with \(bot.history.count) messages")
+                // Build a prompt that includes conversation context
+                var fullPrompt = prompt
+                if !history.isEmpty {
+                    // Format conversation history into the prompt itself
+                    var contextParts: [String] = []
+                    contextParts.append("Continue the following conversation naturally:\n")
 
-                // Generate response
+                    let recentHistory = history.suffix(10) // Last 5 exchanges
+                    for message in recentHistory {
+                        let role = message.role.lowercased()
+                        if role == "user" {
+                            contextParts.append("User: \(message.content)")
+                        } else if role == "assistant" {
+                            contextParts.append("Assistant: \(message.content)")
+                        }
+                    }
+
+                    contextParts.append("User: \(prompt)")
+                    contextParts.append("Assistant:")
+
+                    fullPrompt = contextParts.joined(separator: "\n")
+                }
+
+                print("[LlamaService] Full prompt: \(fullPrompt.prefix(200))...")
+
+                // Generate response with empty library history
                 print("[LlamaService] Calling bot.respond()...")
-                await bot.respond(to: prompt)
+                await bot.respond(to: fullPrompt)
 
                 // Get the response from bot.output
                 let rawOutput = bot.output

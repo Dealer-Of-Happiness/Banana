@@ -90,8 +90,12 @@ class LlamaService {
             throw LlamaError.modelNotFound
         }
 
-        // Try to load the model
-        guard let llm = LLM(from: modelURL, template: template) else {
+        // Try to load the model with appropriate settings
+        guard let llm = LLM(
+            from: modelURL,
+            template: template,
+            maxTokenCount: 4096  // Increase from default 2048 for better responses
+        ) else {
             // Mark this model as failed so we delete it next time
             UserDefaults.standard.set(model.id, forKey: lastFailedKey)
             // Delete the file
@@ -128,7 +132,11 @@ class LlamaService {
             }
         }
 
-        guard let llm = LLM(from: modelURL, template: template) else {
+        guard let llm = LLM(
+            from: modelURL,
+            template: template,
+            maxTokenCount: 4096
+        ) else {
             try? fileManager.removeItem(at: modelURL)
             throw LlamaError.modelLoadFailed("Model file may be corrupted. Please download again.")
         }
@@ -137,20 +145,22 @@ class LlamaService {
         currentModelId = model.id
     }
 
+    private let systemPrompt = "You are AiGoodbye, a helpful, friendly AI assistant. Be concise and helpful in your responses."
+
     private func templateForModel(_ model: AIModel) -> Template {
         switch model.templateType {
         case .mistral:
             return .mistral
         case .llama3:
-            return .chatML()
+            return .chatML(systemPrompt)
         case .gemma:
             return .gemma
         case .phi:
-            return .chatML()
+            return .chatML(systemPrompt)
         case .chatml:
-            return .chatML()
+            return .chatML(systemPrompt)
         case .alpaca:
-            return .alpaca()
+            return .alpaca(systemPrompt)
         }
     }
 

@@ -73,8 +73,8 @@ extension AIModel {
         fullDescription: "Qwen2.5 7B Instruct offers excellent multilingual support including Chinese, Japanese, Korean, and European languages with strong reasoning capabilities.",
         size: "4.7 GB",
         sizeBytes: 4_680_000_000,
-        downloadURL: URL(string: "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/resolve/main/qwen2.5-7b-instruct-q4_k_m.gguf")!,
-        fileName: "qwen2.5-7b-instruct-q4_k_m.gguf",
+        downloadURL: URL(string: "https://huggingface.co/bartowski/Qwen2.5-7B-Instruct-GGUF/resolve/main/Qwen2.5-7B-Instruct-Q4_K_M.gguf")!,
+        fileName: "Qwen2.5-7B-Instruct-Q4_K_M.gguf",
         capabilities: [.chat, .coding, .reasoning, .multilingual, .fileAnalysis],
         memoryRequired: "6 GB RAM",
         templateType: .chatml

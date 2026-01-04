@@ -127,7 +127,7 @@ class SettingsManager: ObservableObject {
 
         self.contextWindow = defaults.integer(forKey: Keys.contextWindow) != 0
             ? defaults.integer(forKey: Keys.contextWindow)
-            : 4096
+            : 8192
 
         self.inputLanguage = SupportedLanguage(rawValue: defaults.string(forKey: Keys.inputLanguage) ?? "en") ?? .english
         self.outputLanguage = SupportedLanguage(rawValue: defaults.string(forKey: Keys.outputLanguage) ?? "en") ?? .english
@@ -152,7 +152,7 @@ class SettingsManager: ObservableObject {
 
     func resetToDefaults() {
         temperature = 0.7
-        contextWindow = 4096
+        contextWindow = 8192
         inputLanguage = .english
         outputLanguage = .english
         hapticFeedbackEnabled = true

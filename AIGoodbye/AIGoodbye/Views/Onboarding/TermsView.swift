@@ -221,7 +221,7 @@ struct TermsView: View {
 
                 Text("If you have any questions about these Terms, please contact us at:")
 
-                Link("support@aigoodbye.ai", destination: URL(string: "mailto:support@aigoodbye.ai")!)
+                Link("marketing@dealerofhappiness.com", destination: URL(string: "mailto:marketing@dealerofhappiness.com")!)
                     .foregroundStyle(.blue)
             }
         }

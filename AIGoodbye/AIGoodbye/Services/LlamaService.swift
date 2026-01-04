@@ -94,7 +94,7 @@ class LlamaService {
         guard let llm = LLM(
             from: modelURL,
             template: template,
-            maxTokenCount: 8192  // 8K context for multi-turn conversation
+            maxTokenCount: 4096  // 4K context - balanced for mobile memory
         ) else {
             // Mark this model as failed so we delete it next time
             UserDefaults.standard.set(model.id, forKey: lastFailedKey)
@@ -135,7 +135,7 @@ class LlamaService {
         guard let llm = LLM(
             from: modelURL,
             template: template,
-            maxTokenCount: 8192
+            maxTokenCount: 4096
         ) else {
             try? fileManager.removeItem(at: modelURL)
             throw LlamaError.modelLoadFailed("Model file may be corrupted. Please download again.")
@@ -220,7 +220,7 @@ class LlamaService {
         guard let newLLM = LLM(
             from: modelURL,
             template: template,
-            maxTokenCount: 8192
+            maxTokenCount: 4096
         ) else {
             print("[LlamaService] recreateLLMInstance: Failed to create new LLM instance")
             return false

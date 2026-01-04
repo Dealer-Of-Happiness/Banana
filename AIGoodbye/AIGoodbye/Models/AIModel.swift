@@ -65,25 +65,25 @@ enum TemplateType: String, Codable {
 // MARK: - Available Models
 
 extension AIModel {
-    // Single model - Ministral 8B
-    static let ministral8B = AIModel(
-        id: "ministral-8b",
-        name: "Ministral 8B",
-        shortDescription: "Advanced AI assistant",
-        fullDescription: "Ministral 8B is a powerful language model from Mistral AI, optimized for instruction following, reasoning, and document analysis.",
-        size: "4.9 GB",
-        sizeBytes: 4_900_000_000,
-        downloadURL: URL(string: "https://huggingface.co/bartowski/Ministral-8B-Instruct-2410-GGUF/resolve/main/Ministral-8B-Instruct-2410-Q4_K_M.gguf")!,
-        fileName: "Ministral-8B-Instruct-2410-Q4_K_M.gguf",
+    // Single model - Llama 3.2 3B (well-tested with LLM.swift)
+    static let llama32_3B = AIModel(
+        id: "llama-3.2-3b",
+        name: "Llama 3.2 3B",
+        shortDescription: "Fast & efficient AI assistant",
+        fullDescription: "Llama 3.2 3B Instruct is Meta's latest compact language model, optimized for mobile devices with excellent instruction following and reasoning capabilities.",
+        size: "2.0 GB",
+        sizeBytes: 2_000_000_000,
+        downloadURL: URL(string: "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf")!,
+        fileName: "Llama-3.2-3B-Instruct-Q4_K_M.gguf",
         capabilities: [.chat, .coding, .reasoning, .multilingual, .fileAnalysis],
-        memoryRequired: "6 GB RAM",
-        templateType: .mistral
+        memoryRequired: "4 GB RAM",
+        templateType: .llama3
     )
 
-    static let allModels: [AIModel] = [ministral8B]
+    static let allModels: [AIModel] = [llama32_3B]
 
     static var defaultModel: AIModel {
-        ministral8B
+        llama32_3B
     }
 
     static func model(withId id: String) -> AIModel? {

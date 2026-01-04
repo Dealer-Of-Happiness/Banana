@@ -140,9 +140,9 @@ actor LlamaService {
     private func templateForModel(_ model: AIModel) -> Template {
         switch model.templateType {
         case .mistral:
-            // Mistral uses its own template format
             return .mistral
         case .llama3:
+            // Llama 3.2 uses ChatML format
             return .chatML()
         case .gemma:
             return .gemma
@@ -197,7 +197,6 @@ actor LlamaService {
                 // Clear previous history
                 bot.history.removeAll()
 
-                // Pass prompt directly - the template handles formatting
                 // Generate response - this populates bot.output
                 await bot.respond(to: prompt)
 

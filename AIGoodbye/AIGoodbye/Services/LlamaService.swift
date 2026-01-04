@@ -9,7 +9,7 @@ import Foundation
 import LLM
 
 @MainActor
-class LlamaService: ObservableObject {
+class LlamaService {
     private var bot: LLM?
     private let temperature: Float
     private let maxTokens: Int
@@ -193,25 +193,14 @@ class LlamaService: ObservableObject {
                     return
                 }
 
-                // Clear previous output and history
+                // Clear previous history
                 bot.history.removeAll()
 
-                // Collect the response using the update closure
-                var collectedResponse = ""
-
-                // Set up update closure to collect tokens
-                bot.update = { delta in
-                    if let delta = delta {
-                        collectedResponse += delta
-                    }
-                }
-
-                // Generate response
+                // Generate response - bot.output is populated after this completes
                 await bot.respond(to: prompt)
 
-                // Get the response - try both collected and output
-                var response = collectedResponse.isEmpty ? bot.output : collectedResponse
-                response = response.trimmingCharacters(in: .whitespacesAndNewlines)
+                // Get the response from bot.output
+                var response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
 
                 // Clean up common artifacts
                 response = self.cleanResponse(response)

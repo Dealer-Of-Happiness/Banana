@@ -65,25 +65,25 @@ enum TemplateType: String, Codable {
 // MARK: - Available Models
 
 extension AIModel {
-    // Single model - Mistral 7B Instruct v0.2 (proven with LLM.swift, multilingual)
-    static let mistral7B = AIModel(
-        id: "mistral-7b",
-        name: "Mistral 7B",
+    // Qwen2.5 7B - tested with LLM.swift, excellent multilingual support
+    static let qwen7B = AIModel(
+        id: "qwen-7b",
+        name: "Qwen 7B",
         shortDescription: "Powerful multilingual AI assistant",
-        fullDescription: "Mistral 7B Instruct v0.2 is a highly capable language model with excellent multilingual support, optimized for instruction following and reasoning.",
-        size: "4.1 GB",
-        sizeBytes: 4_370_000_000,
-        downloadURL: URL(string: "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf")!,
-        fileName: "mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+        fullDescription: "Qwen2.5 7B Instruct offers excellent multilingual support including Chinese, Japanese, Korean, and European languages with strong reasoning capabilities.",
+        size: "4.7 GB",
+        sizeBytes: 4_680_000_000,
+        downloadURL: URL(string: "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/resolve/main/qwen2.5-7b-instruct-q4_k_m.gguf")!,
+        fileName: "qwen2.5-7b-instruct-q4_k_m.gguf",
         capabilities: [.chat, .coding, .reasoning, .multilingual, .fileAnalysis],
         memoryRequired: "6 GB RAM",
-        templateType: .mistral
+        templateType: .chatml
     )
 
-    static let allModels: [AIModel] = [mistral7B]
+    static let allModels: [AIModel] = [qwen7B]
 
     static var defaultModel: AIModel {
-        mistral7B
+        qwen7B
     }
 
     static func model(withId id: String) -> AIModel? {

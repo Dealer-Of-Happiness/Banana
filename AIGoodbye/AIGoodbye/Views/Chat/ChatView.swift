@@ -325,7 +325,7 @@ class ChatViewModel: ObservableObject {
             let placeholderMessage = Message(role: .assistant, content: "")
             messages.append(placeholderMessage)
 
-            for try await chunk in await llamaService.generate(
+            for try await chunk in llamaService.generate(
                 prompt: text,
                 history: messages.dropLast(2).map { ($0.role.rawValue, $0.content) }
             ) {

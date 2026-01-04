@@ -134,8 +134,6 @@ class AppState: ObservableObject {
 struct LoadingView: View {
     @ObservedObject var appState: AppState
     @ObservedObject var modelManager = ModelManager.shared
-    @State private var animatedProgress: Double = 0
-    @State private var progressTimer: Timer?
 
     var body: some View {
         VStack(spacing: 30) {
@@ -161,23 +159,26 @@ struct LoadingView: View {
             // Show download progress from ModelManager
             if modelManager.isDownloading {
                 VStack(spacing: 12) {
-                    // Animated progress bar
-                    ProgressView(value: animatedProgress)
+                    // Real progress bar
+                    ProgressView(value: modelManager.downloadProgress)
                         .progressViewStyle(.linear)
                         .frame(width: 250)
-                        .animation(.easeInOut(duration: 0.5), value: animatedProgress)
+
+                    // Progress percentage
+                    Text("\(Int(modelManager.downloadProgress * 100))%")
+                        .font(.title2.monospacedDigit())
+                        .fontWeight(.semibold)
+
+                    // Downloaded size / Total size
+                    Text("\(modelManager.formattedDownloadedBytes) / \(modelManager.formattedTotalBytes)")
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
 
                     // Status text
                     Text("Download in progress... please wait 5-10 minutes")
-                        .font(.subheadline)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-                }
-                .onAppear {
-                    startProgressAnimation()
-                }
-                .onDisappear {
-                    stopProgressAnimation()
                 }
             } else {
                 ProgressView()
@@ -194,25 +195,6 @@ struct LoadingView: View {
                 .padding(.bottom, 30)
         }
         .padding()
-    }
-
-    private func startProgressAnimation() {
-        animatedProgress = 0.05
-        progressTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { _ in
-            Task { @MainActor in
-                // Slowly increment progress to simulate download activity
-                // Caps at 95% since we don't know when it will actually finish
-                if animatedProgress < 0.95 {
-                    let increment = Double.random(in: 0.02...0.08)
-                    animatedProgress = min(animatedProgress + increment, 0.95)
-                }
-            }
-        }
-    }
-
-    private func stopProgressAnimation() {
-        progressTimer?.invalidate()
-        progressTimer = nil
     }
 }
 

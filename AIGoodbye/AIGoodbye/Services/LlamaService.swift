@@ -208,11 +208,23 @@ class LlamaService {
                     return
                 }
 
-                // DON'T clear history - LLM.swift manages multi-turn conversation
-                // The library automatically adds messages to history after respond()
-                // and has a historyLimit to prevent memory issues
+                // WORKAROUND for LLM.swift Issue #50: KV cache corruption on successive calls
+                // Clear the library's internal history before each call to force fresh KV cache state
+                // Then repopulate with our external history so the library properly formats it
+                bot.history.removeAll()
 
-                // Generate response - bot.output is populated after this completes
+                // Repopulate history from our external storage (limit to recent messages)
+                let recentHistory = history.suffix(20) // Last 20 messages to avoid context overflow
+                for message in recentHistory {
+                    let role = message.role.lowercased()
+                    if role == "user" {
+                        bot.history.append((.user, message.content))
+                    } else if role == "assistant" {
+                        bot.history.append((.bot, message.content))
+                    }
+                }
+
+                // Generate response - the library's preprocess will format history correctly
                 await bot.respond(to: prompt)
 
                 // Get the response from bot.output

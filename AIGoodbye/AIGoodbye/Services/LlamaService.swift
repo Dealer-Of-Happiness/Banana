@@ -218,10 +218,19 @@ class LlamaService {
             return false
         }
 
-        // Release old instance first
+        // Release old instance first and clear state
+        print("[LlamaService] Releasing old LLM instance...")
         bot = nil
 
+        // Wait for memory cleanup - longer on physical devices
+        #if targetEnvironment(simulator)
+        try? await Task.sleep(nanoseconds: 100_000_000) // 100ms in simulator
+        #else
+        try? await Task.sleep(nanoseconds: 500_000_000) // 500ms on real device
+        #endif
+
         // Create a fresh LLM instance - this resets the KV cache
+        print("[LlamaService] Creating new LLM instance...")
         let tokenLimit = getMaxTokenCount()
         guard let newLLM = LLM(
             from: modelURL,
@@ -233,7 +242,7 @@ class LlamaService {
         }
 
         bot = newLLM
-        print("[LlamaService] recreateLLMInstance: Successfully created new LLM instance")
+        print("[LlamaService] recreateLLMInstance: Successfully created new LLM instance with \(tokenLimit) token limit")
         return true
     }
 
@@ -243,71 +252,58 @@ class LlamaService {
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
+                // For messages with history, recreate LLM to avoid KV cache issues
+                if !history.isEmpty {
+                    print("[LlamaService] Recreating LLM for message with history...")
+                    var success = await self.recreateLLMInstance()
+
+                    // Retry once if failed
+                    if !success {
+                        print("[LlamaService] First recreation failed, retrying after delay...")
+                        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+                        success = await self.recreateLLMInstance()
+                    }
+
+                    if !success {
+                        continuation.yield("Error: Could not reload AI model. Please restart the app.")
+                        continuation.finish()
+                        return
+                    }
+                }
+
                 guard let bot = self.bot else {
                     continuation.yield("Error: AI model is not loaded. Please restart the app.")
                     continuation.finish()
                     return
                 }
 
-                // Clear library history - we manage context ourselves in the prompt
+                // Keep library history empty - we handle context ourselves
                 bot.history.removeAll()
 
-                // Build a prompt that includes conversation context
-                var fullPrompt = prompt
-                if !history.isEmpty {
-                    var contextParts: [String] = []
-                    contextParts.append("Continue this conversation:\n")
-
-                    let maxMessageLength = 200
-                    let firstMessagesCount = 2
-                    let recentMessagesCount = 4
-
-                    var selectedMessages: [(role: String, content: String)] = []
-
-                    if history.count <= firstMessagesCount + recentMessagesCount {
-                        selectedMessages = Array(history)
-                    } else {
-                        let firstMessages = Array(history.prefix(firstMessagesCount))
-                        let recentMessages = Array(history.suffix(recentMessagesCount))
-                        selectedMessages.append(contentsOf: firstMessages)
-                        selectedMessages.append((role: "system", content: "[...]"))
-                        selectedMessages.append(contentsOf: recentMessages)
-                    }
-
-                    for message in selectedMessages {
-                        let role = message.role.lowercased()
-                        var content = message.content
-                        if content.count > maxMessageLength {
-                            content = String(content.prefix(maxMessageLength)) + "..."
-                        }
-                        if role == "user" {
-                            contextParts.append("User: \(content)")
-                        } else if role == "assistant" {
-                            contextParts.append("Assistant: \(content)")
-                        } else if role == "system" {
-                            contextParts.append(content)
-                        }
-                    }
-
-                    contextParts.append("User: \(prompt)")
-                    contextParts.append("Assistant:")
-                    fullPrompt = contextParts.joined(separator: "\n")
-                }
+                // Just use the current prompt - avoid complex context formatting
+                // that might confuse the chatML template
+                let fullPrompt = prompt
 
                 // Generate response
+                print("[LlamaService] Generating response for prompt: \(prompt.prefix(50))...")
                 await bot.respond(to: fullPrompt)
                 var response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
+                print("[LlamaService] Raw response length: \(response.count)")
+                response = self.cleanResponse(response)
 
-                // If response failed, try recreating LLM instance and retry once
+                // If response is empty, try once more with completely fresh instance
                 if response.isEmpty || response == "..." || response.count < 3 {
-                    if await self.recreateLLMInstance(), let newBot = self.bot {
-                        newBot.history.removeAll()
-                        await newBot.respond(to: fullPrompt)
-                        response = newBot.output.trimmingCharacters(in: .whitespacesAndNewlines)
+                    print("[LlamaService] Empty response, attempting retry with fresh LLM...")
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 500ms
+
+                    if await self.recreateLLMInstance(), let freshBot = self.bot {
+                        freshBot.history.removeAll()
+                        await freshBot.respond(to: prompt)
+                        response = freshBot.output.trimmingCharacters(in: .whitespacesAndNewlines)
+                        print("[LlamaService] Retry response length: \(response.count)")
+                        response = self.cleanResponse(response)
                     }
                 }
-
-                response = self.cleanResponse(response)
 
                 if response.isEmpty || response == "..." || response.count < 3 {
                     response = "I'm having trouble generating a response. Please try again."

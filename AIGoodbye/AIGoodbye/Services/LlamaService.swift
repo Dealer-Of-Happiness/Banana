@@ -12,7 +12,6 @@ import LLM
 class LlamaService {
     private var bot: LLM?
     private let temperature: Float
-    private let maxTokens: Int
     private var currentModelId: String?
 
     // Download state - observable from outside
@@ -20,16 +19,20 @@ class LlamaService {
     static var totalBytes: Int64 = 0
     static var isDownloading: Bool = false
 
-    // Default: low temperature for consistent responses, max context for file analysis
-    init(temperature: Double = 0.3, contextWindow: Int = 8192) {
+    // Default: low temperature for consistent responses
+    init(temperature: Double = 0.3) {
         self.temperature = Float(temperature)
-        self.maxTokens = contextWindow
     }
 
     // MARK: - Model Management
 
     private func getModelManager() -> ModelManager {
         ModelManager.shared
+    }
+
+    /// Get the current max token count from settings
+    private func getMaxTokenCount() -> Int {
+        return SettingsManager().contextWindow
     }
 
     func loadModel() async throws {
@@ -90,11 +93,12 @@ class LlamaService {
             throw LlamaError.modelNotFound
         }
 
-        // Try to load the model with appropriate settings
+        // Try to load the model with settings from user preferences
+        let tokenLimit = getMaxTokenCount()
         guard let llm = LLM(
             from: modelURL,
             template: template,
-            maxTokenCount: 4096  // 4K context - balanced for mobile memory
+            maxTokenCount: tokenLimit
         ) else {
             // Mark this model as failed so we delete it next time
             UserDefaults.standard.set(model.id, forKey: lastFailedKey)
@@ -132,10 +136,11 @@ class LlamaService {
             }
         }
 
+        let tokenLimit = getMaxTokenCount()
         guard let llm = LLM(
             from: modelURL,
             template: template,
-            maxTokenCount: 4096
+            maxTokenCount: tokenLimit
         ) else {
             try? fileManager.removeItem(at: modelURL)
             throw LlamaError.modelLoadFailed("Model file may be corrupted. Please download again.")
@@ -217,10 +222,11 @@ class LlamaService {
         bot = nil
 
         // Create a fresh LLM instance - this resets the KV cache
+        let tokenLimit = getMaxTokenCount()
         guard let newLLM = LLM(
             from: modelURL,
             template: template,
-            maxTokenCount: 4096
+            maxTokenCount: tokenLimit
         ) else {
             print("[LlamaService] recreateLLMInstance: Failed to create new LLM instance")
             return false

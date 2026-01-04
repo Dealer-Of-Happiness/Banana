@@ -19,6 +19,9 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            // AI Settings (Context Window)
+            aiSettingsSection
+
             // Cloud Connections
             cloudConnectionsSection
 
@@ -62,6 +65,66 @@ struct SettingsView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text("In-app purchases will be available once the app is published on the App Store. Thank you for your interest in supporting Locally AI!")
+        }
+    }
+
+    // MARK: - AI Settings Section
+
+    private var aiSettingsSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Context Window")
+                    Spacer()
+                    Text("\(Int(viewModel.contextWindow / 1024))K tokens")
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+
+                Slider(
+                    value: $viewModel.contextWindow,
+                    in: 4096...32768,
+                    step: 4096
+                ) {
+                    Text("Context Window")
+                } minimumValueLabel: {
+                    Text("4K")
+                        .font(.caption2)
+                } maximumValueLabel: {
+                    Text("32K")
+                        .font(.caption2)
+                }
+                .onChange(of: viewModel.contextWindow) { _, newValue in
+                    appState.settings.contextWindow = Int(newValue)
+                }
+
+                // Guidance text based on selected value
+                Text(contextWindowGuidance)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 4)
+            }
+            .padding(.vertical, 4)
+        } header: {
+            Label("AI Performance", systemImage: "cpu")
+        } footer: {
+            Text("Higher values allow longer conversations but use more memory. Restart the app after changing this setting.")
+        }
+    }
+
+    private var contextWindowGuidance: String {
+        let tokens = Int(viewModel.contextWindow)
+        switch tokens {
+        case 0..<6000:
+            return "4K: Recommended for iPhone 13/14 and devices with 4-6GB RAM. Supports ~10-15 message conversations."
+        case 6000..<12000:
+            return "8K: Recommended for iPhone 15/15 Plus with 6GB RAM. Supports ~20-30 message conversations."
+        case 12000..<20000:
+            return "16K: Recommended for iPhone 15 Pro/16 with 8GB RAM. Supports ~40-50 message conversations."
+        case 20000..<28000:
+            return "24K: Recommended for iPhone 16 Pro with 8GB+ RAM. Supports ~60-70 message conversations."
+        default:
+            return "32K: Recommended for iPhone 16 Pro Max and future devices with 12GB+ RAM. Maximum conversation length."
         }
     }
 

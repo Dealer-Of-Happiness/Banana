@@ -197,25 +197,24 @@ actor LlamaService {
                 // Clear previous history
                 bot.history.removeAll()
 
-                // Use Mistral instruction format
+                // Use Mistral instruction format for better responses
                 let formattedPrompt = "[INST] \(prompt) [/INST]"
 
-                // Stream the response character by character
-                var fullResponse = ""
-                for await char in bot.respond(to: formattedPrompt) {
-                    let charStr = String(char)
-                    fullResponse += charStr
-                    continuation.yield(charStr)
+                // Generate response - this populates bot.output
+                await bot.respond(to: formattedPrompt)
+
+                // Get the response
+                var response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
+
+                // Clean up common artifacts
+                response = self.cleanResponse(response)
+
+                // Provide fallback if response is empty or invalid
+                if response.isEmpty || response == "..." || response.count < 3 {
+                    response = "I'm having trouble generating a response. Please try again."
                 }
 
-                // If response is empty or just punctuation, provide fallback
-                let trimmed = fullResponse.trimmingCharacters(in: .whitespacesAndNewlines)
-                if trimmed.isEmpty || trimmed == "..." || trimmed.count < 3 {
-                    if fullResponse.isEmpty {
-                        continuation.yield("I'm having trouble generating a response. Please try again.")
-                    }
-                }
-
+                continuation.yield(response)
                 continuation.finish()
             }
         }

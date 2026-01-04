@@ -21,8 +21,11 @@ class ModelManager: ObservableObject {
     @Published var downloadingModelId: String?
 
     private let modelsDirectory: URL
-    private var downloadDelegate: DownloadDelegate?
+    private var downloadSession: URLSession?
     private var downloadTask: URLSessionDownloadTask?
+    private var downloadContinuation: CheckedContinuation<Void, Error>?
+    private var currentDestinationURL: URL?
+    private var currentModel: AIModel?
 
     private init() {
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -93,114 +96,118 @@ class ModelManager: ObservableObject {
         downloadedBytes = 0
         totalBytes = model.sizeBytes
         downloadStates[model.id] = .downloading(progress: 0)
+        currentModel = model
 
         let destinationURL = modelPath(for: model)
+        currentDestinationURL = destinationURL
 
         // Delete any existing partial file
         try? FileManager.default.removeItem(at: destinationURL)
 
-        // Create download delegate for progress tracking
-        downloadDelegate = DownloadDelegate { [weak self] bytesWritten, totalBytesWritten, totalBytesExpected in
-            Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                self.downloadedBytes = totalBytesWritten
-                if totalBytesExpected > 0 {
-                    self.totalBytes = totalBytesExpected
-                    self.downloadProgress = Double(totalBytesWritten) / Double(totalBytesExpected)
-                } else {
-                    // Use model's expected size if server doesn't provide content-length
-                    self.downloadProgress = Double(totalBytesWritten) / Double(model.sizeBytes)
-                }
-                self.downloadStates[model.id] = .downloading(progress: self.downloadProgress)
-            }
-        }
+        // Create delegate and session
+        let delegate = DownloadSessionDelegate(manager: self)
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 300
+        config.timeoutIntervalForResource = 3600 // 1 hour for large files
+        downloadSession = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
 
         return try await withCheckedThrowingContinuation { continuation in
-            let session = URLSession(configuration: .default, delegate: downloadDelegate, delegateQueue: nil)
-            let task = session.downloadTask(with: model.downloadURL) { [weak self] tempURL, response, error in
-                Task { @MainActor [weak self] in
-                    guard let self = self else {
-                        continuation.resume(throwing: ModelManagerError.downloadFailed("Manager deallocated"))
-                        return
-                    }
-
-                    if let error = error {
-                        try? FileManager.default.removeItem(at: destinationURL)
-                        self.downloadStates[model.id] = .failed(error.localizedDescription)
-                        self.isDownloading = false
-                        self.downloadingModelId = nil
-                        continuation.resume(throwing: error)
-                        return
-                    }
-
-                    guard let httpResponse = response as? HTTPURLResponse,
-                          httpResponse.statusCode == 200 else {
-                        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-                        self.downloadStates[model.id] = .failed("Server error: \(statusCode)")
-                        self.isDownloading = false
-                        self.downloadingModelId = nil
-                        continuation.resume(throwing: ModelManagerError.downloadFailed("Server error: \(statusCode)"))
-                        return
-                    }
-
-                    guard let tempURL = tempURL else {
-                        self.downloadStates[model.id] = .failed("No file received")
-                        self.isDownloading = false
-                        self.downloadingModelId = nil
-                        continuation.resume(throwing: ModelManagerError.downloadFailed("No file received"))
-                        return
-                    }
-
-                    do {
-                        // Move to destination
-                        try FileManager.default.moveItem(at: tempURL, to: destinationURL)
-
-                        // Verify file size
-                        if let attributes = try? FileManager.default.attributesOfItem(atPath: destinationURL.path),
-                           let fileSize = attributes[.size] as? Int64,
-                           fileSize < model.sizeBytes / 2 {
-                            try? FileManager.default.removeItem(at: destinationURL)
-                            self.downloadStates[model.id] = .failed("Download incomplete")
-                            self.isDownloading = false
-                            self.downloadingModelId = nil
-                            continuation.resume(throwing: ModelManagerError.downloadFailed("Download incomplete - file too small"))
-                            return
-                        }
-
-                        self.downloadStates[model.id] = .downloaded
-                        self.isDownloading = false
-                        self.downloadingModelId = nil
-                        self.downloadProgress = 1.0
-                        continuation.resume()
-
-                    } catch {
-                        try? FileManager.default.removeItem(at: destinationURL)
-                        self.downloadStates[model.id] = .failed(error.localizedDescription)
-                        self.isDownloading = false
-                        self.downloadingModelId = nil
-                        continuation.resume(throwing: error)
-                    }
-                }
-            }
-
+            self.downloadContinuation = continuation
+            let task = downloadSession!.downloadTask(with: model.downloadURL)
             self.downloadTask = task
             task.resume()
         }
+    }
+
+    // Called by delegate when progress updates
+    nonisolated func updateProgress(bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpected: Int64) {
+        Task { @MainActor in
+            self.downloadedBytes = totalBytesWritten
+            if totalBytesExpected > 0 {
+                self.totalBytes = totalBytesExpected
+                self.downloadProgress = Double(totalBytesWritten) / Double(totalBytesExpected)
+            } else if let model = self.currentModel {
+                self.downloadProgress = Double(totalBytesWritten) / Double(model.sizeBytes)
+            }
+            if let modelId = self.downloadingModelId {
+                self.downloadStates[modelId] = .downloading(progress: self.downloadProgress)
+            }
+        }
+    }
+
+    // Called by delegate when download completes
+    nonisolated func downloadCompleted(location: URL) {
+        Task { @MainActor in
+            guard let destinationURL = self.currentDestinationURL,
+                  let model = self.currentModel else {
+                self.downloadContinuation?.resume(throwing: ModelManagerError.downloadFailed("No destination set"))
+                self.cleanupDownload()
+                return
+            }
+
+            do {
+                // Move to destination
+                try FileManager.default.moveItem(at: location, to: destinationURL)
+
+                // Verify file size
+                if let attributes = try? FileManager.default.attributesOfItem(atPath: destinationURL.path),
+                   let fileSize = attributes[.size] as? Int64,
+                   fileSize < model.sizeBytes / 2 {
+                    try? FileManager.default.removeItem(at: destinationURL)
+                    self.downloadStates[model.id] = .failed("Download incomplete")
+                    self.downloadContinuation?.resume(throwing: ModelManagerError.downloadFailed("Download incomplete - file too small"))
+                    self.cleanupDownload()
+                    return
+                }
+
+                self.downloadStates[model.id] = .downloaded
+                self.downloadProgress = 1.0
+                self.downloadContinuation?.resume()
+                self.cleanupDownload()
+
+            } catch {
+                try? FileManager.default.removeItem(at: destinationURL)
+                self.downloadStates[model.id] = .failed(error.localizedDescription)
+                self.downloadContinuation?.resume(throwing: error)
+                self.cleanupDownload()
+            }
+        }
+    }
+
+    // Called by delegate when download fails
+    nonisolated func downloadFailed(error: Error) {
+        Task { @MainActor in
+            if let destinationURL = self.currentDestinationURL {
+                try? FileManager.default.removeItem(at: destinationURL)
+            }
+            if let modelId = self.downloadingModelId {
+                self.downloadStates[modelId] = .failed(error.localizedDescription)
+            }
+            self.downloadContinuation?.resume(throwing: error)
+            self.cleanupDownload()
+        }
+    }
+
+    private func cleanupDownload() {
+        isDownloading = false
+        downloadingModelId = nil
+        downloadTask = nil
+        downloadSession?.invalidateAndCancel()
+        downloadSession = nil
+        downloadContinuation = nil
+        currentDestinationURL = nil
+        currentModel = nil
     }
 
     // MARK: - Cancel Download
 
     func cancelDownload() {
         downloadTask?.cancel()
-        downloadTask = nil
-        downloadDelegate = nil
-
         if let modelId = downloadingModelId {
             downloadStates[modelId] = .notDownloaded
         }
-
-        isDownloading = false
-        downloadingModelId = nil
+        downloadContinuation?.resume(throwing: CancellationError())
+        cleanupDownload()
         downloadProgress = 0
         downloadedBytes = 0
     }
@@ -246,7 +253,7 @@ class ModelManager: ObservableObject {
         UserDefaults.standard.set(model.id, forKey: "selectedModelId")
     }
 
-    var currentModel: AIModel {
+    var activeModel: AIModel {
         AIModel.model(withId: currentModelId) ?? AIModel.defaultModel
     }
 
@@ -280,22 +287,31 @@ class ModelManager: ObservableObject {
     }
 }
 
-// MARK: - Download Delegate
+// MARK: - Download Session Delegate
 
-private class DownloadDelegate: NSObject, URLSessionDownloadDelegate {
-    let progressHandler: (Int64, Int64, Int64) -> Void
+private class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegate {
+    weak var manager: ModelManager?
 
-    init(progressHandler: @escaping (Int64, Int64, Int64) -> Void) {
-        self.progressHandler = progressHandler
+    init(manager: ModelManager) {
+        self.manager = manager
         super.init()
     }
 
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-        progressHandler(bytesWritten, totalBytesWritten, totalBytesExpectedToWrite)
+        manager?.updateProgress(bytesWritten: bytesWritten, totalBytesWritten: totalBytesWritten, totalBytesExpected: totalBytesExpectedToWrite)
     }
 
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        // Handled in completion handler
+        // Copy to a temp location we control since the original will be deleted
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".gguf")
+        try? FileManager.default.copyItem(at: location, to: tempURL)
+        manager?.downloadCompleted(location: tempURL)
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let error = error {
+            manager?.downloadFailed(error: error)
+        }
     }
 }
 

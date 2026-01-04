@@ -171,7 +171,7 @@ struct ChatView: View {
                 Text("Start a Conversation")
                     .font(.title2.bold())
 
-                Text("Ask me anything! I'm powered by \(ModelManager.shared.currentModel.name).")
+                Text("Ask me anything! I'm powered by \(ModelManager.shared.activeModel.name).")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

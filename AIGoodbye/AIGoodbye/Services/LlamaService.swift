@@ -8,16 +8,17 @@
 import Foundation
 import LLM
 
-actor LlamaService {
+@MainActor
+class LlamaService: ObservableObject {
     private var bot: LLM?
     private let temperature: Float
     private let maxTokens: Int
     private var currentModelId: String?
 
     // Download state - observable from outside
-    nonisolated(unsafe) static var downloadedBytes: Int64 = 0
-    nonisolated(unsafe) static var totalBytes: Int64 = 0
-    nonisolated(unsafe) static var isDownloading: Bool = false
+    static var downloadedBytes: Int64 = 0
+    static var totalBytes: Int64 = 0
+    static var isDownloading: Bool = false
 
     // Default: low temperature for consistent responses, max context for file analysis
     init(temperature: Double = 0.3, contextWindow: Int = 8192) {
@@ -27,14 +28,13 @@ actor LlamaService {
 
     // MARK: - Model Management
 
-    @MainActor
     private func getModelManager() -> ModelManager {
         ModelManager.shared
     }
 
     func loadModel() async throws {
-        let manager = await getModelManager()
-        let model = await manager.activeModel
+        let manager = getModelManager()
+        let model = manager.activeModel
 
         // If already loaded with same model, skip
         if bot != nil && currentModelId == model.id {
@@ -45,13 +45,13 @@ actor LlamaService {
         bot = nil
         currentModelId = nil
 
-        // Load the single model (Ministral 8B)
+        // Load the single model
         try await loadModelInternal(model)
     }
 
     private func loadModelInternal(_ model: AIModel) async throws {
-        let manager = await getModelManager()
-        let modelURL = await manager.modelPath(for: model)
+        let manager = getModelManager()
+        let modelURL = manager.modelPath(for: model)
         let fileManager = FileManager.default
 
         // Always delete existing file if we're retrying after a failure
@@ -108,8 +108,8 @@ actor LlamaService {
         bot = nil
         currentModelId = nil
 
-        let manager = await getModelManager()
-        let modelURL = await manager.modelPath(for: model)
+        let manager = getModelManager()
+        let modelURL = manager.modelPath(for: model)
         let template = templateForModel(model)
         let fileManager = FileManager.default
 
@@ -142,7 +142,6 @@ actor LlamaService {
         case .mistral:
             return .mistral
         case .llama3:
-            // Llama 3.2 uses ChatML format
             return .chatML()
         case .gemma:
             return .gemma
@@ -156,7 +155,7 @@ actor LlamaService {
     }
 
     private func downloadModel(_ model: AIModel) async throws {
-        let manager = await getModelManager()
+        let manager = getModelManager()
 
         LlamaService.isDownloading = true
         LlamaService.downloadedBytes = 0
@@ -187,21 +186,32 @@ actor LlamaService {
         history: [(role: String, content: String)] = []
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
-            Task {
+            Task { @MainActor in
                 guard let bot = self.bot else {
                     continuation.yield("Error: AI model is not loaded. Please restart the app.")
                     continuation.finish()
                     return
                 }
 
-                // Clear previous history
+                // Clear previous output and history
                 bot.history.removeAll()
 
-                // Generate response - this populates bot.output
+                // Collect the response using the update closure
+                var collectedResponse = ""
+
+                // Set up update closure to collect tokens
+                bot.update = { delta in
+                    if let delta = delta {
+                        collectedResponse += delta
+                    }
+                }
+
+                // Generate response
                 await bot.respond(to: prompt)
 
-                // Get the response
-                var response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
+                // Get the response - try both collected and output
+                var response = collectedResponse.isEmpty ? bot.output : collectedResponse
+                response = response.trimmingCharacters(in: .whitespacesAndNewlines)
 
                 // Clean up common artifacts
                 response = self.cleanResponse(response)
@@ -289,17 +299,16 @@ actor LlamaService {
 
         bot.history.removeAll()
 
-        let contextPrompt = "You are AI goodbye, a helpful assistant. Be concise.\n\nUser: \(prompt)\nAssistant:"
-        await bot.respond(to: contextPrompt)
+        await bot.respond(to: prompt)
 
         var response = bot.output
         response = response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 
-        if let range = response.range(of: "User:") {
-            response = String(response[..<range.lowerBound])
+        if response.isEmpty {
+            throw LlamaError.generationFailed("Empty response from model")
         }
 
-        return response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+        return response
     }
 
     // MARK: - Vision Analysis

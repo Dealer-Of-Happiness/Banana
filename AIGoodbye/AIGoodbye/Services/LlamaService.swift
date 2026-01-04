@@ -197,11 +197,9 @@ actor LlamaService {
                 // Clear previous history
                 bot.history.removeAll()
 
-                // Use Mistral instruction format for better responses
-                let formattedPrompt = "[INST] \(prompt) [/INST]"
-
+                // Pass prompt directly - the template handles formatting
                 // Generate response - this populates bot.output
-                await bot.respond(to: formattedPrompt)
+                await bot.respond(to: prompt)
 
                 // Get the response
                 var response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)

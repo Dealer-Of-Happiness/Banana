@@ -230,14 +230,21 @@ class LlamaService {
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
+                // WORKAROUND for LLM.swift Issue #50: KV cache corruption on successive calls
+                // Recreate LLM instance before EVERY call to ensure fresh KV cache state
+                // This is slower but guarantees consistent behavior
+                if !history.isEmpty {
+                    // Only recreate if this is not the first message (history exists)
+                    _ = await self.recreateLLMInstance()
+                }
+
                 guard let bot = self.bot else {
                     continuation.yield("Error: AI model is not loaded. Please restart the app.")
                     continuation.finish()
                     return
                 }
 
-                // WORKAROUND for LLM.swift Issue #50: KV cache corruption on successive calls
-                // Clear history and repopulate from external storage
+                // Clear any existing history and repopulate from our external storage
                 bot.history.removeAll()
 
                 // Repopulate history from our external storage (limit to recent messages)
@@ -256,26 +263,6 @@ class LlamaService {
 
                 // Get the response from bot.output
                 var response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
-
-                // If response is empty, KV cache may be corrupted - recreate LLM instance and retry
-                if response.isEmpty || response == "..." || response.count < 3 {
-                    // Recreate the LLM instance to reset KV cache
-                    if await self.recreateLLMInstance(), let newBot = self.bot {
-                        // Repopulate history on new instance
-                        for message in recentHistory {
-                            let role = message.role.lowercased()
-                            if role == "user" {
-                                newBot.history.append((.user, message.content))
-                            } else if role == "assistant" {
-                                newBot.history.append((.bot, message.content))
-                            }
-                        }
-
-                        // Retry generation
-                        await newBot.respond(to: prompt)
-                        response = newBot.output.trimmingCharacters(in: .whitespacesAndNewlines)
-                    }
-                }
 
                 // Clean up common artifacts
                 response = self.cleanResponse(response)

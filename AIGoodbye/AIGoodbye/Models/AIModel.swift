@@ -65,16 +65,16 @@ enum TemplateType: String, Codable {
 // MARK: - Available Models
 
 extension AIModel {
-    // Single model - Mistral 7B Instruct v0.3 (proven with LLM.swift, multilingual)
+    // Single model - Mistral 7B Instruct v0.2 (proven with LLM.swift, multilingual)
     static let mistral7B = AIModel(
         id: "mistral-7b",
         name: "Mistral 7B",
         shortDescription: "Powerful multilingual AI assistant",
-        fullDescription: "Mistral 7B Instruct v0.3 is a highly capable language model with excellent multilingual support, optimized for instruction following and reasoning.",
+        fullDescription: "Mistral 7B Instruct v0.2 is a highly capable language model with excellent multilingual support, optimized for instruction following and reasoning.",
         size: "4.1 GB",
-        sizeBytes: 4_100_000_000,
-        downloadURL: URL(string: "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/mistral-7b-instruct-v0.3.Q4_K_M.gguf")!,
-        fileName: "mistral-7b-instruct-v0.3.Q4_K_M.gguf",
+        sizeBytes: 4_370_000_000,
+        downloadURL: URL(string: "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf")!,
+        fileName: "mistral-7b-instruct-v0.2.Q4_K_M.gguf",
         capabilities: [.chat, .coding, .reasoning, .multilingual, .fileAnalysis],
         memoryRequired: "6 GB RAM",
         templateType: .mistral

@@ -48,7 +48,8 @@ struct ChatView: View {
                 }
 
                 ToolbarItem(placement: .principal) {
-                    QuickModelPicker()
+                    Text("AiGoodbye")
+                        .font(.headline)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -155,7 +156,7 @@ struct ChatView: View {
     private var emptyStateView: some View {
         ScrollView {
             VStack(spacing: 24) {
-                Spacer(minLength: 60)
+                Spacer(minLength: 100)
 
                 // Logo
                 Image(systemName: "bubble.left.and.bubble.right.fill")
@@ -170,28 +171,6 @@ struct ChatView: View {
 
                 Text("Start a Conversation")
                     .font(.title2.bold())
-
-                Text("Ask me anything! I'm powered by \(ModelManager.shared.activeModel.name).")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-
-                // Quick suggestions
-                VStack(spacing: 12) {
-                    SuggestionButton(text: "Explain quantum computing simply") {
-                        viewModel.inputText = "Explain quantum computing simply"
-                    }
-
-                    SuggestionButton(text: "Help me write a professional email") {
-                        viewModel.inputText = "Help me write a professional email"
-                    }
-
-                    SuggestionButton(text: "What's a good recipe for dinner?") {
-                        viewModel.inputText = "What's a good recipe for dinner?"
-                    }
-                }
-                .padding(.top, 8)
 
                 Spacer()
             }

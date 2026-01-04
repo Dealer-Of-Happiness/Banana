@@ -188,39 +188,35 @@ actor LlamaService {
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task {
-                do {
-                    guard let bot = self.bot else {
-                        continuation.yield("Error: AI model is not loaded. Please restart the app.")
-                        continuation.finish()
-                        return
-                    }
-
-                    // Clear previous history
-                    bot.history.removeAll()
-
-                    // Simple direct prompt for best compatibility
-                    let directPrompt = prompt
-
-                    // Generate response
-                    await bot.respond(to: directPrompt)
-
-                    // Get the response from bot's output
-                    var response = bot.output
-
-                    // Basic cleanup
-                    response = response.trimmingCharacters(in: .whitespacesAndNewlines)
-
-                    // Return the response
-                    if response.isEmpty {
-                        continuation.yield("I couldn't generate a response. The model may need to be reloaded.")
-                    } else {
-                        continuation.yield(response)
-                    }
+                guard let bot = self.bot else {
+                    continuation.yield("Error: AI model is not loaded. Please restart the app.")
                     continuation.finish()
-                } catch {
-                    continuation.yield("Error: \(error.localizedDescription)")
-                    continuation.finish()
+                    return
                 }
+
+                // Clear previous history
+                bot.history.removeAll()
+
+                // Use Mistral instruction format
+                let formattedPrompt = "[INST] \(prompt) [/INST]"
+
+                // Stream the response character by character
+                var fullResponse = ""
+                for await char in bot.respond(to: formattedPrompt) {
+                    let charStr = String(char)
+                    fullResponse += charStr
+                    continuation.yield(charStr)
+                }
+
+                // If response is empty or just punctuation, provide fallback
+                let trimmed = fullResponse.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.isEmpty || trimmed == "..." || trimmed.count < 3 {
+                    if fullResponse.isEmpty {
+                        continuation.yield("I'm having trouble generating a response. Please try again.")
+                    }
+                }
+
+                continuation.finish()
             }
         }
     }

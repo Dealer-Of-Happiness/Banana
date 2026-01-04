@@ -260,19 +260,53 @@ class LlamaService {
                 bot.history.removeAll()
 
                 // Build a prompt that includes conversation context
+                // Using "bookend" strategy: keep first messages + recent messages, drop middle
                 var fullPrompt = prompt
                 if !history.isEmpty {
-                    // Format conversation history into the prompt itself
                     var contextParts: [String] = []
                     contextParts.append("Continue the following conversation naturally:\n")
 
-                    let recentHistory = history.suffix(10) // Last 5 exchanges
-                    for message in recentHistory {
+                    // Smart context management for long conversations:
+                    // - Keep first 2 messages (user intro usually has name/context)
+                    // - Keep last 6 messages (recent context)
+                    // - Drop middle messages to save tokens
+                    // - Truncate long messages
+
+                    let maxMessageLength = 300 // Truncate long messages
+                    let firstMessagesCount = 2
+                    let recentMessagesCount = 6
+
+                    var selectedMessages: [(role: String, content: String)] = []
+
+                    if history.count <= firstMessagesCount + recentMessagesCount {
+                        // Short conversation - keep everything
+                        selectedMessages = Array(history)
+                    } else {
+                        // Long conversation - use bookend strategy
+                        let firstMessages = Array(history.prefix(firstMessagesCount))
+                        let recentMessages = Array(history.suffix(recentMessagesCount))
+
+                        selectedMessages.append(contentsOf: firstMessages)
+                        // Add marker for omitted messages
+                        selectedMessages.append((role: "system", content: "[...earlier conversation omitted...]"))
+                        selectedMessages.append(contentsOf: recentMessages)
+                    }
+
+                    for message in selectedMessages {
                         let role = message.role.lowercased()
+                        var content = message.content
+
+                        // Truncate long messages to save context
+                        if content.count > maxMessageLength {
+                            content = String(content.prefix(maxMessageLength)) + "..."
+                        }
+
                         if role == "user" {
-                            contextParts.append("User: \(message.content)")
+                            contextParts.append("User: \(content)")
                         } else if role == "assistant" {
-                            contextParts.append("Assistant: \(message.content)")
+                            contextParts.append("Assistant: \(content)")
+                        } else if role == "system" {
+                            contextParts.append(content)
                         }
                     }
 
@@ -282,7 +316,7 @@ class LlamaService {
                     fullPrompt = contextParts.joined(separator: "\n")
                 }
 
-                print("[LlamaService] Full prompt: \(fullPrompt.prefix(200))...")
+                print("[LlamaService] Full prompt length: \(fullPrompt.count) chars, history: \(history.count) messages")
 
                 // Generate response with empty library history
                 print("[LlamaService] Calling bot.respond()...")

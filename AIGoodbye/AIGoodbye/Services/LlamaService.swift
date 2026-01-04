@@ -200,6 +200,7 @@ class LlamaService {
     private func recreateLLMInstance() async -> Bool {
         guard let modelId = currentModelId,
               let model = AIModel.model(withId: modelId) else {
+            print("[LlamaService] recreateLLMInstance: No model ID or model not found")
             return false
         }
 
@@ -208,8 +209,12 @@ class LlamaService {
         let template = templateForModel(model)
 
         guard FileManager.default.fileExists(atPath: modelURL.path) else {
+            print("[LlamaService] recreateLLMInstance: Model file doesn't exist")
             return false
         }
+
+        // Release old instance first
+        bot = nil
 
         // Create a fresh LLM instance - this resets the KV cache
         guard let newLLM = LLM(
@@ -217,10 +222,12 @@ class LlamaService {
             template: template,
             maxTokenCount: 8192
         ) else {
+            print("[LlamaService] recreateLLMInstance: Failed to create new LLM instance")
             return false
         }
 
         bot = newLLM
+        print("[LlamaService] recreateLLMInstance: Successfully created new LLM instance")
         return true
     }
 
@@ -230,21 +237,24 @@ class LlamaService {
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
+                print("[LlamaService] generate called with prompt: \(prompt.prefix(50))..., history count: \(history.count)")
+
                 // WORKAROUND for LLM.swift Issue #50: KV cache corruption on successive calls
-                // Recreate LLM instance before EVERY call to ensure fresh KV cache state
-                // This is slower but guarantees consistent behavior
+                // ALWAYS recreate LLM instance before each call when we have history
                 if !history.isEmpty {
-                    // Only recreate if this is not the first message (history exists)
-                    _ = await self.recreateLLMInstance()
+                    print("[LlamaService] Recreating LLM instance due to history...")
+                    let success = await self.recreateLLMInstance()
+                    print("[LlamaService] Recreate result: \(success)")
                 }
 
                 guard let bot = self.bot else {
+                    print("[LlamaService] ERROR: bot is nil")
                     continuation.yield("Error: AI model is not loaded. Please restart the app.")
                     continuation.finish()
                     return
                 }
 
-                // Clear any existing history and repopulate from our external storage
+                // Clear any existing history - start fresh each time
                 bot.history.removeAll()
 
                 // Repopulate history from our external storage (limit to recent messages)
@@ -257,18 +267,24 @@ class LlamaService {
                         bot.history.append((.bot, message.content))
                     }
                 }
+                print("[LlamaService] Populated bot.history with \(bot.history.count) messages")
 
                 // Generate response
+                print("[LlamaService] Calling bot.respond()...")
                 await bot.respond(to: prompt)
 
                 // Get the response from bot.output
-                var response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
+                let rawOutput = bot.output
+                print("[LlamaService] Raw output length: \(rawOutput.count), content: \(rawOutput.prefix(100))...")
+
+                var response = rawOutput.trimmingCharacters(in: .whitespacesAndNewlines)
 
                 // Clean up common artifacts
                 response = self.cleanResponse(response)
 
                 // Provide fallback if response is still empty or invalid
                 if response.isEmpty || response == "..." || response.count < 3 {
+                    print("[LlamaService] Response too short or empty, returning error message")
                     response = "I'm having trouble generating a response. Please try again."
                 }
 

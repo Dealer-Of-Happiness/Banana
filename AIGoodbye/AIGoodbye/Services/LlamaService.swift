@@ -196,25 +196,52 @@ class LlamaService {
 
     // MARK: - Text Generation
 
+    /// Recreate the LLM instance to reset KV cache (workaround for LLM.swift Issue #50)
+    private func recreateLLMInstance() async -> Bool {
+        guard let modelId = currentModelId,
+              let model = AIModel.model(withId: modelId) else {
+            return false
+        }
+
+        let manager = getModelManager()
+        let modelURL = manager.modelPath(for: model)
+        let template = templateForModel(model)
+
+        guard FileManager.default.fileExists(atPath: modelURL.path) else {
+            return false
+        }
+
+        // Create a fresh LLM instance - this resets the KV cache
+        guard let newLLM = LLM(
+            from: modelURL,
+            template: template,
+            maxTokenCount: 8192
+        ) else {
+            return false
+        }
+
+        bot = newLLM
+        return true
+    }
+
     func generate(
         prompt: String,
         history: [(role: String, content: String)] = []
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
-                guard let bot = self.bot else {
+                guard var bot = self.bot else {
                     continuation.yield("Error: AI model is not loaded. Please restart the app.")
                     continuation.finish()
                     return
                 }
 
                 // WORKAROUND for LLM.swift Issue #50: KV cache corruption on successive calls
-                // Clear the library's internal history before each call to force fresh KV cache state
-                // Then repopulate with our external history so the library properly formats it
+                // Clear history and repopulate from external storage
                 bot.history.removeAll()
 
                 // Repopulate history from our external storage (limit to recent messages)
-                let recentHistory = history.suffix(20) // Last 20 messages to avoid context overflow
+                let recentHistory = history.suffix(20)
                 for message in recentHistory {
                     let role = message.role.lowercased()
                     if role == "user" {
@@ -224,16 +251,36 @@ class LlamaService {
                     }
                 }
 
-                // Generate response - the library's preprocess will format history correctly
+                // Generate response
                 await bot.respond(to: prompt)
 
                 // Get the response from bot.output
                 var response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
 
+                // If response is empty, KV cache may be corrupted - recreate LLM instance and retry
+                if response.isEmpty || response == "..." || response.count < 3 {
+                    // Recreate the LLM instance to reset KV cache
+                    if await self.recreateLLMInstance(), let newBot = self.bot {
+                        // Repopulate history on new instance
+                        for message in recentHistory {
+                            let role = message.role.lowercased()
+                            if role == "user" {
+                                newBot.history.append((.user, message.content))
+                            } else if role == "assistant" {
+                                newBot.history.append((.bot, message.content))
+                            }
+                        }
+
+                        // Retry generation
+                        await newBot.respond(to: prompt)
+                        response = newBot.output.trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                }
+
                 // Clean up common artifacts
                 response = self.cleanResponse(response)
 
-                // Provide fallback if response is empty or invalid
+                // Provide fallback if response is still empty or invalid
                 if response.isEmpty || response == "..." || response.count < 3 {
                     response = "I'm having trouble generating a response. Please try again."
                 }

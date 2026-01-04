@@ -98,7 +98,7 @@ class AppState: ObservableObject {
         loadingMessage = "Checking for AI model..."
 
         do {
-            loadingMessage = "Loading AI model..."
+            loadingMessage = "Loading offline AI Model..."
             try await llamaService.loadModel()
 
             loadingMessage = "Initializing services..."
@@ -134,9 +134,13 @@ class AppState: ObservableObject {
 struct LoadingView: View {
     @ObservedObject var appState: AppState
     @ObservedObject var modelManager = ModelManager.shared
+    @State private var animatedProgress: Double = 0
+    @State private var progressTimer: Timer?
 
     var body: some View {
         VStack(spacing: 30) {
+            Spacer()
+
             Image(systemName: "brain.head.profile")
                 .font(.system(size: 80))
                 .foregroundStyle(
@@ -147,7 +151,7 @@ struct LoadingView: View {
                     )
                 )
 
-            Text("AI goodbye")
+            Text("AiGoodbye")
                 .font(.largeTitle.bold())
 
             Text(appState.loadingMessage)
@@ -157,32 +161,58 @@ struct LoadingView: View {
             // Show download progress from ModelManager
             if modelManager.isDownloading {
                 VStack(spacing: 12) {
-                    // Progress bar
-                    ProgressView(value: modelManager.downloadProgress)
+                    // Animated progress bar
+                    ProgressView(value: animatedProgress)
                         .progressViewStyle(.linear)
                         .frame(width: 250)
+                        .animation(.easeInOut(duration: 0.5), value: animatedProgress)
 
                     // Status text
-                    if modelManager.downloadProgress > 0 {
-                        Text("\(Int(modelManager.downloadProgress * 100))%")
-                            .font(.title3.monospacedDigit())
-                            .fontWeight(.semibold)
-                    } else {
-                        Text("Downloading... please wait")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    // Model name
-                    Text(modelManager.currentModel.name)
-                        .font(.caption)
+                    Text("Download in progress... please wait 5-10 minutes")
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .onAppear {
+                    startProgressAnimation()
+                }
+                .onDisappear {
+                    stopProgressAnimation()
                 }
             } else {
                 ProgressView()
             }
+
+            Spacer()
+
+            // Tagline at bottom
+            Text("Say \"Goodbye\" to subscriptions, privacy concerns and need for internet connection")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+                .padding(.bottom, 30)
         }
         .padding()
+    }
+
+    private func startProgressAnimation() {
+        animatedProgress = 0.05
+        progressTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { _ in
+            Task { @MainActor in
+                // Slowly increment progress to simulate download activity
+                // Caps at 95% since we don't know when it will actually finish
+                if animatedProgress < 0.95 {
+                    let increment = Double.random(in: 0.02...0.08)
+                    animatedProgress = min(animatedProgress + increment, 0.95)
+                }
+            }
+        }
+    }
+
+    private func stopProgressAnimation() {
+        progressTimer?.invalidate()
+        progressTimer = nil
     }
 }
 

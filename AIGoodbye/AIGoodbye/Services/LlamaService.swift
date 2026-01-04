@@ -189,6 +189,12 @@ class LlamaService {
         bot != nil
     }
 
+    /// Reset conversation history for starting a new chat
+    /// This properly clears both history AND the internal KV cache
+    func resetConversation() {
+        bot?.reset()
+    }
+
     // MARK: - Text Generation
 
     func generate(
@@ -203,8 +209,9 @@ class LlamaService {
                     return
                 }
 
-                // Clear previous history
-                bot.history.removeAll()
+                // DON'T clear history - LLM.swift manages multi-turn conversation
+                // The library automatically adds messages to history after respond()
+                // and has a historyLimit to prevent memory issues
 
                 // Generate response - bot.output is populated after this completes
                 await bot.respond(to: prompt)

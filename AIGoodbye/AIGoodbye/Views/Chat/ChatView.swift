@@ -282,6 +282,9 @@ class ChatViewModel: ObservableObject {
             messages.removeAll()
             currentConversationId = conversation?.id
 
+            // Reset LLM conversation state when switching conversations
+            appState?.llamaService.resetConversation()
+
             // Load messages from conversation if it exists
             if let conversation = conversation {
                 messages = conversation.messages.sorted { $0.timestamp < $1.timestamp }
@@ -406,6 +409,8 @@ class ChatViewModel: ObservableObject {
 
     func clearConversation() {
         messages.removeAll()
+        // Reset LLM conversation state when clearing chat
+        appState?.llamaService.resetConversation()
     }
 }
 

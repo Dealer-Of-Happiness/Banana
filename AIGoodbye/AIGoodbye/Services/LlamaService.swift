@@ -190,9 +190,8 @@ class LlamaService {
     }
 
     /// Reset conversation history for starting a new chat
-    /// This properly clears both history AND the internal KV cache
     func resetConversation() {
-        bot?.reset()
+        bot?.history.removeAll()
     }
 
     // MARK: - Text Generation

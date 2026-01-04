@@ -73,8 +73,7 @@ class AppState: ObservableObject {
     init() {
         self.settings = SettingsManager()
         self.llamaService = LlamaService(
-            temperature: settings.temperature,
-            contextWindow: settings.contextWindow
+            temperature: settings.temperature
         )
         self.speechService = SpeechService(settings: settings)
         self.documentService = DocumentService()

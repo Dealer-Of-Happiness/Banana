@@ -31,8 +31,8 @@ class LlamaService {
     }
 
     /// Get the current max token count from settings
-    private func getMaxTokenCount() -> Int {
-        return SettingsManager().contextWindow
+    private func getMaxTokenCount() -> Int32 {
+        return Int32(SettingsManager().contextWindow)
     }
 
     func loadModel() async throws {

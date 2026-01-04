@@ -243,26 +243,14 @@ class LlamaService {
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
-                print("[LlamaService] generate called with prompt: \(prompt.prefix(50))..., history count: \(history.count)")
-
-                // WORKAROUND for LLM.swift Issue #50: KV cache corruption on successive calls
-                // ALWAYS recreate LLM instance before each call when we have history
-                if !history.isEmpty {
-                    print("[LlamaService] Recreating LLM instance due to history...")
-                    let success = await self.recreateLLMInstance()
-                    print("[LlamaService] Recreate result: \(success)")
-                }
-
                 guard let bot = self.bot else {
-                    print("[LlamaService] ERROR: bot is nil")
                     continuation.yield("Error: AI model is not loaded. Please restart the app.")
                     continuation.finish()
                     return
                 }
 
-                // CRITICAL FIX: Don't use the library's history mechanism at all
-                // It causes KV cache corruption. Instead, always keep history empty
-                // and format the conversation context ourselves into the prompt.
+                // Clear library history - we manage context ourselves in the prompt
+                // This avoids KV cache issues without needing to recreate the LLM instance
                 bot.history.removeAll()
 
                 // Build a prompt that includes conversation context
@@ -270,43 +258,32 @@ class LlamaService {
                 var fullPrompt = prompt
                 if !history.isEmpty {
                     var contextParts: [String] = []
-                    contextParts.append("Continue the following conversation naturally:\n")
+                    contextParts.append("Continue this conversation:\n")
 
                     // Smart context management for long conversations:
-                    // - Keep first 2 messages (user intro usually has name/context)
-                    // - Keep last 6 messages (recent context)
-                    // - Drop middle messages to save tokens
-                    // - Truncate long messages
-
-                    let maxMessageLength = 300 // Truncate long messages
+                    // Keep first 2 messages (user intro) + last 4 messages (recent context)
+                    let maxMessageLength = 200 // Shorter truncation for speed
                     let firstMessagesCount = 2
-                    let recentMessagesCount = 6
+                    let recentMessagesCount = 4
 
                     var selectedMessages: [(role: String, content: String)] = []
 
                     if history.count <= firstMessagesCount + recentMessagesCount {
-                        // Short conversation - keep everything
                         selectedMessages = Array(history)
                     } else {
-                        // Long conversation - use bookend strategy
                         let firstMessages = Array(history.prefix(firstMessagesCount))
                         let recentMessages = Array(history.suffix(recentMessagesCount))
-
                         selectedMessages.append(contentsOf: firstMessages)
-                        // Add marker for omitted messages
-                        selectedMessages.append((role: "system", content: "[...earlier conversation omitted...]"))
+                        selectedMessages.append((role: "system", content: "[...]"))
                         selectedMessages.append(contentsOf: recentMessages)
                     }
 
                     for message in selectedMessages {
                         let role = message.role.lowercased()
                         var content = message.content
-
-                        // Truncate long messages to save context
                         if content.count > maxMessageLength {
                             content = String(content.prefix(maxMessageLength)) + "..."
                         }
-
                         if role == "user" {
                             contextParts.append("User: \(content)")
                         } else if role == "assistant" {
@@ -318,28 +295,16 @@ class LlamaService {
 
                     contextParts.append("User: \(prompt)")
                     contextParts.append("Assistant:")
-
                     fullPrompt = contextParts.joined(separator: "\n")
                 }
 
-                print("[LlamaService] Full prompt length: \(fullPrompt.count) chars, history: \(history.count) messages")
-
-                // Generate response with empty library history
-                print("[LlamaService] Calling bot.respond()...")
+                // Generate response
                 await bot.respond(to: fullPrompt)
 
-                // Get the response from bot.output
-                let rawOutput = bot.output
-                print("[LlamaService] Raw output length: \(rawOutput.count), content: \(rawOutput.prefix(100))...")
-
-                var response = rawOutput.trimmingCharacters(in: .whitespacesAndNewlines)
-
-                // Clean up common artifacts
+                var response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
                 response = self.cleanResponse(response)
 
-                // Provide fallback if response is still empty or invalid
                 if response.isEmpty || response == "..." || response.count < 3 {
-                    print("[LlamaService] Response too short or empty, returning error message")
                     response = "I'm having trouble generating a response. Please try again."
                 }
 

@@ -65,25 +65,25 @@ enum TemplateType: String, Codable {
 // MARK: - Available Models
 
 extension AIModel {
-    // Qwen2.5 7B - tested with LLM.swift, excellent multilingual support
-    static let qwen7B = AIModel(
-        id: "qwen-7b",
-        name: "Qwen 7B",
-        shortDescription: "Powerful multilingual AI assistant",
-        fullDescription: "Qwen2.5 7B Instruct offers excellent multilingual support including Chinese, Japanese, Korean, and European languages with strong reasoning capabilities.",
-        size: "4.7 GB",
-        sizeBytes: 4_680_000_000,
-        downloadURL: URL(string: "https://huggingface.co/bartowski/Qwen2.5-7B-Instruct-GGUF/resolve/main/Qwen2.5-7B-Instruct-Q4_K_M.gguf")!,
-        fileName: "Qwen2.5-7B-Instruct-Q4_K_M.gguf",
+    // Qwen2.5 3B - optimized for mobile, excellent multilingual support
+    static let qwen3B = AIModel(
+        id: "qwen-3b",
+        name: "Qwen 3B",
+        shortDescription: "Fast multilingual AI assistant",
+        fullDescription: "Qwen2.5 3B Instruct is optimized for mobile devices with excellent multilingual support including Chinese, Japanese, Korean, and European languages.",
+        size: "1.9 GB",
+        sizeBytes: 1_940_000_000,
+        downloadURL: URL(string: "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf")!,
+        fileName: "qwen2.5-3b-instruct-q4_k_m.gguf",
         capabilities: [.chat, .coding, .reasoning, .multilingual, .fileAnalysis],
-        memoryRequired: "6 GB RAM",
+        memoryRequired: "3 GB RAM",
         templateType: .chatml
     )
 
-    static let allModels: [AIModel] = [qwen7B]
+    static let allModels: [AIModel] = [qwen3B]
 
     static var defaultModel: AIModel {
-        qwen7B
+        qwen3B
     }
 
     static func model(withId id: String) -> AIModel? {

@@ -94,7 +94,7 @@ class LlamaService {
         guard let llm = LLM(
             from: modelURL,
             template: template,
-            maxTokenCount: 8192  // Higher context for better responses
+            maxTokenCount: 2048  // Keep low to avoid memory crashes on mobile
         ) else {
             // Mark this model as failed so we delete it next time
             UserDefaults.standard.set(model.id, forKey: lastFailedKey)
@@ -135,7 +135,7 @@ class LlamaService {
         guard let llm = LLM(
             from: modelURL,
             template: template,
-            maxTokenCount: 8192
+            maxTokenCount: 2048
         ) else {
             try? fileManager.removeItem(at: modelURL)
             throw LlamaError.modelLoadFailed("Model file may be corrupted. Please download again.")

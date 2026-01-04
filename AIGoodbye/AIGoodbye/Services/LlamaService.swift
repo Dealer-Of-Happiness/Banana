@@ -197,113 +197,48 @@ class LlamaService {
     /// Reset conversation history for starting a new chat
     func resetConversation() {
         bot?.history.removeAll()
+        print("[LlamaService] Conversation reset - history cleared")
+    }
+
+    /// Restore conversation history from saved messages (for resuming conversations)
+    func restoreHistory(_ messages: [(role: String, content: String)]) {
+        guard let bot = bot else { return }
+
+        // Convert to LLM.swift's Chat format
+        bot.history = messages.compactMap { msg in
+            let role: LLM.Role = msg.role.lowercased() == "user" ? .user : .bot
+            return (role, msg.content)
+        }
+        print("[LlamaService] Restored \(bot.history.count) messages to history")
     }
 
     // MARK: - Text Generation
 
-    /// Recreate the LLM instance to reset KV cache (workaround for LLM.swift Issue #50)
-    private func recreateLLMInstance() async -> Bool {
-        guard let modelId = currentModelId,
-              let model = AIModel.model(withId: modelId) else {
-            print("[LlamaService] recreateLLMInstance: No model ID or model not found")
-            return false
-        }
-
-        let manager = getModelManager()
-        let modelURL = manager.modelPath(for: model)
-        let template = templateForModel(model)
-
-        guard FileManager.default.fileExists(atPath: modelURL.path) else {
-            print("[LlamaService] recreateLLMInstance: Model file doesn't exist")
-            return false
-        }
-
-        // Release old instance first and clear state
-        print("[LlamaService] Releasing old LLM instance...")
-        bot = nil
-
-        // Wait for memory cleanup - longer on physical devices
-        #if targetEnvironment(simulator)
-        try? await Task.sleep(nanoseconds: 100_000_000) // 100ms in simulator
-        #else
-        try? await Task.sleep(nanoseconds: 500_000_000) // 500ms on real device
-        #endif
-
-        // Create a fresh LLM instance - this resets the KV cache
-        print("[LlamaService] Creating new LLM instance...")
-        let tokenLimit = getMaxTokenCount()
-        guard let newLLM = LLM(
-            from: modelURL,
-            template: template,
-            maxTokenCount: tokenLimit
-        ) else {
-            print("[LlamaService] recreateLLMInstance: Failed to create new LLM instance")
-            return false
-        }
-
-        bot = newLLM
-        print("[LlamaService] recreateLLMInstance: Successfully created new LLM instance with \(tokenLimit) token limit")
-        return true
-    }
-
-    func generate(
-        prompt: String,
-        history: [(role: String, content: String)] = []
-    ) -> AsyncThrowingStream<String, Error> {
+    func generate(prompt: String) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
-                // For messages with history, recreate LLM to avoid KV cache issues
-                if !history.isEmpty {
-                    print("[LlamaService] Recreating LLM for message with history...")
-                    var success = await self.recreateLLMInstance()
-
-                    // Retry once if failed
-                    if !success {
-                        print("[LlamaService] First recreation failed, retrying after delay...")
-                        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
-                        success = await self.recreateLLMInstance()
-                    }
-
-                    if !success {
-                        continuation.yield("Error: Could not reload AI model. Please restart the app.")
-                        continuation.finish()
-                        return
-                    }
-                }
-
                 guard let bot = self.bot else {
                     continuation.yield("Error: AI model is not loaded. Please restart the app.")
                     continuation.finish()
                     return
                 }
 
-                // Keep library history empty - we handle context ourselves
-                bot.history.removeAll()
+                // DON'T clear history - LLM.swift manages it automatically
+                // DON'T recreate the model - use the existing instance
 
-                // Just use the current prompt - avoid complex context formatting
-                // that might confuse the chatML template
-                let fullPrompt = prompt
+                print("[LlamaService] Generating response...")
+                print("[LlamaService] Current history count: \(bot.history.count)")
+                print("[LlamaService] Prompt: \(prompt.prefix(50))...")
 
-                // Generate response
-                print("[LlamaService] Generating response for prompt: \(prompt.prefix(50))...")
-                await bot.respond(to: fullPrompt)
+                // Just respond - LLM.swift handles history automatically
+                // After this call, it will append [(user, prompt), (bot, output)] to history
+                await bot.respond(to: prompt)
+
                 var response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
-                print("[LlamaService] Raw response length: \(response.count)")
+                print("[LlamaService] Response length: \(response.count)")
+                print("[LlamaService] New history count: \(bot.history.count)")
+
                 response = self.cleanResponse(response)
-
-                // If response is empty, try once more with completely fresh instance
-                if response.isEmpty || response == "..." || response.count < 3 {
-                    print("[LlamaService] Empty response, attempting retry with fresh LLM...")
-                    try? await Task.sleep(nanoseconds: 500_000_000) // 500ms
-
-                    if await self.recreateLLMInstance(), let freshBot = self.bot {
-                        freshBot.history.removeAll()
-                        await freshBot.respond(to: prompt)
-                        response = freshBot.output.trimmingCharacters(in: .whitespacesAndNewlines)
-                        print("[LlamaService] Retry response length: \(response.count)")
-                        response = self.cleanResponse(response)
-                    }
-                }
 
                 if response.isEmpty || response == "..." || response.count < 3 {
                     response = "I'm having trouble generating a response. Please try again."
@@ -379,13 +314,16 @@ class LlamaService {
         return nil
     }
 
-    // Simple non-streaming response
-    func getResponse(prompt: String) async throws -> String {
+    // Simple non-streaming response (for one-off queries that don't need history)
+    func getResponse(prompt: String, clearHistory: Bool = false) async throws -> String {
         guard let bot = bot else {
             throw LlamaError.modelNotLoaded
         }
 
-        bot.history.removeAll()
+        // Only clear history if explicitly requested (e.g., for utility queries)
+        if clearHistory {
+            bot.history.removeAll()
+        }
 
         await bot.respond(to: prompt)
 

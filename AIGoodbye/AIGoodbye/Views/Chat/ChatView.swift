@@ -288,6 +288,10 @@ class ChatViewModel: ObservableObject {
             // Load messages from conversation if it exists
             if let conversation = conversation {
                 messages = conversation.messages.sorted { $0.timestamp < $1.timestamp }
+
+                // Restore conversation history to LLM.swift so it remembers context
+                let historyForLLM = messages.map { ($0.role.rawValue, $0.content) }
+                appState?.llamaService.restoreHistory(historyForLLM)
             }
         }
     }
@@ -328,10 +332,8 @@ class ChatViewModel: ObservableObject {
             let placeholderMessage = Message(role: .assistant, content: "")
             messages.append(placeholderMessage)
 
-            for try await chunk in llamaService.generate(
-                prompt: text,
-                history: messages.dropLast(2).map { ($0.role.rawValue, $0.content) }
-            ) {
+            // LLM.swift manages history automatically - just pass the prompt
+            for try await chunk in llamaService.generate(prompt: text) {
                 responseText += chunk
                 if let index = messages.firstIndex(where: { $0.id == placeholderMessage.id }) {
                     messages[index].content = responseText

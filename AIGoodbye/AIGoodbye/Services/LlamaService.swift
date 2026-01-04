@@ -250,19 +250,15 @@ class LlamaService {
                 }
 
                 // Clear library history - we manage context ourselves in the prompt
-                // This avoids KV cache issues without needing to recreate the LLM instance
                 bot.history.removeAll()
 
                 // Build a prompt that includes conversation context
-                // Using "bookend" strategy: keep first messages + recent messages, drop middle
                 var fullPrompt = prompt
                 if !history.isEmpty {
                     var contextParts: [String] = []
                     contextParts.append("Continue this conversation:\n")
 
-                    // Smart context management for long conversations:
-                    // Keep first 2 messages (user intro) + last 4 messages (recent context)
-                    let maxMessageLength = 200 // Shorter truncation for speed
+                    let maxMessageLength = 200
                     let firstMessagesCount = 2
                     let recentMessagesCount = 4
 
@@ -300,8 +296,17 @@ class LlamaService {
 
                 // Generate response
                 await bot.respond(to: fullPrompt)
-
                 var response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
+
+                // If response failed, try recreating LLM instance and retry once
+                if response.isEmpty || response == "..." || response.count < 3 {
+                    if await self.recreateLLMInstance(), let newBot = self.bot {
+                        newBot.history.removeAll()
+                        await newBot.respond(to: fullPrompt)
+                        response = newBot.output.trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                }
+
                 response = self.cleanResponse(response)
 
                 if response.isEmpty || response == "..." || response.count < 3 {

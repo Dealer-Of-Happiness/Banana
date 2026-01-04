@@ -34,7 +34,7 @@ actor LlamaService {
 
     func loadModel() async throws {
         let manager = await getModelManager()
-        let model = await manager.currentModel
+        let model = await manager.activeModel
 
         // If already loaded with same model, skip
         if bot != nil && currentModelId == model.id {

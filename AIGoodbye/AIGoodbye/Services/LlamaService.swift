@@ -277,11 +277,12 @@ class LlamaService {
                     return
                 }
 
-                // CRITICAL: Clear the library's history before EVERY call
-                // This prevents KV cache corruption (LLM.swift Issue #50)
-                print("[LlamaService] History before clear: \(bot.history.count)")
-                bot.history.removeAll()
-                print("[LlamaService] History after clear: \(bot.history.count)")
+                // CRITICAL: Call reset() which clears BOTH history AND KV cache
+                // This is the proper way to prevent KV cache corruption
+                // reset() calls core.resetContext() which calls llama_memory_seq_rm()
+                print("[LlamaService] History before reset: \(bot.history.count)")
+                bot.reset()
+                print("[LlamaService] History after reset: \(bot.history.count)")
 
                 // Build context from conversation history (simplified format)
                 // Don't use User:/Assistant: markers as they conflict with chatML template

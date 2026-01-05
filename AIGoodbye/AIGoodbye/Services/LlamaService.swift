@@ -116,17 +116,17 @@ class LlamaService {
         let systemPrompt = "You are AiGoodbye, a helpful AI assistant. Be concise and helpful."
         switch model.templateType {
         case .mistral:
-            return Template.mistral(systemPrompt)
+            return .mistral  // constant, no system prompt
         case .llama3:
-            return Template.llama3(systemPrompt)
+            return .llama(systemPrompt)  // llama3 uses llama template
         case .gemma:
-            return Template.gemma(systemPrompt)
+            return .gemma  // constant, no system prompt
         case .phi:
-            return Template.phi3(systemPrompt)
+            return .chatML(systemPrompt)  // phi uses chatML format
         case .chatml:
-            return Template.chatML(systemPrompt)
+            return .chatML(systemPrompt)
         case .alpaca:
-            return Template.alpaca(systemPrompt)
+            return .alpaca(systemPrompt)
         }
     }
 

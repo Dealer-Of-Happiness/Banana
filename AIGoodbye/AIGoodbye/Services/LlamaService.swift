@@ -33,8 +33,8 @@ class LlamaService {
     }
 
     /// Get the current max token count from settings
-    private func getMaxTokenCount() -> Int {
-        return SettingsManager().contextWindow
+    private func getMaxTokenCount() -> Int32 {
+        return Int32(SettingsManager().contextWindow)
     }
 
     func loadModel() async throws {
@@ -112,20 +112,21 @@ class LlamaService {
         print("[LlamaService] Model loaded successfully")
     }
 
-    private func templateForModel(_ model: AIModel) -> LLM.Template {
+    private func templateForModel(_ model: AIModel) -> Template {
+        let systemPrompt = "You are AiGoodbye, a helpful AI assistant. Be concise and helpful."
         switch model.templateType {
         case .mistral:
-            return .mistral
+            return Template.mistral(systemPrompt)
         case .llama3:
-            return .llama3
+            return Template.llama3(systemPrompt)
         case .gemma:
-            return .gemma
+            return Template.gemma(systemPrompt)
         case .phi:
-            return .phi3
+            return Template.phi3(systemPrompt)
         case .chatml:
-            return .chatML
+            return Template.chatML(systemPrompt)
         case .alpaca:
-            return .alpaca
+            return Template.alpaca(systemPrompt)
         }
     }
 

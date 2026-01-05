@@ -277,59 +277,64 @@ class LlamaService {
                     return
                 }
 
-                // Save current history BEFORE recreation (as array of tuples)
-                // We store as simple Bool + String to avoid any type issues with LLM.Role
+                // Save current history (to restore after recreation)
                 var savedHistoryData: [(isUser: Bool, content: String)] = []
                 for entry in currentBot.history {
-                    // Check role by comparing with .user enum case
                     let isUser = (entry.role == .user)
                     savedHistoryData.append((isUser: isUser, content: entry.content))
-                    print("[LlamaService] Saved entry - isUser: \(isUser), content: \(entry.content.prefix(30))...")
                 }
-                print("[LlamaService] Total saved: \(savedHistoryData.count) history entries")
+                print("[LlamaService] Current history count: \(savedHistoryData.count)")
 
-                // ALWAYS recreate LLM to reset KV cache (workaround for Issue #50)
-                print("[LlamaService] Recreating LLM to reset KV cache...")
+                // Only recreate LLM if there's existing history (to avoid KV cache corruption)
+                // For the FIRST message, use the existing instance - it's fresh and works fine
+                if !savedHistoryData.isEmpty {
+                    print("[LlamaService] Has history - recreating LLM to reset KV cache...")
 
-                guard await self.recreateLLMInstance() else {
-                    print("[LlamaService] ERROR: recreateLLMInstance failed")
-                    continuation.yield("Error: Could not reload AI model. Please restart the app.")
-                    continuation.finish()
-                    return
+                    guard await self.recreateLLMInstance() else {
+                        print("[LlamaService] ERROR: recreateLLMInstance failed")
+                        continuation.yield("Error: Could not reload AI model. Please restart the app.")
+                        continuation.finish()
+                        return
+                    }
+
+                    guard let newBot = self.bot else {
+                        print("[LlamaService] ERROR: bot is nil after recreation")
+                        continuation.yield("Error: AI model is not loaded. Please restart the app.")
+                        continuation.finish()
+                        return
+                    }
+
+                    // Restore saved history to the NEW instance
+                    for entry in savedHistoryData {
+                        if entry.isUser {
+                            newBot.history.append((.user, entry.content))
+                        } else {
+                            newBot.history.append((.bot, entry.content))
+                        }
+                    }
+                    print("[LlamaService] Restored \(newBot.history.count) history entries")
+                } else {
+                    print("[LlamaService] First message - using existing LLM instance (no recreation needed)")
                 }
 
                 guard let bot = self.bot else {
-                    print("[LlamaService] ERROR: bot is nil after recreation")
                     continuation.yield("Error: AI model is not loaded. Please restart the app.")
                     continuation.finish()
                     return
                 }
 
-                // Restore saved history to the NEW instance
-                bot.history.removeAll()
-                for entry in savedHistoryData {
-                    if entry.isUser {
-                        bot.history.append((.user, entry.content))
-                    } else {
-                        bot.history.append((.bot, entry.content))
-                    }
-                }
-                print("[LlamaService] Restored \(bot.history.count) history entries to new instance")
-
-                // Generate response - LLM.swift will format prompt with history
+                // Generate response
                 print("[LlamaService] Generating response for: \(prompt.prefix(50))...")
                 await bot.respond(to: prompt)
 
                 var response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
-                print("[LlamaService] Raw response length: \(response.count)")
-                print("[LlamaService] Raw response preview: \(response.prefix(100))...")
-                print("[LlamaService] New history count: \(bot.history.count)")
+                print("[LlamaService] Response length: \(response.count)")
+                print("[LlamaService] History count after response: \(bot.history.count)")
 
                 response = self.cleanResponse(response)
-                print("[LlamaService] Cleaned response length: \(response.count)")
 
                 if response.isEmpty || response == "..." || response.count < 3 {
-                    print("[LlamaService] WARNING: Response too short or empty, returning error message")
+                    print("[LlamaService] WARNING: Empty response")
                     response = "I'm having trouble generating a response. Please try again."
                 }
 

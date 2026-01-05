@@ -334,8 +334,9 @@ class ChatViewModel: ObservableObject {
             let placeholderMessage = Message(role: .assistant, content: "")
             messages.append(placeholderMessage)
 
-            // Let LLM.swift manage history internally - just pass the prompt
-            for try await chunk in llamaService.generate(prompt: text) {
+            // Pass conversation history (exclude placeholder and current user message)
+            let history = messages.dropLast(2).map { ($0.role.rawValue, $0.content) }
+            for try await chunk in llamaService.generate(prompt: text, conversationHistory: history) {
                 responseText += chunk
                 if let index = messages.firstIndex(where: { $0.id == placeholderMessage.id }) {
                     messages[index].content = responseText

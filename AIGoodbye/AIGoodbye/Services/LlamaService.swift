@@ -270,24 +270,53 @@ class LlamaService {
     func generate(prompt: String, conversationHistory: [(role: String, content: String)] = []) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
-                guard let bot = self.bot else {
+                guard self.bot != nil else {
                     print("[LlamaService] ERROR: bot is nil")
                     continuation.yield("Error: AI model is not loaded. Please restart the app.")
                     continuation.finish()
                     return
                 }
 
-                print("[LlamaService] Current history count: \(bot.history.count)")
-                print("[LlamaService] Sending prompt: \(prompt.prefix(50))...")
+                // Check if we need to recreate (for subsequent messages)
+                let historyCount = self.bot?.history.count ?? 0
+                print("[LlamaService] Current history count: \(historyCount)")
 
-                // Use LLM.swift as designed - just call respond()
-                // The library maintains history and formats prompts automatically
-                // DON'T clear history - let the library manage it
-                await bot.respond(to: prompt)
+                // For messages after the first, recreate LLM with SMALL context to fit in memory
+                if historyCount > 0 {
+                    print("[LlamaService] Recreating LLM with small context for subsequent message...")
+
+                    // Recreate with minimal context (2K) to reduce memory footprint
+                    guard await self.recreateLLMInstanceWithSmallContext() else {
+                        print("[LlamaService] ERROR: Failed to recreate LLM")
+                        continuation.yield("Error: Could not reload AI. Please restart the app.")
+                        continuation.finish()
+                        return
+                    }
+                }
+
+                guard let bot = self.bot else {
+                    continuation.yield("Error: AI model is not loaded. Please restart the app.")
+                    continuation.finish()
+                    return
+                }
+
+                // Build prompt with history context (since we cleared the LLM's history)
+                var fullPrompt = prompt
+                if !conversationHistory.isEmpty {
+                    let recent = conversationHistory.suffix(4) // Last 2 exchanges
+                    var context = "Based on our conversation:\n"
+                    for msg in recent {
+                        let role = msg.role.lowercased() == "user" ? "User" : "You"
+                        context += "\(role): \(msg.content)\n"
+                    }
+                    fullPrompt = context + "\nUser: \(prompt)"
+                }
+
+                print("[LlamaService] Generating response...")
+                await bot.respond(to: fullPrompt)
 
                 let rawOutput = bot.output
                 print("[LlamaService] Raw output length: \(rawOutput.count)")
-                print("[LlamaService] History after respond: \(bot.history.count)")
 
                 var response = rawOutput.trimmingCharacters(in: .whitespacesAndNewlines)
                 response = self.cleanResponse(response)
@@ -301,6 +330,42 @@ class LlamaService {
                 continuation.finish()
             }
         }
+    }
+
+    /// Recreate with small context window (2K) to reduce memory footprint
+    private func recreateLLMInstanceWithSmallContext() async -> Bool {
+        guard let modelId = currentModelId,
+              let model = AIModel.model(withId: modelId) else {
+            return false
+        }
+
+        let manager = getModelManager()
+        let modelURL = manager.modelPath(for: model)
+        let template = templateForModel(model)
+
+        guard FileManager.default.fileExists(atPath: modelURL.path) else {
+            return false
+        }
+
+        // Release old instance
+        bot = nil
+
+        // Wait for memory to be freed
+        try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
+
+        // Create with SMALL context (2048) to reduce memory
+        guard let newLLM = LLM(
+            from: modelURL,
+            template: template,
+            maxTokenCount: 2048  // Small context to fit in memory
+        ) else {
+            print("[LlamaService] Failed to create LLM with small context")
+            return false
+        }
+
+        bot = newLLM
+        print("[LlamaService] Created LLM with 2K context")
+        return true
     }
 
     private func cleanResponse(_ response: String) -> String {

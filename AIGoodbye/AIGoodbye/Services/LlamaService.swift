@@ -277,34 +277,15 @@ class LlamaService {
                     return
                 }
 
-                // CRITICAL: Call reset() which clears BOTH history AND KV cache
-                // This is the proper way to prevent KV cache corruption
-                // reset() calls core.resetContext() which calls llama_memory_seq_rm()
-                print("[LlamaService] History before reset: \(bot.history.count)")
-                bot.reset()
-                print("[LlamaService] History after reset: \(bot.history.count)")
+                print("[LlamaService] Current history count: \(bot.history.count)")
+                print("[LlamaService] Sending prompt: \(prompt.prefix(50))...")
 
-                // Build context from conversation history (simplified format)
-                // Don't use User:/Assistant: markers as they conflict with chatML template
-                var contextPrefix = ""
-                if !conversationHistory.isEmpty {
-                    let recent = conversationHistory.suffix(6) // Last 3 exchanges
-                    var contextParts: [String] = []
-                    for msg in recent {
-                        let prefix = msg.role.lowercased() == "user" ? "Human" : "AI"
-                        contextParts.append("\(prefix): \(msg.content)")
-                    }
-                    contextPrefix = "[Context: \(contextParts.joined(separator: " | "))]\n\n"
-                }
-
-                let fullPrompt = contextPrefix + prompt
-                print("[LlamaService] Prompt: \(fullPrompt.prefix(200))...")
-
-                // Generate response
-                await bot.respond(to: fullPrompt)
+                // Use LLM.swift as designed - just call respond()
+                // The library maintains history and formats prompts automatically
+                // DON'T clear history - let the library manage it
+                await bot.respond(to: prompt)
 
                 let rawOutput = bot.output
-                print("[LlamaService] Raw output: '\(rawOutput.prefix(100))...'")
                 print("[LlamaService] Raw output length: \(rawOutput.count)")
                 print("[LlamaService] History after respond: \(bot.history.count)")
 
@@ -312,7 +293,7 @@ class LlamaService {
                 response = self.cleanResponse(response)
 
                 if response.isEmpty || response == "..." || response.count < 3 {
-                    print("[LlamaService] WARNING: Empty response after cleaning")
+                    print("[LlamaService] WARNING: Empty response")
                     response = "I'm having trouble generating a response. Please try again."
                 }
 

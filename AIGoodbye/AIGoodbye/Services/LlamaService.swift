@@ -279,44 +279,39 @@ class LlamaService {
 
                 // CRITICAL: Clear the library's history before EVERY call
                 // This prevents KV cache corruption (LLM.swift Issue #50)
-                // We'll format the conversation ourselves in the prompt
+                print("[LlamaService] History before clear: \(bot.history.count)")
                 bot.history.removeAll()
-                print("[LlamaService] Cleared bot.history to prevent KV cache issues")
+                print("[LlamaService] History after clear: \(bot.history.count)")
 
-                // Build the full prompt with conversation history
-                // This is how working apps handle multi-turn without KV cache issues
-                var fullPrompt = ""
-
-                // Add conversation history (keep last 6 exchanges to fit in context)
-                let recentHistory = conversationHistory.suffix(12) // 6 exchanges = 12 messages
-                if !recentHistory.isEmpty {
-                    fullPrompt += "Previous conversation:\n"
-                    for msg in recentHistory {
-                        if msg.role.lowercased() == "user" {
-                            fullPrompt += "User: \(msg.content)\n"
-                        } else {
-                            fullPrompt += "Assistant: \(msg.content)\n"
-                        }
+                // Build context from conversation history (simplified format)
+                // Don't use User:/Assistant: markers as they conflict with chatML template
+                var contextPrefix = ""
+                if !conversationHistory.isEmpty {
+                    let recent = conversationHistory.suffix(6) // Last 3 exchanges
+                    var contextParts: [String] = []
+                    for msg in recent {
+                        let prefix = msg.role.lowercased() == "user" ? "Human" : "AI"
+                        contextParts.append("\(prefix): \(msg.content)")
                     }
-                    fullPrompt += "\n"
+                    contextPrefix = "[Context: \(contextParts.joined(separator: " | "))]\n\n"
                 }
 
-                // Add current message
-                fullPrompt += "User: \(prompt)\nAssistant:"
+                let fullPrompt = contextPrefix + prompt
+                print("[LlamaService] Prompt: \(fullPrompt.prefix(200))...")
 
-                print("[LlamaService] Generating with \(recentHistory.count) history messages")
-                print("[LlamaService] Full prompt length: \(fullPrompt.count) chars")
-
-                // Generate response - single call with complete context
+                // Generate response
                 await bot.respond(to: fullPrompt)
 
-                var response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
-                print("[LlamaService] Response length: \(response.count)")
+                let rawOutput = bot.output
+                print("[LlamaService] Raw output: '\(rawOutput.prefix(100))...'")
+                print("[LlamaService] Raw output length: \(rawOutput.count)")
+                print("[LlamaService] History after respond: \(bot.history.count)")
 
+                var response = rawOutput.trimmingCharacters(in: .whitespacesAndNewlines)
                 response = self.cleanResponse(response)
 
                 if response.isEmpty || response == "..." || response.count < 3 {
-                    print("[LlamaService] WARNING: Empty response")
+                    print("[LlamaService] WARNING: Empty response after cleaning")
                     response = "I'm having trouble generating a response. Please try again."
                 }
 

@@ -2,17 +2,19 @@
 //  LlamaService.swift
 //  AIGoodbye
 //
-//  Local Llama model inference service using llmfarm_core.swift
+//  Local Llama model inference service using LLM.swift
+//  Multi-turn workaround: Pass full conversation history in each prompt
 //
 
 import Foundation
-import llmfarm_core
+import LLM
 
 @MainActor
 class LlamaService {
-    private var ai: AI?
+    private var bot: LLM?
     private let temperature: Float
     private var currentModelId: String?
+    private var modelURL: URL?
 
     // Download state - observable from outside
     static var downloadedBytes: Int64 = 0
@@ -31,8 +33,8 @@ class LlamaService {
     }
 
     /// Get the current max token count from settings
-    private func getMaxTokenCount() -> Int32 {
-        return Int32(SettingsManager().contextWindow)
+    private func getMaxTokenCount() -> Int {
+        return SettingsManager().contextWindow
     }
 
     func loadModel() async throws {
@@ -40,12 +42,12 @@ class LlamaService {
         let model = manager.activeModel
 
         // If already loaded with same model, skip
-        if ai != nil && currentModelId == model.id {
+        if bot != nil && currentModelId == model.id {
             return
         }
 
         // Unload previous model
-        ai = nil
+        bot = nil
         currentModelId = nil
 
         // Load the single model
@@ -54,28 +56,26 @@ class LlamaService {
 
     private func loadModelInternal(_ model: AIModel) async throws {
         let manager = getModelManager()
-        let modelURL = manager.modelPath(for: model)
+        let url = manager.modelPath(for: model)
         let fileManager = FileManager.default
 
         // Always delete existing file if we're retrying after a failure
-        // Check UserDefaults for last failed model
         let lastFailedKey = "lastFailedModelId"
         if UserDefaults.standard.string(forKey: lastFailedKey) == model.id {
-            // This model failed before, delete and redownload
-            try? fileManager.removeItem(at: modelURL)
+            try? fileManager.removeItem(at: url)
             UserDefaults.standard.removeObject(forKey: lastFailedKey)
         }
 
         // Check if model is downloaded and valid
-        var needsDownload = !fileManager.fileExists(atPath: modelURL.path)
+        var needsDownload = !fileManager.fileExists(atPath: url.path)
 
         if !needsDownload {
             // Check file size - if too small, the download was incomplete
-            if let attributes = try? fileManager.attributesOfItem(atPath: modelURL.path),
+            if let attributes = try? fileManager.attributesOfItem(atPath: url.path),
                let fileSize = attributes[.size] as? Int64 {
                 let minimumSize = model.sizeBytes / 2
                 if fileSize < minimumSize {
-                    try? fileManager.removeItem(at: modelURL)
+                    try? fileManager.removeItem(at: url)
                     needsDownload = true
                 }
             }
@@ -85,121 +85,82 @@ class LlamaService {
             try await downloadModel(model)
         }
 
+        // Get template for the model
+        let template = templateForModel(model)
+
         // Verify file exists after potential download
-        guard fileManager.fileExists(atPath: modelURL.path) else {
+        guard fileManager.fileExists(atPath: url.path) else {
             throw LlamaError.modelNotFound
         }
 
         // Try to load the model with settings from user preferences
-        do {
-            try await loadAIModel(modelPath: modelURL.path, model: model)
-            currentModelId = model.id
-        } catch {
+        let tokenLimit = getMaxTokenCount()
+        guard let llm = LLM(
+            from: url,
+            template: template,
+            maxTokenCount: tokenLimit
+        ) else {
             // Mark this model as failed so we delete it next time
             UserDefaults.standard.set(model.id, forKey: lastFailedKey)
-            // Delete the file
-            try? fileManager.removeItem(at: modelURL)
+            try? fileManager.removeItem(at: url)
             throw LlamaError.modelLoadFailed("Model failed to initialize. File deleted - restart app to re-download.")
         }
+
+        bot = llm
+        modelURL = url
+        currentModelId = model.id
+        print("[LlamaService] Model loaded successfully")
     }
 
-    private func loadAIModel(modelPath: String, model: AIModel) async throws {
-        // Create AI instance
-        let chatName = "aigoodbye_chat"
-        let newAI = AI(_modelPath: modelPath, _chatName: chatName)
-
-        // Configure context parameters
-        var contextParams: ModelAndContextParams = .default
-        contextParams.context = getMaxTokenCount()
-        contextParams.use_metal = true
-        contextParams.n_threads = Int32(max(1, ProcessInfo.processInfo.activeProcessorCount - 2))
-
-        // Set temperature
-        contextParams.temp = temperature
-
-        // Determine inference type based on model
-        let inferenceType = inferenceTypeForModel(model)
-
-        // Load model on background thread
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    try newAI.loadModel(inferenceType, contextParams: contextParams)
-
-                    // Set prompt format based on model template
-                    if let llmModel = newAI.model {
-                        llmModel.promptFormat = self.promptFormatForModel(model)
-                        llmModel.contextParams.system_prompt = "You are AiGoodbye, a helpful, friendly AI assistant. Be concise and helpful in your responses."
-                    }
-
-                    DispatchQueue.main.async {
-                        self.ai = newAI
-                        print("[LlamaService] Model loaded successfully with llmfarm_core")
-                        continuation.resume()
-                    }
-                } catch {
-                    DispatchQueue.main.async {
-                        print("[LlamaService] Failed to load model: \(error)")
-                        continuation.resume(throwing: error)
-                    }
-                }
-            }
-        }
-    }
-
-    private func inferenceTypeForModel(_ model: AIModel) -> ModelInference {
-        // Most GGUF models use LLama inference
-        return .LLama_gguf
-    }
-
-    private func promptFormatForModel(_ model: AIModel) -> ModelPromptStyle {
+    private func templateForModel(_ model: AIModel) -> LLM.Template {
         switch model.templateType {
         case .mistral:
-            return .Mistral
+            return .mistral
         case .llama3:
-            return .LLaMa
+            return .llama3
         case .gemma:
-            return .Gemma
+            return .gemma
         case .phi:
-            return .Phi3
+            return .phi3
         case .chatml:
-            return .ChatML
+            return .chatML
         case .alpaca:
-            return .Alpaca
+            return .alpaca
         }
     }
 
     func loadSpecificModel(_ model: AIModel) async throws {
-        // Unload previous model
-        ai = nil
+        bot = nil
         currentModelId = nil
 
         let manager = getModelManager()
-        let modelURL = manager.modelPath(for: model)
+        let url = manager.modelPath(for: model)
         let fileManager = FileManager.default
 
-        // Verify file exists and has valid size
-        guard fileManager.fileExists(atPath: modelURL.path) else {
+        guard fileManager.fileExists(atPath: url.path) else {
             throw LlamaError.modelNotFound
         }
 
-        // Check file size
-        if let attributes = try? fileManager.attributesOfItem(atPath: modelURL.path),
+        if let attributes = try? fileManager.attributesOfItem(atPath: url.path),
            let fileSize = attributes[.size] as? Int64 {
             let minimumSize = model.sizeBytes / 2
             if fileSize < minimumSize {
-                try? fileManager.removeItem(at: modelURL)
+                try? fileManager.removeItem(at: url)
                 throw LlamaError.modelLoadFailed("Model file is incomplete. Please download again.")
             }
         }
 
-        do {
-            try await loadAIModel(modelPath: modelURL.path, model: model)
-            currentModelId = model.id
-        } catch {
-            try? fileManager.removeItem(at: modelURL)
+        let template = templateForModel(model)
+        let tokenLimit = getMaxTokenCount()
+
+        guard let llm = LLM(from: url, template: template, maxTokenCount: tokenLimit) else {
+            try? fileManager.removeItem(at: url)
             throw LlamaError.modelLoadFailed("Model file may be corrupted. Please download again.")
         }
+
+        bot = llm
+        modelURL = url
+        currentModelId = model.id
     }
 
     private func downloadModel(_ model: AIModel) async throws {
@@ -219,137 +180,146 @@ class LlamaService {
     }
 
     func unloadModel() {
-        ai = nil
+        bot = nil
         currentModelId = nil
+        modelURL = nil
     }
 
     func isModelLoaded() -> Bool {
-        ai != nil && ai?.model != nil
+        bot != nil
     }
 
-    /// Reset conversation history for starting a new chat
-    /// With llmfarm_core, we need to reset the AI to clear KV cache
+    /// Reset conversation - for LLM.swift this is a no-op since we pass full history each time
     func resetConversation() {
-        guard let currentAI = ai, let modelId = currentModelId, let model = AIModel.model(withId: modelId) else {
-            print("[LlamaService] resetConversation: No AI loaded")
-            return
-        }
-
-        // Save model path before resetting
-        let modelPath = getModelManager().modelPath(for: model).path
-
-        print("[LlamaService] Resetting conversation - will recreate AI on next message")
-
-        // For llmfarm_core, setting ai = nil will clear the context
-        // The model will be reloaded on the next generate call if needed
-        // This is a clean way to reset the KV cache
-        ai = nil
-
-        // Immediately reload the model to avoid delay on first message
-        Task {
-            do {
-                try await loadAIModel(modelPath: modelPath, model: model)
-                print("[LlamaService] Model reloaded after conversation reset")
-            } catch {
-                print("[LlamaService] Failed to reload model after reset: \(error)")
-            }
-        }
+        // No-op: With our stateless approach, each message gets full history in prompt
+        print("[LlamaService] resetConversation called - using stateless approach")
     }
 
-    /// Restore conversation history from saved messages (for resuming conversations)
+    /// Restore history - no-op since we pass history in each prompt
     func restoreHistory(_ messages: [(role: String, content: String)]) {
-        // llmfarm_core handles history internally through its context
-        // For resuming, we would need to replay the conversation
-        // For now, we log this - the context will build up naturally
-        print("[LlamaService] Note: History restore requested for \(messages.count) messages")
-        print("[LlamaService] Context will build up naturally through conversation")
+        print("[LlamaService] restoreHistory called - history passed in generate() instead")
     }
 
     // MARK: - Text Generation
 
+    /// Generate response using full conversation history in the prompt
+    /// This works around LLM.swift's KV cache corruption by treating each call as independent
     func generate(prompt: String, conversationHistory: [(role: String, content: String)] = []) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
-                guard let ai = self.ai, let model = ai.model else {
-                    print("[LlamaService] ERROR: AI or model is nil")
+                // Recreate LLM instance for each message to avoid KV cache corruption
+                guard let modelId = self.currentModelId,
+                      let model = AIModel.model(withId: modelId),
+                      let url = self.modelURL else {
+                    print("[LlamaService] ERROR: Model not configured")
                     continuation.yield("Error: AI model is not loaded. Please restart the app.")
                     continuation.finish()
                     return
                 }
 
-                print("[LlamaService] Generating response with llmfarm_core...")
-                print("[LlamaService] Current nPast: \(model.nPast)")
+                // Create fresh LLM instance for this request
+                let template = self.templateForModel(model)
+                let tokenLimit = self.getMaxTokenCount()
 
-                // Build the input - llmfarm_core handles history via nPast
-                // For context, include recent history in the prompt if this is a new context
-                var fullPrompt = prompt
-                if model.nPast == 0 && !conversationHistory.isEmpty {
-                    // Only include history if we're starting fresh
-                    let recent = conversationHistory.suffix(4)
-                    var context = ""
-                    for msg in recent {
-                        let role = msg.role.lowercased() == "user" ? "User" : "Assistant"
-                        context += "\(role): \(msg.content)\n"
-                    }
-                    fullPrompt = context + "User: \(prompt)"
+                print("[LlamaService] Creating fresh LLM instance for this request...")
+                guard let freshBot = LLM(from: url, template: template, maxTokenCount: tokenLimit) else {
+                    print("[LlamaService] ERROR: Failed to create LLM instance")
+                    continuation.yield("Error: Could not initialize AI. Please restart the app.")
+                    continuation.finish()
+                    return
                 }
 
-                var responseText = ""
-                var tokenCount = 0
-                let maxTokens = 512
-
-                // Use conversation method for streaming
-                ai.conversation(
-                    fullPrompt,
-                    { token, time in
-                        // Token callback - called for each generated token
-                        responseText += token
-                        tokenCount += 1
-
-                        // Check for max tokens
-                        if tokenCount >= maxTokens {
-                            return true // Stop generation
-                        }
-                        return false
-                    },
-                    { info, value in
-                        // Info callback - can be used for debugging
-                        print("[LlamaService] Info: \(info)")
-                    },
-                    { finalOutput in
-                        // Completion callback
-                        DispatchQueue.main.async {
-                            var response = responseText.trimmingCharacters(in: .whitespacesAndNewlines)
-                            response = self.cleanResponse(response)
-
-                            if response.isEmpty || response == "..." || response.count < 3 {
-                                print("[LlamaService] WARNING: Empty response")
-                                response = "I'm having trouble generating a response. Please try again."
-                            }
-
-                            print("[LlamaService] Generated \(tokenCount) tokens, response length: \(response.count)")
-                            continuation.yield(response)
-                            continuation.finish()
-                        }
-                    },
-                    system_prompt: nil, // System prompt already set in model
-                    img_path: nil
+                // Build the full conversation prompt with history
+                let fullPrompt = self.buildConversationPrompt(
+                    currentMessage: prompt,
+                    history: conversationHistory,
+                    model: model
                 )
+
+                print("[LlamaService] Generating with full context prompt...")
+                print("[LlamaService] History messages: \(conversationHistory.count)")
+                print("[LlamaService] Prompt length: \(fullPrompt.count) chars")
+
+                // Generate response
+                await freshBot.respond(to: fullPrompt)
+
+                let rawOutput = freshBot.output
+                print("[LlamaService] Raw output length: \(rawOutput.count)")
+
+                var response = rawOutput.trimmingCharacters(in: .whitespacesAndNewlines)
+                response = self.cleanResponse(response)
+
+                if response.isEmpty || response == "..." || response.count < 3 {
+                    print("[LlamaService] WARNING: Empty response")
+                    response = "I'm having trouble generating a response. Please try again."
+                }
+
+                continuation.yield(response)
+                continuation.finish()
             }
         }
+    }
+
+    /// Build a complete conversation prompt with history
+    private func buildConversationPrompt(currentMessage: String, history: [(role: String, content: String)], model: AIModel) -> String {
+        // For chatML format (Qwen), build proper conversation structure
+        if model.templateType == .chatml {
+            return buildChatMLPrompt(currentMessage: currentMessage, history: history)
+        }
+
+        // For other formats, use a simpler approach
+        return buildSimplePrompt(currentMessage: currentMessage, history: history)
+    }
+
+    private func buildChatMLPrompt(currentMessage: String, history: [(role: String, content: String)]) -> String {
+        var prompt = ""
+
+        // System message
+        prompt += "<|im_start|>system\nYou are AiGoodbye, a helpful AI assistant. Be concise and helpful.<|im_end|>\n"
+
+        // Add conversation history
+        for msg in history.suffix(6) {  // Last 6 messages to keep context manageable
+            let role = msg.role.lowercased() == "user" ? "user" : "assistant"
+            prompt += "<|im_start|>\(role)\n\(msg.content)<|im_end|>\n"
+        }
+
+        // Add current user message
+        prompt += "<|im_start|>user\n\(currentMessage)<|im_end|>\n"
+
+        // Start assistant response
+        prompt += "<|im_start|>assistant\n"
+
+        return prompt
+    }
+
+    private func buildSimplePrompt(currentMessage: String, history: [(role: String, content: String)]) -> String {
+        var prompt = "You are AiGoodbye, a helpful AI assistant.\n\n"
+
+        // Add conversation history
+        if !history.isEmpty {
+            prompt += "Previous conversation:\n"
+            for msg in history.suffix(6) {
+                let role = msg.role.lowercased() == "user" ? "Human" : "Assistant"
+                prompt += "\(role): \(msg.content)\n"
+            }
+            prompt += "\n"
+        }
+
+        prompt += "Human: \(currentMessage)\nAssistant:"
+
+        return prompt
     }
 
     private func cleanResponse(_ response: String) -> String {
         var cleaned = response
 
-        // Remove common artifacts from the response
+        // Remove common artifacts
         let patternsToRemove = [
+            "<|im_end|>", "<|im_start|>",
+            "<|endoftext|>", "<|end|>",
             "assistant", "Assistant:", "Assistant",
-            "user", "User:", "User",
-            "Q:", "A:",
             "<|", "|>",
             "Human:", "AI:",
-            "###", "```",
             "[INST]", "[/INST]",
             "<<SYS>>", "<</SYS>>"
         ]
@@ -364,21 +334,19 @@ class LlamaService {
 
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-            // Skip empty lines or lines that look like role markers
             if trimmed.isEmpty { continue }
             if trimmed.lowercased() == "assistant" { continue }
             if trimmed.lowercased() == "user" { continue }
+            if trimmed.lowercased() == "system" { continue }
             if trimmed.hasPrefix("Q:") || trimmed.hasPrefix("A:") { continue }
 
             cleanedLines.append(line)
         }
 
         cleaned = cleanedLines.joined(separator: "\n")
-
-        // Final trim
         cleaned = cleaned.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 
-        // If response is repeating, take only the first unique part
+        // If response is repeating, take only first unique part
         if let firstOccurrence = findRepeatingPattern(in: cleaned) {
             cleaned = firstOccurrence
         }
@@ -390,12 +358,10 @@ class LlamaService {
         let words = text.components(separatedBy: .whitespaces)
         guard words.count > 10 else { return nil }
 
-        // Look for repetition by finding duplicate phrases
         let halfLength = words.count / 2
         let firstHalf = words.prefix(halfLength).joined(separator: " ")
         let secondHalf = words.suffix(halfLength).joined(separator: " ")
 
-        // If first half appears in second half, likely repeating
         if secondHalf.contains(firstHalf.prefix(50)) {
             return firstHalf.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
         }
@@ -403,50 +369,36 @@ class LlamaService {
         return nil
     }
 
-    // Simple non-streaming response (for one-off queries that don't need history)
+    // Simple non-streaming response
     func getResponse(prompt: String, clearHistory: Bool = false) async throws -> String {
-        guard let ai = ai, let model = ai.model else {
+        guard let modelId = currentModelId,
+              let model = AIModel.model(withId: modelId),
+              let url = modelURL else {
             throw LlamaError.modelNotLoaded
         }
 
-        // If clearHistory is requested, reset the context
-        if clearHistory {
-            // For llmfarm_core, we would need to recreate the model to clear context
-            // For now, just proceed - the caller should use resetConversation() before this
-            print("[LlamaService] Note: clearHistory requested but context persists in llmfarm_core")
+        // Create fresh instance
+        let template = templateForModel(model)
+        let tokenLimit = getMaxTokenCount()
+
+        guard let freshBot = LLM(from: url, template: template, maxTokenCount: tokenLimit) else {
+            throw LlamaError.modelLoadFailed("Could not create LLM instance")
         }
 
-        var responseText = ""
-        var tokenCount = 0
-        let maxTokens = 256
+        await freshBot.respond(to: prompt)
 
-        return try await withCheckedThrowingContinuation { continuation in
-            ai.conversation(
-                prompt,
-                { token, time in
-                    responseText += token
-                    tokenCount += 1
-                    return tokenCount >= maxTokens
-                },
-                nil,
-                { _ in
-                    let response = responseText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if response.isEmpty {
-                        continuation.resume(throwing: LlamaError.generationFailed("Empty response from model"))
-                    } else {
-                        continuation.resume(returning: response)
-                    }
-                },
-                system_prompt: nil,
-                img_path: nil
-            )
+        let response = freshBot.output.trimmingCharacters(in: .whitespacesAndNewlines)
+        if response.isEmpty {
+            throw LlamaError.generationFailed("Empty response from model")
         }
+
+        return cleanResponse(response)
     }
 
     // MARK: - Vision Analysis
 
     func analyzeImage(_ imageData: Data, prompt: String) async throws -> String {
-        guard ai != nil else {
+        guard bot != nil else {
             throw LlamaError.modelNotLoaded
         }
 

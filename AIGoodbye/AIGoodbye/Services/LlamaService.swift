@@ -267,69 +267,51 @@ class LlamaService {
         return true
     }
 
-    func generate(prompt: String) -> AsyncThrowingStream<String, Error> {
+    func generate(prompt: String, conversationHistory: [(role: String, content: String)] = []) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
-                guard let currentBot = self.bot else {
-                    print("[LlamaService] ERROR: bot is nil at start of generate")
+                guard let bot = self.bot else {
+                    print("[LlamaService] ERROR: bot is nil")
                     continuation.yield("Error: AI model is not loaded. Please restart the app.")
                     continuation.finish()
                     return
                 }
 
-                // Save current history (to restore after recreation)
-                var savedHistoryData: [(isUser: Bool, content: String)] = []
-                for entry in currentBot.history {
-                    let isUser = (entry.role == .user)
-                    savedHistoryData.append((isUser: isUser, content: entry.content))
-                }
-                print("[LlamaService] Current history count: \(savedHistoryData.count)")
+                // CRITICAL: Clear the library's history before EVERY call
+                // This prevents KV cache corruption (LLM.swift Issue #50)
+                // We'll format the conversation ourselves in the prompt
+                bot.history.removeAll()
+                print("[LlamaService] Cleared bot.history to prevent KV cache issues")
 
-                // Only recreate LLM if there's existing history (to avoid KV cache corruption)
-                // For the FIRST message, use the existing instance - it's fresh and works fine
-                if !savedHistoryData.isEmpty {
-                    print("[LlamaService] Has history - recreating LLM to reset KV cache...")
+                // Build the full prompt with conversation history
+                // This is how working apps handle multi-turn without KV cache issues
+                var fullPrompt = ""
 
-                    guard await self.recreateLLMInstance() else {
-                        print("[LlamaService] ERROR: recreateLLMInstance failed")
-                        continuation.yield("Error: Could not reload AI model. Please restart the app.")
-                        continuation.finish()
-                        return
-                    }
-
-                    guard let newBot = self.bot else {
-                        print("[LlamaService] ERROR: bot is nil after recreation")
-                        continuation.yield("Error: AI model is not loaded. Please restart the app.")
-                        continuation.finish()
-                        return
-                    }
-
-                    // Restore saved history to the NEW instance
-                    for entry in savedHistoryData {
-                        if entry.isUser {
-                            newBot.history.append((.user, entry.content))
+                // Add conversation history (keep last 6 exchanges to fit in context)
+                let recentHistory = conversationHistory.suffix(12) // 6 exchanges = 12 messages
+                if !recentHistory.isEmpty {
+                    fullPrompt += "Previous conversation:\n"
+                    for msg in recentHistory {
+                        if msg.role.lowercased() == "user" {
+                            fullPrompt += "User: \(msg.content)\n"
                         } else {
-                            newBot.history.append((.bot, entry.content))
+                            fullPrompt += "Assistant: \(msg.content)\n"
                         }
                     }
-                    print("[LlamaService] Restored \(newBot.history.count) history entries")
-                } else {
-                    print("[LlamaService] First message - using existing LLM instance (no recreation needed)")
+                    fullPrompt += "\n"
                 }
 
-                guard let bot = self.bot else {
-                    continuation.yield("Error: AI model is not loaded. Please restart the app.")
-                    continuation.finish()
-                    return
-                }
+                // Add current message
+                fullPrompt += "User: \(prompt)\nAssistant:"
 
-                // Generate response
-                print("[LlamaService] Generating response for: \(prompt.prefix(50))...")
-                await bot.respond(to: prompt)
+                print("[LlamaService] Generating with \(recentHistory.count) history messages")
+                print("[LlamaService] Full prompt length: \(fullPrompt.count) chars")
+
+                // Generate response - single call with complete context
+                await bot.respond(to: fullPrompt)
 
                 var response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
                 print("[LlamaService] Response length: \(response.count)")
-                print("[LlamaService] History count after response: \(bot.history.count)")
 
                 response = self.cleanResponse(response)
 

@@ -204,10 +204,22 @@ class LlamaService {
     func restoreHistory(_ messages: [(role: String, content: String)]) {
         guard let bot = bot else { return }
 
-        // Convert to LLM.swift's Chat format
-        bot.history = messages.compactMap { msg in
-            let role: LLM.Role = msg.role.lowercased() == "user" ? .user : .bot
-            return (role, msg.content)
+        // Convert to LLM.swift's Chat format (role, content) tuples
+        // LLM.swift uses .user and .bot for roles
+        var newHistory: [(role: String, content: String)] = []
+        for msg in messages {
+            let role = msg.role.lowercased() == "user" ? "user" : "bot"
+            newHistory.append((role, msg.content))
+        }
+
+        // Clear and rebuild history by adding messages
+        bot.history.removeAll()
+        for entry in newHistory {
+            if entry.role == "user" {
+                bot.history.append((.user, entry.content))
+            } else {
+                bot.history.append((.bot, entry.content))
+            }
         }
         print("[LlamaService] Restored \(bot.history.count) messages to history")
     }

@@ -243,8 +243,9 @@ class LlamaService {
         // CRITICAL: Wait for memory to be freed on physical devices
         // Without this delay, creating a new 2.7GB model while the old one
         // is still in memory can fail on devices with limited RAM
+        // iPhone 13 Pro Max has 6GB RAM, so we need adequate time for deallocation
         #if !targetEnvironment(simulator)
-        try? await Task.sleep(nanoseconds: 500_000_000) // 500ms on physical device
+        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second on physical device
         #else
         try? await Task.sleep(nanoseconds: 100_000_000) // 100ms in simulator
         #endif

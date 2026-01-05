@@ -308,6 +308,8 @@ class ChatViewModel: ObservableObject {
             conversation = appState?.conversationManager.createConversation()
             appState?.currentConversation = conversation
             currentConversationId = conversation?.id
+            // IMPORTANT: Reset LLM history when starting a brand new conversation
+            appState?.llamaService.resetConversation()
         }
 
         // Add user message to conversation

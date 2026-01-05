@@ -236,10 +236,21 @@ class LlamaService {
             return false
         }
 
-        // Release old instance
+        // Release old instance first
+        print("[LlamaService] Releasing old LLM instance...")
         bot = nil
 
+        // CRITICAL: Wait for memory to be freed on physical devices
+        // Without this delay, creating a new 2.7GB model while the old one
+        // is still in memory can fail on devices with limited RAM
+        #if !targetEnvironment(simulator)
+        try? await Task.sleep(nanoseconds: 500_000_000) // 500ms on physical device
+        #else
+        try? await Task.sleep(nanoseconds: 100_000_000) // 100ms in simulator
+        #endif
+
         // Create a fresh LLM instance with clean KV cache
+        print("[LlamaService] Creating fresh LLM instance...")
         let tokenLimit = getMaxTokenCount()
         guard let newLLM = LLM(
             from: modelURL,
@@ -251,7 +262,7 @@ class LlamaService {
         }
 
         bot = newLLM
-        print("[LlamaService] recreateLLMInstance: Created fresh LLM instance")
+        print("[LlamaService] recreateLLMInstance: Created fresh LLM instance with \(tokenLimit) token limit")
         return true
     }
 
@@ -259,34 +270,49 @@ class LlamaService {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
                 guard let currentBot = self.bot else {
+                    print("[LlamaService] ERROR: bot is nil at start of generate")
                     continuation.yield("Error: AI model is not loaded. Please restart the app.")
                     continuation.finish()
                     return
                 }
 
-                // Save current history BEFORE recreation
-                let savedHistory = currentBot.history
-                print("[LlamaService] Saved \(savedHistory.count) history entries")
+                // Save current history BEFORE recreation (as array of tuples)
+                // We store as simple Bool + String to avoid any type issues with LLM.Role
+                var savedHistoryData: [(isUser: Bool, content: String)] = []
+                for entry in currentBot.history {
+                    // Check role by comparing with .user enum case
+                    let isUser = (entry.role == .user)
+                    savedHistoryData.append((isUser: isUser, content: entry.content))
+                    print("[LlamaService] Saved entry - isUser: \(isUser), content: \(entry.content.prefix(30))...")
+                }
+                print("[LlamaService] Total saved: \(savedHistoryData.count) history entries")
 
                 // ALWAYS recreate LLM to reset KV cache (workaround for Issue #50)
-                // This is necessary because LLM.swift's KV cache gets corrupted after first respond()
                 print("[LlamaService] Recreating LLM to reset KV cache...")
 
                 guard await self.recreateLLMInstance() else {
+                    print("[LlamaService] ERROR: recreateLLMInstance failed")
                     continuation.yield("Error: Could not reload AI model. Please restart the app.")
                     continuation.finish()
                     return
                 }
 
                 guard let bot = self.bot else {
+                    print("[LlamaService] ERROR: bot is nil after recreation")
                     continuation.yield("Error: AI model is not loaded. Please restart the app.")
                     continuation.finish()
                     return
                 }
 
                 // Restore saved history to the NEW instance
-                // This way the model "remembers" because history is included in the formatted prompt
-                bot.history = savedHistory
+                bot.history.removeAll()
+                for entry in savedHistoryData {
+                    if entry.isUser {
+                        bot.history.append((.user, entry.content))
+                    } else {
+                        bot.history.append((.bot, entry.content))
+                    }
+                }
                 print("[LlamaService] Restored \(bot.history.count) history entries to new instance")
 
                 // Generate response - LLM.swift will format prompt with history
@@ -294,12 +320,15 @@ class LlamaService {
                 await bot.respond(to: prompt)
 
                 var response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
-                print("[LlamaService] Response length: \(response.count)")
+                print("[LlamaService] Raw response length: \(response.count)")
+                print("[LlamaService] Raw response preview: \(response.prefix(100))...")
                 print("[LlamaService] New history count: \(bot.history.count)")
 
                 response = self.cleanResponse(response)
+                print("[LlamaService] Cleaned response length: \(response.count)")
 
                 if response.isEmpty || response == "..." || response.count < 3 {
+                    print("[LlamaService] WARNING: Response too short or empty, returning error message")
                     response = "I'm having trouble generating a response. Please try again."
                 }
 

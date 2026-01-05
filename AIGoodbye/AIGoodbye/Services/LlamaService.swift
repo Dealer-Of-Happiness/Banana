@@ -186,7 +186,8 @@ class LlamaService {
     }
 
     func isModelLoaded() -> Bool {
-        bot != nil
+        // Check modelURL since bot may be nil between generations
+        modelURL != nil && currentModelId != nil
     }
 
     /// Reset conversation - for LLM.swift this is a no-op since we pass full history each time
@@ -220,6 +221,9 @@ class LlamaService {
                 // Create fresh LLM instance for this request
                 let template = self.templateForModel(model)
                 let tokenLimit = self.getMaxTokenCount()
+
+                // Release existing bot to free memory before creating new instance
+                self.bot = nil
 
                 print("[LlamaService] Creating fresh LLM instance for this request...")
                 guard let freshBot = LLM(from: url, template: template, maxTokenCount: tokenLimit) else {

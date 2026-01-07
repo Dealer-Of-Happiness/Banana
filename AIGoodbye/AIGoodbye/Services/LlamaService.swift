@@ -211,34 +211,40 @@ class LlamaService {
     // MARK: - Text Generation
 
     /// Generate response using full conversation history in the prompt
-    /// This works around LLM.swift's KV cache corruption by treating each call as independent
+    /// Reuses the same bot instance to avoid memory issues from repeated creation
     func generate(prompt: String, conversationHistory: [(role: String, content: String)] = []) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
-                // Recreate LLM instance for each message to avoid KV cache corruption
                 guard let modelId = self.currentModelId,
-                      let model = AIModel.model(withId: modelId),
-                      let url = self.modelURL else {
+                      let model = AIModel.model(withId: modelId) else {
                     print("[LlamaService] ERROR: Model not configured")
                     continuation.yield("Error: AI model is not loaded. Please restart the app.")
                     continuation.finish()
                     return
                 }
 
-                // Create fresh LLM instance for this request
-                let template = self.templateForModel(model)
-                let tokenLimit = self.getMaxTokenCount()
+                // Ensure we have a bot instance
+                if self.bot == nil {
+                    print("[LlamaService] Bot is nil, reloading model...")
+                    do {
+                        try await self.loadModel()
+                    } catch {
+                        print("[LlamaService] Failed to reload model: \(error)")
+                        continuation.yield("Error: Could not load AI model. Please restart the app.")
+                        continuation.finish()
+                        return
+                    }
+                }
 
-                // Release existing bot to free memory before creating new instance
-                self.bot = nil
-
-                print("[LlamaService] Creating fresh LLM instance for this request...")
-                guard let freshBot = LLM(from: url, template: template, maxTokenCount: tokenLimit) else {
-                    print("[LlamaService] ERROR: Failed to create LLM instance")
-                    continuation.yield("Error: Could not initialize AI. Please restart the app.")
+                guard let bot = self.bot else {
+                    continuation.yield("Error: AI model is not loaded.")
                     continuation.finish()
                     return
                 }
+
+                // Clear bot's internal history to start fresh each time
+                // We pass full context in the prompt instead
+                bot.history.removeAll()
 
                 // Build the full conversation prompt with history
                 let fullPrompt = self.buildConversationPrompt(
@@ -247,21 +253,21 @@ class LlamaService {
                     model: model
                 )
 
-                print("[LlamaService] Generating with full context prompt...")
+                print("[LlamaService] Generating response...")
                 print("[LlamaService] History messages: \(conversationHistory.count)")
                 print("[LlamaService] Prompt length: \(fullPrompt.count) chars")
 
                 // Generate response
-                await freshBot.respond(to: fullPrompt)
+                await bot.respond(to: fullPrompt)
 
-                let rawOutput = freshBot.output
+                let rawOutput = bot.output
                 print("[LlamaService] Raw output length: \(rawOutput.count)")
 
                 var response = rawOutput.trimmingCharacters(in: .whitespacesAndNewlines)
                 response = self.cleanResponse(response)
 
                 if response.isEmpty || response == "..." || response.count < 3 {
-                    print("[LlamaService] WARNING: Empty response")
+                    print("[LlamaService] WARNING: Empty response, may need to reload model")
                     response = "I'm having trouble generating a response. Please try again."
                 }
 

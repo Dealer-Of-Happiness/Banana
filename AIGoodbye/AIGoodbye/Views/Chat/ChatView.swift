@@ -331,22 +331,15 @@ class ChatViewModel: ObservableObject {
             guard let llamaService = appState?.llamaService else { return }
 
             var responseText = ""
-            let placeholderMessage = Message(role: .assistant, content: "")
-            messages.append(placeholderMessage)
 
-            // Pass conversation history (exclude placeholder and current user message)
-            let history = messages.dropLast(2).map { ($0.role.rawValue, $0.content) }
+            // Pass conversation history (exclude current user message)
+            let history = messages.dropLast().map { ($0.role.rawValue, $0.content) }
             for try await chunk in llamaService.generate(prompt: text, conversationHistory: history) {
-                responseText += chunk
-                if let index = messages.firstIndex(where: { $0.id == placeholderMessage.id }) {
-                    messages[index].content = responseText
-                }
+                responseText = chunk  // LlamaService returns full response, not chunks
             }
 
-            // Remove placeholder and add actual response to conversation
-            messages.removeAll { $0.id == placeholderMessage.id }
-
-            if let conv = conversation {
+            // Add response to conversation (no placeholder needed)
+            if let conv = conversation, !responseText.isEmpty {
                 let assistantMessage = appState?.conversationManager.addMessage(
                     to: conv,
                     role: .assistant,

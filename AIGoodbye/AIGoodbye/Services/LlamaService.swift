@@ -197,6 +197,24 @@ class LlamaService {
         modelURL != nil && currentModelId != nil
     }
 
+    /// Reload the model with current settings (e.g., after context window change)
+    func reloadModel() async throws {
+        guard let modelId = currentModelId,
+              let model = AIModel.model(withId: modelId) else {
+            throw LlamaError.modelNotLoaded
+        }
+
+        print("[LlamaService] Reloading model with new settings...")
+
+        // Unload current model
+        bot = nil
+
+        // Reload with current settings
+        try await loadModelInternal(model)
+
+        print("[LlamaService] Model reloaded successfully")
+    }
+
     /// Reset conversation - for LLM.swift this is a no-op since we pass full history each time
     func resetConversation() {
         // No-op: With our stateless approach, each message gets full history in prompt

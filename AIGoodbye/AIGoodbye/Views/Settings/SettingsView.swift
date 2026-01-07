@@ -94,8 +94,19 @@ struct SettingsView: View {
                     Text("32K")
                         .font(.caption2)
                 }
-                .onChange(of: viewModel.contextWindow) { _, newValue in
+                .onChange(of: viewModel.contextWindow) { oldValue, newValue in
                     appState.settings.contextWindow = Int(newValue)
+
+                    // Auto-reload model if context window changed significantly
+                    if abs(oldValue - newValue) >= 1024 {
+                        Task {
+                            do {
+                                try await appState.llamaService.reloadModel()
+                            } catch {
+                                print("[Settings] Failed to reload model: \(error)")
+                            }
+                        }
+                    }
                 }
 
                 // Guidance text based on selected value
@@ -108,7 +119,7 @@ struct SettingsView: View {
         } header: {
             Label("AI Performance", systemImage: "cpu")
         } footer: {
-            Text("Higher values allow longer conversations but use more memory. Restart the app after changing this setting.")
+            Text("Higher values allow longer conversations but use more memory. Model reloads automatically when changed.")
         }
     }
 

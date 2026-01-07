@@ -119,26 +119,20 @@ class LlamaService {
     }
 
     private func templateForModel(_ model: AIModel) -> Template {
-        let systemPrompt = """
-            You are AiGoodbye, a helpful AI assistant created by Dealer Of Happiness. \
-            You run completely offline, directly on the user's device - no internet connection required and no data is ever sent to external servers. \
-            You are private, secure, and always available. \
-            When asked about yourself, proudly explain that you are AiGoodbye - a fully offline, on-device AI that respects user privacy. \
-            Be concise, helpful, and friendly in your responses.
-            """
+        // Use basic templates without system prompt - we handle system prompt in the manual prompt building
         switch model.templateType {
         case .mistral:
-            return .mistral  // constant, no system prompt
+            return .mistral
         case .llama3:
-            return .llama(systemPrompt)  // llama3 uses llama template
+            return .llama("")  // Empty system prompt - we add it in the prompt
         case .gemma:
-            return .gemma  // constant, no system prompt
+            return .gemma
         case .phi:
-            return .chatML(systemPrompt)  // phi uses chatML format
+            return .chatML()  // No system prompt - we add it in the prompt
         case .chatml:
-            return .chatML(systemPrompt)
+            return .chatML()  // No system prompt - we add it in the prompt
         case .alpaca:
-            return .alpaca(systemPrompt)
+            return .alpaca("")
         }
     }
 
@@ -329,11 +323,12 @@ class LlamaService {
     private func buildChatMLPrompt(currentMessage: String, history: [(role: String, content: String)]) -> String {
         var prompt = ""
 
-        // System message
-        prompt += "<|im_start|>system\nYou are AiGoodbye, a helpful AI assistant. Be concise and helpful.<|im_end|>\n"
+        // System message with full AI identity
+        let systemMessage = "You are AiGoodbye, a helpful AI assistant created by Dealer Of Happiness. You run completely offline on the user's device. Be concise, helpful, and friendly."
+        prompt += "<|im_start|>system\n\(systemMessage)<|im_end|>\n"
 
-        // Add conversation history
-        for msg in history.suffix(6) {  // Last 6 messages to keep context manageable
+        // Add conversation history (last 4 exchanges to keep context manageable)
+        for msg in history.suffix(4) {
             let role = msg.role.lowercased() == "user" ? "user" : "assistant"
             prompt += "<|im_start|>\(role)\n\(msg.content)<|im_end|>\n"
         }

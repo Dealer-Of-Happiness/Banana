@@ -24,8 +24,6 @@ class LlamaService {
     // Failure tracking for auto-recovery
     private var consecutiveFailures = 0
     private let maxConsecutiveFailures = 2
-    private var messageCount = 0
-    private let refreshInterval = 10 // Recreate bot every N messages to prevent memory issues
 
     // Default: low temperature for consistent responses
     init(temperature: Double = 0.3) {
@@ -97,12 +95,14 @@ class LlamaService {
                 try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 second
             }
 
-            // Match working implementation: don't pass maxTokenCount
-            if let llm = LLM(from: url, template: template) {
+            // Initialize with proper history limit for long conversations
+            // historyLimit controls how many messages the library keeps (default is 8)
+            // Setting to 30 allows ~15 conversation exchanges before auto-pruning
+            if let llm = LLM(from: url, template: template, historyLimit: 30) {
                 bot = llm
                 modelURL = url
                 currentModelId = model.id
-                print("[LlamaService] Model loaded successfully on attempt \(attempt)")
+                print("[LlamaService] Model loaded successfully on attempt \(attempt) with historyLimit: 30")
                 return
             }
 
@@ -114,20 +114,22 @@ class LlamaService {
     }
 
     private func templateForModel(_ model: AIModel) -> Template {
-        // Use basic templates without system prompt - we handle system prompt in the manual prompt building
+        // Include system prompt in template - library will use this for all messages
+        let systemPrompt = "You are AiGoodbye, a helpful AI assistant created by Dealer Of Happiness. You run completely offline on the user's device. Be concise, helpful, and friendly."
+
         switch model.templateType {
         case .mistral:
             return .mistral
         case .llama3:
-            return .llama("")  // Empty system prompt - we add it in the prompt
+            return .llama(systemPrompt)
         case .gemma:
             return .gemma
         case .phi:
-            return .chatML()  // No system prompt - we add it in the prompt
+            return .chatML(systemPrompt)
         case .chatml:
-            return .chatML()  // No system prompt - we add it in the prompt
+            return .chatML(systemPrompt)
         case .alpaca:
-            return .alpaca("")
+            return .alpaca(systemPrompt)
         }
     }
 
@@ -154,7 +156,7 @@ class LlamaService {
 
         let template = templateForModel(model)
 
-        guard let llm = LLM(from: url, template: template) else {
+        guard let llm = LLM(from: url, template: template, historyLimit: 30) else {
             try? fileManager.removeItem(at: url)
             throw LlamaError.modelLoadFailed("Model file may be corrupted. Please download again.")
         }
@@ -228,7 +230,6 @@ class LlamaService {
         bot = nil
         currentModelId = nil
         consecutiveFailures = 0
-        messageCount = 0
 
         // Small delay to let memory settle
         try? await Task.sleep(nanoseconds: 500_000_000)
@@ -240,24 +241,15 @@ class LlamaService {
 
     // MARK: - Text Generation
 
-    /// Generate response with full conversation history in prompt
-    /// Key: Clear bot.output before and bot.history after each respond() call
+    /// Generate response using LLM.swift's native history management
+    /// The library automatically manages conversation history with historyLimit
     func generate(prompt: String, conversationHistory: [(role: String, content: String)] = []) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
                 do {
-                    guard let modelId = self.currentModelId,
-                          let model = AIModel.model(withId: modelId) else {
+                    guard self.currentModelId != nil else {
                         print("[LlamaService] ERROR: Model not configured")
                         throw LlamaError.modelNotLoaded
-                    }
-
-                    // Check if we need periodic refresh to prevent memory accumulation
-                    self.messageCount += 1
-                    if self.messageCount >= self.refreshInterval {
-                        print("[LlamaService] Periodic refresh triggered (message \(self.messageCount))")
-                        self.bot = nil
-                        self.messageCount = 0
                     }
 
                     // Check if too many consecutive failures - force reset
@@ -276,30 +268,20 @@ class LlamaService {
                         throw LlamaError.modelNotLoaded
                     }
 
-                    // Build full conversation prompt with history (limited to last 3 exchanges)
-                    let fullPrompt = self.buildConversationPrompt(
-                        currentMessage: prompt,
-                        history: conversationHistory,
-                        model: model
-                    )
-
                     print("[LlamaService] Generating response...")
-                    print("[LlamaService] History messages: \(conversationHistory.count)")
-                    print("[LlamaService] Prompt length: \(fullPrompt.count) chars")
-                    print("[LlamaService] Bot history count before: \(bot.history.count)")
+                    print("[LlamaService] User prompt: \(prompt.prefix(50))...")
+                    print("[LlamaService] Bot history count: \(bot.history.count)")
 
-                    // CRITICAL: Clear both output AND history before calling respond
+                    // CRITICAL: Only clear output, let library manage history naturally
                     bot.output = ""
-                    bot.history.removeAll()
 
-                    // Generate response
-                    await bot.respond(to: fullPrompt)
+                    // Let LLM.swift handle conversation - just pass the user message
+                    // The library's template and history management will handle the rest
+                    await bot.respond(to: prompt)
 
                     var response = bot.output
                     print("[LlamaService] Raw output length: \(response.count)")
-
-                    // CRITICAL: Clear history AFTER response to prevent accumulation
-                    bot.history.removeAll()
+                    print("[LlamaService] Bot history count after: \(bot.history.count)")
 
                     // Clean up response
                     response = response.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -315,10 +297,8 @@ class LlamaService {
 
                         if let freshBot = self.bot {
                             freshBot.output = ""
-                            freshBot.history.removeAll()
-                            await freshBot.respond(to: fullPrompt)
+                            await freshBot.respond(to: prompt)
                             response = self.cleanResponse(freshBot.output.trimmingCharacters(in: .whitespacesAndNewlines))
-                            freshBot.history.removeAll() // Clear after
                         }
                     }
 
@@ -342,56 +322,7 @@ class LlamaService {
         }
     }
 
-    /// Build a complete conversation prompt with history
-    private func buildConversationPrompt(currentMessage: String, history: [(role: String, content: String)], model: AIModel) -> String {
-        // For chatML format (Qwen), build proper conversation structure
-        if model.templateType == .chatml {
-            return buildChatMLPrompt(currentMessage: currentMessage, history: history)
-        }
-
-        // For other formats, use a simpler approach
-        return buildSimplePrompt(currentMessage: currentMessage, history: history)
-    }
-
-    private func buildChatMLPrompt(currentMessage: String, history: [(role: String, content: String)]) -> String {
-        var prompt = ""
-
-        // System message with full AI identity
-        let systemMessage = "You are AiGoodbye, a helpful AI assistant created by Dealer Of Happiness. You run completely offline on the user's device. Be concise, helpful, and friendly."
-        prompt += "<|im_start|>system\n\(systemMessage)<|im_end|>\n"
-
-        // Add conversation history (last 3 exchanges to prevent context overflow)
-        for msg in history.suffix(3) {
-            let role = msg.role.lowercased() == "user" ? "user" : "assistant"
-            prompt += "<|im_start|>\(role)\n\(msg.content)<|im_end|>\n"
-        }
-
-        // Add current user message
-        prompt += "<|im_start|>user\n\(currentMessage)<|im_end|>\n"
-
-        // Start assistant response
-        prompt += "<|im_start|>assistant\n"
-
-        return prompt
-    }
-
-    private func buildSimplePrompt(currentMessage: String, history: [(role: String, content: String)]) -> String {
-        var prompt = "You are AiGoodbye, a helpful AI assistant.\n\n"
-
-        // Add conversation history
-        if !history.isEmpty {
-            prompt += "Previous conversation:\n"
-            for msg in history.suffix(6) {
-                let role = msg.role.lowercased() == "user" ? "Human" : "Assistant"
-                prompt += "\(role): \(msg.content)\n"
-            }
-            prompt += "\n"
-        }
-
-        prompt += "Human: \(currentMessage)\nAssistant:"
-
-        return prompt
-    }
+    // MARK: - Response Cleaning
 
     private func cleanResponse(_ response: String) -> String {
         var cleaned = response

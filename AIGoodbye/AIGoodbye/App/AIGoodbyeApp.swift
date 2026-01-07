@@ -155,22 +155,32 @@ struct LoadingView: View {
     @ObservedObject var appState: AppState
     @ObservedObject var modelManager = ModelManager.shared
 
+    // Rotating tagline phrases
+    private let taglinePhrases = [
+        "Subscriptions",
+        "Security Concerns",
+        "Privacy Worries",
+        "Need for Reception",
+        "Data Tracking",
+        "Monthly Fees",
+        "Cloud Dependency"
+    ]
+
+    @State private var currentPhraseIndex = 0
+    @State private var phraseOpacity: Double = 1.0
+
+    // Timer for rotating text
+    let timer = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
+
     var body: some View {
         VStack(spacing: 30) {
             Spacer()
 
-            Image(systemName: "brain.head.profile")
-                .font(.system(size: 80))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [.blue, .purple],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            Text("AiGoodbye")
-                .font(.largeTitle.bold())
+            // Logo image
+            Image("Logo")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 200, height: 200)
 
             Text(appState.loadingMessage)
                 .foregroundStyle(.secondary)
@@ -206,13 +216,34 @@ struct LoadingView: View {
 
             Spacer()
 
-            // Tagline at bottom
-            Text("Say \"Goodbye\" to subscriptions, privacy concerns and need for internet connection")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-                .padding(.bottom, 30)
+            // Animated tagline at bottom
+            VStack(spacing: 4) {
+                Text("Say \"Goodbye\" to")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                Text(taglinePhrases[currentPhraseIndex])
+                    .font(.footnote.bold())
+                    .foregroundStyle(.primary)
+                    .opacity(phraseOpacity)
+                    .animation(.easeInOut(duration: 0.5), value: phraseOpacity)
+            }
+            .padding(.horizontal, 40)
+            .padding(.bottom, 30)
+            .onReceive(timer) { _ in
+                // Fade out
+                withAnimation(.easeOut(duration: 0.4)) {
+                    phraseOpacity = 0
+                }
+
+                // Change text and fade in after delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    currentPhraseIndex = (currentPhraseIndex + 1) % taglinePhrases.count
+                    withAnimation(.easeIn(duration: 0.4)) {
+                        phraseOpacity = 1
+                    }
+                }
+            }
         }
         .padding()
     }

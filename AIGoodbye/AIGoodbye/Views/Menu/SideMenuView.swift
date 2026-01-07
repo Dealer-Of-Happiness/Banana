@@ -132,7 +132,7 @@ struct SideMenuView: View {
 
     private var header: some View {
         HStack {
-            Text("AI goodbye")
+            Text("AiGoodbye")
                 .font(.title.bold())
                 .foregroundStyle(
                     LinearGradient(

@@ -21,6 +21,12 @@ class LlamaService {
     static var totalBytes: Int64 = 0
     static var isDownloading: Bool = false
 
+    // Failure tracking for auto-recovery
+    private var consecutiveFailures = 0
+    private let maxConsecutiveFailures = 2
+    private var messageCount = 0
+    private let refreshInterval = 10 // Recreate bot every N messages to prevent memory issues
+
     // Default: low temperature for consistent responses
     init(temperature: Double = 0.3) {
         self.temperature = Float(temperature)
@@ -207,6 +213,7 @@ class LlamaService {
     func resetConversation() {
         print("[LlamaService] resetConversation called - clearing bot history")
         bot?.history.removeAll()
+        consecutiveFailures = 0
     }
 
     /// Restore history - no-op since we pass history in each prompt
@@ -214,10 +221,27 @@ class LlamaService {
         print("[LlamaService] restoreHistory called - history passed in generate() instead")
     }
 
+    /// Force reset - completely destroys and recreates the bot instance
+    /// Use this when the model gets into a bad state
+    func forceReset() async throws {
+        print("[LlamaService] Force reset initiated...")
+        bot = nil
+        currentModelId = nil
+        consecutiveFailures = 0
+        messageCount = 0
+
+        // Small delay to let memory settle
+        try? await Task.sleep(nanoseconds: 500_000_000)
+
+        // Reload model fresh
+        try await loadModel()
+        print("[LlamaService] Force reset completed successfully")
+    }
+
     // MARK: - Text Generation
 
     /// Generate response with full conversation history in prompt
-    /// Key: Clear bot.output before each respond() call
+    /// Key: Clear bot.output before and bot.history after each respond() call
     func generate(prompt: String, conversationHistory: [(role: String, content: String)] = []) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
@@ -226,6 +250,20 @@ class LlamaService {
                           let model = AIModel.model(withId: modelId) else {
                         print("[LlamaService] ERROR: Model not configured")
                         throw LlamaError.modelNotLoaded
+                    }
+
+                    // Check if we need periodic refresh to prevent memory accumulation
+                    self.messageCount += 1
+                    if self.messageCount >= self.refreshInterval {
+                        print("[LlamaService] Periodic refresh triggered (message \(self.messageCount))")
+                        self.bot = nil
+                        self.messageCount = 0
+                    }
+
+                    // Check if too many consecutive failures - force reset
+                    if self.consecutiveFailures >= self.maxConsecutiveFailures {
+                        print("[LlamaService] Too many failures (\(self.consecutiveFailures)), forcing reset...")
+                        try await self.forceReset()
                     }
 
                     // Ensure we have a bot instance
@@ -238,7 +276,7 @@ class LlamaService {
                         throw LlamaError.modelNotLoaded
                     }
 
-                    // Build full conversation prompt with history
+                    // Build full conversation prompt with history (limited to last 3 exchanges)
                     let fullPrompt = self.buildConversationPrompt(
                         currentMessage: prompt,
                         history: conversationHistory,
@@ -248,9 +286,11 @@ class LlamaService {
                     print("[LlamaService] Generating response...")
                     print("[LlamaService] History messages: \(conversationHistory.count)")
                     print("[LlamaService] Prompt length: \(fullPrompt.count) chars")
+                    print("[LlamaService] Bot history count before: \(bot.history.count)")
 
-                    // CRITICAL: Clear output before calling respond
+                    // CRITICAL: Clear both output AND history before calling respond
                     bot.output = ""
+                    bot.history.removeAll()
 
                     // Generate response
                     await bot.respond(to: fullPrompt)
@@ -258,32 +298,43 @@ class LlamaService {
                     var response = bot.output
                     print("[LlamaService] Raw output length: \(response.count)")
 
+                    // CRITICAL: Clear history AFTER response to prevent accumulation
+                    bot.history.removeAll()
+
                     // Clean up response
                     response = response.trimmingCharacters(in: .whitespacesAndNewlines)
                     response = self.cleanResponse(response)
 
                     if response.isEmpty || response == "..." || response.count < 3 {
-                        print("[LlamaService] WARNING: Empty response, trying once more...")
-                        // One more attempt with fresh bot
+                        print("[LlamaService] WARNING: Empty response, recreating bot...")
+                        self.consecutiveFailures += 1
+
+                        // Recreate bot completely
                         self.bot = nil
                         try await self.loadModel()
 
                         if let freshBot = self.bot {
                             freshBot.output = ""
+                            freshBot.history.removeAll()
                             await freshBot.respond(to: fullPrompt)
                             response = self.cleanResponse(freshBot.output.trimmingCharacters(in: .whitespacesAndNewlines))
+                            freshBot.history.removeAll() // Clear after
                         }
                     }
 
                     if response.isEmpty || response.count < 3 {
+                        self.consecutiveFailures += 1
                         continuation.yield("I'm having trouble generating a response. Please try again.")
                     } else {
+                        // Success! Reset failure counter
+                        self.consecutiveFailures = 0
                         continuation.yield(response)
                     }
                     continuation.finish()
 
                 } catch {
                     print("[LlamaService] Generate error: \(error)")
+                    self.consecutiveFailures += 1
                     continuation.yield("Error: \(error.localizedDescription)")
                     continuation.finish()
                 }
@@ -309,8 +360,8 @@ class LlamaService {
         let systemMessage = "You are AiGoodbye, a helpful AI assistant created by Dealer Of Happiness. You run completely offline on the user's device. Be concise, helpful, and friendly."
         prompt += "<|im_start|>system\n\(systemMessage)<|im_end|>\n"
 
-        // Add conversation history (last 4 exchanges to keep context manageable)
-        for msg in history.suffix(4) {
+        // Add conversation history (last 3 exchanges to prevent context overflow)
+        for msg in history.suffix(3) {
             let role = msg.role.lowercased() == "user" ? "user" : "assistant"
             prompt += "<|im_start|>\(role)\n\(msg.content)<|im_end|>\n"
         }

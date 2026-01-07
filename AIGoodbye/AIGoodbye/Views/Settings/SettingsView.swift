@@ -16,6 +16,8 @@ struct SettingsView: View {
     @State private var showClearCacheAlert = false
     @State private var showExportOptions = false
     @State private var showDonationInfo = false
+    @State private var showResetAIAlert = false
+    @State private var isResettingAI = false
 
     var body: some View {
         Form {
@@ -58,7 +60,7 @@ struct SettingsView: View {
         .alert("Donations Coming Soon", isPresented: $showDonationInfo) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("In-app purchases will be available once the app is published on the App Store. Thank you for your interest in supporting Locally AI!")
+            Text("In-app purchases will be available once the app is published on the App Store. Thank you for your interest in supporting AiGoodbye!")
         }
     }
 
@@ -144,8 +146,41 @@ struct SettingsView: View {
             Button("Delete All Chats", role: .destructive) {
                 showClearCacheAlert = true
             }
+
+            // Reset AI button for troubleshooting
+            Button {
+                showResetAIAlert = true
+            } label: {
+                HStack {
+                    Text("Reset AI")
+                    Spacer()
+                    if isResettingAI {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    }
+                }
+            }
+            .disabled(isResettingAI)
         } header: {
             Label("Data & Privacy", systemImage: "lock.shield")
+        } footer: {
+            Text("If AI responses stop working, use 'Reset AI' to fix it.")
+        }
+        .alert("Reset AI?", isPresented: $showResetAIAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Reset") {
+                Task {
+                    isResettingAI = true
+                    do {
+                        try await appState.llamaService.forceReset()
+                    } catch {
+                        print("[Settings] Reset AI failed: \(error)")
+                    }
+                    isResettingAI = false
+                }
+            }
+        } message: {
+            Text("This will reload the AI model. Use this if you're experiencing persistent errors.")
         }
     }
 
@@ -198,9 +233,9 @@ struct SettingsView: View {
                 .disabled(donationService.purchaseInProgress)
             }
         } header: {
-            Label("Support AI goodbye", systemImage: "heart.fill")
+            Label("Support AiGoodbye", systemImage: "heart.fill")
         } footer: {
-            Text("Your support helps keep AI goodbye free and ad-free for everyone. Thank you!")
+            Text("Your support helps keep AiGoodbye free and ad-free for everyone. Thank you!")
         }
     }
 

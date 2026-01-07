@@ -221,10 +221,10 @@ class LlamaService {
         print("[LlamaService] Model reloaded successfully")
     }
 
-    /// Reset conversation - for LLM.swift this is a no-op since we pass full history each time
+    /// Reset conversation - clears the bot's internal conversation history
     func resetConversation() {
-        // No-op: With our stateless approach, each message gets full history in prompt
-        print("[LlamaService] resetConversation called - using stateless approach")
+        print("[LlamaService] resetConversation called - clearing bot history")
+        bot?.history.removeAll()
     }
 
     /// Restore history - no-op since we pass history in each prompt
@@ -234,8 +234,8 @@ class LlamaService {
 
     // MARK: - Text Generation
 
-    /// Generate response using full conversation history in the prompt
-    /// Reuses the same bot instance to avoid memory issues from repeated creation
+    /// Generate response using the bot's native conversation memory
+    /// Instead of passing history in prompt, let LLM.swift handle it naturally
     func generate(prompt: String, conversationHistory: [(role: String, content: String)] = []) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
@@ -266,23 +266,12 @@ class LlamaService {
                     return
                 }
 
-                // Clear bot's internal history to start fresh each time
-                // We pass full context in the prompt instead
-                bot.history.removeAll()
-
-                // Build the full conversation prompt with history
-                let fullPrompt = self.buildConversationPrompt(
-                    currentMessage: prompt,
-                    history: conversationHistory,
-                    model: model
-                )
-
                 print("[LlamaService] Generating response...")
-                print("[LlamaService] History messages: \(conversationHistory.count)")
-                print("[LlamaService] Prompt length: \(fullPrompt.count) chars")
+                print("[LlamaService] Bot history count: \(bot.history.count)")
+                print("[LlamaService] Prompt: \(prompt.prefix(100))...")
 
-                // Generate response
-                await bot.respond(to: fullPrompt)
+                // Just send the user's message - let LLM.swift handle conversation context
+                await bot.respond(to: prompt)
 
                 let rawOutput = bot.output
                 print("[LlamaService] Raw output length: \(rawOutput.count)")
@@ -291,8 +280,22 @@ class LlamaService {
                 response = self.cleanResponse(response)
 
                 if response.isEmpty || response == "..." || response.count < 3 {
-                    print("[LlamaService] WARNING: Empty response, may need to reload model")
-                    response = "I'm having trouble generating a response. Please try again."
+                    print("[LlamaService] WARNING: Empty response, recreating bot...")
+                    // Try recreating the bot for a fresh start
+                    self.bot = nil
+                    do {
+                        try await self.loadModel()
+                        if let freshBot = self.bot {
+                            await freshBot.respond(to: prompt)
+                            response = self.cleanResponse(freshBot.output.trimmingCharacters(in: .whitespacesAndNewlines))
+                        }
+                    } catch {
+                        print("[LlamaService] Failed to recreate bot: \(error)")
+                    }
+
+                    if response.isEmpty || response.count < 3 {
+                        response = "I'm having trouble generating a response. Please try again."
+                    }
                 }
 
                 continuation.yield(response)

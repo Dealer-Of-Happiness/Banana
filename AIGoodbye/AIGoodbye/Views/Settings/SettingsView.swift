@@ -22,9 +22,6 @@ struct SettingsView: View {
             // AI Settings (Context Window)
             aiSettingsSection
 
-            // Cloud Connections
-            cloudConnectionsSection
-
             // Data & Privacy
             dataPrivacySection
 
@@ -33,9 +30,6 @@ struct SettingsView: View {
 
             // About
             aboutSection
-
-            // Apple Watch
-            watchSection
         }
         .navigationTitle("Settings")
         .onAppear {
@@ -136,34 +130,6 @@ struct SettingsView: View {
             return "24K: Recommended for iPhone 16 Pro with 8GB+ RAM. Supports ~60-70 message conversations."
         default:
             return "32K: Recommended for iPhone 16 Pro Max and future devices with 12GB+ RAM. Maximum conversation length."
-        }
-    }
-
-    // MARK: - Cloud Connections Section
-
-    private var cloudConnectionsSection: some View {
-        Section {
-            CloudConnectionRow(
-                provider: .chatGPT,
-                isEnabled: $viewModel.chatGPTEnabled,
-                apiKey: $viewModel.chatGPTApiKey
-            )
-
-            CloudConnectionRow(
-                provider: .claude,
-                isEnabled: $viewModel.claudeEnabled,
-                apiKey: $viewModel.claudeApiKey
-            )
-
-            CloudConnectionRow(
-                provider: .google,
-                isEnabled: $viewModel.googleEnabled,
-                apiKey: $viewModel.googleApiKey
-            )
-        } header: {
-            Label("Cloud Connections", systemImage: "cloud")
-        } footer: {
-            Text("Optional. Connect using your own API keys for enhanced capabilities.")
         }
     }
 
@@ -271,49 +237,6 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Watch Section
-
-    private var watchSection: some View {
-        Section {
-            HStack {
-                Text("Watch App Status")
-                Spacer()
-                Text(viewModel.watchAppStatus)
-                    .foregroundStyle(.secondary)
-            }
-        } header: {
-            Label("Apple Watch", systemImage: "applewatch")
-        }
-    }
-}
-
-// MARK: - Cloud Connection Row
-
-struct CloudConnectionRow: View {
-    let provider: CloudAIProvider
-    @Binding var isEnabled: Bool
-    @Binding var apiKey: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Toggle(isOn: $isEnabled) {
-                HStack {
-                    Image(systemName: provider.iconName)
-                        .foregroundStyle(.blue)
-                    Text(provider.displayName)
-                }
-            }
-
-            if isEnabled {
-                SecureField("API Key", text: $apiKey)
-                    .textContentType(.password)
-                    .font(.footnote)
-                    .padding(8)
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-        }
-    }
 }
 
 // MARK: - Settings View Model
@@ -323,17 +246,6 @@ class SettingsViewModel: ObservableObject {
     // AI Configuration
     @Published var temperature: Double = 0.7
     @Published var contextWindow: Double = 4096
-
-    // Cloud Connections
-    @Published var chatGPTEnabled = false
-    @Published var chatGPTApiKey = ""
-    @Published var claudeEnabled = false
-    @Published var claudeApiKey = ""
-    @Published var googleEnabled = false
-    @Published var googleApiKey = ""
-
-    // Watch
-    @Published var watchAppStatus = "Not Connected"
 
     func loadSettings(from settings: SettingsManager) {
         temperature = settings.temperature

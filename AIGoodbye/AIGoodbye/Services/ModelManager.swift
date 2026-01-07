@@ -16,7 +16,7 @@ class ModelManager: ObservableObject {
     static let backgroundSessionIdentifier = "com.aigoodbye.modeldownload"
 
     @Published var downloadStates: [String: ModelDownloadState] = [:]
-    @Published var currentModelId: String = "ministral-8b"
+    @Published var currentModelId: String = "qwen-7b"
     @Published var downloadProgress: Double = 0
     @Published var downloadedBytes: Int64 = 0
     @Published var totalBytes: Int64 = 0

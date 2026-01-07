@@ -32,11 +32,6 @@ class LlamaService {
         ModelManager.shared
     }
 
-    /// Get the current max token count from settings
-    private func getMaxTokenCount() -> Int32 {
-        return Int32(SettingsManager().contextWindow)
-    }
-
     func loadModel() async throws {
         let manager = getModelManager()
         let model = manager.activeModel
@@ -87,9 +82,6 @@ class LlamaService {
             throw LlamaError.modelNotFound
         }
 
-        // Try to load the model with settings from user preferences
-        let tokenLimit = getMaxTokenCount()
-
         // Try loading with retry - LLM might fail due to memory pressure, not corrupted file
         for attempt in 1...3 {
             print("[LlamaService] Loading model attempt \(attempt)/3...")
@@ -99,11 +91,8 @@ class LlamaService {
                 try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 second
             }
 
-            if let llm = LLM(
-                from: url,
-                template: template,
-                maxTokenCount: tokenLimit
-            ) {
+            // Match working implementation: don't pass maxTokenCount
+            if let llm = LLM(from: url, template: template) {
                 bot = llm
                 modelURL = url
                 currentModelId = model.id
@@ -158,9 +147,8 @@ class LlamaService {
         }
 
         let template = templateForModel(model)
-        let tokenLimit = getMaxTokenCount()
 
-        guard let llm = LLM(from: url, template: template, maxTokenCount: tokenLimit) else {
+        guard let llm = LLM(from: url, template: template) else {
             try? fileManager.removeItem(at: url)
             throw LlamaError.modelLoadFailed("Model file may be corrupted. Please download again.")
         }
@@ -233,78 +221,72 @@ class LlamaService {
     func generate(prompt: String, conversationHistory: [(role: String, content: String)] = []) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
-                guard let modelId = self.currentModelId,
-                      let model = AIModel.model(withId: modelId) else {
-                    print("[LlamaService] ERROR: Model not configured")
-                    continuation.yield("Error: AI model is not loaded. Please restart the app.")
-                    continuation.finish()
-                    return
-                }
-
-                // Ensure we have a bot instance
-                if self.bot == nil {
-                    print("[LlamaService] Bot is nil, reloading model...")
-                    do {
-                        try await self.loadModel()
-                    } catch {
-                        print("[LlamaService] Failed to reload model: \(error)")
-                        continuation.yield("Error: Could not load AI model. Please restart the app.")
-                        continuation.finish()
-                        return
+                do {
+                    guard let modelId = self.currentModelId,
+                          let model = AIModel.model(withId: modelId) else {
+                        print("[LlamaService] ERROR: Model not configured")
+                        throw LlamaError.modelNotLoaded
                     }
-                }
 
-                guard let bot = self.bot else {
-                    continuation.yield("Error: AI model is not loaded.")
-                    continuation.finish()
-                    return
-                }
-
-                // Build full conversation prompt with history
-                let fullPrompt = self.buildConversationPrompt(
-                    currentMessage: prompt,
-                    history: conversationHistory,
-                    model: model
-                )
-
-                print("[LlamaService] Generating response...")
-                print("[LlamaService] History messages: \(conversationHistory.count)")
-                print("[LlamaService] Prompt length: \(fullPrompt.count) chars")
-
-                // CRITICAL: Clear output before calling respond
-                bot.output = ""
-
-                // Generate response
-                await bot.respond(to: fullPrompt)
-
-                let rawOutput = bot.output
-                print("[LlamaService] Raw output length: \(rawOutput.count)")
-
-                var response = rawOutput.trimmingCharacters(in: .whitespacesAndNewlines)
-                response = self.cleanResponse(response)
-
-                if response.isEmpty || response == "..." || response.count < 3 {
-                    print("[LlamaService] WARNING: Empty response, retrying with fresh bot...")
-                    // Try recreating the bot for a fresh start
-                    self.bot = nil
-                    do {
+                    // Ensure we have a bot instance
+                    if self.bot == nil {
+                        print("[LlamaService] Bot is nil, reloading model...")
                         try await self.loadModel()
+                    }
+
+                    guard let bot = self.bot else {
+                        throw LlamaError.modelNotLoaded
+                    }
+
+                    // Build full conversation prompt with history
+                    let fullPrompt = self.buildConversationPrompt(
+                        currentMessage: prompt,
+                        history: conversationHistory,
+                        model: model
+                    )
+
+                    print("[LlamaService] Generating response...")
+                    print("[LlamaService] History messages: \(conversationHistory.count)")
+                    print("[LlamaService] Prompt length: \(fullPrompt.count) chars")
+
+                    // CRITICAL: Clear output before calling respond
+                    bot.output = ""
+
+                    // Generate response
+                    await bot.respond(to: fullPrompt)
+
+                    var response = bot.output
+                    print("[LlamaService] Raw output length: \(response.count)")
+
+                    // Clean up response
+                    response = response.trimmingCharacters(in: .whitespacesAndNewlines)
+                    response = self.cleanResponse(response)
+
+                    if response.isEmpty || response == "..." || response.count < 3 {
+                        print("[LlamaService] WARNING: Empty response, trying once more...")
+                        // One more attempt with fresh bot
+                        self.bot = nil
+                        try await self.loadModel()
+
                         if let freshBot = self.bot {
                             freshBot.output = ""
                             await freshBot.respond(to: fullPrompt)
                             response = self.cleanResponse(freshBot.output.trimmingCharacters(in: .whitespacesAndNewlines))
                         }
-                    } catch {
-                        print("[LlamaService] Failed to recreate bot: \(error)")
                     }
 
                     if response.isEmpty || response.count < 3 {
-                        response = "I'm having trouble generating a response. Please try again."
+                        continuation.yield("I'm having trouble generating a response. Please try again.")
+                    } else {
+                        continuation.yield(response)
                     }
-                }
+                    continuation.finish()
 
-                continuation.yield(response)
-                continuation.finish()
+                } catch {
+                    print("[LlamaService] Generate error: \(error)")
+                    continuation.yield("Error: \(error.localizedDescription)")
+                    continuation.finish()
+                }
             }
         }
     }
@@ -429,12 +411,12 @@ class LlamaService {
 
         // Create fresh instance
         let template = templateForModel(model)
-        let tokenLimit = getMaxTokenCount()
 
-        guard let freshBot = LLM(from: url, template: template, maxTokenCount: tokenLimit) else {
+        guard let freshBot = LLM(from: url, template: template) else {
             throw LlamaError.modelLoadFailed("Could not create LLM instance")
         }
 
+        freshBot.output = ""
         await freshBot.respond(to: prompt)
 
         let response = freshBot.output.trimmingCharacters(in: .whitespacesAndNewlines)

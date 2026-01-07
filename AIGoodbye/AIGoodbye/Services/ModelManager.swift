@@ -2,7 +2,7 @@
 //  ModelManager.swift
 //  AIGoodbye
 //
-//  Manages AI model downloads and storage
+//  Manages AI model downloads and storage with background download support
 //
 
 import Foundation
@@ -11,6 +11,9 @@ import Combine
 @MainActor
 class ModelManager: ObservableObject {
     static let shared = ModelManager()
+
+    // Background session identifier
+    static let backgroundSessionIdentifier = "com.aigoodbye.modeldownload"
 
     @Published var downloadStates: [String: ModelDownloadState] = [:]
     @Published var currentModelId: String = "ministral-8b"
@@ -21,11 +24,14 @@ class ModelManager: ObservableObject {
     @Published var downloadingModelId: String?
 
     private let modelsDirectory: URL
-    private var downloadSession: URLSession?
+    private var backgroundSession: URLSession!
     private var downloadTask: URLSessionDownloadTask?
     private var downloadContinuation: CheckedContinuation<Void, Error>?
     private var currentDestinationURL: URL?
     private var currentModel: AIModel?
+
+    // Background completion handler from AppDelegate
+    var backgroundCompletionHandler: (() -> Void)?
 
     private init() {
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -39,8 +45,31 @@ class ModelManager: ObservableObject {
             currentModelId = savedModelId
         }
 
+        // Check for any in-progress download that was interrupted
+        if let downloadingId = UserDefaults.standard.string(forKey: "downloadingModelId") {
+            downloadingModelId = downloadingId
+            // Will be resumed when background session reconnects
+        }
+
+        // Create background session (must be done before any downloads)
+        setupBackgroundSession()
+
         // Initialize download states
         refreshDownloadStates()
+    }
+
+    private func setupBackgroundSession() {
+        let config = URLSessionConfiguration.background(withIdentifier: ModelManager.backgroundSessionIdentifier)
+        config.sessionSendsLaunchEvents = true  // Wake app when download completes
+        config.isDiscretionary = false  // Don't delay downloads
+        config.timeoutIntervalForRequest = 300
+        config.timeoutIntervalForResource = 7200  // 2 hours for large files
+
+        // Allow downloads on cellular if user prefers
+        config.allowsCellularAccess = true
+
+        let delegate = BackgroundDownloadDelegate(manager: self)
+        backgroundSession = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
     }
 
     // MARK: - Model Path
@@ -72,6 +101,9 @@ class ModelManager: ObservableObject {
         for model in AIModel.allModels {
             if isModelDownloaded(model) {
                 downloadStates[model.id] = .downloaded
+            } else if downloadingModelId == model.id {
+                // Download was in progress
+                downloadStates[model.id] = .downloading(progress: downloadProgress)
             } else {
                 downloadStates[model.id] = .notDownloaded
             }
@@ -98,24 +130,21 @@ class ModelManager: ObservableObject {
         downloadStates[model.id] = .downloading(progress: 0)
         currentModel = model
 
+        // Save downloading state to survive app restarts
+        UserDefaults.standard.set(model.id, forKey: "downloadingModelId")
+
         let destinationURL = modelPath(for: model)
         currentDestinationURL = destinationURL
 
         // Delete any existing partial file
         try? FileManager.default.removeItem(at: destinationURL)
 
-        // Create delegate and session
-        let delegate = DownloadSessionDelegate(manager: self)
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 300
-        config.timeoutIntervalForResource = 3600 // 1 hour for large files
-        downloadSession = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
-
         return try await withCheckedThrowingContinuation { continuation in
             self.downloadContinuation = continuation
-            let task = downloadSession!.downloadTask(with: model.downloadURL)
+            let task = backgroundSession.downloadTask(with: model.downloadURL)
             self.downloadTask = task
             task.resume()
+            print("[ModelManager] Started background download for \(model.name)")
         }
     }
 
@@ -138,45 +167,68 @@ class ModelManager: ObservableObject {
     // Called by delegate when download completes
     nonisolated func downloadCompleted(location: URL) {
         Task { @MainActor in
-            guard let destinationURL = self.currentDestinationURL,
-                  let model = self.currentModel else {
-                self.downloadContinuation?.resume(throwing: ModelManagerError.downloadFailed("No destination set"))
+            guard let destinationURL = self.currentDestinationURL else {
+                // Try to determine destination from downloading model
+                guard let modelId = self.downloadingModelId,
+                      let model = AIModel.model(withId: modelId) else {
+                    self.downloadContinuation?.resume(throwing: ModelManagerError.downloadFailed("No destination set"))
+                    self.cleanupDownload()
+                    return
+                }
+                let destURL = self.modelPath(for: model)
+                self.finishDownload(from: location, to: destURL, model: model)
+                return
+            }
+
+            let model = self.currentModel ?? AIModel.allModels.first { self.modelPath(for: $0) == destinationURL }
+            guard let model = model else {
+                self.downloadContinuation?.resume(throwing: ModelManagerError.downloadFailed("Model not found"))
                 self.cleanupDownload()
                 return
             }
 
-            do {
-                // Move to destination
-                try FileManager.default.moveItem(at: location, to: destinationURL)
+            self.finishDownload(from: location, to: destinationURL, model: model)
+        }
+    }
 
-                // Verify file size
-                if let attributes = try? FileManager.default.attributesOfItem(atPath: destinationURL.path),
-                   let fileSize = attributes[.size] as? Int64,
-                   fileSize < model.sizeBytes / 2 {
-                    try? FileManager.default.removeItem(at: destinationURL)
-                    self.downloadStates[model.id] = .failed("Download incomplete")
-                    self.downloadContinuation?.resume(throwing: ModelManagerError.downloadFailed("Download incomplete - file too small"))
-                    self.cleanupDownload()
-                    return
-                }
+    private func finishDownload(from location: URL, to destinationURL: URL, model: AIModel) {
+        do {
+            // Remove existing file if any
+            try? FileManager.default.removeItem(at: destinationURL)
 
-                self.downloadStates[model.id] = .downloaded
-                self.downloadProgress = 1.0
-                self.downloadContinuation?.resume()
-                self.cleanupDownload()
+            // Move to destination
+            try FileManager.default.moveItem(at: location, to: destinationURL)
 
-            } catch {
+            // Verify file size
+            if let attributes = try? FileManager.default.attributesOfItem(atPath: destinationURL.path),
+               let fileSize = attributes[.size] as? Int64,
+               fileSize < model.sizeBytes / 2 {
                 try? FileManager.default.removeItem(at: destinationURL)
-                self.downloadStates[model.id] = .failed(error.localizedDescription)
-                self.downloadContinuation?.resume(throwing: error)
+                self.downloadStates[model.id] = .failed("Download incomplete")
+                self.downloadContinuation?.resume(throwing: ModelManagerError.downloadFailed("Download incomplete - file too small"))
                 self.cleanupDownload()
+                return
             }
+
+            print("[ModelManager] Download completed successfully: \(model.name)")
+            self.downloadStates[model.id] = .downloaded
+            self.downloadProgress = 1.0
+            self.downloadContinuation?.resume()
+            self.cleanupDownload()
+
+        } catch {
+            print("[ModelManager] Error moving download: \(error)")
+            try? FileManager.default.removeItem(at: destinationURL)
+            self.downloadStates[model.id] = .failed(error.localizedDescription)
+            self.downloadContinuation?.resume(throwing: error)
+            self.cleanupDownload()
         }
     }
 
     // Called by delegate when download fails
     nonisolated func downloadFailed(error: Error) {
         Task { @MainActor in
+            print("[ModelManager] Download failed: \(error.localizedDescription)")
             if let destinationURL = self.currentDestinationURL {
                 try? FileManager.default.removeItem(at: destinationURL)
             }
@@ -188,15 +240,25 @@ class ModelManager: ObservableObject {
         }
     }
 
+    // Called when background events are completed
+    nonisolated func backgroundSessionDidComplete() {
+        Task { @MainActor in
+            print("[ModelManager] Background session events completed")
+            self.backgroundCompletionHandler?()
+            self.backgroundCompletionHandler = nil
+        }
+    }
+
     private func cleanupDownload() {
         isDownloading = false
         downloadingModelId = nil
         downloadTask = nil
-        downloadSession?.invalidateAndCancel()
-        downloadSession = nil
         downloadContinuation = nil
         currentDestinationURL = nil
         currentModel = nil
+
+        // Clear saved downloading state
+        UserDefaults.standard.removeObject(forKey: "downloadingModelId")
     }
 
     // MARK: - Cancel Download
@@ -287,9 +349,9 @@ class ModelManager: ObservableObject {
     }
 }
 
-// MARK: - Download Session Delegate
+// MARK: - Background Download Session Delegate
 
-private class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegate {
+private class BackgroundDownloadDelegate: NSObject, URLSessionDownloadDelegate {
     weak var manager: ModelManager?
 
     init(manager: ModelManager) {
@@ -304,14 +366,30 @@ private class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegate {
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         // Copy to a temp location we control since the original will be deleted
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".gguf")
-        try? FileManager.default.copyItem(at: location, to: tempURL)
-        manager?.downloadCompleted(location: tempURL)
+        do {
+            try FileManager.default.copyItem(at: location, to: tempURL)
+            manager?.downloadCompleted(location: tempURL)
+        } catch {
+            print("[ModelManager] Error copying downloaded file: \(error)")
+            manager?.downloadFailed(error: error)
+        }
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let error = error {
-            manager?.downloadFailed(error: error)
+            // Check if this is a cancellation
+            let nsError = error as NSError
+            if nsError.code == NSURLErrorCancelled {
+                print("[ModelManager] Download was cancelled")
+            } else {
+                manager?.downloadFailed(error: error)
+            }
         }
+    }
+
+    // Called when all background events have been delivered
+    func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        manager?.backgroundSessionDidComplete()
     }
 }
 

@@ -9,9 +9,30 @@
 import SwiftUI
 import SwiftData
 import Combine
+import UIKit
+
+// MARK: - App Delegate for Background Downloads
+
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication,
+                     handleEventsForBackgroundURLSession identifier: String,
+                     completionHandler: @escaping () -> Void) {
+        // Check if this is our background download session
+        if identifier == ModelManager.backgroundSessionIdentifier {
+            print("[AppDelegate] Handling background URL session events")
+            // Store the completion handler to call when all events are delivered
+            Task { @MainActor in
+                ModelManager.shared.backgroundCompletionHandler = completionHandler
+            }
+        }
+    }
+}
 
 @main
 struct AIGoodbyeApp: App {
+    // Connect AppDelegate for background download support
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     @StateObject private var appState = AppState()
     @AppStorage("hasAcceptedTerms") private var hasAcceptedTerms = false
 
@@ -174,7 +195,7 @@ struct LoadingView: View {
                         .foregroundStyle(.secondary)
 
                     // Status text
-                    Text("Download in progress... please wait 5-10 minutes")
+                    Text("Download continues in background - you can switch apps")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)

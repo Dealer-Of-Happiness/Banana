@@ -59,13 +59,6 @@ class LlamaService {
         let url = manager.modelPath(for: model)
         let fileManager = FileManager.default
 
-        // Always delete existing file if we're retrying after a failure
-        let lastFailedKey = "lastFailedModelId"
-        if UserDefaults.standard.string(forKey: lastFailedKey) == model.id {
-            try? fileManager.removeItem(at: url)
-            UserDefaults.standard.removeObject(forKey: lastFailedKey)
-        }
-
         // Check if model is downloaded and valid
         var needsDownload = !fileManager.fileExists(atPath: url.path)
 
@@ -75,6 +68,7 @@ class LlamaService {
                let fileSize = attributes[.size] as? Int64 {
                 let minimumSize = model.sizeBytes / 2
                 if fileSize < minimumSize {
+                    print("[LlamaService] Model file too small (\(fileSize) bytes), redownloading...")
                     try? fileManager.removeItem(at: url)
                     needsDownload = true
                 }
@@ -95,21 +89,35 @@ class LlamaService {
 
         // Try to load the model with settings from user preferences
         let tokenLimit = getMaxTokenCount()
-        guard let llm = LLM(
-            from: url,
-            template: template,
-            maxTokenCount: tokenLimit
-        ) else {
-            // Mark this model as failed so we delete it next time
-            UserDefaults.standard.set(model.id, forKey: lastFailedKey)
-            try? fileManager.removeItem(at: url)
-            throw LlamaError.modelLoadFailed("Model failed to initialize. File deleted - restart app to re-download.")
+
+        // Try loading with retry - LLM might fail due to memory pressure, not corrupted file
+        var lastError: Error?
+        for attempt in 1...3 {
+            print("[LlamaService] Loading model attempt \(attempt)/3...")
+
+            // Give memory time to settle between attempts
+            if attempt > 1 {
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 second
+            }
+
+            if let llm = LLM(
+                from: url,
+                template: template,
+                maxTokenCount: tokenLimit
+            ) {
+                bot = llm
+                modelURL = url
+                currentModelId = model.id
+                print("[LlamaService] Model loaded successfully on attempt \(attempt)")
+                return
+            }
+
+            lastError = LlamaError.modelLoadFailed("LLM initialization returned nil on attempt \(attempt)")
+            print("[LlamaService] LLM init failed on attempt \(attempt)")
         }
 
-        bot = llm
-        modelURL = url
-        currentModelId = model.id
-        print("[LlamaService] Model loaded successfully")
+        // All attempts failed - but DON'T delete the file, it might be memory issues
+        throw LlamaError.modelLoadFailed("Could not initialize AI model. Try closing other apps to free memory, then restart.")
     }
 
     private func templateForModel(_ model: AIModel) -> Template {

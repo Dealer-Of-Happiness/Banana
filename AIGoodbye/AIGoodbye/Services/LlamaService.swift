@@ -234,8 +234,8 @@ class LlamaService {
 
     // MARK: - Text Generation
 
-    /// Generate response using the bot's native conversation memory
-    /// Instead of passing history in prompt, let LLM.swift handle it naturally
+    /// Generate response with full conversation history in prompt
+    /// Key: Clear bot.output before each respond() call
     func generate(prompt: String, conversationHistory: [(role: String, content: String)] = []) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
@@ -266,12 +266,22 @@ class LlamaService {
                     return
                 }
 
-                print("[LlamaService] Generating response...")
-                print("[LlamaService] Bot history count: \(bot.history.count)")
-                print("[LlamaService] Prompt: \(prompt.prefix(100))...")
+                // Build full conversation prompt with history
+                let fullPrompt = self.buildConversationPrompt(
+                    currentMessage: prompt,
+                    history: conversationHistory,
+                    model: model
+                )
 
-                // Just send the user's message - let LLM.swift handle conversation context
-                await bot.respond(to: prompt)
+                print("[LlamaService] Generating response...")
+                print("[LlamaService] History messages: \(conversationHistory.count)")
+                print("[LlamaService] Prompt length: \(fullPrompt.count) chars")
+
+                // CRITICAL: Clear output before calling respond
+                bot.output = ""
+
+                // Generate response
+                await bot.respond(to: fullPrompt)
 
                 let rawOutput = bot.output
                 print("[LlamaService] Raw output length: \(rawOutput.count)")
@@ -280,13 +290,14 @@ class LlamaService {
                 response = self.cleanResponse(response)
 
                 if response.isEmpty || response == "..." || response.count < 3 {
-                    print("[LlamaService] WARNING: Empty response, recreating bot...")
+                    print("[LlamaService] WARNING: Empty response, retrying with fresh bot...")
                     // Try recreating the bot for a fresh start
                     self.bot = nil
                     do {
                         try await self.loadModel()
                         if let freshBot = self.bot {
-                            await freshBot.respond(to: prompt)
+                            freshBot.output = ""
+                            await freshBot.respond(to: fullPrompt)
                             response = self.cleanResponse(freshBot.output.trimmingCharacters(in: .whitespacesAndNewlines))
                         }
                     } catch {

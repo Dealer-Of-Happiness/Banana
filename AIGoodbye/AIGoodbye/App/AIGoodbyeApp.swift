@@ -159,7 +159,6 @@ struct LoadingView: View {
     private let taglinePhrases = [
         "Subscriptions",
         "Security Concerns",
-        "Privacy Worries",
         "Need for Reception",
         "Data Tracking",
         "Monthly Fees",

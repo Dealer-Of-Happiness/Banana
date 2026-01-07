@@ -91,7 +91,6 @@ class LlamaService {
         let tokenLimit = getMaxTokenCount()
 
         // Try loading with retry - LLM might fail due to memory pressure, not corrupted file
-        var lastError: Error?
         for attempt in 1...3 {
             print("[LlamaService] Loading model attempt \(attempt)/3...")
 
@@ -112,7 +111,6 @@ class LlamaService {
                 return
             }
 
-            lastError = LlamaError.modelLoadFailed("LLM initialization returned nil on attempt \(attempt)")
             print("[LlamaService] LLM init failed on attempt \(attempt)")
         }
 

@@ -332,13 +332,9 @@ class ChatViewModel: ObservableObject {
 
             var responseText = ""
 
-            // Build conversation history (exclude the message we just added)
-            // messages array now includes the user message we just added, so use dropLast
-            let previousMessages = messages.dropLast()
-            let conversationHistory = previousMessages.map { (role: $0.role.rawValue, content: $0.content) }
-
-            for try await chunk in llamaService.generate(prompt: text, conversationHistory: Array(conversationHistory)) {
-                responseText = chunk  // LlamaService returns full response, not chunks
+            // v2.x library handles conversation history natively
+            for try await chunk in llamaService.generate(prompt: text) {
+                responseText = chunk
             }
 
             // Add response to conversation (no placeholder needed)

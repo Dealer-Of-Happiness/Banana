@@ -249,36 +249,19 @@ class LlamaService {
                     }
 
                     print("[LlamaService] Generating response...")
-                    print("[LlamaService] Bot history count: \(bot.history.count)")
-                    print("[LlamaService] Bot isAvailable: \(bot.isAvailable)")
+                    print("[LlamaService] Bot history count before: \(bot.history.count)")
                     print("[LlamaService] User prompt: \(prompt.prefix(50))...")
 
-                    // CRITICAL: Check if bot is available before calling respond
-                    // If not available (previous call still running), respond() returns immediately with empty output
-                    if !bot.isAvailable {
-                        print("[LlamaService] WARNING: Bot is not available, waiting...")
-                        // Wait up to 30 seconds for bot to become available
-                        var waitCount = 0
-                        while !bot.isAvailable && waitCount < 60 {
-                            try await Task.sleep(nanoseconds: 500_000_000) // 0.5 second
-                            waitCount += 1
-                        }
-                        if !bot.isAvailable {
-                            print("[LlamaService] ERROR: Bot still not available after waiting")
-                            throw LlamaError.generationFailed("AI is still processing. Please wait.")
-                        }
-                        print("[LlamaService] Bot became available after \(waitCount * 500)ms")
-                    }
+                    // Small delay to ensure any previous operation is fully complete
+                    try await Task.sleep(nanoseconds: 100_000_000) // 100ms
 
                     // Trust the library's native history management (historyLimit: 30)
-                    // Just pass the prompt - library handles context automatically
                     await bot.respond(to: prompt)
 
                     let response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
                     print("[LlamaService] Raw output length: \(response.count)")
                     print("[LlamaService] Raw output preview: '\(response.prefix(100))'")
                     print("[LlamaService] Bot history count after: \(bot.history.count)")
-                    print("[LlamaService] Bot isAvailable after: \(bot.isAvailable)")
 
                     let cleanedResponse = self.cleanResponse(response)
 

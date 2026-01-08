@@ -232,9 +232,8 @@ class LlamaService {
 
     // MARK: - Text Generation
 
-    /// Generate response - SIMPLE: just call respond() and return the result
-    /// NEVER set bot = nil here, NEVER try to reload the model
-    /// The bot instance must stay alive between messages
+    /// Generate response using prompt stuffing for reliable multi-turn
+    /// Since LLM.swift's native history has issues, we build full context ourselves
     func generate(prompt: String, conversationHistory: [(role: String, content: String)] = []) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
@@ -250,22 +249,46 @@ class LlamaService {
                     }
 
                     print("[LlamaService] Generating response...")
-                    print("[LlamaService] Bot history count: \(bot.history.count)")
+                    print("[LlamaService] Conversation history: \(conversationHistory.count) messages")
                     print("[LlamaService] User prompt: \(prompt.prefix(50))...")
 
-                    // SIMPLE: Just call respond() - library handles everything
-                    // DO NOT set bot = nil, DO NOT try to reload, DO NOT clear anything
-                    await bot.respond(to: prompt)
+                    // WORKAROUND: LLM.swift's native history doesn't work reliably
+                    // So we clear history and build the full context into the prompt ourselves
+                    bot.history.removeAll()
+
+                    // Build prompt with conversation context
+                    let fullPrompt: String
+                    if conversationHistory.isEmpty {
+                        fullPrompt = prompt
+                    } else {
+                        // Include recent conversation history in the prompt
+                        var contextParts: [String] = []
+                        let recentHistory = conversationHistory.suffix(10) // Last 5 exchanges
+
+                        for msg in recentHistory {
+                            if msg.role.lowercased() == "user" {
+                                contextParts.append("User: \(msg.content)")
+                            } else {
+                                contextParts.append("Assistant: \(msg.content)")
+                            }
+                        }
+                        contextParts.append("User: \(prompt)")
+                        contextParts.append("Assistant:")
+
+                        fullPrompt = contextParts.joined(separator: "\n")
+                    }
+
+                    print("[LlamaService] Full prompt length: \(fullPrompt.count)")
+
+                    await bot.respond(to: fullPrompt)
 
                     let response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
                     print("[LlamaService] Raw output length: \(response.count)")
-                    print("[LlamaService] Bot history count after: \(bot.history.count)")
 
-                    // Clean and return - no complex retry logic
                     let cleanedResponse = self.cleanResponse(response)
 
                     if cleanedResponse.isEmpty {
-                        continuation.yield("...")
+                        continuation.yield("I'm thinking...")
                     } else {
                         continuation.yield(cleanedResponse)
                     }

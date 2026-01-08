@@ -106,7 +106,7 @@ class ICloudSyncService {
     }
 
     private func exportAsText(_ conversations: [Conversation], to url: URL) throws -> URL {
-        var content = "AI goodbye Conversations Export\n"
+        var content = "AiGoodbye Conversations Export\n"
         content += "Exported: \(Date().formatted())\n"
         content += "=" .padding(toLength: 50, withPad: "=", startingAt: 0) + "\n\n"
 
@@ -115,7 +115,7 @@ class ICloudSyncService {
             content += "Created: \(conversation.createdAt.formatted())\n\n"
 
             for message in conversation.messages {
-                let role = message.role == .user ? "You" : "AI goodbye"
+                let role = message.role == .user ? "You" : "AiGoodbye"
                 content += "\(role): \(message.content)\n\n"
             }
 
@@ -144,7 +144,7 @@ class ICloudSyncService {
 
             var yOffset: CGFloat = 50
 
-            "AI goodbye Conversations".draw(at: CGPoint(x: 50, y: yOffset), withAttributes: titleAttributes)
+            "AiGoodbye Conversations".draw(at: CGPoint(x: 50, y: yOffset), withAttributes: titleAttributes)
             yOffset += 40
 
             for conversation in conversations {
@@ -157,7 +157,7 @@ class ICloudSyncService {
                 yOffset += 25
 
                 for message in conversation.messages {
-                    let role = message.role == .user ? "You: " : "AI goodbye: "
+                    let role = message.role == .user ? "You: " : "AiGoodbye: "
                     let text = role + message.content
                     text.draw(in: CGRect(x: 50, y: yOffset, width: 512, height: 100), withAttributes: bodyAttributes)
                     yOffset += 50

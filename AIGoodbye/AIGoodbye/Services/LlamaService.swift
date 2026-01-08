@@ -241,8 +241,8 @@ class LlamaService {
 
     // MARK: - Text Generation
 
-    /// Generate response using LLM.swift's native history management
-    /// The library automatically manages conversation history with historyLimit
+    /// Generate response using prompt stuffing approach for reliable multi-turn conversations
+    /// We explicitly build the full conversation context each time instead of relying on library history
     func generate(prompt: String, conversationHistory: [(role: String, content: String)] = []) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
@@ -269,26 +269,29 @@ class LlamaService {
                     }
 
                     print("[LlamaService] Generating response...")
+                    print("[LlamaService] Conversation history count: \(conversationHistory.count)")
                     print("[LlamaService] User prompt: \(prompt.prefix(50))...")
-                    print("[LlamaService] Bot history count: \(bot.history.count)")
 
-                    // CRITICAL: Only clear output, let library manage history naturally
+                    // CRITICAL: Clear bot history before each call - we manage context ourselves
+                    bot.history.removeAll()
                     bot.output = ""
 
-                    // Let LLM.swift handle conversation - just pass the user message
-                    // The library's template and history management will handle the rest
-                    await bot.respond(to: prompt)
+                    // Build complete prompt with conversation history (prompt stuffing)
+                    let fullPrompt = self.buildConversationPrompt(history: conversationHistory, currentMessage: prompt)
+                    print("[LlamaService] Full prompt length: \(fullPrompt.count) chars")
+
+                    // Generate response
+                    await bot.respond(to: fullPrompt)
 
                     var response = bot.output
                     print("[LlamaService] Raw output length: \(response.count)")
-                    print("[LlamaService] Bot history count after: \(bot.history.count)")
 
                     // Clean up response
                     response = response.trimmingCharacters(in: .whitespacesAndNewlines)
                     response = self.cleanResponse(response)
 
                     if response.isEmpty || response == "..." || response.count < 3 {
-                        print("[LlamaService] WARNING: Empty response, recreating bot...")
+                        print("[LlamaService] WARNING: Empty response, retrying with fresh bot...")
                         self.consecutiveFailures += 1
 
                         // Recreate bot completely
@@ -296,8 +299,9 @@ class LlamaService {
                         try await self.loadModel()
 
                         if let freshBot = self.bot {
+                            freshBot.history.removeAll()
                             freshBot.output = ""
-                            await freshBot.respond(to: prompt)
+                            await freshBot.respond(to: fullPrompt)
                             response = self.cleanResponse(freshBot.output.trimmingCharacters(in: .whitespacesAndNewlines))
                         }
                     }
@@ -320,6 +324,37 @@ class LlamaService {
                 }
             }
         }
+    }
+
+    /// Build a complete prompt including conversation history
+    /// Uses a simple format that works well with most models
+    private func buildConversationPrompt(history: [(role: String, content: String)], currentMessage: String) -> String {
+        // For single message (no history), just return the message
+        if history.isEmpty {
+            return currentMessage
+        }
+
+        // Build conversation context
+        // Keep only recent messages to avoid context overflow (last 20 messages = 10 exchanges)
+        let recentHistory = history.suffix(20)
+
+        var conversationParts: [String] = []
+
+        for message in recentHistory {
+            let role = message.role.lowercased()
+            if role == "user" {
+                conversationParts.append("User: \(message.content)")
+            } else if role == "assistant" {
+                conversationParts.append("Assistant: \(message.content)")
+            }
+        }
+
+        // Add current message
+        conversationParts.append("User: \(currentMessage)")
+        conversationParts.append("Assistant:")
+
+        // Join with double newlines for clarity
+        return conversationParts.joined(separator: "\n\n")
     }
 
     // MARK: - Response Cleaning

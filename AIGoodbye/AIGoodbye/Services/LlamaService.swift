@@ -232,8 +232,8 @@ class LlamaService {
 
     // MARK: - Text Generation
 
-    /// Generate response using prompt stuffing for reliable multi-turn
-    /// Since LLM.swift's native history has issues, we build full context ourselves
+    /// Generate response with conversation history
+    /// Uses prompt stuffing to work around LLM.swift multi-turn bugs
     func generate(prompt: String, conversationHistory: [(role: String, content: String)] = []) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
@@ -249,24 +249,52 @@ class LlamaService {
                     }
 
                     print("[LlamaService] Generating response...")
-                    print("[LlamaService] Bot history count before: \(bot.history.count)")
+                    print("[LlamaService] Conversation history: \(conversationHistory.count) messages")
                     print("[LlamaService] User prompt: \(prompt.prefix(50))...")
 
-                    // Small delay to ensure any previous operation is fully complete
-                    try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+                    // WORKAROUND for LLM.swift multi-turn bug:
+                    // Clear library's history and manually stuff context into prompt
+                    bot.history.removeAll()
 
-                    // Trust the library's native history management (historyLimit: 30)
-                    await bot.respond(to: prompt)
+                    // Build full prompt with conversation history
+                    let fullPrompt: String
+                    if conversationHistory.isEmpty {
+                        // First message - just use the prompt directly
+                        fullPrompt = prompt
+                    } else {
+                        // Multi-turn: build context from history
+                        var parts: [String] = []
+
+                        // Include last 10 messages (5 exchanges) for context
+                        let recentHistory = conversationHistory.suffix(10)
+                        for msg in recentHistory {
+                            if msg.role.lowercased() == "user" {
+                                parts.append("User: \(msg.content)")
+                            } else if msg.role.lowercased() == "assistant" {
+                                parts.append("Assistant: \(msg.content)")
+                            }
+                        }
+
+                        // Add current prompt
+                        parts.append("User: \(prompt)")
+                        parts.append("Assistant:")
+
+                        fullPrompt = parts.joined(separator: "\n\n")
+                    }
+
+                    print("[LlamaService] Full prompt length: \(fullPrompt.count) chars")
+
+                    await bot.respond(to: fullPrompt)
 
                     let response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
                     print("[LlamaService] Raw output length: \(response.count)")
-                    print("[LlamaService] Raw output preview: '\(response.prefix(100))'")
-                    print("[LlamaService] Bot history count after: \(bot.history.count)")
+                    print("[LlamaService] Raw output: '\(response.prefix(200))'")
 
                     let cleanedResponse = self.cleanResponse(response)
 
                     if cleanedResponse.isEmpty {
-                        continuation.yield("I'm thinking...")
+                        print("[LlamaService] WARNING: Empty response after cleaning")
+                        continuation.yield("I'm still thinking... Please try again.")
                     } else {
                         continuation.yield(cleanedResponse)
                     }

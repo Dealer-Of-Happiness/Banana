@@ -86,16 +86,14 @@ class LlamaService {
         // Load model - single attempt, no complex retry logic
         print("[LlamaService] Loading model...")
 
-        // historyLimit: 0 disables library's history management to prevent crashes
-        // Each message is treated as independent (stateless)
-        guard let llm = LLM(from: url, template: template, historyLimit: 0) else {
+        guard let llm = LLM(from: url, template: template, historyLimit: 30) else {
             throw LlamaError.modelLoadFailed("Could not initialize AI model. Try closing other apps to free memory, then restart the app.")
         }
 
         bot = llm
         modelURL = url
         currentModelId = model.id
-        print("[LlamaService] Model loaded successfully (stateless mode)")
+        print("[LlamaService] Model loaded successfully with historyLimit: 30")
     }
 
     private func templateForModel(_ model: AIModel) -> Template {
@@ -143,7 +141,7 @@ class LlamaService {
 
         let template = templateForModel(model)
 
-        guard let llm = LLM(from: url, template: template, historyLimit: 0) else {
+        guard let llm = LLM(from: url, template: template, historyLimit: 30) else {
             throw LlamaError.modelLoadFailed("Model file may be corrupted. Please download again.")
         }
 
@@ -253,7 +251,7 @@ class LlamaService {
                     print("[LlamaService] Bot history count: \(bot.history.count)")
                     print("[LlamaService] User prompt: \(prompt.prefix(50))...")
 
-                    // Stateless mode: each message is independent (no conversation memory)
+                    // v2.x library handles multi-turn natively with historyLimit: 30
                     // Just pass the prompt - library manages context automatically
                     await bot.respond(to: prompt)
 

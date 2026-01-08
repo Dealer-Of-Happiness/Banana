@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import PhotosUI
 import Combine
 import UIKit
 
@@ -14,12 +13,6 @@ struct ChatView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = ChatViewModel()
     @FocusState private var isInputFocused: Bool
-    @State private var showAttachmentOptions = false
-    @State private var showDocumentPicker = false
-    @State private var showImagePicker = false
-    @State private var showCamera = false
-    @State private var showModelSelection = false
-    @State private var selectedPhoto: PhotosPickerItem?
 
     var body: some View {
         NavigationStack {
@@ -67,32 +60,6 @@ struct ChatView: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
-                    }
-                }
-            }
-            .sheet(isPresented: $showDocumentPicker) {
-                DocumentPickerView { urls in
-                    Task {
-                        await viewModel.processDocuments(urls)
-                    }
-                }
-            }
-            .photosPicker(
-                isPresented: $showImagePicker,
-                selection: $selectedPhoto,
-                matching: .images
-            )
-            .onChange(of: selectedPhoto) { _, newValue in
-                if let item = newValue {
-                    Task {
-                        await viewModel.processPhoto(item)
-                    }
-                }
-            }
-            .fullScreenCover(isPresented: $showCamera) {
-                CameraView { image in
-                    Task {
-                        await viewModel.analyzeImage(image)
                     }
                 }
             }
@@ -182,42 +149,7 @@ struct ChatView: View {
 
     private var inputArea: some View {
         VStack(spacing: 8) {
-            // Attachment preview
-            if !viewModel.attachments.isEmpty {
-                attachmentPreview
-            }
-
             HStack(spacing: 12) {
-                // Attachment button
-                Button {
-                    showAttachmentOptions = true
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.blue)
-                }
-                .confirmationDialog("Add Attachment", isPresented: $showAttachmentOptions) {
-                    Button {
-                        showDocumentPicker = true
-                    } label: {
-                        Label("Document", systemImage: "doc.fill")
-                    }
-
-                    Button {
-                        showImagePicker = true
-                    } label: {
-                        Label("Photo Library", systemImage: "photo.fill")
-                    }
-
-                    Button {
-                        showCamera = true
-                    } label: {
-                        Label("Take Photo", systemImage: "camera.fill")
-                    }
-
-                    Button("Cancel", role: .cancel) {}
-                }
-
                 // Text input
                 TextField("Message...", text: $viewModel.inputText, axis: .vertical)
                     .textFieldStyle(.plain)
@@ -245,23 +177,6 @@ struct ChatView: View {
         .background(.bar)
     }
 
-    // MARK: - Attachment Preview
-
-    private var attachmentPreview: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack {
-                ForEach(viewModel.attachments, id: \.self) { attachment in
-                    AttachmentChip(
-                        name: attachment,
-                        onRemove: {
-                            viewModel.removeAttachment(attachment)
-                        }
-                    )
-                }
-            }
-            .padding(.horizontal)
-        }
-    }
 }
 
 // MARK: - Chat View Model
@@ -271,7 +186,6 @@ class ChatViewModel: ObservableObject {
     @Published var messages: [Message] = []
     @Published var inputText = ""
     @Published var isGenerating = false
-    @Published var attachments: [String] = []
 
     var appState: AppState?
     private var currentConversationId: UUID?
@@ -369,30 +283,6 @@ class ChatViewModel: ObservableObject {
         }
 
         isGenerating = false
-        attachments.removeAll()
-    }
-
-    func processDocuments(_ urls: [URL]) async {
-        for url in urls {
-            attachments.append(url.lastPathComponent)
-            // Process document through document service
-        }
-    }
-
-    func processPhoto(_ item: PhotosPickerItem) async {
-        if (try? await item.loadTransferable(type: Data.self)) != nil {
-            attachments.append("Photo")
-            // Process image
-        }
-    }
-
-    func analyzeImage(_ image: UIImage) async {
-        attachments.append("Camera Photo")
-        // Analyze with vision model
-    }
-
-    func removeAttachment(_ name: String) {
-        attachments.removeAll { $0 == name }
     }
 
     func regenerateLastResponse() {

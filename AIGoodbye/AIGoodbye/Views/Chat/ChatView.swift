@@ -332,11 +332,8 @@ class ChatViewModel: ObservableObject {
 
             var responseText = ""
 
-            // Build conversation history for prompt stuffing
-            // Exclude the message we just added (last one is current user message)
-            let historyForLLM = messages.dropLast().map { ($0.role.rawValue, $0.content) }
-
-            for try await chunk in llamaService.generate(prompt: text, conversationHistory: Array(historyForLLM)) {
+            // Library handles conversation history natively via historyLimit
+            for try await chunk in llamaService.generate(prompt: text) {
                 responseText = chunk  // LlamaService returns full response, not chunks
             }
 

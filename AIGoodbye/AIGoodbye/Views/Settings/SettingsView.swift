@@ -16,8 +16,6 @@ struct SettingsView: View {
     @State private var showClearCacheAlert = false
     @State private var showExportOptions = false
     @State private var showDonationInfo = false
-    @State private var showResetAIAlert = false
-    @State private var isResettingAI = false
 
     var body: some View {
         Form {
@@ -146,41 +144,10 @@ struct SettingsView: View {
             Button("Delete All Chats", role: .destructive) {
                 showClearCacheAlert = true
             }
-
-            // Reset AI button for troubleshooting
-            Button {
-                showResetAIAlert = true
-            } label: {
-                HStack {
-                    Text("Reset AI")
-                    Spacer()
-                    if isResettingAI {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    }
-                }
-            }
-            .disabled(isResettingAI)
         } header: {
             Label("Data & Privacy", systemImage: "lock.shield")
         } footer: {
-            Text("If AI responses stop working, use 'Reset AI' to fix it.")
-        }
-        .alert("Reset AI?", isPresented: $showResetAIAlert) {
-            Button("Cancel", role: .cancel) {}
-            Button("Reset") {
-                Task {
-                    isResettingAI = true
-                    do {
-                        try await appState.llamaService.forceReset()
-                    } catch {
-                        print("[Settings] Reset AI failed: \(error)")
-                    }
-                    isResettingAI = false
-                }
-            }
-        } message: {
-            Text("This will reload the AI model. Use this if you're experiencing persistent errors.")
+            Text("All data is stored locally on your device.")
         }
     }
 
@@ -336,22 +303,22 @@ struct TermsDetailView: View {
                         .fontWeight(.medium)
 
                     bulletPoints([
-                        "When using local models, all processing occurs on your device with no data sent to external servers",
-                        "When using cloud models, your conversations and prompts are sent to external servers",
+                        "All AI processing occurs entirely on your device - no data is sent to external servers",
+                        "Your conversations and data never leave your phone",
                         "You are responsible for the security of your device and any data you input into the app",
                         "You are responsible for ensuring you have the right to use any content you input into the app"
                     ])
 
-                    sectionTitle("Third-Party Services")
+                    sectionTitle("Offline Operation")
 
-                    Text("Regarding third-party services:")
+                    Text("Regarding offline functionality:")
                         .fontWeight(.medium)
 
                     bulletPoints([
-                        "The integration allows you to access third-party AI models through their APIs",
-                        "Your use of third-party services is subject to their terms of service and privacy policy",
-                        "AiGoodbye is not responsible for the practices, policies, or content of third-party providers",
-                        "Your API keys and account management are your responsibility"
+                        "AiGoodbye operates 100% offline after the initial model download",
+                        "No internet connection is required to use the AI features",
+                        "No accounts, logins, or subscriptions are required",
+                        "Your privacy is guaranteed by design"
                     ])
                 }
 
@@ -440,19 +407,19 @@ struct PrivacyPolicyView: View {
                 Text("""
                 AiGoodbye is designed with privacy as a core principle. Say goodbye to monthly subscriptions, sharing your private data, and requiring internet connection.
 
-                **Local Processing**
-                All AI processing happens directly on your device. Your conversations and documents never leave your device unless you explicitly enable cloud AI services.
+                **100% Offline & Private**
+                All AI processing happens directly on your device. Your conversations never leave your phone - no servers, no cloud, no data collection.
 
-                **Your Data**
-                - Documents are stored locally and encrypted
-                - Conversations stay on your device
-                - Personal knowledge base access is optional and revocable
-
-                **Cloud Services**
-                When you enable cloud AI (ChatGPT, Claude, Google), your queries are sent to those services. You use your own API keys and are subject to their privacy policies.
+                **Your Data Stays Yours**
+                - All conversations are stored locally on your device
+                - Nothing is ever uploaded or shared
+                - Delete your data anytime from Settings
 
                 **No Tracking**
-                We don't collect analytics, usage data, or personal information.
+                We don't collect analytics, usage data, or personal information. The app works completely offline.
+
+                **No Account Required**
+                Use AiGoodbye without creating an account or signing in. Your privacy is guaranteed by design.
 
                 **Contact**
                 marketing@dealerofhappiness.com

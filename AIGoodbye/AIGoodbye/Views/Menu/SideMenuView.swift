@@ -319,17 +319,54 @@ struct SideMenuView: View {
         }
     }
 
-    // MARK: - Settings Button
+    // MARK: - Settings Button (Liquid Glass Style)
 
     private var settingsButton: some View {
         Button {
             showSettings = true
         } label: {
-            Label("Settings", systemImage: "gear")
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
+            HStack(spacing: 12) {
+                Image(systemName: "gear")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.blue, .purple],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                Text("Settings")
+                    .font(.body.weight(.medium))
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [.white.opacity(0.3), .white.opacity(0.1)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    )
+                    .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+            )
         }
         .foregroundStyle(.primary)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Actions

@@ -3,7 +3,7 @@
 //  AIGoodbye
 //
 //  Local Llama model inference service using LLM.swift
-//  Multi-turn workaround: Pass full conversation history in each prompt
+//  SIMPLE APPROACH: Load once, keep alive, just call respond()
 //
 
 import Foundation
@@ -21,10 +21,6 @@ class LlamaService {
     static var totalBytes: Int64 = 0
     static var isDownloading: Bool = false
 
-    // Failure tracking for auto-recovery
-    private var consecutiveFailures = 0
-    private let maxConsecutiveFailures = 2
-
     // Default: low temperature for consistent responses
     init(temperature: Double = 0.3) {
         self.temperature = Float(temperature)
@@ -40,16 +36,20 @@ class LlamaService {
         let manager = getModelManager()
         let model = manager.activeModel
 
-        // If already loaded with same model, skip
+        // If already loaded with same model, skip - KEEP BOT ALIVE
         if bot != nil && currentModelId == model.id {
+            print("[LlamaService] Model already loaded, reusing existing instance")
             return
         }
 
-        // Unload previous model
-        bot = nil
+        // Only unload when switching to a different model
+        if currentModelId != nil && currentModelId != model.id {
+            print("[LlamaService] Switching models, unloading previous")
+            bot = nil
+        }
         currentModelId = nil
 
-        // Load the single model
+        // Load the model
         try await loadModelInternal(model)
     }
 
@@ -62,7 +62,6 @@ class LlamaService {
         var needsDownload = !fileManager.fileExists(atPath: url.path)
 
         if !needsDownload {
-            // Check file size - if too small, the download was incomplete
             if let attributes = try? fileManager.attributesOfItem(atPath: url.path),
                let fileSize = attributes[.size] as? Int64 {
                 let minimumSize = model.sizeBytes / 2
@@ -78,43 +77,26 @@ class LlamaService {
             try await downloadModel(model)
         }
 
-        // Get template for the model
         let template = templateForModel(model)
 
-        // Verify file exists after potential download
         guard fileManager.fileExists(atPath: url.path) else {
             throw LlamaError.modelNotFound
         }
 
-        // Try loading with retry - LLM might fail due to memory pressure, not corrupted file
-        for attempt in 1...3 {
-            print("[LlamaService] Loading model attempt \(attempt)/3...")
+        // Load model - single attempt, no complex retry logic
+        print("[LlamaService] Loading model...")
 
-            // Give memory time to settle between attempts
-            if attempt > 1 {
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 second
-            }
-
-            // Initialize with proper history limit for long conversations
-            // historyLimit controls how many messages the library keeps (default is 8)
-            // Setting to 30 allows ~15 conversation exchanges before auto-pruning
-            if let llm = LLM(from: url, template: template, historyLimit: 30) {
-                bot = llm
-                modelURL = url
-                currentModelId = model.id
-                print("[LlamaService] Model loaded successfully on attempt \(attempt) with historyLimit: 30")
-                return
-            }
-
-            print("[LlamaService] LLM init failed on attempt \(attempt)")
+        guard let llm = LLM(from: url, template: template, historyLimit: 30) else {
+            throw LlamaError.modelLoadFailed("Could not initialize AI model. Try closing other apps to free memory, then restart the app.")
         }
 
-        // All attempts failed - but DON'T delete the file, it might be memory issues
-        throw LlamaError.modelLoadFailed("Could not initialize AI model. Try closing other apps to free memory, then restart.")
+        bot = llm
+        modelURL = url
+        currentModelId = model.id
+        print("[LlamaService] Model loaded successfully with historyLimit: 30")
     }
 
     private func templateForModel(_ model: AIModel) -> Template {
-        // Include system prompt in template - library will use this for all messages
         let systemPrompt = "You are AiGoodbye, a helpful AI assistant created by Dealer Of Happiness. You run completely offline on the user's device. Be concise, helpful, and friendly."
 
         switch model.templateType {
@@ -134,8 +116,11 @@ class LlamaService {
     }
 
     func loadSpecificModel(_ model: AIModel) async throws {
-        bot = nil
-        currentModelId = nil
+        // Only nil out if we're loading a different model
+        if currentModelId != model.id {
+            bot = nil
+            currentModelId = nil
+        }
 
         let manager = getModelManager()
         let url = manager.modelPath(for: model)
@@ -157,7 +142,6 @@ class LlamaService {
         let template = templateForModel(model)
 
         guard let llm = LLM(from: url, template: template, historyLimit: 30) else {
-            try? fileManager.removeItem(at: url)
             throw LlamaError.modelLoadFailed("Model file may be corrupted. Please download again.")
         }
 
@@ -189,8 +173,7 @@ class LlamaService {
     }
 
     func isModelLoaded() -> Bool {
-        // Check modelURL since bot may be nil between generations
-        modelURL != nil && currentModelId != nil
+        bot != nil && currentModelId != nil
     }
 
     /// Reload the model with current settings (e.g., after context window change)
@@ -201,42 +184,31 @@ class LlamaService {
         }
 
         print("[LlamaService] Reloading model with new settings...")
-
-        // Unload current model
         bot = nil
-
-        // Reload with current settings
         try await loadModelInternal(model)
-
         print("[LlamaService] Model reloaded successfully")
     }
 
     /// Reset conversation - clears the bot's internal conversation history
+    /// Only call this when starting a NEW conversation or user explicitly clears chat
     func resetConversation() {
         print("[LlamaService] resetConversation called - clearing bot history")
         bot?.history.removeAll()
-        consecutiveFailures = 0
     }
 
     /// Restore history from saved conversation
-    /// Called when loading an existing conversation to sync bot's internal state
-    /// Note: History is [(Role, String)] tuples where Role is .user or .bot
     func restoreHistory(_ messages: [(role: String, content: String)]) {
         guard let bot = bot else {
             print("[LlamaService] restoreHistory called but bot is nil")
             return
         }
 
-        // Clear existing history first
         bot.history.removeAll()
 
-        // Add each message to bot's history
-        // History type is [(Role, String)] - tuples, not enum constructors
         for message in messages {
             let role = message.0.lowercased()
             let content = message.1
 
-            // Add to history using tuple syntax: (Role, String)
             if role == "user" {
                 bot.history.append((.user, content))
             } else if role == "assistant" {
@@ -247,45 +219,29 @@ class LlamaService {
         print("[LlamaService] restoreHistory: restored \(bot.history.count) messages")
     }
 
-    /// Force reset - completely destroys and recreates the bot instance
-    /// Use this when the model gets into a bad state
+    /// Force reset - only for manual user-triggered reset from Settings
     func forceReset() async throws {
         print("[LlamaService] Force reset initiated...")
         bot = nil
         currentModelId = nil
-        consecutiveFailures = 0
 
-        // Small delay to let memory settle
         try? await Task.sleep(nanoseconds: 500_000_000)
-
-        // Reload model fresh
         try await loadModel()
         print("[LlamaService] Force reset completed successfully")
     }
 
     // MARK: - Text Generation
 
-    /// Generate response using LLM.swift's native conversation management
-    /// CRITICAL: Do NOT manually clear bot.output or bot.history!
-    /// The library handles all state management internally in respond(to:)
+    /// Generate response - SIMPLE: just call respond() and return the result
+    /// NEVER set bot = nil here, NEVER try to reload the model
+    /// The bot instance must stay alive between messages
     func generate(prompt: String, conversationHistory: [(role: String, content: String)] = []) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
                 do {
-                    guard self.currentModelId != nil else {
-                        print("[LlamaService] ERROR: Model not configured")
-                        throw LlamaError.modelNotLoaded
-                    }
-
-                    // Check if too many consecutive failures - force reset
-                    if self.consecutiveFailures >= self.maxConsecutiveFailures {
-                        print("[LlamaService] Too many failures (\(self.consecutiveFailures)), forcing reset...")
-                        try await self.forceReset()
-                    }
-
-                    // Ensure we have a bot instance
+                    // Make sure model is loaded (only loads if not already loaded)
                     if self.bot == nil {
-                        print("[LlamaService] Bot is nil, reloading model...")
+                        print("[LlamaService] Bot not loaded, loading model...")
                         try await self.loadModel()
                     }
 
@@ -297,50 +253,26 @@ class LlamaService {
                     print("[LlamaService] Bot history count: \(bot.history.count)")
                     print("[LlamaService] User prompt: \(prompt.prefix(50))...")
 
-                    // CRITICAL: Do NOT clear bot.output or bot.history!
-                    // The library internally calls setOutput(to: "") at the start of respond()
-                    // and automatically appends messages to history after generation
-                    // Manually clearing these interferes with the library's state management
-
-                    // Just pass the user message - library handles everything
+                    // SIMPLE: Just call respond() - library handles everything
+                    // DO NOT set bot = nil, DO NOT try to reload, DO NOT clear anything
                     await bot.respond(to: prompt)
 
-                    var response = bot.output
+                    let response = bot.output.trimmingCharacters(in: .whitespacesAndNewlines)
                     print("[LlamaService] Raw output length: \(response.count)")
                     print("[LlamaService] Bot history count after: \(bot.history.count)")
 
-                    // Clean up response
-                    response = response.trimmingCharacters(in: .whitespacesAndNewlines)
-                    response = self.cleanResponse(response)
+                    // Clean and return - no complex retry logic
+                    let cleanedResponse = self.cleanResponse(response)
 
-                    if response.isEmpty || response == "..." || response.count < 3 {
-                        print("[LlamaService] WARNING: Empty response, retrying with fresh bot...")
-                        self.consecutiveFailures += 1
-
-                        // Recreate bot completely - this resets everything
-                        self.bot = nil
-                        try await self.loadModel()
-
-                        if let freshBot = self.bot {
-                            // Don't clear anything - just call respond
-                            await freshBot.respond(to: prompt)
-                            response = self.cleanResponse(freshBot.output.trimmingCharacters(in: .whitespacesAndNewlines))
-                        }
-                    }
-
-                    if response.isEmpty || response.count < 3 {
-                        self.consecutiveFailures += 1
-                        continuation.yield("I'm having trouble generating a response. Please try again.")
+                    if cleanedResponse.isEmpty {
+                        continuation.yield("...")
                     } else {
-                        // Success! Reset failure counter
-                        self.consecutiveFailures = 0
-                        continuation.yield(response)
+                        continuation.yield(cleanedResponse)
                     }
                     continuation.finish()
 
                 } catch {
                     print("[LlamaService] Generate error: \(error)")
-                    self.consecutiveFailures += 1
                     continuation.yield("Error: \(error.localizedDescription)")
                     continuation.finish()
                 }
@@ -357,9 +289,7 @@ class LlamaService {
         let patternsToRemove = [
             "<|im_end|>", "<|im_start|>",
             "<|endoftext|>", "<|end|>",
-            "assistant", "Assistant:", "Assistant",
             "<|", "|>",
-            "Human:", "AI:",
             "[INST]", "[/INST]",
             "<<SYS>>", "<</SYS>>"
         ]
@@ -368,71 +298,7 @@ class LlamaService {
             cleaned = cleaned.replacingOccurrences(of: pattern, with: "")
         }
 
-        // Remove lines that are just role labels
-        let lines = cleaned.components(separatedBy: "\n")
-        var cleanedLines: [String] = []
-
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty { continue }
-            if trimmed.lowercased() == "assistant" { continue }
-            if trimmed.lowercased() == "user" { continue }
-            if trimmed.lowercased() == "system" { continue }
-            if trimmed.hasPrefix("Q:") || trimmed.hasPrefix("A:") { continue }
-
-            cleanedLines.append(line)
-        }
-
-        cleaned = cleanedLines.joined(separator: "\n")
-        cleaned = cleaned.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-
-        // If response is repeating, take only first unique part
-        if let firstOccurrence = findRepeatingPattern(in: cleaned) {
-            cleaned = firstOccurrence
-        }
-
-        return cleaned
-    }
-
-    private func findRepeatingPattern(in text: String) -> String? {
-        let words = text.components(separatedBy: .whitespaces)
-        guard words.count > 10 else { return nil }
-
-        let halfLength = words.count / 2
-        let firstHalf = words.prefix(halfLength).joined(separator: " ")
-        let secondHalf = words.suffix(halfLength).joined(separator: " ")
-
-        if secondHalf.contains(firstHalf.prefix(50)) {
-            return firstHalf.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-        }
-
-        return nil
-    }
-
-    // Simple non-streaming response
-    func getResponse(prompt: String, clearHistory: Bool = false) async throws -> String {
-        guard let modelId = currentModelId,
-              let model = AIModel.model(withId: modelId),
-              let url = modelURL else {
-            throw LlamaError.modelNotLoaded
-        }
-
-        // Create fresh instance
-        let template = templateForModel(model)
-
-        guard let freshBot = LLM(from: url, template: template) else {
-            throw LlamaError.modelLoadFailed("Could not create LLM instance")
-        }
-
-        // Don't clear output - library handles this internally
-        await freshBot.respond(to: prompt)
-
-        let response = freshBot.output.trimmingCharacters(in: .whitespacesAndNewlines)
-        if response.isEmpty {
-            throw LlamaError.generationFailed("Empty response from model")
-        }
-
-        return cleanResponse(response)
+        return cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     // MARK: - Vision Analysis

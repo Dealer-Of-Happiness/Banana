@@ -220,6 +220,7 @@ class LlamaService {
 
     /// Restore history from saved conversation
     /// Called when loading an existing conversation to sync bot's internal state
+    /// Note: History is [(Role, String)] tuples where Role is .user or .bot
     func restoreHistory(_ messages: [(role: String, content: String)]) {
         guard let bot = bot else {
             print("[LlamaService] restoreHistory called but bot is nil")
@@ -230,16 +231,16 @@ class LlamaService {
         bot.history.removeAll()
 
         // Add each message to bot's history
-        // The library's history format expects (role, content) tuples
+        // History type is [(Role, String)] - tuples, not enum constructors
         for message in messages {
             let role = message.0.lowercased()
             let content = message.1
 
-            // Add to history in the format the library expects
+            // Add to history using tuple syntax: (Role, String)
             if role == "user" {
-                bot.history.append(.user(content))
+                bot.history.append((.user, content))
             } else if role == "assistant" {
-                bot.history.append(.bot(content))
+                bot.history.append((.bot, content))
             }
         }
 
@@ -264,8 +265,9 @@ class LlamaService {
 
     // MARK: - Text Generation
 
-    /// Generate response using LLM.swift's native history management
-    /// Key insight: Clear bot.output but NOT bot.history - let library manage conversation state
+    /// Generate response using LLM.swift's native conversation management
+    /// CRITICAL: Do NOT manually clear bot.output or bot.history!
+    /// The library handles all state management internally in respond(to:)
     func generate(prompt: String, conversationHistory: [(role: String, content: String)] = []) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
@@ -295,12 +297,12 @@ class LlamaService {
                     print("[LlamaService] Bot history count: \(bot.history.count)")
                     print("[LlamaService] User prompt: \(prompt.prefix(50))...")
 
-                    // CRITICAL FIX: Only clear output, NOT history!
-                    // The library appends to output, so we must clear it before each call
-                    // But history should be preserved for multi-turn conversations
-                    bot.output = ""
+                    // CRITICAL: Do NOT clear bot.output or bot.history!
+                    // The library internally calls setOutput(to: "") at the start of respond()
+                    // and automatically appends messages to history after generation
+                    // Manually clearing these interferes with the library's state management
 
-                    // Just pass the user message - library handles ChatML formatting and history
+                    // Just pass the user message - library handles everything
                     await bot.respond(to: prompt)
 
                     var response = bot.output
@@ -320,7 +322,7 @@ class LlamaService {
                         try await self.loadModel()
 
                         if let freshBot = self.bot {
-                            freshBot.output = ""
+                            // Don't clear anything - just call respond
                             await freshBot.respond(to: prompt)
                             response = self.cleanResponse(freshBot.output.trimmingCharacters(in: .whitespacesAndNewlines))
                         }
@@ -422,7 +424,7 @@ class LlamaService {
             throw LlamaError.modelLoadFailed("Could not create LLM instance")
         }
 
-        freshBot.output = ""
+        // Don't clear output - library handles this internally
         await freshBot.respond(to: prompt)
 
         let response = freshBot.output.trimmingCharacters(in: .whitespacesAndNewlines)

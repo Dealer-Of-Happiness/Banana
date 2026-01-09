@@ -73,6 +73,7 @@ class AppState: ObservableObject {
     let cloudAIService: CloudAIService
     let iCloudService: ICloudSyncService
     let conversationManager: ConversationManager
+    let donationService: DonationService
 
     init() {
         self.settings = SettingsManager()
@@ -95,6 +96,7 @@ class AppState: ObservableObject {
         )
         self.iCloudService = ICloudSyncService(settings: settings)
         self.conversationManager = ConversationManager()
+        self.donationService = DonationService()
     }
 
     func initialize() async {

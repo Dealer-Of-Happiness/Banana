@@ -10,6 +10,7 @@ import Combine
 import CloudKit
 import EventKit
 import HealthKit
+import StoreKit
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
@@ -94,6 +95,16 @@ struct SettingsView: View {
             } else {
                 Text("Permission was denied. Please enable it in Settings.")
             }
+        }
+        .sheet(isPresented: Binding(
+            get: { appState.donationService.showThankYou },
+            set: { appState.donationService.showThankYou = $0 }
+        )) {
+            ThankYouView(isPresented: Binding(
+                get: { appState.donationService.showThankYou },
+                set: { appState.donationService.showThankYou = $0 }
+            ))
+            .presentationDetents([.medium])
         }
     }
 
@@ -358,9 +369,19 @@ struct SettingsView: View {
     private var supportSection: some View {
         Section {
             ForEach(DonationTier.allCases) { tier in
-                DonationRow(tier: tier) {
-                    Task { await viewModel.purchase(tier) }
+                DonationRow(
+                    tier: tier,
+                    product: appState.donationService.products.first { $0.id == tier.rawValue },
+                    isLoading: appState.donationService.purchaseInProgress
+                ) {
+                    Task { await appState.donationService.purchase(tier) }
                 }
+            }
+
+            if let error = appState.donationService.purchaseError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
             }
         } header: {
             Label("Support AI goodbye", systemImage: "heart.fill")
@@ -520,6 +541,8 @@ struct KnowledgeBaseRow: View {
 
 struct DonationRow: View {
     let tier: DonationTier
+    let product: Product?
+    let isLoading: Bool
     let action: () -> Void
 
     var body: some View {
@@ -530,18 +553,25 @@ struct DonationRow: View {
 
                 VStack(alignment: .leading) {
                     Text(tier.displayName)
-                    Text(tier.price)
+                    // Show actual price from App Store, fallback to hardcoded
+                    Text(product?.displayPrice ?? tier.price)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer()
 
-                Image(systemName: "chevron.right")
-                    .foregroundStyle(.tertiary)
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(.tertiary)
+                }
             }
         }
         .foregroundStyle(.primary)
+        .disabled(isLoading)
     }
 }
 
@@ -625,10 +655,6 @@ class SettingsViewModel: ObservableObject {
 
     func exportConversations(format: ExportFormat) async {
         // Export conversations in selected format
-    }
-
-    func purchase(_ tier: DonationTier) async {
-        // Handle In-App Purchase
     }
 }
 

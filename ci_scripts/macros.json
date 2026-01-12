@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "macros": [
+    {
+      "fingerprint": "427f3b8957a40982500abc8d35ccff8b83ec56a4",
+      "packageIdentity": "llm.swift",
+      "targetName": "LLMMacrosImplementation"
+    }
+  ]
+}

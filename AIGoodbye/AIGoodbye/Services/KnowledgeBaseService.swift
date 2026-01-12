@@ -2,16 +2,14 @@
 //  KnowledgeBaseService.swift
 //  AIGoodbye
 //
-//  Personal knowledge base integrations (Calendar, Health, etc.)
+//  Personal knowledge base integrations (Calendar, Reminders)
 //
 
 import Foundation
 import EventKit
-import HealthKit
 
 actor KnowledgeBaseService {
     private let eventStore = EKEventStore()
-    private let healthStore = HKHealthStore()
 
     // MARK: - Permission Status
 
@@ -21,8 +19,6 @@ actor KnowledgeBaseService {
             return EKEventStore.authorizationStatus(for: .event) == .fullAccess
         case .reminders:
             return EKEventStore.authorizationStatus(for: .reminder) == .fullAccess
-        case .health, .fitness:
-            return HKHealthStore.isHealthDataAvailable()
         }
     }
 
@@ -34,9 +30,6 @@ actor KnowledgeBaseService {
             return try await eventStore.requestFullAccessToEvents()
         case .reminders:
             return try await eventStore.requestFullAccessToReminders()
-        case .health, .fitness:
-            try await requestHealthPermissions()
-            return true
         }
     }
 
@@ -113,119 +106,6 @@ actor KnowledgeBaseService {
         try eventStore.save(reminder, commit: true)
     }
 
-    // MARK: - Health Data
-
-    private func requestHealthPermissions() async throws {
-        let typesToRead: Set<HKSampleType> = [
-            HKQuantityType(.stepCount),
-            HKQuantityType(.heartRate),
-            HKQuantityType(.activeEnergyBurned),
-            HKQuantityType(.distanceWalkingRunning),
-            HKWorkoutType.workoutType()
-        ]
-
-        try await healthStore.requestAuthorization(toShare: [], read: typesToRead)
-    }
-
-    func getSteps(for days: Int = 7) async throws -> Int {
-        let stepType = HKQuantityType(.stepCount)
-        let startDate = Calendar.current.date(byAdding: .day, value: -days, to: Date())!
-
-        let predicate = HKQuery.predicateForSamples(
-            withStart: startDate,
-            end: Date(),
-            options: .strictStartDate
-        )
-
-        return try await withCheckedThrowingContinuation { continuation in
-            let query = HKStatisticsQuery(
-                quantityType: stepType,
-                quantitySamplePredicate: predicate,
-                options: .cumulativeSum
-            ) { _, result, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-
-                let steps = result?.sumQuantity()?.doubleValue(for: .count()) ?? 0
-                continuation.resume(returning: Int(steps))
-            }
-
-            healthStore.execute(query)
-        }
-    }
-
-    func getHeartRate() async throws -> Double {
-        let heartRateType = HKQuantityType(.heartRate)
-
-        return try await withCheckedThrowingContinuation { continuation in
-            let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-
-            let query = HKSampleQuery(
-                sampleType: heartRateType,
-                predicate: nil,
-                limit: 1,
-                sortDescriptors: [sortDescriptor]
-            ) { _, samples, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-
-                guard let sample = samples?.first as? HKQuantitySample else {
-                    continuation.resume(returning: 0)
-                    return
-                }
-
-                let bpm = sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
-                continuation.resume(returning: bpm)
-            }
-
-            healthStore.execute(query)
-        }
-    }
-
-    func getWorkouts(for days: Int = 30) async throws -> [WorkoutSummary] {
-        let workoutType = HKWorkoutType.workoutType()
-        let startDate = Calendar.current.date(byAdding: .day, value: -days, to: Date())!
-
-        let predicate = HKQuery.predicateForSamples(
-            withStart: startDate,
-            end: Date(),
-            options: .strictStartDate
-        )
-
-        return try await withCheckedThrowingContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: workoutType,
-                predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: nil
-            ) { _, samples, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-
-                let workouts = (samples as? [HKWorkout] ?? []).map { workout in
-                    let energyType = HKQuantityType(.activeEnergyBurned)
-                    let calories = workout.statistics(for: energyType)?.sumQuantity()?.doubleValue(for: .kilocalorie()) ?? 0
-                    return WorkoutSummary(
-                        type: workout.workoutActivityType.name,
-                        duration: workout.duration,
-                        calories: calories,
-                        date: workout.startDate
-                    )
-                }
-
-                continuation.resume(returning: workouts)
-            }
-
-            healthStore.execute(query)
-        }
-    }
-
     // MARK: - Query Interface
 
     func query(_ text: String) async throws -> String {
@@ -246,24 +126,6 @@ actor KnowledgeBaseService {
                 return "You have no pending reminders."
             }
             return formatReminders(reminders)
-        }
-
-        if lowercased.contains("step") || lowercased.contains("walk") {
-            let steps = try await getSteps()
-            return "You've walked \(steps.formatted()) steps in the past week."
-        }
-
-        if lowercased.contains("heart") || lowercased.contains("pulse") {
-            let heartRate = try await getHeartRate()
-            return "Your latest heart rate reading is \(Int(heartRate)) BPM."
-        }
-
-        if lowercased.contains("workout") || lowercased.contains("exercise") {
-            let workouts = try await getWorkouts()
-            if workouts.isEmpty {
-                return "No workouts recorded in the past month."
-            }
-            return formatWorkouts(workouts)
         }
 
         return "I couldn't find relevant information for your query."
@@ -294,17 +156,6 @@ actor KnowledgeBaseService {
         }
         return result
     }
-
-    private func formatWorkouts(_ workouts: [WorkoutSummary]) -> String {
-        var result = "Your recent workouts:\n\n"
-        for workout in workouts.prefix(5) {
-            result += "• \(workout.type)\n"
-            result += "  Duration: \(Int(workout.duration / 60)) minutes\n"
-            result += "  Calories: \(Int(workout.calories))\n"
-            result += "  Date: \(workout.date.formatted(date: .abbreviated, time: .omitted))\n\n"
-        }
-        return result
-    }
 }
 
 // MARK: - Data Models
@@ -323,30 +174,6 @@ struct ReminderItem {
     let dueDate: Date?
     let isCompleted: Bool
     let priority: Int
-}
-
-struct WorkoutSummary {
-    let type: String
-    let duration: TimeInterval
-    let calories: Double
-    let date: Date
-}
-
-// MARK: - HKWorkoutActivityType Extension
-
-extension HKWorkoutActivityType {
-    var name: String {
-        switch self {
-        case .running: return "Running"
-        case .walking: return "Walking"
-        case .cycling: return "Cycling"
-        case .swimming: return "Swimming"
-        case .yoga: return "Yoga"
-        case .functionalStrengthTraining: return "Strength Training"
-        case .hiking: return "Hiking"
-        default: return "Workout"
-        }
-    }
 }
 
 // MARK: - Errors

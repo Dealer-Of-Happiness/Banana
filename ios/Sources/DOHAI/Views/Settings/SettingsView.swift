@@ -9,7 +9,6 @@ import SwiftUI
 import Combine
 import CloudKit
 import EventKit
-import HealthKit
 import StoreKit
 
 struct SettingsView: View {
@@ -259,8 +258,6 @@ struct SettingsView: View {
     private func binding(for source: KnowledgeBaseSource) -> Binding<Bool> {
         switch source {
         case .calendar: return $viewModel.calendarEnabled
-        case .health: return $viewModel.healthEnabled
-        case .fitness: return $viewModel.fitnessEnabled
         case .notes: return $viewModel.notesEnabled
         case .email: return $viewModel.emailEnabled
         case .reminders: return $viewModel.remindersEnabled
@@ -290,8 +287,6 @@ struct SettingsView: View {
     private func setToggle(for source: KnowledgeBaseSource, to value: Bool) {
         switch source {
         case .calendar: viewModel.calendarEnabled = value
-        case .health: viewModel.healthEnabled = value
-        case .fitness: viewModel.fitnessEnabled = value
         case .notes: viewModel.notesEnabled = value
         case .email: viewModel.emailEnabled = value
         case .reminders: viewModel.remindersEnabled = value
@@ -602,8 +597,6 @@ class SettingsViewModel: ObservableObject {
 
     // Knowledge Base
     @Published var calendarEnabled = false
-    @Published var healthEnabled = false
-    @Published var fitnessEnabled = false
     @Published var notesEnabled = false
     @Published var emailEnabled = false
     @Published var remindersEnabled = false
@@ -640,8 +633,6 @@ class SettingsViewModel: ObservableObject {
             case .denied, .restricted: return "Denied"
             default: return "Not Set"
             }
-        case .health, .fitness:
-            return HKHealthStore.isHealthDataAvailable() ? (healthEnabled ? "Granted" : "Not Set") : "Not Available"
         case .notes:
             return "Not Available" // Notes doesn't have a public API
         case .email:

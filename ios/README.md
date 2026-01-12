@@ -95,7 +95,6 @@ ios/Sources/
 │       ├── CloudAIService.swift    # ChatGPT, Claude
 │       ├── ICloudSyncService.swift # Sync & export
 │       ├── ConversationManager.swift # Data management
-│       ├── DonationService.swift   # In-app purchases
 │       └── SettingsManager.swift   # Preferences
 ├── DOHAIWidgets/
 │   └── DOHAIWidgets.swift          # Home screen widgets
@@ -124,7 +123,6 @@ ios/Sources/
 | Voice & Sound | Haptic feedback, Voice mode, Speech rate |
 | Knowledge Base | Calendar, Health, Fitness, Notes, Email, Reminders |
 | Data & Privacy | iCloud sync, Export, Clear cache |
-| Support | $0.99, $5, $20 donations |
 
 ## App Store Checklist
 
@@ -132,7 +130,6 @@ ios/Sources/
 - [x] Terms and Conditions
 - [x] All required Info.plist keys
 - [x] Non-exempt encryption declaration
-- [x] StoreKit 2 for donations
 - [x] Widget extensions
 - [x] Watch app with complications
 
@@ -153,7 +150,7 @@ In Xcode: Target > General
 ### 4. App Store Connect
 - Add screenshots (6.7", 6.5", 5.5")
 - Write description
-- Set pricing (Free)
+- Set pricing (Paid)
 - Submit for review
 
 ## License
@@ -162,6 +159,6 @@ MIT License
 
 ## Contact
 
-support@aigoodbye.ai
+marketing@dealerofhappiness.com
 
 Website: https://aigoodbye.ai

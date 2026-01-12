@@ -9,7 +9,6 @@ import SwiftUI
 import Combine
 import CloudKit
 import EventKit
-import StoreKit
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
@@ -40,9 +39,6 @@ struct SettingsView: View {
 
             // Data & Privacy
             dataPrivacySection
-
-            // Support AI goodbye
-            supportSection
 
             // About
             aboutSection
@@ -94,16 +90,6 @@ struct SettingsView: View {
             } else {
                 Text("Permission was denied. Please enable it in Settings.")
             }
-        }
-        .sheet(isPresented: Binding(
-            get: { appState.donationService.showThankYou },
-            set: { appState.donationService.showThankYou = $0 }
-        )) {
-            ThankYouView(isPresented: Binding(
-                get: { appState.donationService.showThankYou },
-                set: { appState.donationService.showThankYou = $0 }
-            ))
-            .presentationDetents([.medium])
         }
     }
 
@@ -359,32 +345,6 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Support Section
-
-    private var supportSection: some View {
-        Section {
-            ForEach(DonationTier.allCases) { tier in
-                DonationRow(
-                    tier: tier,
-                    product: appState.donationService.products.first { $0.id == tier.rawValue },
-                    isLoading: appState.donationService.purchaseInProgress
-                ) {
-                    Task { await appState.donationService.purchase(tier) }
-                }
-            }
-
-            if let error = appState.donationService.purchaseError {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
-        } header: {
-            Label("Support AI goodbye", systemImage: "heart.fill")
-        } footer: {
-            Text("Your support helps us improve AI goodbye. All features remain free.")
-        }
-    }
-
     // MARK: - About Section
 
     private var aboutSection: some View {
@@ -529,44 +489,6 @@ struct KnowledgeBaseRow: View {
         case "Denied": return .red
         default: return .gray
         }
-    }
-}
-
-// MARK: - Donation Row
-
-struct DonationRow: View {
-    let tier: DonationTier
-    let product: Product?
-    let isLoading: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Text(tier.emoji)
-                    .font(.title2)
-
-                VStack(alignment: .leading) {
-                    Text(tier.displayName)
-                    // Show actual price from App Store, fallback to hardcoded
-                    Text(product?.displayPrice ?? tier.price)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                if isLoading {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                } else {
-                    Image(systemName: "chevron.right")
-                        .foregroundStyle(.tertiary)
-                }
-            }
-        }
-        .foregroundStyle(.primary)
-        .disabled(isLoading)
     }
 }
 

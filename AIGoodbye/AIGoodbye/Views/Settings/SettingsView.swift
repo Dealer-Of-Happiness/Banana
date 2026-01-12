@@ -7,15 +7,12 @@
 
 import SwiftUI
 import Combine
-import StoreKit
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = SettingsViewModel()
-    @StateObject private var donationService = DonationService()
     @State private var showClearCacheAlert = false
     @State private var showExportOptions = false
-    @State private var showDonationInfo = false
 
     var body: some View {
         Form {
@@ -24,9 +21,6 @@ struct SettingsView: View {
 
             // Data & Privacy
             dataPrivacySection
-
-            // Support AiGoodbye
-            supportSection
 
             // About
             aboutSection
@@ -51,14 +45,6 @@ struct SettingsView: View {
                 }
             }
             Button("Cancel", role: .cancel) {}
-        }
-        .sheet(isPresented: $donationService.showThankYou) {
-            ThankYouView(isPresented: $donationService.showThankYou)
-        }
-        .alert("Donations Coming Soon", isPresented: $showDonationInfo) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("In-app purchases will be available once the app is published on the App Store. Thank you for your interest in supporting AiGoodbye!")
         }
     }
 
@@ -148,61 +134,6 @@ struct SettingsView: View {
             Label("Data & Privacy", systemImage: "lock.shield")
         } footer: {
             Text("All data is stored locally on your device.")
-        }
-    }
-
-    // MARK: - Support Section
-
-    private var supportSection: some View {
-        Section {
-            ForEach(DonationTier.allCases) { tier in
-                Button {
-                    if donationService.products.isEmpty {
-                        showDonationInfo = true
-                    } else {
-                        Task {
-                            await donationService.purchase(tier)
-                        }
-                    }
-                } label: {
-                    HStack {
-                        Text(tier.emoji)
-                            .font(.title2)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(tier.displayName)
-                                .font(.body)
-
-                            if let product = donationService.products.first(where: { $0.id == tier.rawValue }) {
-                                Text(product.displayPrice)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            } else {
-                                Text(tier.price)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        Spacer()
-
-                        if donationService.purchaseInProgress {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                        } else {
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                }
-                .foregroundStyle(.primary)
-                .disabled(donationService.purchaseInProgress)
-            }
-        } header: {
-            Label("Support AiGoodbye", systemImage: "heart.fill")
-        } footer: {
-            Text("Your support helps keep AiGoodbye free and ad-free for everyone. Thank you!")
         }
     }
 

@@ -86,40 +86,6 @@ enum CloudAIProvider: String, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Donation Tier
-
-enum DonationTier: String, CaseIterable, Identifiable {
-    case coffee = "com.aigoodbye.donation.coffee"
-    case support = "com.aigoodbye.donation.support"
-    case patron = "com.aigoodbye.donation.patron"
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .coffee: return "Buy me a coffee"
-        case .support: return "Support development"
-        case .patron: return "Become a patron"
-        }
-    }
-
-    var price: String {
-        switch self {
-        case .coffee: return "$0.99"
-        case .support: return "$5.00"
-        case .patron: return "$20.00"
-        }
-    }
-
-    var emoji: String {
-        switch self {
-        case .coffee: return "☕️"
-        case .support: return "💪"
-        case .patron: return "🌟"
-        }
-    }
-}
-
 // MARK: - Knowledge Base Source
 
 enum KnowledgeBaseSource: String, CaseIterable, Identifiable {

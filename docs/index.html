@@ -654,6 +654,13 @@
             font-size: 1rem;
         }
 
+        .beta-note {
+            margin-top: 12px;
+            font-size: 0.8rem;
+            color: var(--success-green);
+            font-weight: 500;
+        }
+
         /* QR Code Section */
         .qr-section {
             text-align: center;
@@ -1371,9 +1378,10 @@
                         <li>Knowledge base & RAG</li>
                         <li>Lifetime updates</li>
                     </ul>
-                    <button class="btn btn-secondary price-btn" disabled style="opacity: 0.7;">
-                        Coming Soon
+                    <button class="btn btn-primary price-btn" onclick="downloadApp('macos')">
+                        Download for macOS
                     </button>
+                    <p class="beta-note">Free beta - payment coming soon</p>
                 </div>
 
                 <!-- Windows -->
@@ -1389,9 +1397,10 @@
                         <li>Knowledge base & RAG</li>
                         <li>Lifetime updates</li>
                     </ul>
-                    <button class="btn btn-secondary price-btn" disabled style="opacity: 0.7;">
-                        Coming Soon
+                    <button class="btn btn-primary price-btn" onclick="downloadApp('windows')">
+                        Download for Windows
                     </button>
+                    <p class="beta-note">Free beta - payment coming soon</p>
                 </div>
             </div>
         </div>
@@ -1740,6 +1749,47 @@
             e.preventDefault();
             alert('Payment system coming soon! Contact marketing@dealerofhappiness.com for early access.');
         });
+
+        // Free download function (payment will be added later)
+        function downloadApp(platform) {
+            // GitHub releases URLs - update these with actual release URLs when available
+            const downloadUrls = {
+                macos: 'https://github.com/Dealer-Of-Happiness/Banana/releases/latest/download/BananaAI-macos.dmg',
+                windows: 'https://github.com/Dealer-Of-Happiness/Banana/releases/latest/download/BananaAI-windows.exe'
+            };
+
+            const url = downloadUrls[platform];
+
+            if (url) {
+                // Track download (optional analytics)
+                console.log(`Starting download for ${platform}`);
+
+                // Show download started message
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = 'Download Starting...';
+                btn.disabled = true;
+
+                // Trigger download
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = '';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Reset button after delay
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }, 3000);
+
+                // Show thank you message
+                setTimeout(() => {
+                    alert(`Thank you for downloading AI Goodbye for ${platform === 'macos' ? 'macOS' : 'Windows'}!\n\nYour download should start automatically. If it doesn't, please check your downloads folder or try again.\n\nNote: This is a free beta version. Payment will be required for the full release.`);
+                }, 500);
+            }
+        }
 
         // Smooth scroll for anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {

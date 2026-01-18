@@ -24,6 +24,120 @@
         </div>
     </div>
 
+    <!-- Model Setup Screen (First Launch) -->
+    <div id="model-setup-screen" class="model-setup-screen hidden">
+        <div class="model-setup-content">
+            <div class="setup-header">
+                <svg class="logo" viewBox="0 0 100 100" width="60" height="60">
+                    <circle cx="50" cy="50" r="45" fill="#f7d716" stroke="#e6c200" stroke-width="3"/>
+                    <text x="50" y="65" text-anchor="middle" font-size="40" font-weight="bold" fill="#1a1a2e">AI</text>
+                </svg>
+                <h1>Welcome to Banana AI</h1>
+                <p>Choose at least one AI model to download. You can download more later.</p>
+            </div>
+
+            <div class="model-cards">
+                <!-- Small Model -->
+                <div class="model-card" data-model="llama3.2:1b">
+                    <div class="model-card-header">
+                        <input type="checkbox" id="model-small" class="model-checkbox">
+                        <label for="model-small">
+                            <span class="model-name">Llama 3.2 1B</span>
+                            <span class="model-badge small">Small</span>
+                        </label>
+                    </div>
+                    <div class="model-info">
+                        <p class="model-size">~1.3 GB download</p>
+                        <p class="model-desc">Fast responses, ideal for quick tasks and basic conversations. Works great on older hardware.</p>
+                        <ul class="model-features">
+                            <li>✓ Quick responses</li>
+                            <li>✓ Low memory usage</li>
+                            <li>✓ Basic conversations</li>
+                        </ul>
+                    </div>
+                    <div class="model-progress hidden">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <span class="progress-text">0%</span>
+                    </div>
+                    <div class="model-status">
+                        <span class="status-text">Not downloaded</span>
+                    </div>
+                </div>
+
+                <!-- Medium Model -->
+                <div class="model-card recommended" data-model="llama3.2:3b">
+                    <div class="recommended-badge">Recommended</div>
+                    <div class="model-card-header">
+                        <input type="checkbox" id="model-medium" class="model-checkbox">
+                        <label for="model-medium">
+                            <span class="model-name">Llama 3.2 3B</span>
+                            <span class="model-badge medium">Medium</span>
+                        </label>
+                    </div>
+                    <div class="model-info">
+                        <p class="model-size">~2.0 GB download</p>
+                        <p class="model-desc">Best balance of speed and quality. Great for most tasks including writing and analysis.</p>
+                        <ul class="model-features">
+                            <li>✓ Balanced performance</li>
+                            <li>✓ Better comprehension</li>
+                            <li>✓ Most use cases</li>
+                        </ul>
+                    </div>
+                    <div class="model-progress hidden">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <span class="progress-text">0%</span>
+                    </div>
+                    <div class="model-status">
+                        <span class="status-text">Not downloaded</span>
+                    </div>
+                </div>
+
+                <!-- Large Model -->
+                <div class="model-card" data-model="llama3.1:8b">
+                    <div class="model-card-header">
+                        <input type="checkbox" id="model-large" class="model-checkbox">
+                        <label for="model-large">
+                            <span class="model-name">Llama 3.1 8B</span>
+                            <span class="model-badge large">Large</span>
+                        </label>
+                    </div>
+                    <div class="model-info">
+                        <p class="model-size">~4.7 GB download</p>
+                        <p class="model-desc">Most capable model with advanced reasoning. Best for complex analysis and professional tasks.</p>
+                        <ul class="model-features">
+                            <li>✓ Advanced reasoning</li>
+                            <li>✓ Complex analysis</li>
+                            <li>✓ Professional quality</li>
+                        </ul>
+                    </div>
+                    <div class="model-progress hidden">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <span class="progress-text">0%</span>
+                    </div>
+                    <div class="model-status">
+                        <span class="status-text">Not downloaded</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-actions">
+                <p class="selection-hint" id="selection-hint">Select at least one model to continue</p>
+                <button id="download-models-btn" class="btn-download" disabled>
+                    Download Selected Models
+                </button>
+                <button id="continue-setup-btn" class="btn-continue hidden">
+                    Continue to App →
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Main App -->
     <div id="app" class="app hidden">
         <!-- Sidebar -->
@@ -78,13 +192,22 @@
                     </div>
                 </div>
 
+                <!-- Model Selection Bar -->
+                <div class="chat-model-bar">
+                    <label for="chat-model-select">Model:</label>
+                    <select id="chat-model-select" class="chat-model-select">
+                        <option value="" disabled selected>Select a model...</option>
+                    </select>
+                    <span class="model-indicator" id="model-indicator"></span>
+                </div>
+
                 <div class="chat-container" id="chat-container">
                     <div class="message assistant">
                         <div class="message-avatar">🍌</div>
                         <div class="message-content">
                             <p>Hello! I'm Banana AI, your local AI assistant.</p>
-                            <p>I can work completely offline with local models, or connect to ChatGPT/Claude when you need internet capabilities.</p>
-                            <p><strong>Try asking me anything!</strong></p>
+                            <p>I run completely offline on your device - no internet required, no data leaves your computer.</p>
+                            <p><strong>Select a model above to start chatting!</strong></p>
                         </div>
                     </div>
                 </div>

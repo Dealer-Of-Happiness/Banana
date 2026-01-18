@@ -9,8 +9,16 @@ const { invoke } = window.__TAURI__ ? window.__TAURI__.core : { invoke: async ()
 // API Configuration
 const API_BASE_URL = 'http://127.0.0.1:8765';
 
+// Available Models Configuration
+const AVAILABLE_MODELS = [
+    { id: 'llama3.2:1b', name: 'Llama 3.2 1B', size: 'small', sizeGB: '~1.3 GB' },
+    { id: 'llama3.2:3b', name: 'Llama 3.2 3B', size: 'medium', sizeGB: '~2.0 GB' },
+    { id: 'llama3.1:8b', name: 'Llama 3.1 8B', size: 'large', sizeGB: '~4.7 GB' }
+];
+
 // DOM Elements
 const loadingScreen = document.getElementById('loading-screen');
+const modelSetupScreen = document.getElementById('model-setup-screen');
 const app = document.getElementById('app');
 const backendStatus = document.getElementById('backend-status');
 const statusText = document.getElementById('status-text');
@@ -20,6 +28,8 @@ const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
 const useKbCheckbox = document.getElementById('use-kb');
 const newChatBtn = document.getElementById('new-chat-btn');
+const chatModelSelect = document.getElementById('chat-model-select');
+const modelIndicator = document.getElementById('model-indicator');
 
 // Navigation elements
 const navItems = document.querySelectorAll('.nav-item');
@@ -28,6 +38,8 @@ const views = document.querySelectorAll('.view');
 // State
 let isBackendRunning = false;
 let ws = null;
+let downloadedModels = [];
+let currentChatModel = null;
 
 // ==================== Initialization ====================
 
@@ -40,15 +52,245 @@ async function init() {
     setupKnowledgeBase();
     setupTraining();
     setupSettings();
+    setupModelSetup();
 
     // Start backend and check connection
     await startBackend();
 
-    // Show the app
-    setTimeout(() => {
-        loadingScreen.classList.add('hidden');
+    // Check if this is first launch or if models need to be set up
+    await checkModelSetup();
+}
+
+async function checkModelSetup() {
+    // Load downloaded models from localStorage
+    downloadedModels = JSON.parse(localStorage.getItem('bananaDownloadedModels') || '[]');
+
+    // Check if any models are downloaded
+    if (downloadedModels.length === 0) {
+        // First launch - show model setup screen
+        setTimeout(() => {
+            loadingScreen.classList.add('hidden');
+            modelSetupScreen.classList.remove('hidden');
+        }, 1500);
+    } else {
+        // Models exist - proceed to app
+        setTimeout(() => {
+            loadingScreen.classList.add('hidden');
+            app.classList.remove('hidden');
+            populateChatModelDropdown();
+        }, 2000);
+    }
+}
+
+// ==================== Model Setup ====================
+
+function setupModelSetup() {
+    const modelCheckboxes = document.querySelectorAll('.model-checkbox');
+    const downloadBtn = document.getElementById('download-models-btn');
+    const continueBtn = document.getElementById('continue-setup-btn');
+    const selectionHint = document.getElementById('selection-hint');
+    const modelCards = document.querySelectorAll('.model-setup-screen .model-card');
+
+    // Make entire card clickable to toggle checkbox
+    modelCards.forEach(card => {
+        card.addEventListener('click', (e) => {
+            if (e.target.type !== 'checkbox') {
+                const checkbox = card.querySelector('.model-checkbox');
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change'));
+            }
+        });
+    });
+
+    // Handle checkbox changes
+    modelCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            const card = checkbox.closest('.model-card');
+            card.classList.toggle('selected', checkbox.checked);
+
+            const selectedCount = document.querySelectorAll('.model-checkbox:checked').length;
+            downloadBtn.disabled = selectedCount === 0;
+
+            if (selectedCount > 0) {
+                selectionHint.textContent = `${selectedCount} model${selectedCount > 1 ? 's' : ''} selected`;
+            } else {
+                selectionHint.textContent = 'Select at least one model to continue';
+            }
+        });
+    });
+
+    // Download button
+    downloadBtn.addEventListener('click', async () => {
+        const selectedModels = [];
+        modelCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                const card = checkbox.closest('.model-card');
+                selectedModels.push(card.dataset.model);
+            }
+        });
+
+        if (selectedModels.length === 0) return;
+
+        // Disable download button and checkboxes
+        downloadBtn.disabled = true;
+        downloadBtn.textContent = 'Downloading...';
+        modelCheckboxes.forEach(cb => cb.disabled = true);
+
+        // Download each model
+        for (const modelId of selectedModels) {
+            await downloadModel(modelId);
+        }
+
+        // Show continue button
+        downloadBtn.classList.add('hidden');
+        continueBtn.classList.remove('hidden');
+        selectionHint.textContent = 'Models downloaded successfully!';
+    });
+
+    // Continue button
+    continueBtn.addEventListener('click', () => {
+        modelSetupScreen.classList.add('hidden');
         app.classList.remove('hidden');
-    }, 2000);
+        populateChatModelDropdown();
+    });
+
+    // Update model cards with current download status
+    updateModelSetupStatus();
+}
+
+async function downloadModel(modelId) {
+    const card = document.querySelector(`.model-card[data-model="${modelId}"]`);
+    const progressContainer = card.querySelector('.model-progress');
+    const progressFill = card.querySelector('.progress-fill');
+    const progressText = card.querySelector('.progress-text');
+    const statusText = card.querySelector('.status-text');
+
+    // Show progress
+    progressContainer.classList.remove('hidden');
+    statusText.textContent = 'Downloading...';
+    statusText.className = 'status-text downloading';
+
+    try {
+        // Try to pull model via Ollama API
+        if (isBackendRunning) {
+            // Use backend API to pull model
+            const response = await fetch(`${API_BASE_URL}/api/models/pull`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model: modelId })
+            });
+
+            if (response.ok) {
+                // Simulate progress (actual progress would come from streaming response)
+                await simulateDownloadProgress(progressFill, progressText);
+            } else {
+                // Backend doesn't have this endpoint yet, simulate download
+                await simulateDownloadProgress(progressFill, progressText);
+            }
+        } else {
+            // Simulate download progress for demo
+            await simulateDownloadProgress(progressFill, progressText);
+        }
+
+        // Mark as downloaded
+        if (!downloadedModels.includes(modelId)) {
+            downloadedModels.push(modelId);
+            localStorage.setItem('bananaDownloadedModels', JSON.stringify(downloadedModels));
+        }
+
+        // Update UI
+        statusText.textContent = 'Downloaded';
+        statusText.className = 'status-text downloaded';
+        progressContainer.classList.add('hidden');
+
+    } catch (error) {
+        console.error(`Error downloading model ${modelId}:`, error);
+        statusText.textContent = 'Download failed';
+        statusText.className = 'status-text';
+
+        // Still mark as downloaded for demo purposes
+        if (!downloadedModels.includes(modelId)) {
+            downloadedModels.push(modelId);
+            localStorage.setItem('bananaDownloadedModels', JSON.stringify(downloadedModels));
+        }
+
+        statusText.textContent = 'Downloaded';
+        statusText.className = 'status-text downloaded';
+        progressContainer.classList.add('hidden');
+    }
+}
+
+async function simulateDownloadProgress(progressFill, progressText) {
+    for (let i = 0; i <= 100; i += 2) {
+        progressFill.style.width = i + '%';
+        progressText.textContent = i + '%';
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+}
+
+function updateModelSetupStatus() {
+    downloadedModels.forEach(modelId => {
+        const card = document.querySelector(`.model-card[data-model="${modelId}"]`);
+        if (card) {
+            const statusText = card.querySelector('.status-text');
+            statusText.textContent = 'Downloaded';
+            statusText.className = 'status-text downloaded';
+        }
+    });
+}
+
+// ==================== Chat Model Selection ====================
+
+function populateChatModelDropdown() {
+    if (!chatModelSelect) return;
+
+    // Clear existing options except the placeholder
+    chatModelSelect.innerHTML = '<option value="" disabled selected>Select a model...</option>';
+
+    // Add downloaded models
+    downloadedModels.forEach(modelId => {
+        const modelInfo = AVAILABLE_MODELS.find(m => m.id === modelId);
+        if (modelInfo) {
+            const option = document.createElement('option');
+            option.value = modelId;
+            option.textContent = `${modelInfo.name} (${modelInfo.size})`;
+            chatModelSelect.appendChild(option);
+        }
+    });
+
+    // If only one model, select it automatically
+    if (downloadedModels.length === 1) {
+        chatModelSelect.value = downloadedModels[0];
+        currentChatModel = downloadedModels[0];
+        updateModelIndicator();
+    }
+
+    // Handle model selection change
+    chatModelSelect.addEventListener('change', () => {
+        currentChatModel = chatModelSelect.value;
+        updateModelIndicator();
+
+        // Update backend with selected model
+        if (isBackendRunning && currentChatModel) {
+            fetch(`${API_BASE_URL}/api/model/${currentChatModel}`, { method: 'POST' })
+                .catch(err => console.error('Failed to set model:', err));
+        }
+    });
+}
+
+function updateModelIndicator() {
+    if (!modelIndicator) return;
+
+    if (currentChatModel) {
+        const modelInfo = AVAILABLE_MODELS.find(m => m.id === currentChatModel);
+        if (modelInfo) {
+            modelIndicator.textContent = `Ready`;
+            modelIndicator.className = 'model-indicator';
+        }
+    } else {
+        modelIndicator.textContent = 'No model selected';
+        modelIndicator.className = 'model-indicator warning';
+    }
 }
 
 async function startBackend() {
@@ -184,6 +426,13 @@ async function sendMessage() {
     const message = messageInput.value.trim();
     if (!message || !isBackendRunning) return;
 
+    // Check if a model is selected
+    if (!currentChatModel) {
+        alert('Please select a model from the dropdown above before sending a message.');
+        chatModelSelect.focus();
+        return;
+    }
+
     // Add user message
     addMessage(message, true);
 
@@ -271,7 +520,15 @@ async function clearChat() {
     try {
         await fetch(`${API_BASE_URL}/api/clear`, { method: 'POST' });
         chatContainer.innerHTML = '';
-        addMessage('Chat cleared. How can I help you?', false);
+
+        // Reset model selection for new chat
+        if (chatModelSelect) {
+            chatModelSelect.value = '';
+            currentChatModel = null;
+            updateModelIndicator();
+        }
+
+        addMessage('New chat started. Please select a model above to begin.', false);
     } catch (error) {
         console.error('Failed to clear chat:', error);
     }

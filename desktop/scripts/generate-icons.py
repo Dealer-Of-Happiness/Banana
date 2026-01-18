@@ -24,8 +24,8 @@ def create_png(width, height, color, output_path):
     # PNG signature
     signature = b'\x89PNG\r\n\x1a\n'
 
-    # IHDR chunk
-    ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0)
+    # IHDR chunk - color type 6 = RGBA (truecolor with alpha)
+    ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)
     ihdr = write_chunk(b'IHDR', ihdr_data)
 
     # IDAT chunk (image data)
@@ -33,7 +33,7 @@ def create_png(width, height, color, output_path):
     for y in range(height):
         raw_data += b'\x00'  # Filter byte
         for x in range(width):
-            raw_data += bytes(color)  # RGB
+            raw_data += bytes(color) + b'\xff'  # RGBA (with full alpha)
 
     compressed = zlib.compress(raw_data, 9)
     idat = write_chunk(b'IDAT', compressed)
@@ -134,20 +134,21 @@ def create_icns(sizes, color, output_path):
     import zlib
 
     def create_png_data(width, height, color):
-        """Create PNG data in memory."""
+        """Create PNG data in memory with RGBA format."""
         def write_chunk(chunk_type, data):
             chunk = chunk_type + data
             return struct.pack('>I', len(data)) + chunk + struct.pack('>I', zlib.crc32(chunk) & 0xffffffff)
 
         signature = b'\x89PNG\r\n\x1a\n'
-        ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0)
+        # Color type 6 = RGBA (truecolor with alpha)
+        ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)
         ihdr = write_chunk(b'IHDR', ihdr_data)
 
         raw_data = b''
         for y in range(height):
             raw_data += b'\x00'
             for x in range(width):
-                raw_data += bytes(color)
+                raw_data += bytes(color) + b'\xff'  # RGBA with full alpha
 
         compressed = zlib.compress(raw_data, 9)
         idat = write_chunk(b'IDAT', compressed)

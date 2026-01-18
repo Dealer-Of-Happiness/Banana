@@ -42,9 +42,7 @@
     "externalBin": [
       "binaries/banana-backend"
     ],
-    "resources": [
-      "resources/*"
-    ],
+    "resources": [],
     "category": "Productivity",
     "shortDescription": "Your Offline AI with Internet Connectivity",
     "longDescription": "Banana AI is a powerful AI assistant that works offline with local models and can connect to the internet when needed. Train your own models, use knowledge bases, and chat with AI - all with complete privacy.",

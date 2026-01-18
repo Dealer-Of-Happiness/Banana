@@ -216,7 +216,7 @@ jobs:
 
             | Platform | Architecture | Download |
             |----------|--------------|----------|
-            | macOS | Apple Silicon (M1/M2/M3) | [AIGoodbye-macOS-arm64.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-macOS-arm64.dmg) |
+            | macOS | Apple Silicon | [AIGoodbye-macOS-arm64.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-macOS-arm64.dmg) |
             | macOS | Intel | [AIGoodbye-macOS-x64.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-macOS-x64.dmg) |
             | Windows | 64-bit | [AIGoodbye-Windows-Setup.exe](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-Windows-Setup.exe) |
 

@@ -652,6 +652,8 @@
             width: 100%;
             padding: 16px;
             font-size: 1rem;
+            text-align: center;
+            justify-content: center;
         }
 
         .beta-note {
@@ -1386,10 +1388,10 @@
                     </ul>
                     <div class="mac-download-options">
                         <button class="btn btn-primary price-btn" onclick="downloadApp('macos-arm64')">
-                            Apple Silicon (M1/M2/M3)
+                            Download for Apple Silicon
                         </button>
                         <button class="btn btn-secondary price-btn" onclick="downloadApp('macos-x64')" style="margin-top: 8px;">
-                            Intel Mac
+                            Download for Intel Mac
                         </button>
                         <p class="mac-help-text">Not sure? Click  > About This Mac</p>
                     </div>
@@ -1773,8 +1775,8 @@
             };
 
             const platformNames = {
-                'macos-arm64': 'macOS (Apple Silicon)',
-                'macos-x64': 'macOS (Intel)',
+                'macos-arm64': 'macOS Apple Silicon',
+                'macos-x64': 'macOS Intel',
                 'windows': 'Windows'
             };
 

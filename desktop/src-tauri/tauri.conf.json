@@ -57,26 +57,22 @@
       "timestampUrl": "http://timestamp.digicert.com",
       "wix": null,
       "nsis": {
-        "installerIcon": "icons/icon.ico",
-        "headerImage": "icons/header.bmp",
-        "sidebarImage": "icons/sidebar.bmp",
-        "installMode": "currentUser",
         "license": "../LICENSE",
-        "languages": ["English"]
+        "installMode": "currentUser"
       }
     },
     "macOS": {
       "entitlements": null,
-      "exceptionDomain": null,
       "frameworks": [],
-      "minimumSystemVersion": "10.15",
-      "signingIdentity": null,
-      "providerShortName": null
+      "minimumSystemVersion": "10.15"
     },
     "linux": {
-      "appId": "ai.aigoodbye.banana",
-      "category": "Utility",
-      "description": "Banana AI - Your Offline AI with Internet Connectivity"
+      "deb": {
+        "section": "utils"
+      },
+      "rpm": {
+        "release": "1"
+      }
     }
   },
   "plugins": {

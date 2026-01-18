@@ -6,11 +6,28 @@ This creates a standalone executable that can be bundled with the Tauri desktop 
 """
 
 import sys
+import os
 from pathlib import Path
 
-# Get the project root
-project_root = Path('.').parent.resolve()
+# Get paths relative to the spec file location
+# SPECPATH is a PyInstaller global variable containing the spec file directory
+try:
+    spec_dir = Path(SPECPATH)
+except NameError:
+    spec_dir = Path(__file__).parent.resolve()
+desktop_dir = spec_dir  # spec file is in desktop/
+project_root = desktop_dir.parent  # parent of desktop/
 src_path = project_root / 'src'
+
+# Icon paths
+icon_path = desktop_dir / 'src-tauri' / 'icons' / ('icon.ico' if sys.platform == 'win32' else 'icon.icns')
+icon_str = str(icon_path) if icon_path.exists() else None
+
+# Debug output
+print(f"[PyInstaller Spec] spec_dir: {spec_dir}")
+print(f"[PyInstaller Spec] project_root: {project_root}")
+print(f"[PyInstaller Spec] icon_path: {icon_path}")
+print(f"[PyInstaller Spec] icon exists: {icon_path.exists()}")
 
 a = Analysis(
     [str(src_path / 'banana_ai' / 'cli.py')],
@@ -115,5 +132,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='desktop/src-tauri/icons/icon.ico' if sys.platform == 'win32' else 'desktop/src-tauri/icons/icon.icns',
+    icon=icon_str,
 )

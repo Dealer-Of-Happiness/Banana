@@ -1,5 +1,5 @@
 """
-Banana AI Web Application.
+AIGoodbye Web Application.
 
 Provides a web interface for interacting with your AI.
 """
@@ -55,7 +55,7 @@ def create_app(config: Optional[Config] = None) -> FastAPI:
     ai = BananaAI(config)
 
     app = FastAPI(
-        title="Banana AI",
+        title="AIGoodbye",
         description="Your Offline AI with Internet Connectivity",
         version="1.0.0",
     )
@@ -234,7 +234,7 @@ def get_chat_html() -> str:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Banana AI</title>
+    <title>AIGoodbye</title>
     <style>
         * {
             margin: 0;
@@ -404,7 +404,7 @@ def get_chat_html() -> str:
 </head>
 <body>
     <div class="header">
-        <h1>Banana AI</h1>
+        <h1>AIGoodbye</h1>
         <p class="subtitle">Your Offline AI with Internet Connectivity</p>
     </div>
 
@@ -423,7 +423,7 @@ def get_chat_html() -> str:
 
     <div class="chat-container" id="chat-container">
         <div class="message assistant">
-            <p>Hello! I'm Banana AI, your local AI assistant. I can work offline and connect to the internet when needed.</p>
+            <p>Hello! I'm AIGoodbye, your local AI assistant. I can work offline and connect to the internet when needed.</p>
             <p style="margin-top: 10px;">Try asking me anything!</p>
         </div>
     </div>

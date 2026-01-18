@@ -580,17 +580,7 @@
         }
 
         .price-card.featured::before {
-            content: 'MOST POPULAR';
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
-            padding: 6px 20px;
-            border-radius: 100px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            letter-spacing: 0.5px;
+            display: none;
         }
 
         .price-platform {
@@ -1361,7 +1351,6 @@
                         <li>100% private - data stays on device</li>
                         <li>No subscription required</li>
                         <li>Multi-language support</li>
-                        <li>Lifetime updates</li>
                     </ul>
                     <div class="qr-section">
                         <div class="qr-code">
@@ -1382,15 +1371,15 @@
                     <ul class="price-features">
                         <li>Full offline AI capabilities</li>
                         <li>Choose from 3 AI model sizes</li>
-                        <li>Document & image analysis (70B model)</li>
+                        <li>Document & image analysis</li>
                         <li>Knowledge base & RAG</li>
-                        <li>Lifetime updates</li>
+                        <li>Multi-language support</li>
                     </ul>
                     <div class="mac-download-options">
                         <button class="btn btn-primary price-btn" onclick="downloadApp('macos-arm64')">
                             Download for Apple Silicon
                         </button>
-                        <button class="btn btn-secondary price-btn" onclick="downloadApp('macos-x64')" style="margin-top: 8px;">
+                        <button class="btn btn-primary price-btn" onclick="downloadApp('macos-x64')" style="margin-top: 8px;">
                             Download for Intel Mac
                         </button>
                         <p class="mac-help-text">Not sure? Click  > About This Mac</p>
@@ -1400,16 +1389,16 @@
 
                 <!-- Windows -->
                 <div class="price-card">
-                    <div class="price-platform">🪟</div>
+                    <div class="price-platform"><svg viewBox="0 0 88 88" width="32" height="32" style="fill: #00a4ef;"><path d="M0 12.402l35.687-4.86.016 34.423-35.67.203zm35.67 33.529l.028 34.453L.028 75.48.026 45.7zm4.326-39.025L87.314 0v41.527l-47.318.376zm47.329 39.349l-.011 41.34-47.318-6.678-.066-34.739z"/></svg></div>
                     <h3 class="price-name">Windows</h3>
                     <div class="price-amount">$29.99</div>
                     <p class="price-period">One-time purchase</p>
                     <ul class="price-features">
                         <li>Full offline AI capabilities</li>
                         <li>Choose from 3 AI model sizes</li>
-                        <li>Document & image analysis (70B model)</li>
+                        <li>Document & image analysis</li>
                         <li>Knowledge base & RAG</li>
-                        <li>Lifetime updates</li>
+                        <li>Multi-language support</li>
                     </ul>
                     <button class="btn btn-primary price-btn" onclick="downloadApp('windows')">
                         Download for Windows
@@ -1497,7 +1486,7 @@
                     </button>
                     <div class="faq-answer">
                         <div class="faq-answer-content">
-                            On Mac and Windows, AI Goodbye offers three different AI model sizes to choose from. For more demanding tasks like document analysis and image understanding, you can use our largest 70B parameter model. All processing happens locally on your device—no internet connection or cloud services required.
+                            On Mac and Windows, AI Goodbye offers three different AI model sizes to choose from. For more demanding tasks like document analysis and image understanding, you can use our largest model. All processing happens locally on your device—no internet connection or cloud services required.
                         </div>
                     </div>
                 </div>
@@ -1509,17 +1498,6 @@
                     <div class="faq-answer">
                         <div class="faq-answer-content">
                             Yes, 100%. We have no servers that receive your data. All AI processing happens locally on your device. Your conversations, documents, and personal information never leave your computer or phone. We don't collect analytics, track usage, or use any advertising networks. Read our <a href="privacy-policy.html" style="color: var(--neon-blue);">privacy policy</a> for complete details.
-                        </div>
-                    </div>
-                </div>
-                <div class="faq-item">
-                    <button class="faq-question">
-                        What's included in lifetime updates?
-                        <span class="faq-icon">+</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-content">
-                            When you purchase AI Goodbye, you get all future updates at no additional cost. This includes new features, improved AI models, security updates, and platform compatibility updates. We're committed to continuously improving the app for all our users.
                         </div>
                     </div>
                 </div>

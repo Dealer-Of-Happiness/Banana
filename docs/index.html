@@ -3,80 +3,1771 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Goodbye - Legal</title>
+    <title>AI Goodbye - Your Offline AI with Internet Connectivity</title>
+    <meta name="description" content="Say goodbye to monthly subscriptions, privacy concerns, and internet dependency. AI Goodbye runs powerful AI locally on your device.">
+    <meta name="keywords" content="offline AI, private AI, no subscription, local AI, ChatGPT alternative, Claude alternative">
+    <meta property="og:title" content="AI Goodbye - Your Offline AI Assistant">
+    <meta property="og:description" content="Pay once, use forever. No subscriptions. Complete privacy. Works offline.">
+    <meta property="og:image" content="https://aigoodbye.ai/icon.png">
+    <meta property="og:url" content="https://aigoodbye.ai">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://js.stripe.com/v3/"></script>
     <style>
+        :root {
+            --neon-blue: #00d4ff;
+            --neon-pink: #ff6ec7;
+            --neon-purple: #a855f7;
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-card-hover: #1a1a25;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-muted: #6b6b7b;
+            --border-color: #2a2a3a;
+            --success-green: #10b981;
+            --warning-orange: #f59e0b;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
             line-height: 1.6;
-            color: #333;
-            background-color: #f9f9f9;
-            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(255, 110, 199, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(168, 85, 247, 0.05) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 20px 0;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        nav .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .logo img {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-cta {
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+            color: white !important;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .nav-cta:hover {
+            opacity: 0.9;
+        }
+
+        /* Hero Section */
+        .hero {
             min-height: 100vh;
             display: flex;
             align-items: center;
-            justify-content: center;
+            padding: 120px 0 80px;
+            position: relative;
         }
-        .container {
+
+        .hero-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+        }
+
+        .hero-text h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 24px;
+        }
+
+        .hero-text h1 .gradient {
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-text h1 .glow {
+            text-shadow: 0 0 40px rgba(0, 212, 255, 0.5);
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            max-width: 500px;
+        }
+
+        .hero-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 40px;
+        }
+
+        .badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 10px 16px;
+            border-radius: 100px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .badge-icon {
+            font-size: 1.1rem;
+        }
+
+        .hero-cta {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: all 0.3s;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+            color: white;
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 212, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--neon-blue);
+        }
+
+        .hero-visual {
+            position: relative;
+        }
+
+        .app-preview {
+            width: 100%;
+            max-width: 500px;
+            border-radius: 20px;
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.1),
+                0 20px 60px rgba(0, 0, 0, 0.5),
+                0 0 100px rgba(0, 212, 255, 0.2);
+        }
+
+        .app-mockup {
+            width: 100%;
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+        .mockup-header {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .mockup-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .mockup-dot.red { background: #ff5f57; }
+        .mockup-dot.yellow { background: #febc2e; }
+        .mockup-dot.green { background: #28c840; }
+
+        .mockup-content {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 300px;
+        }
+
+        .chat-message {
+            margin-bottom: 16px;
+            animation: fadeInUp 0.5s ease forwards;
+            opacity: 0;
+        }
+
+        .chat-message:nth-child(1) { animation-delay: 0.2s; }
+        .chat-message:nth-child(2) { animation-delay: 0.6s; }
+        .chat-message:nth-child(3) { animation-delay: 1s; }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chat-user {
+            text-align: right;
+        }
+
+        .chat-user .bubble {
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+            display: inline-block;
+            padding: 12px 16px;
+            border-radius: 16px 16px 4px 16px;
+            max-width: 80%;
+        }
+
+        .chat-ai .bubble {
+            background: var(--bg-card-hover);
+            display: inline-block;
+            padding: 12px 16px;
+            border-radius: 16px 16px 16px 4px;
+            max-width: 80%;
+            border: 1px solid var(--border-color);
+        }
+
+        .chat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .offline-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success-green);
+            padding: 4px 10px;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            margin-top: 8px;
+        }
+
+        .offline-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--success-green);
+            border-radius: 50%;
+        }
+
+        /* Why Section */
+        .why-section {
+            padding: 120px 0;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .section-label {
+            display: inline-block;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(255, 110, 199, 0.1));
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            padding: 8px 20px;
+            border-radius: 100px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--neon-blue);
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .section-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
             max-width: 600px;
             margin: 0 auto;
-            background: white;
+        }
+
+        .problems-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .problem-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 32px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .problem-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--neon-blue), var(--neon-pink));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .problem-card:hover {
+            border-color: var(--neon-blue);
+            transform: translateY(-4px);
+        }
+
+        .problem-card:hover::before {
+            opacity: 1;
+        }
+
+        .problem-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(255, 110, 199, 0.1));
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+        }
+
+        .problem-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .problem-old {
+            color: #ef4444;
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .problem-old::before {
+            content: '✗';
+            position: absolute;
+            left: 0;
+        }
+
+        .problem-new {
+            color: var(--success-green);
+            font-size: 0.95rem;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .problem-new::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+        }
+
+        /* Features Section */
+        .features-section {
+            padding: 120px 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(0, 212, 255, 0.03) 50%, transparent 100%);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
             padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            border-color: rgba(0, 212, 255, 0.3);
+        }
+
+        .feature-card.large {
+            grid-column: span 2;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        .feature-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .feature-desc {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .feature-list {
+            list-style: none;
+            margin-top: 20px;
+        }
+
+        .feature-list li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+
+        .feature-list li::before {
+            content: '✓';
+            color: var(--success-green);
+            font-weight: bold;
+        }
+
+        /* Pricing / Download Section */
+        .download-section {
+            padding: 120px 0;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-top: 60px;
+        }
+
+        .price-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .price-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--neon-blue);
+        }
+
+        .price-card.featured {
+            border: 2px solid var(--neon-blue);
+            background: linear-gradient(180deg, rgba(0, 212, 255, 0.05) 0%, var(--bg-card) 100%);
+        }
+
+        .price-card.featured::before {
+            content: 'MOST POPULAR';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+            padding: 6px 20px;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .price-platform {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+
+        .price-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .price-amount {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .price-amount.free {
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .price-period {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+        }
+
+        .price-features {
+            list-style: none;
+            text-align: left;
+            margin-bottom: 32px;
+        }
+
+        .price-features li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .price-features li:last-child {
+            border-bottom: none;
+        }
+
+        .price-features li::before {
+            content: '✓';
+            color: var(--success-green);
+            font-weight: bold;
+        }
+
+        .price-btn {
+            width: 100%;
+            padding: 16px;
+            font-size: 1rem;
+        }
+
+        /* QR Code Section */
+        .qr-section {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .qr-code {
+            width: 150px;
+            height: 150px;
+            background: white;
+            border-radius: 16px;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+        }
+
+        .qr-code img {
+            width: 100%;
+            height: 100%;
+        }
+
+        .qr-placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #f0f0f0 25%, #e0e0e0 25%, #e0e0e0 50%, #f0f0f0 50%, #f0f0f0 75%, #e0e0e0 75%);
+            background-size: 20px 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 0.7rem;
             text-align: center;
         }
-        h1 {
-            color: #1a1a1a;
-            margin-bottom: 10px;
-            font-size: 2em;
+
+        .qr-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
         }
-        .tagline {
-            color: #666;
-            margin-bottom: 30px;
+
+        /* Testimonials */
+        .testimonials-section {
+            padding: 120px 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(168, 85, 247, 0.03) 50%, transparent 100%);
         }
-        .links {
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .testimonial-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 32px;
+        }
+
+        .testimonial-stars {
+            color: #fbbf24;
+            margin-bottom: 16px;
+        }
+
+        .testimonial-text {
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .testimonial-author {
             display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-top: 30px;
+            align-items: center;
+            gap: 12px;
         }
-        .links a {
-            display: block;
-            padding: 15px 30px;
-            background: #007AFF;
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 500;
-            transition: background 0.2s;
+
+        .testimonial-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-pink));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
         }
-        .links a:hover {
-            background: #0056b3;
+
+        .testimonial-name {
+            font-weight: 600;
         }
+
+        .testimonial-role {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* FAQ Section */
+        .faq-section {
+            padding: 120px 0;
+        }
+
+        .faq-grid {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .faq-question {
+            width: 100%;
+            padding: 24px;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .faq-question:hover {
+            color: var(--neon-blue);
+        }
+
+        .faq-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s;
+        }
+
+        .faq-item.open .faq-icon {
+            transform: rotate(45deg);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .faq-item.open .faq-answer {
+            max-height: 500px;
+        }
+
+        .faq-answer-content {
+            padding: 0 24px 24px;
+            color: var(--text-secondary);
+        }
+
+        /* CTA Section */
+        .cta-section {
+            padding: 120px 0;
+            text-align: center;
+        }
+
+        .cta-box {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(255, 110, 199, 0.1));
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 32px;
+            padding: 80px;
+        }
+
+        .cta-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+        }
+
+        .cta-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Footer */
         footer {
-            margin-top: 40px;
-            color: #888;
-            font-size: 0.9em;
+            padding: 60px 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 60px;
+        }
+
+        .footer-brand p {
+            color: var(--text-secondary);
+            margin-top: 16px;
+            max-width: 300px;
+        }
+
+        .footer-heading {
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 12px;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: var(--neon-blue);
+        }
+
+        .footer-bottom {
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 16px;
+        }
+
+        .social-links a {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            transition: color 0.3s;
+        }
+
+        .social-links a:hover {
+            color: var(--neon-blue);
+        }
+
+        /* Payment Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 480px;
+            width: 90%;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .modal-subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+        }
+
+        .modal-price {
+            text-align: center;
+            padding: 24px;
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 16px;
+            margin-bottom: 32px;
+        }
+
+        .modal-price-amount {
+            font-size: 2.5rem;
+            font-weight: 800;
+        }
+
+        .modal-price-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        #card-element {
+            background: var(--bg-dark);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 24px;
+        }
+
+        #card-errors {
+            color: #ef4444;
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+        }
+
+        .modal-btn {
+            width: 100%;
+        }
+
+        .modal-secure {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 16px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* Success State */
+        .success-message {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .success-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .success-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .success-text {
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        /* Mobile Menu */
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                gap: 60px;
+            }
+
+            .hero-text h1 {
+                font-size: 3rem;
+            }
+
+            .hero-visual {
+                order: -1;
+            }
+
+            .problems-grid,
+            .features-grid,
+            .pricing-grid,
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .feature-card.large {
+                grid-column: span 1;
+                grid-template-columns: 1fr;
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr 1fr;
+                gap: 40px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .hero-text h1 {
+                font-size: 2.5rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .cta-box {
+                padding: 40px 24px;
+            }
+
+            .cta-title {
+                font-size: 2rem;
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+        }
+
+        /* Loading States */
+        .btn.loading {
+            position: relative;
+            color: transparent;
+        }
+
+        .btn.loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Hide/Show based on payment */
+        .download-ready {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>AI Goodbye</h1>
-        <p class="tagline">Your Offline AI Assistant</p>
+    <div class="bg-gradient"></div>
 
-        <div class="links">
-            <a href="privacy-policy.html">Privacy Policy</a>
+    <!-- Navigation -->
+    <nav>
+        <div class="container">
+            <a href="#" class="logo">
+                <img src="icon.png" alt="AI Goodbye">
+                <span class="logo-text">AI Goodbye</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#pricing">Pricing</a></li>
+                <li><a href="#faq">FAQ</a></li>
+                <li><a href="privacy-policy.html">Privacy</a></li>
+                <li><a href="#pricing" class="nav-cta">Download</a></li>
+            </ul>
+            <button class="mobile-menu-btn">☰</button>
         </div>
+    </nav>
 
-        <footer>
-            <p>&copy; 2026 AI Goodbye</p>
-        </footer>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1>
+                        <span class="glow">Say</span> <span class="gradient">Goodbye</span><br>
+                        to AI Subscriptions
+                    </h1>
+                    <p class="hero-subtitle">
+                        Your offline AI assistant that runs entirely on your device. No monthly fees. No data collection. No internet required.
+                    </p>
+                    <div class="hero-badges">
+                        <div class="badge">
+                            <span class="badge-icon">🔒</span>
+                            100% Private
+                        </div>
+                        <div class="badge">
+                            <span class="badge-icon">📴</span>
+                            Works Offline
+                        </div>
+                        <div class="badge">
+                            <span class="badge-icon">💰</span>
+                            Pay Once
+                        </div>
+                    </div>
+                    <div class="hero-cta">
+                        <a href="#pricing" class="btn btn-primary">
+                            Download Now
+                        </a>
+                        <a href="#features" class="btn btn-secondary">
+                            Learn More
+                        </a>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="app-mockup">
+                        <div class="mockup-header">
+                            <div class="mockup-dot red"></div>
+                            <div class="mockup-dot yellow"></div>
+                            <div class="mockup-dot green"></div>
+                        </div>
+                        <div class="mockup-content">
+                            <div class="chat-message chat-user">
+                                <div class="chat-label">You</div>
+                                <div class="bubble">Summarize this quarterly report for me</div>
+                            </div>
+                            <div class="chat-message chat-ai">
+                                <div class="chat-label">AI Goodbye</div>
+                                <div class="bubble">
+                                    Here's your Q4 summary: Revenue increased 23% YoY, with strongest growth in the enterprise segment. Key highlights include...
+                                </div>
+                                <div class="offline-badge">Running locally on your device</div>
+                            </div>
+                            <div class="chat-message chat-user">
+                                <div class="chat-label">You</div>
+                                <div class="bubble">What about the projections for next year?</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Section -->
+    <section class="why-section" id="why">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">WHY AI GOODBYE?</span>
+                <h2 class="section-title">Break Free from AI Lock-In</h2>
+                <p class="section-subtitle">
+                    Traditional AI assistants come with hidden costs. We believe you deserve better.
+                </p>
+            </div>
+            <div class="problems-grid">
+                <div class="problem-card">
+                    <div class="problem-icon">💸</div>
+                    <h3 class="problem-title">Endless Subscriptions</h3>
+                    <p class="problem-old">$20/month adds up to $240/year, forever</p>
+                    <p class="problem-new">Pay once, own it forever for just $9.99</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">👁️</div>
+                    <h3 class="problem-title">Privacy Concerns</h3>
+                    <p class="problem-old">Your conversations stored on corporate servers</p>
+                    <p class="problem-new">Everything stays on your device, always</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">🌐</div>
+                    <h3 class="problem-title">Internet Dependency</h3>
+                    <p class="problem-old">No connection? No AI assistant</p>
+                    <p class="problem-new">Works completely offline, anywhere</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="features">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">POWERFUL FEATURES</span>
+                <h2 class="section-title">Everything You Need, Locally</h2>
+                <p class="section-subtitle">
+                    A full-featured AI assistant that respects your privacy and your wallet.
+                </p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card large">
+                    <div>
+                        <div class="feature-icon">🧠</div>
+                        <h3 class="feature-title">Hybrid AI Intelligence</h3>
+                        <p class="feature-desc">
+                            Run powerful AI models locally on your device. When you need more, optionally connect to ChatGPT, Claude, or Google AI with your own API keys.
+                        </p>
+                        <ul class="feature-list">
+                            <li>Local AI that runs without internet</li>
+                            <li>Optional cloud AI integration</li>
+                            <li>Your API keys, your control</li>
+                            <li>Intelligent mode switching</li>
+                        </ul>
+                    </div>
+                    <div style="text-align: center;">
+                        <img src="icon.png" alt="AI Goodbye" style="max-width: 200px; border-radius: 24px; box-shadow: 0 0 60px rgba(0, 212, 255, 0.3);">
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📄</div>
+                    <h3 class="feature-title">Document Analysis</h3>
+                    <p class="feature-desc">
+                        Upload PDFs, Word docs, and text files. Ask questions, get summaries, and extract insights—all processed locally.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎤</div>
+                    <h3 class="feature-title">Voice Conversations</h3>
+                    <p class="feature-desc">
+                        Talk naturally with your AI assistant. Supports 6 languages including English, Spanish, French, Russian, Korean, and Chinese.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📚</div>
+                    <h3 class="feature-title">Knowledge Base</h3>
+                    <p class="feature-desc">
+                        Build your personal AI knowledge base. Upload documents and get contextual answers using RAG technology.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎓</div>
+                    <h3 class="feature-title">Custom Training</h3>
+                    <p class="feature-desc">
+                        Fine-tune models for your specific needs using LoRA technology. Create an AI that truly understands your domain.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing/Download Section -->
+    <section class="download-section" id="pricing">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">SIMPLE PRICING</span>
+                <h2 class="section-title">One Price. Forever Yours.</h2>
+                <p class="section-subtitle">
+                    No subscriptions. No hidden fees. Just powerful AI that you own.
+                </p>
+            </div>
+            <div class="pricing-grid">
+                <!-- iPhone -->
+                <div class="price-card">
+                    <div class="price-platform">📱</div>
+                    <h3 class="price-name">iPhone</h3>
+                    <div class="price-amount free">Free</div>
+                    <p class="price-period">Available on App Store</p>
+                    <ul class="price-features">
+                        <li>Full offline AI capabilities</li>
+                        <li>Voice conversations</li>
+                        <li>Document analysis</li>
+                        <li>Apple Watch app</li>
+                        <li>Home screen widgets</li>
+                    </ul>
+                    <div class="qr-section">
+                        <div class="qr-code">
+                            <div class="qr-placeholder" id="ios-qr">
+                                QR Code<br>Coming Soon
+                            </div>
+                        </div>
+                        <p class="qr-label">Scan to download</p>
+                    </div>
+                </div>
+
+                <!-- macOS -->
+                <div class="price-card featured">
+                    <div class="price-platform">💻</div>
+                    <h3 class="price-name">macOS</h3>
+                    <div class="price-amount">$9.99</div>
+                    <p class="price-period">One-time purchase</p>
+                    <ul class="price-features">
+                        <li>Full offline AI capabilities</li>
+                        <li>Knowledge base & RAG</li>
+                        <li>Custom model training</li>
+                        <li>CLI & Web interface</li>
+                        <li>Lifetime updates</li>
+                    </ul>
+                    <button class="btn btn-primary price-btn" onclick="openPaymentModal('macos')">
+                        Buy for Mac
+                    </button>
+                </div>
+
+                <!-- Windows -->
+                <div class="price-card">
+                    <div class="price-platform">🪟</div>
+                    <h3 class="price-name">Windows</h3>
+                    <div class="price-amount">$9.99</div>
+                    <p class="price-period">One-time purchase</p>
+                    <ul class="price-features">
+                        <li>Full offline AI capabilities</li>
+                        <li>Knowledge base & RAG</li>
+                        <li>Custom model training</li>
+                        <li>CLI & Web interface</li>
+                        <li>Lifetime updates</li>
+                    </ul>
+                    <button class="btn btn-primary price-btn" onclick="openPaymentModal('windows')">
+                        Buy for Windows
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="testimonials-section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">TESTIMONIALS</span>
+                <h2 class="section-title">Loved by Privacy-Conscious Users</h2>
+            </div>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">★★★★★</div>
+                    <p class="testimonial-text">
+                        "Finally, an AI assistant I can trust with my work documents. Everything stays on my MacBook—exactly how it should be."
+                    </p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">MK</div>
+                        <div>
+                            <div class="testimonial-name">Michael K.</div>
+                            <div class="testimonial-role">Software Engineer</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">★★★★★</div>
+                    <p class="testimonial-text">
+                        "I work in healthcare where privacy matters. AI Goodbye lets me use AI assistance without compromising patient confidentiality."
+                    </p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">SR</div>
+                        <div>
+                            <div class="testimonial-name">Dr. Sarah R.</div>
+                            <div class="testimonial-role">Healthcare Professional</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">★★★★★</div>
+                    <p class="testimonial-text">
+                        "Saved me $240/year in subscriptions. The one-time price paid for itself in the first month!"
+                    </p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">JL</div>
+                        <div>
+                            <div class="testimonial-name">Jennifer L.</div>
+                            <div class="testimonial-role">Freelance Writer</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section" id="faq">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">FAQ</span>
+                <h2 class="section-title">Frequently Asked Questions</h2>
+            </div>
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <button class="faq-question">
+                        How does it work offline?
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            AI Goodbye runs powerful AI models directly on your device using optimized machine learning technology. On iPhone, we use llama.cpp for efficient on-device inference. On Mac and Windows, we integrate with Ollama to run models locally. No internet connection is needed for core AI functionality.
+                        </div>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">
+                        What if I need more powerful AI capabilities?
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            AI Goodbye supports optional integration with cloud AI services like ChatGPT, Claude, and Google AI. You can use your own API keys to access these services when needed. Your queries go directly to the service—we never see or store them. This is completely optional; the app works fully offline without it.
+                        </div>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">
+                        Is my data really private?
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            Yes, 100%. We have no servers that receive your data. All AI processing happens locally on your device. Your conversations, documents, and personal information never leave your computer or phone. We don't collect analytics, track usage, or use any advertising networks. Read our <a href="privacy-policy.html" style="color: var(--neon-blue);">privacy policy</a> for complete details.
+                        </div>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">
+                        What's included in lifetime updates?
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            When you purchase AI Goodbye, you get all future updates at no additional cost. This includes new features, improved AI models, security updates, and platform compatibility updates. We're committed to continuously improving the app for all our users.
+                        </div>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">
+                        What are the system requirements?
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            <strong>iPhone:</strong> iPhone 12 or later running iOS 16+<br>
+                            <strong>Mac:</strong> macOS 12 Monterey or later, Apple Silicon or Intel<br>
+                            <strong>Windows:</strong> Windows 10 or later, 64-bit<br><br>
+                            For optimal AI performance, we recommend at least 8GB of RAM on desktop systems.
+                        </div>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">
+                        Can I get a refund?
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            Yes! We offer a 30-day money-back guarantee. If you're not satisfied with AI Goodbye for any reason, contact us at <a href="mailto:marketing@dealerofhappiness.com" style="color: var(--neon-blue);">marketing@dealerofhappiness.com</a> and we'll process your refund promptly.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-box">
+                <h2 class="cta-title">Ready to Say Goodbye?</h2>
+                <p class="cta-subtitle">
+                    Join thousands of users who've taken control of their AI experience. No subscriptions. No data collection. Just powerful AI that's truly yours.
+                </p>
+                <div class="cta-buttons">
+                    <a href="#pricing" class="btn btn-primary">
+                        Get Started for $9.99
+                    </a>
+                    <a href="mailto:marketing@dealerofhappiness.com" class="btn btn-secondary">
+                        Contact Us
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <a href="#" class="logo">
+                        <img src="icon.png" alt="AI Goodbye" style="width: 40px; height: 40px; border-radius: 10px;">
+                        <span class="logo-text">AI Goodbye</span>
+                    </a>
+                    <p>Your offline AI assistant. Private by design, powerful by nature.</p>
+                </div>
+                <div>
+                    <h4 class="footer-heading">Product</h4>
+                    <ul class="footer-links">
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#pricing">Pricing</a></li>
+                        <li><a href="#faq">FAQ</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="footer-heading">Legal</h4>
+                    <ul class="footer-links">
+                        <li><a href="privacy-policy.html">Privacy Policy</a></li>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="footer-heading">Contact</h4>
+                    <ul class="footer-links">
+                        <li><a href="mailto:marketing@dealerofhappiness.com">Email Us</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 AI Goodbye. All rights reserved. A product of Dealer Of Happiness.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Payment Modal -->
+    <div class="modal-overlay" id="payment-modal">
+        <div class="modal">
+            <button class="modal-close" onclick="closePaymentModal()">&times;</button>
+            <h2 class="modal-title">Purchase AI Goodbye</h2>
+            <p class="modal-subtitle" id="modal-platform">for macOS</p>
+
+            <div class="modal-price">
+                <div class="modal-price-amount">$9.99</div>
+                <div class="modal-price-label">One-time purchase • Lifetime updates</div>
+            </div>
+
+            <form id="payment-form">
+                <div id="card-element"></div>
+                <div id="card-errors" role="alert"></div>
+                <button type="submit" class="btn btn-primary modal-btn" id="submit-btn">
+                    Pay $9.99
+                </button>
+            </form>
+
+            <div class="modal-secure">
+                🔒 Secure payment powered by Stripe
+            </div>
+
+            <!-- Success State (hidden by default) -->
+            <div class="success-message" id="success-message" style="display: none;">
+                <div class="success-icon">✅</div>
+                <h3 class="success-title">Thank You!</h3>
+                <p class="success-text">Your purchase was successful. Check your email for the download link.</p>
+                <a href="#" class="btn btn-primary" id="download-link">Download Now</a>
+            </div>
+        </div>
     </div>
+
+    <script>
+        // FAQ Accordion
+        document.querySelectorAll('.faq-question').forEach(button => {
+            button.addEventListener('click', () => {
+                const item = button.parentElement;
+                const isOpen = item.classList.contains('open');
+
+                // Close all items
+                document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+
+                // Open clicked item if it wasn't open
+                if (!isOpen) {
+                    item.classList.add('open');
+                }
+            });
+        });
+
+        // Payment Modal
+        let currentPlatform = 'macos';
+
+        function openPaymentModal(platform) {
+            currentPlatform = platform;
+            const modal = document.getElementById('payment-modal');
+            const platformText = document.getElementById('modal-platform');
+
+            platformText.textContent = platform === 'macos' ? 'for macOS' : 'for Windows';
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePaymentModal() {
+            const modal = document.getElementById('payment-modal');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close modal on overlay click
+        document.getElementById('payment-modal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                closePaymentModal();
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closePaymentModal();
+            }
+        });
+
+        // Stripe Integration Placeholder
+        // NOTE: To enable payments, you need to:
+        // 1. Create a Stripe account at https://stripe.com
+        // 2. Get your publishable key from the Stripe Dashboard
+        // 3. Replace 'pk_test_YOUR_PUBLISHABLE_KEY' below with your actual key
+        // 4. Set up a backend server to create payment intents
+        // 5. Configure webhooks to handle successful payments and deliver download links
+
+        /*
+        // Uncomment and configure when ready to accept payments:
+
+        const stripe = Stripe('pk_test_YOUR_PUBLISHABLE_KEY');
+        const elements = stripe.elements();
+        const cardElement = elements.create('card', {
+            style: {
+                base: {
+                    color: '#ffffff',
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '16px',
+                    '::placeholder': {
+                        color: '#6b6b7b'
+                    }
+                },
+                invalid: {
+                    color: '#ef4444'
+                }
+            }
+        });
+        cardElement.mount('#card-element');
+
+        const form = document.getElementById('payment-form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+
+            // Create payment intent on your server
+            const response = await fetch('/create-payment-intent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ platform: currentPlatform })
+            });
+            const { clientSecret } = await response.json();
+
+            // Confirm payment
+            const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+                payment_method: { card: cardElement }
+            });
+
+            if (error) {
+                document.getElementById('card-errors').textContent = error.message;
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+            } else if (paymentIntent.status === 'succeeded') {
+                // Show success message
+                document.getElementById('payment-form').style.display = 'none';
+                document.querySelector('.modal-price').style.display = 'none';
+                document.getElementById('success-message').style.display = 'block';
+            }
+        });
+        */
+
+        // Temporary: Show alert for demo purposes
+        document.getElementById('payment-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert('Payment system coming soon! Contact marketing@dealerofhappiness.com for early access.');
+        });
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Mobile menu toggle (basic implementation)
+        document.querySelector('.mobile-menu-btn').addEventListener('click', () => {
+            const navLinks = document.querySelector('.nav-links');
+            navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
+            navLinks.style.flexDirection = 'column';
+            navLinks.style.position = 'absolute';
+            navLinks.style.top = '100%';
+            navLinks.style.left = '0';
+            navLinks.style.right = '0';
+            navLinks.style.background = 'rgba(10, 10, 15, 0.95)';
+            navLinks.style.padding = '20px';
+            navLinks.style.gap = '20px';
+        });
+    </script>
 </body>
 </html>

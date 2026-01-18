@@ -1,0 +1,27 @@
+{
+  "name": "banana-ai-desktop",
+  "version": "1.0.0",
+  "description": "Banana AI - Your Offline AI with Internet Connectivity",
+  "author": "AI Goodbye <marketing@dealerofhappiness.com>",
+  "license": "Proprietary",
+  "homepage": "https://aigoodbye.ai",
+  "private": true,
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "build:windows": "tauri build --target x86_64-pc-windows-msvc",
+    "build:mac": "tauri build --target universal-apple-darwin",
+    "build:mac-intel": "tauri build --target x86_64-apple-darwin",
+    "build:mac-arm": "tauri build --target aarch64-apple-darwin",
+    "bundle:python": "node scripts/bundle-python.js",
+    "package:all": "npm run bundle:python && npm run build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "vite": "^5.0.0"
+  }
+}

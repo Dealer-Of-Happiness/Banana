@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banana AI</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="logo-container">
+                <svg class="logo" viewBox="0 0 100 100" width="80" height="80">
+                    <circle cx="50" cy="50" r="45" fill="#f7d716" stroke="#e6c200" stroke-width="3"/>
+                    <text x="50" y="65" text-anchor="middle" font-size="40" font-weight="bold" fill="#1a1a2e">AI</text>
+                </svg>
+            </div>
+            <h1>Banana AI</h1>
+            <p class="loading-text">Starting AI engine...</p>
+            <div class="loading-bar">
+                <div class="loading-progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="app hidden">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="brand">Banana AI</h1>
+                <span class="version">v1.0.0</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-view="chat">
+                    <span class="icon">💬</span>
+                    Chat
+                </button>
+                <button class="nav-item" data-view="knowledge">
+                    <span class="icon">📚</span>
+                    Knowledge Base
+                </button>
+                <button class="nav-item" data-view="training">
+                    <span class="icon">🧠</span>
+                    Training
+                </button>
+                <button class="nav-item" data-view="settings">
+                    <span class="icon">⚙️</span>
+                    Settings
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="status-box">
+                    <span id="backend-status" class="status-dot offline"></span>
+                    <span id="status-text">Connecting...</span>
+                </div>
+                <div class="mode-selector">
+                    <select id="mode-select">
+                        <option value="hybrid">🔄 Hybrid Mode</option>
+                        <option value="local">🏠 Local Only</option>
+                        <option value="internet">🌐 Internet Only</option>
+                    </select>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Chat View -->
+            <div id="chat-view" class="view active">
+                <div class="chat-header">
+                    <h2>Chat</h2>
+                    <div class="chat-actions">
+                        <button id="new-chat-btn" class="btn-icon" title="New Chat">🗑️ Clear</button>
+                    </div>
+                </div>
+
+                <div class="chat-container" id="chat-container">
+                    <div class="message assistant">
+                        <div class="message-avatar">🍌</div>
+                        <div class="message-content">
+                            <p>Hello! I'm Banana AI, your local AI assistant.</p>
+                            <p>I can work completely offline with local models, or connect to ChatGPT/Claude when you need internet capabilities.</p>
+                            <p><strong>Try asking me anything!</strong></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <div class="input-wrapper">
+                        <textarea
+                            id="message-input"
+                            placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
+                            rows="1"
+                        ></textarea>
+                        <button id="send-button" class="send-btn" disabled>
+                            <svg viewBox="0 0 24 24" width="24" height="24">
+                                <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="input-footer">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="use-kb" checked>
+                            <span>Use Knowledge Base</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Knowledge Base View -->
+            <div id="knowledge-view" class="view">
+                <div class="view-header">
+                    <h2>Knowledge Base</h2>
+                    <p>Add documents to enhance AI responses with your own data.</p>
+                </div>
+
+                <div class="kb-content">
+                    <div class="upload-zone" id="upload-zone">
+                        <div class="upload-icon">📄</div>
+                        <p>Drag & drop files here or click to upload</p>
+                        <p class="upload-hint">Supports: PDF, TXT, MD, DOCX</p>
+                        <input type="file" id="file-input" multiple accept=".pdf,.txt,.md,.docx" hidden>
+                    </div>
+
+                    <div class="kb-stats" id="kb-stats">
+                        <div class="stat-card">
+                            <span class="stat-value" id="doc-count">0</span>
+                            <span class="stat-label">Documents</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value" id="chunk-count">0</span>
+                            <span class="stat-label">Chunks</span>
+                        </div>
+                    </div>
+
+                    <div class="kb-search">
+                        <input type="text" id="kb-search-input" placeholder="Search your knowledge base...">
+                        <button id="kb-search-btn" class="btn-primary">Search</button>
+                    </div>
+
+                    <div class="kb-results" id="kb-results"></div>
+                </div>
+            </div>
+
+            <!-- Training View -->
+            <div id="training-view" class="view">
+                <div class="view-header">
+                    <h2>Model Training</h2>
+                    <p>Fine-tune models with LoRA on your own data.</p>
+                </div>
+
+                <div class="training-content">
+                    <div class="training-form">
+                        <div class="form-group">
+                            <label>Task Name</label>
+                            <input type="text" id="task-name" placeholder="e.g., customer-support-bot">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Base Model</label>
+                            <select id="base-model">
+                                <option value="meta-llama/Llama-3.2-3B">Llama 3.2 3B</option>
+                                <option value="meta-llama/Llama-3.2-1B">Llama 3.2 1B</option>
+                                <option value="mistralai/Mistral-7B-v0.1">Mistral 7B</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Training Data (JSON)</label>
+                            <textarea id="training-data" rows="10" placeholder='[
+  {"input": "Hello", "output": "Hi there!"},
+  {"input": "How are you?", "output": "I am doing great, thanks for asking!"}
+]'></textarea>
+                        </div>
+
+                        <button id="start-training" class="btn-primary btn-large">
+                            🚀 Start Training
+                        </button>
+                    </div>
+
+                    <div class="trained-models">
+                        <h3>Trained Models</h3>
+                        <div id="models-list" class="models-list">
+                            <p class="empty-state">No trained models yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="settings-view" class="view">
+                <div class="view-header">
+                    <h2>Settings</h2>
+                </div>
+
+                <div class="settings-content">
+                    <section class="settings-section">
+                        <h3>AI Configuration</h3>
+
+                        <div class="setting-item">
+                            <label>Default Mode</label>
+                            <select id="default-mode">
+                                <option value="hybrid">Hybrid (Local + Internet)</option>
+                                <option value="local">Local Only</option>
+                                <option value="internet">Internet Only</option>
+                            </select>
+                        </div>
+
+                        <div class="setting-item">
+                            <label>Local Model (Ollama)</label>
+                            <input type="text" id="local-model" placeholder="llama3.2:3b">
+                        </div>
+
+                        <div class="setting-item">
+                            <label>System Prompt</label>
+                            <textarea id="system-prompt" rows="4" placeholder="You are a helpful AI assistant..."></textarea>
+                        </div>
+                    </section>
+
+                    <section class="settings-section">
+                        <h3>API Keys</h3>
+                        <p class="settings-note">API keys are stored locally and never sent to our servers.</p>
+
+                        <div class="setting-item">
+                            <label>OpenAI API Key</label>
+                            <input type="password" id="openai-key" placeholder="sk-...">
+                        </div>
+
+                        <div class="setting-item">
+                            <label>Anthropic API Key</label>
+                            <input type="password" id="anthropic-key" placeholder="sk-ant-...">
+                        </div>
+
+                        <div class="setting-item">
+                            <label>Google API Key</label>
+                            <input type="password" id="google-key" placeholder="AIza...">
+                        </div>
+                    </section>
+
+                    <section class="settings-section">
+                        <h3>About</h3>
+                        <div class="about-info">
+                            <p><strong>Banana AI Desktop</strong></p>
+                            <p>Version 1.0.0</p>
+                            <p>© 2024 AI Goodbye. All rights reserved.</p>
+                            <p><a href="https://aigoodbye.ai" target="_blank">aigoodbye.ai</a></p>
+                        </div>
+                        <button id="check-updates" class="btn-secondary">Check for Updates</button>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

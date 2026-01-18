@@ -1,0 +1,24 @@
+{
+  "$schema": "https://tauri.app/update.schema.json",
+  "name": "Banana AI Desktop",
+  "notes": "Release notes go here",
+  "pub_date": "2024-01-01T00:00:00Z",
+  "platforms": {
+    "darwin-x86_64": {
+      "signature": "",
+      "url": "https://aigoodbye.ai/downloads/Banana-AI_1.0.0_x64.dmg.tar.gz"
+    },
+    "darwin-aarch64": {
+      "signature": "",
+      "url": "https://aigoodbye.ai/downloads/Banana-AI_1.0.0_aarch64.dmg.tar.gz"
+    },
+    "linux-x86_64": {
+      "signature": "",
+      "url": "https://aigoodbye.ai/downloads/Banana-AI_1.0.0_amd64.AppImage.tar.gz"
+    },
+    "windows-x86_64": {
+      "signature": "",
+      "url": "https://aigoodbye.ai/downloads/Banana-AI_1.0.0_x64-setup.nsis.zip"
+    }
+  }
+}

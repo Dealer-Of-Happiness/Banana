@@ -1,0 +1,90 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Banana AI",
+  "version": "1.0.0",
+  "identifier": "ai.aigoodbye.banana",
+  "build": {
+    "beforeBuildCommand": "npm run bundle:python",
+    "beforeDevCommand": "",
+    "frontendDist": "../src",
+    "devUrl": "http://localhost:8000"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "Banana AI",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "center": true,
+        "decorations": true,
+        "resizable": true,
+        "fullscreen": false,
+        "transparent": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "targets": "all",
+    "externalBin": [
+      "binaries/banana-backend"
+    ],
+    "resources": [
+      "resources/*"
+    ],
+    "category": "Productivity",
+    "shortDescription": "Your Offline AI with Internet Connectivity",
+    "longDescription": "Banana AI is a powerful AI assistant that works offline with local models and can connect to the internet when needed. Train your own models, use knowledge bases, and chat with AI - all with complete privacy.",
+    "copyright": "Copyright 2024 AI Goodbye. All rights reserved.",
+    "publisher": "AI Goodbye",
+    "licenseFile": "../LICENSE",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "wix": null,
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "icons/header.bmp",
+        "sidebarImage": "icons/sidebar.bmp",
+        "installMode": "currentUser",
+        "license": "../LICENSE",
+        "languages": ["English"]
+      }
+    },
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": null,
+      "frameworks": [],
+      "minimumSystemVersion": "10.15",
+      "signingIdentity": null,
+      "providerShortName": null
+    },
+    "linux": {
+      "appId": "ai.aigoodbye.banana",
+      "category": "Utility",
+      "description": "Banana AI - Your Offline AI with Internet Connectivity"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://aigoodbye.ai/api/updates/{{target}}/{{arch}}/{{current_version}}"
+      ],
+      "pubkey": "YOUR_PUBLIC_KEY_HERE"
+    }
+  }
+}

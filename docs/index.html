@@ -1396,6 +1396,9 @@
                         <p class="mac-help-text">Not sure? Click  > About This Mac</p>
                     </div>
                     <p class="beta-note">Free beta - payment coming soon</p>
+                    <p class="mac-help-text" style="margin-top: 8px;">
+                        <a href="#macos-security" style="color: var(--neon-blue); text-decoration: underline;">Security warning? See how to open</a>
+                    </p>
                 </div>
 
                 <!-- Windows -->
@@ -1534,6 +1537,27 @@
                             <strong>Mac:</strong> macOS 12 Monterey or later, Apple Silicon or Intel<br>
                             <strong>Windows:</strong> Windows 10 or later, 64-bit<br><br>
                             For optimal AI performance, we recommend at least 8GB of RAM on desktop systems.
+                        </div>
+                    </div>
+                </div>
+                <div class="faq-item" id="macos-security">
+                    <button class="faq-question">
+                        macOS says "Apple could not verify" - how do I open the app?
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            This security message appears because AI Goodbye is currently in beta and distributed directly (not through the Mac App Store). The app is safe to use. To open it:<br><br>
+                            <strong>Method 1 (Recommended):</strong><br>
+                            1. Right-click (or Control-click) on the AI Goodbye app<br>
+                            2. Select "Open" from the menu<br>
+                            3. Click "Open" in the dialog that appears<br><br>
+                            <strong>Method 2:</strong><br>
+                            1. Try to open the app normally (it will be blocked)<br>
+                            2. Go to System Settings > Privacy & Security<br>
+                            3. Scroll down to find the message about AI Goodbye<br>
+                            4. Click "Open Anyway"<br><br>
+                            You only need to do this once. After the first time, the app will open normally. We're working on official Apple notarization for future releases.
                         </div>
                     </div>
                 </div>
@@ -1780,6 +1804,12 @@
                 'windows': 'Windows'
             };
 
+            const securityNotes = {
+                'macos-arm64': '\n\nNote for macOS: If you see a security warning, right-click the app and select "Open", then click "Open" again. See our FAQ for details.',
+                'macos-x64': '\n\nNote for macOS: If you see a security warning, right-click the app and select "Open", then click "Open" again. See our FAQ for details.',
+                'windows': ''
+            };
+
             const url = downloadUrls[platform];
 
             if (url) {
@@ -1809,9 +1839,9 @@
                             // Trigger download
                             window.location.href = asset.browser_download_url;
 
-                            // Show thank you message
+                            // Show thank you message with platform-specific notes
                             setTimeout(() => {
-                                alert(`Thank you for downloading AI Goodbye for ${platformNames[platform]}!\n\nYour download should start automatically. If it doesn't, please check your downloads folder or try again.\n\nNote: This is a free beta version. Payment will be required for the full release.`);
+                                alert(`Thank you for downloading AI Goodbye for ${platformNames[platform]}!\n\nYour download should start automatically. If it doesn't, please check your downloads folder or try again.\n\nThis is a free beta version. Payment will be required for the full release.${securityNotes[platform]}`);
                             }, 500);
                         } else {
                             throw new Error('Asset not found');
@@ -1819,7 +1849,7 @@
                     })
                     .catch(error => {
                         console.error('Download error:', error);
-                        alert(`Download Coming Soon!\n\nThe ${platformNames[platform]} version is currently being prepared. Please check back soon or contact us at marketing@dealerofhappiness.com for early access.`);
+                        alert(`Download Not Yet Available\n\nThe ${platformNames[platform]} beta release is currently being prepared and will be available very soon.\n\nPlease check back in a few days or contact us at marketing@dealerofhappiness.com for updates.`);
                     })
                     .finally(() => {
                         // Reset button after delay

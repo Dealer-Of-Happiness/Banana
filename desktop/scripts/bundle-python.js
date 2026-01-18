@@ -19,14 +19,17 @@ const platform = process.platform;
 const arch = process.arch;
 
 const binaryName = platform === 'win32' ? 'banana-backend.exe' : 'banana-backend';
-const targetTriple = getTargetTriple();
+
+// Support explicit target via environment variable (useful for CI)
+// This allows overriding auto-detection when needed
+const targetTriple = process.env.TAURI_TARGET || getTargetTriple();
 
 console.log('='.repeat(60));
 console.log('Banana AI - Python Backend Bundler');
 console.log('='.repeat(60));
 console.log(`Platform: ${platform}`);
 console.log(`Architecture: ${arch}`);
-console.log(`Target: ${targetTriple}`);
+console.log(`Target: ${targetTriple}${process.env.TAURI_TARGET ? ' (from TAURI_TARGET env)' : ''}`);
 console.log('');
 
 function getTargetTriple() {

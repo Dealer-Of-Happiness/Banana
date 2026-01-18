@@ -99,7 +99,9 @@ jobs:
             arch: arm64
             target: aarch64-apple-darwin
             artifact_suffix: arm64
-          - runner: macos-14
+          # Use macos-13 for Intel builds - macos-14 is ARM64 (Apple Silicon)
+          # PyInstaller cannot cross-compile, so we need an actual Intel runner
+          - runner: macos-13
             arch: x64
             target: x86_64-apple-darwin
             artifact_suffix: x64
@@ -135,6 +137,8 @@ jobs:
 
       - name: Bundle Python backend
         working-directory: desktop
+        env:
+          TAURI_TARGET: ${{ matrix.target }}
         run: npm run bundle:python
 
       - name: Build Tauri

@@ -57,7 +57,6 @@
       "timestampUrl": "http://timestamp.digicert.com",
       "wix": null,
       "nsis": {
-        "license": "../LICENSE",
         "installMode": "currentUser"
       }
     },

@@ -152,3 +152,16 @@ tensorboard/
 *.safetensors
 *.gguf
 *.ggml
+
+# Tauri generated icons (auto-generated in CI)
+desktop/src-tauri/icons/*.png
+desktop/src-tauri/icons/*.ico
+desktop/src-tauri/icons/*.icns
+desktop/src-tauri/icons/*.bmp
+
+# Tauri build artifacts
+desktop/src-tauri/target/
+desktop/src-tauri/binaries/
+desktop/dist/
+desktop/build/
+desktop/requirements-minimal.txt

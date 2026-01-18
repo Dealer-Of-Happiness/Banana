@@ -115,5 +115,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='src-tauri/icons/icon.ico' if sys.platform == 'win32' else 'src-tauri/icons/icon.icns',
+    icon='desktop/src-tauri/icons/icon.ico' if sys.platform == 'win32' else 'desktop/src-tauri/icons/icon.icns',
 )

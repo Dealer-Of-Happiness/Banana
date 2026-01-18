@@ -69,18 +69,35 @@ jobs:
           $outputDir = "release-artifacts"
           New-Item -ItemType Directory -Force -Path $outputDir
 
+          # When building with --target, artifacts are in target/{target}/release/bundle/
+          $targetDir = "desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle"
+          $fallbackDir = "desktop/src-tauri/target/release/bundle"
+
           # Find and rename the NSIS installer
-          $nsisFiles = Get-ChildItem -Path "desktop/src-tauri/target/release/bundle/nsis/*.exe" -ErrorAction SilentlyContinue
+          $nsisFiles = Get-ChildItem -Path "$targetDir/nsis/*.exe" -ErrorAction SilentlyContinue
+          if (-not $nsisFiles) {
+            $nsisFiles = Get-ChildItem -Path "$fallbackDir/nsis/*.exe" -ErrorAction SilentlyContinue
+          }
           if ($nsisFiles) {
             Copy-Item $nsisFiles[0].FullName "$outputDir/${{ env.APP_NAME }}-Windows-Setup.exe"
+            Write-Host "Copied NSIS installer: $($nsisFiles[0].FullName)"
+          } else {
+            Write-Host "Warning: No NSIS installer found"
           }
 
           # Find and rename the MSI installer
-          $msiFiles = Get-ChildItem -Path "desktop/src-tauri/target/release/bundle/msi/*.msi" -ErrorAction SilentlyContinue
+          $msiFiles = Get-ChildItem -Path "$targetDir/msi/*.msi" -ErrorAction SilentlyContinue
+          if (-not $msiFiles) {
+            $msiFiles = Get-ChildItem -Path "$fallbackDir/msi/*.msi" -ErrorAction SilentlyContinue
+          }
           if ($msiFiles) {
             Copy-Item $msiFiles[0].FullName "$outputDir/${{ env.APP_NAME }}-Windows.msi"
+            Write-Host "Copied MSI installer: $($msiFiles[0].FullName)"
+          } else {
+            Write-Host "Warning: No MSI installer found"
           }
 
+          Write-Host "Release artifacts:"
           Get-ChildItem $outputDir
 
       - name: Upload Windows artifacts

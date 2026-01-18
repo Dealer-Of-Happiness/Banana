@@ -1,4 +1,4 @@
-name: Desktop Build
+name: Desktop Build & Release
 
 on:
   push:
@@ -10,9 +10,18 @@ on:
         description: 'Version to build (e.g., 1.0.0)'
         required: true
         default: '1.0.0'
+      create_release:
+        description: 'Create a GitHub release'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 env:
   CARGO_TERM_COLOR: always
+  APP_NAME: AIGoodbye
 
 jobs:
   build-windows:
@@ -51,13 +60,32 @@ jobs:
         working-directory: desktop
         run: npm run build:windows
 
+      - name: Rename and organize artifacts
+        shell: pwsh
+        run: |
+          $version = if ("${{ github.event.inputs.version }}") { "${{ github.event.inputs.version }}" } else { "${{ github.ref_name }}".TrimStart('v') }
+          $outputDir = "release-artifacts"
+          New-Item -ItemType Directory -Force -Path $outputDir
+
+          # Find and rename the NSIS installer
+          $nsisFiles = Get-ChildItem -Path "desktop/src-tauri/target/release/bundle/nsis/*.exe" -ErrorAction SilentlyContinue
+          if ($nsisFiles) {
+            Copy-Item $nsisFiles[0].FullName "$outputDir/${{ env.APP_NAME }}-Windows-Setup.exe"
+          }
+
+          # Find and rename the MSI installer
+          $msiFiles = Get-ChildItem -Path "desktop/src-tauri/target/release/bundle/msi/*.msi" -ErrorAction SilentlyContinue
+          if ($msiFiles) {
+            Copy-Item $msiFiles[0].FullName "$outputDir/${{ env.APP_NAME }}-Windows.msi"
+          }
+
+          Get-ChildItem $outputDir
+
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-installer
-          path: |
-            desktop/src-tauri/target/release/bundle/nsis/*.exe
-            desktop/src-tauri/target/release/bundle/msi/*.msi
+          path: release-artifacts/*
 
   build-macos:
     runs-on: macos-latest
@@ -105,36 +133,97 @@ jobs:
         env:
           ARCHFLAGS: "-arch x86_64"
         run: |
-          # Rebuild for Intel
-          cd desktop
           npm run bundle:python
 
       - name: Build Tauri (x86_64)
         working-directory: desktop
         run: npm run build:mac-intel
 
+      - name: Rename and organize artifacts
+        run: |
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
+          VERSION="${VERSION#v}"
+          OUTPUT_DIR="release-artifacts"
+          mkdir -p $OUTPUT_DIR
+
+          # Find and rename DMG files
+          # ARM64 (Apple Silicon)
+          ARM_DMG=$(find desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg -name "*.dmg" 2>/dev/null | head -1)
+          if [ -n "$ARM_DMG" ]; then
+            cp "$ARM_DMG" "$OUTPUT_DIR/${{ env.APP_NAME }}-macOS-arm64.dmg"
+          fi
+
+          # x86_64 (Intel)
+          INTEL_DMG=$(find desktop/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg -name "*.dmg" 2>/dev/null | head -1)
+          if [ -n "$INTEL_DMG" ]; then
+            cp "$INTEL_DMG" "$OUTPUT_DIR/${{ env.APP_NAME }}-macOS-x64.dmg"
+          fi
+
+          # Fallback to release directory
+          RELEASE_DMG=$(find desktop/src-tauri/target/release/bundle/dmg -name "*.dmg" 2>/dev/null | head -1)
+          if [ -n "$RELEASE_DMG" ] && [ ! -f "$OUTPUT_DIR/${{ env.APP_NAME }}-macOS-arm64.dmg" ]; then
+            cp "$RELEASE_DMG" "$OUTPUT_DIR/${{ env.APP_NAME }}-macOS.dmg"
+          fi
+
+          ls -la $OUTPUT_DIR
+
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: macos-installer
-          path: |
-            desktop/src-tauri/target/release/bundle/dmg/*.dmg
-            desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
-            desktop/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+          path: release-artifacts/*
 
   release:
     needs: [build-windows, build-macos]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.create_release == 'true'
+    permissions:
+      contents: write
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Organize release files
+        run: |
+          mkdir -p release-files
+          find artifacts -type f \( -name "*.exe" -o -name "*.msi" -o -name "*.dmg" \) -exec cp {} release-files/ \;
+          ls -la release-files/
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "tag=v${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+            echo "tag=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            windows-installer/*
-            macos-installer/*
-          draft: true
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: AI Goodbye v${{ steps.version.outputs.version }}
+          files: release-files/*
+          draft: false
+          prerelease: false
           generate_release_notes: true
+          body: |
+            ## Downloads
+
+            | Platform | Architecture | Download |
+            |----------|--------------|----------|
+            | macOS | Apple Silicon (M1/M2/M3) | [AIGoodbye-macOS-arm64.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-macOS-arm64.dmg) |
+            | macOS | Intel | [AIGoodbye-macOS-x64.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-macOS-x64.dmg) |
+            | Windows | 64-bit | [AIGoodbye-Windows-Setup.exe](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-Windows-Setup.exe) |
+
+            ## Installation
+
+            **macOS:** Download the DMG file for your Mac type, open it, and drag AI Goodbye to your Applications folder.
+
+            **Windows:** Download the Setup.exe and run the installer.
+
+            ## What's New

@@ -97,6 +97,32 @@ body {
     100% { width: 0%; margin-left: 100%; }
 }
 
+.retry-btn {
+    margin-top: 20px;
+    padding: 12px 32px;
+    background: var(--primary);
+    color: var(--bg-dark);
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.retry-btn:hover {
+    background: var(--primary-dark);
+    transform: scale(1.02);
+}
+
+.retry-btn.hidden {
+    display: none;
+}
+
+.loading-text.error {
+    color: var(--error);
+}
+
 /* App Layout */
 .app {
     display: flex;

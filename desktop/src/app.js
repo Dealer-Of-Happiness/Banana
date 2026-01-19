@@ -44,6 +44,8 @@ let conversationHistory = [];
 
 // ==================== Initialization ====================
 
+let ollamaReady = false;
+
 async function init() {
     console.log('Initializing AI Goodbye Desktop...');
 
@@ -55,15 +57,52 @@ async function init() {
     setupSettings();
     setupModelSetup();
     setupImageAttachment();
+    setupRetryButton();
 
-    // Wait for embedded Ollama to start
+    // Start Ollama and wait for it
+    await startupSequence();
+}
+
+function setupRetryButton() {
+    const retryBtn = document.getElementById('retry-btn');
+    if (retryBtn) {
+        retryBtn.addEventListener('click', async () => {
+            retryBtn.classList.add('hidden');
+            await startupSequence();
+        });
+    }
+}
+
+async function startupSequence() {
+    const loadingBar = document.querySelector('.loading-bar');
+    const loadingTextEl = document.querySelector('.loading-text');
+    const retryBtn = document.getElementById('retry-btn');
+
+    // Reset UI
+    if (loadingBar) loadingBar.style.display = '';
+    if (loadingTextEl) loadingTextEl.className = 'loading-text';
     updateLoadingText('Starting AI engine...');
-    await waitForOllama();
 
-    // Check for installed models
+    // Wait for Ollama to be ready
+    console.log('Waiting for Ollama...');
+    ollamaReady = await waitForOllama();
+
+    if (!ollamaReady) {
+        // Ollama failed to start - show error and retry button
+        console.error('Ollama failed to start');
+        if (loadingBar) loadingBar.style.display = 'none';
+        if (loadingTextEl) loadingTextEl.className = 'loading-text error';
+        updateLoadingText('Could not start AI engine. Click Retry.');
+        if (retryBtn) retryBtn.classList.remove('hidden');
+        return;
+    }
+
+    // Ollama is ready - proceed with app
+    console.log('Ollama ready, syncing models...');
+    updateLoadingText('Checking installed models...');
     await syncWithOllama();
 
-    // Check if this is first launch or if models need to be set up
+    // Show appropriate screen
     await checkModelSetup();
 }
 
@@ -74,22 +113,24 @@ function updateLoadingText(text) {
     }
 }
 
-// Wait for embedded Ollama to become ready (started by Tauri)
-async function waitForOllama(maxAttempts = 30) {
+// Wait for Ollama to become ready
+async function waitForOllama(maxAttempts = 60) {
+    // Try up to 60 times with 500ms delay = 30 seconds total
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
         const ready = await checkOllamaAvailable();
         if (ready) {
-            console.log('Ollama is ready');
+            console.log(`Ollama ready after ${attempt + 1} attempts`);
             return true;
         }
-        // Wait 500ms between attempts (total ~15 seconds max)
+
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        if (attempt % 4 === 0) {
-            updateLoadingText('Starting AI engine' + '.'.repeat((attempt / 4) % 4 + 1));
-        }
+        // Update loading text with dots
+        const dots = '.'.repeat((attempt % 3) + 1);
+        updateLoadingText(`Starting AI engine${dots}`);
     }
-    console.warn('Ollama did not start within expected time');
+
+    console.warn('Ollama did not start within 30 seconds');
     return false;
 }
 
@@ -279,27 +320,12 @@ function setupModelSetup() {
             return;
         }
 
-        // Show starting status
-        selectionHint.textContent = 'Checking AI engine...';
-        selectionHint.style.color = '';
-        downloadBtn.disabled = true;
-
-        // Check if embedded Ollama is ready
-        console.log('Checking Ollama availability...');
-        const ollamaAvailable = await checkOllamaAvailable();
-        console.log('Ollama available:', ollamaAvailable);
-
-        if (!ollamaAvailable) {
-            selectionHint.textContent = 'AI engine not ready. Please restart the app and try again.';
-            selectionHint.style.color = '#ff6b6b';
-            downloadBtn.disabled = false;
-            return;
-        }
-
         // Disable UI during download
+        downloadBtn.disabled = true;
         downloadBtn.textContent = 'Downloading...';
         modelCheckboxes.forEach(cb => cb.disabled = true);
         selectionHint.textContent = `Downloading ${selectedModels.length} model${selectedModels.length > 1 ? 's' : ''}...`;
+        selectionHint.style.color = '';
 
         // Download all selected models in parallel
         console.log('Starting parallel downloads...');
@@ -318,7 +344,7 @@ function setupModelSetup() {
             downloadBtn.disabled = false;
             downloadBtn.textContent = 'Download Selected Models';
             modelCheckboxes.forEach(cb => cb.disabled = false);
-            selectionHint.textContent = 'Download failed. Check console for details.';
+            selectionHint.textContent = 'Download failed. Please try again.';
             selectionHint.style.color = '#ff6b6b';
         }
     });
@@ -534,23 +560,6 @@ window.handleDownloadModel = async function(modelId) {
     console.log('handleDownloadModel called for:', modelId);
 
     const modelItem = document.querySelector(`.model-item[data-model="${modelId}"]`);
-    if (modelItem) {
-        const actionsDiv = modelItem.querySelector('.model-item-actions');
-        actionsDiv.innerHTML = `<span class="model-item-status downloading">Checking...</span>`;
-    }
-
-    const ollamaAvailable = await checkOllamaAvailable();
-    if (!ollamaAvailable) {
-        if (modelItem) {
-            const actionsDiv = modelItem.querySelector('.model-item-actions');
-            actionsDiv.innerHTML = `
-                <span class="model-item-status error">AI engine not ready</span>
-                <button class="btn-download-small" onclick="handleDownloadModel('${modelId}')">Retry</button>
-            `;
-        }
-        return;
-    }
-
     if (modelItem) {
         const actionsDiv = modelItem.querySelector('.model-item-actions');
         actionsDiv.innerHTML = `<span class="model-item-status downloading">Downloading...</span>`;

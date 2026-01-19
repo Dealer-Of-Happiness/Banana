@@ -432,11 +432,16 @@ async function downloadModelFromOllama(modelId) {
                     const data = JSON.parse(line);
                     console.log(`[${modelId}] Ollama response:`, data);
 
-                    // Check for error from Ollama
+                    // Check for error from Ollama - break immediately
                     if (data.error) {
                         errorMessage = data.error;
                         console.error(`[${modelId}] Ollama error:`, data.error);
-                        continue;
+                        // Show error immediately to user
+                        if (statusTextEl) {
+                            statusTextEl.textContent = `Error: ${data.error.substring(0, 50)}`;
+                            statusTextEl.className = 'status-text error';
+                        }
+                        break;
                     }
 
                     // Update status text based on Ollama's status
@@ -472,6 +477,9 @@ async function downloadModelFromOllama(modelId) {
                     console.log(`[${modelId}] Parse error for line:`, line);
                 }
             }
+
+            // Break outer loop if we got an error
+            if (errorMessage) break;
         }
 
         // Check if Ollama returned an error

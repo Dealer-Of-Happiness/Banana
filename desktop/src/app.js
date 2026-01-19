@@ -225,44 +225,59 @@ function setupImageAttachment() {
 
     console.log('Setting up image attachment...');
 
-    attachButton.addEventListener('click', (e) => {
+    // Use a more direct approach - create new input each time for reliability
+    attachButton.onclick = function(e) {
         e.preventDefault();
         e.stopPropagation();
         console.log('Attach button clicked');
-        imageInput.click();
-    });
 
-    imageInput.addEventListener('change', (e) => {
-        console.log('Files selected:', e.target.files.length);
-        const files = Array.from(e.target.files);
+        // Create a fresh file input to avoid caching issues
+        const tempInput = document.createElement('input');
+        tempInput.type = 'file';
+        tempInput.accept = 'image/*';
+        tempInput.multiple = true;
 
-        files.forEach(file => {
-            console.log('Processing file:', file.name, file.type);
-            if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    console.log('File loaded, adding to pendingImages');
-                    const base64 = event.target.result.split(',')[1];
-                    pendingImages.push({
-                        base64: base64,
-                        preview: event.target.result,
-                        name: file.name
-                    });
-                    console.log('pendingImages count:', pendingImages.length);
-                    renderImagePreviews();
-                    updateSendButtonState();
-                };
-                reader.onerror = (error) => {
-                    console.error('FileReader error:', error);
-                };
-                reader.readAsDataURL(file);
-            } else {
-                console.log('File is not an image:', file.type);
-            }
-        });
-        // Reset input so same file can be selected again
-        imageInput.value = '';
-    });
+        tempInput.onchange = function() {
+            console.log('Files selected:', tempInput.files.length);
+            const files = Array.from(tempInput.files);
+
+            files.forEach(file => {
+                console.log('Processing file:', file.name, file.type, file.size);
+
+                // Check by file extension as well as MIME type
+                const isImage = file.type.startsWith('image/') ||
+                    /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(file.name);
+
+                if (isImage) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        console.log('File loaded successfully, adding to pendingImages');
+                        const dataUrl = event.target.result;
+                        const base64 = dataUrl.split(',')[1];
+                        pendingImages.push({
+                            base64: base64,
+                            preview: dataUrl,
+                            name: file.name
+                        });
+                        console.log('pendingImages count:', pendingImages.length);
+                        renderImagePreviews();
+                        updateSendButtonState();
+                    };
+                    reader.onerror = function(error) {
+                        console.error('FileReader error:', error);
+                        alert('Failed to read file: ' + file.name);
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    console.log('File is not an image:', file.type);
+                    alert('Please select an image file (JPG, PNG, GIF, etc.)');
+                }
+            });
+        };
+
+        // Trigger file selection
+        tempInput.click();
+    };
 }
 
 function renderImagePreviews() {
@@ -752,18 +767,10 @@ function setupNavigation() {
     navItems.forEach(item => {
         item.addEventListener('click', () => {
             const viewName = item.dataset.view;
-
-            navItems.forEach(nav => nav.classList.remove('active'));
-            item.classList.add('active');
-
-            views.forEach(view => {
-                view.classList.toggle('active', view.id === `${viewName}-view`);
-            });
+            switchToView(viewName);
 
             if (viewName === 'settings') {
                 renderModelList();
-            }
-            if (viewName === 'knowledge') {
                 loadKBStats();
                 renderKBDocuments();
             }
@@ -829,71 +836,93 @@ function createNewChat(folderId = null) {
 }
 
 function createNewFolder() {
-    const name = prompt('Enter folder name:');
-    if (name && name.trim()) {
-        const newFolder = {
-            id: Date.now().toString(),
-            name: name.trim(),
-            createdAt: new Date().toISOString()
-        };
-        folders.push(newFolder);
-        saveChatsAndFolders();
-        renderChatList();
-    }
+    showInputDialog('Enter folder name:', '', (name) => {
+        if (name) {
+            const newFolder = {
+                id: Date.now().toString(),
+                name: name,
+                createdAt: new Date().toISOString()
+            };
+            folders.push(newFolder);
+            saveChatsAndFolders();
+            renderChatList();
+        }
+    });
 }
 
 function renameChat(chatId) {
     const chat = chats.find(c => c.id === chatId);
     if (chat) {
-        const newName = prompt('Enter new name:', chat.name);
-        if (newName && newName.trim()) {
-            chat.name = newName.trim();
-            saveChatsAndFolders();
-            renderChatList();
-        }
+        showInputDialog('Enter new name:', chat.name, (newName) => {
+            if (newName) {
+                chat.name = newName;
+                saveChatsAndFolders();
+                renderChatList();
+            }
+        });
     }
 }
 
 function deleteChat(chatId) {
-    if (confirm('Delete this chat?')) {
-        chats = chats.filter(c => c.id !== chatId);
-        if (currentChatId === chatId) {
-            currentChatId = chats.length > 0 ? chats[0].id : null;
-            if (!currentChatId) {
-                createNewChat();
-                return;
+    showConfirmDialog('Delete this chat?', 'Yes, Delete', 'Cancel', (confirmed) => {
+        if (confirmed) {
+            chats = chats.filter(c => c.id !== chatId);
+            if (currentChatId === chatId) {
+                currentChatId = chats.length > 0 ? chats[0].id : null;
+                if (!currentChatId) {
+                    createNewChat();
+                    return;
+                }
             }
+            saveChatsAndFolders();
+            renderChatList();
+            loadCurrentChat();
         }
-        saveChatsAndFolders();
-        renderChatList();
-        loadCurrentChat();
-    }
+    });
 }
 
 function renameFolder(folderId) {
     const folder = folders.find(f => f.id === folderId);
     if (folder) {
-        const newName = prompt('Enter new name:', folder.name);
-        if (newName && newName.trim()) {
-            folder.name = newName.trim();
-            saveChatsAndFolders();
-            renderChatList();
-        }
+        showInputDialog('Enter new name:', folder.name, (newName) => {
+            if (newName) {
+                folder.name = newName;
+                saveChatsAndFolders();
+                renderChatList();
+            }
+        });
     }
 }
 
 function deleteFolder(folderId) {
-    if (confirm('Delete this folder? Chats inside will be moved out.')) {
-        // Move chats out of folder
-        chats.forEach(chat => {
-            if (chat.folderId === folderId) {
-                chat.folderId = null;
+    const folderChats = chats.filter(c => c.folderId === folderId);
+    const message = folderChats.length > 0
+        ? `Are you sure? All ${folderChats.length} chat(s) within this folder will be deleted too.`
+        : 'Delete this folder?';
+
+    showConfirmDialog(message, 'Yes, Delete', 'Cancel', (confirmed) => {
+        if (confirmed) {
+            // Delete all chats in the folder
+            const chatIdsToDelete = folderChats.map(c => c.id);
+            chats = chats.filter(c => !chatIdsToDelete.includes(c.id));
+
+            // Delete the folder
+            folders = folders.filter(f => f.id !== folderId);
+
+            // If current chat was deleted, select another
+            if (chatIdsToDelete.includes(currentChatId)) {
+                currentChatId = chats.length > 0 ? chats[0].id : null;
+                if (!currentChatId) {
+                    createNewChat();
+                    return;
+                }
             }
-        });
-        folders = folders.filter(f => f.id !== folderId);
-        saveChatsAndFolders();
-        renderChatList();
-    }
+
+            saveChatsAndFolders();
+            renderChatList();
+            loadCurrentChat();
+        }
+    });
 }
 
 function moveChatToFolder(chatId, folderId) {
@@ -909,6 +938,21 @@ function selectChat(chatId) {
     currentChatId = chatId;
     renderChatList();
     loadCurrentChat();
+
+    // Switch to chat view
+    switchToView('chat');
+}
+
+function switchToView(viewName) {
+    // Update nav items
+    navItems.forEach(nav => nav.classList.remove('active'));
+    const targetNav = document.querySelector(`.nav-item[data-view="${viewName}"]`);
+    if (targetNav) targetNav.classList.add('active');
+
+    // Update views
+    views.forEach(view => {
+        view.classList.toggle('active', view.id === `${viewName}-view`);
+    });
 }
 
 function loadCurrentChat() {
@@ -1414,6 +1458,112 @@ async function checkForUpdates() {
     } catch (e) {
         alert('Update check failed.');
     }
+}
+
+// ==================== Custom Dialogs ====================
+
+function showConfirmDialog(message, confirmText, cancelText, callback) {
+    // Remove any existing dialog
+    const existingDialog = document.getElementById('custom-dialog');
+    if (existingDialog) existingDialog.remove();
+
+    const dialog = document.createElement('div');
+    dialog.id = 'custom-dialog';
+    dialog.className = 'custom-dialog-overlay';
+    dialog.innerHTML = `
+        <div class="custom-dialog">
+            <p class="dialog-message">${escapeHtml(message)}</p>
+            <div class="dialog-buttons">
+                <button class="dialog-btn dialog-btn-cancel">${escapeHtml(cancelText)}</button>
+                <button class="dialog-btn dialog-btn-confirm">${escapeHtml(confirmText)}</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(dialog);
+
+    const confirmBtn = dialog.querySelector('.dialog-btn-confirm');
+    const cancelBtn = dialog.querySelector('.dialog-btn-cancel');
+
+    confirmBtn.addEventListener('click', () => {
+        dialog.remove();
+        callback(true);
+    });
+
+    cancelBtn.addEventListener('click', () => {
+        dialog.remove();
+        callback(false);
+    });
+
+    // Close on overlay click
+    dialog.addEventListener('click', (e) => {
+        if (e.target === dialog) {
+            dialog.remove();
+            callback(false);
+        }
+    });
+}
+
+function showInputDialog(title, defaultValue, callback) {
+    // Remove any existing dialog
+    const existingDialog = document.getElementById('custom-dialog');
+    if (existingDialog) existingDialog.remove();
+
+    const dialog = document.createElement('div');
+    dialog.id = 'custom-dialog';
+    dialog.className = 'custom-dialog-overlay';
+    dialog.innerHTML = `
+        <div class="custom-dialog">
+            <p class="dialog-message">${escapeHtml(title)}</p>
+            <input type="text" class="dialog-input" value="${escapeHtml(defaultValue || '')}" autofocus>
+            <div class="dialog-buttons">
+                <button class="dialog-btn dialog-btn-cancel">Cancel</button>
+                <button class="dialog-btn dialog-btn-confirm">OK</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(dialog);
+
+    const input = dialog.querySelector('.dialog-input');
+    const confirmBtn = dialog.querySelector('.dialog-btn-confirm');
+    const cancelBtn = dialog.querySelector('.dialog-btn-cancel');
+
+    // Focus and select input
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 50);
+
+    const submit = () => {
+        const value = input.value.trim();
+        dialog.remove();
+        callback(value || null);
+    };
+
+    confirmBtn.addEventListener('click', submit);
+
+    cancelBtn.addEventListener('click', () => {
+        dialog.remove();
+        callback(null);
+    });
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            submit();
+        } else if (e.key === 'Escape') {
+            dialog.remove();
+            callback(null);
+        }
+    });
+
+    // Close on overlay click
+    dialog.addEventListener('click', (e) => {
+        if (e.target === dialog) {
+            dialog.remove();
+            callback(null);
+        }
+    });
 }
 
 // ==================== Utilities ====================

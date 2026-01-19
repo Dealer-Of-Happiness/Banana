@@ -178,9 +178,6 @@
                 <button class="nav-item" data-view="settings">
                     <span class="icon">Settings</span>
                 </button>
-                <button class="nav-item" data-view="knowledge">
-                    <span class="icon">Knowledge Base</span>
-                </button>
             </nav>
 
             <!-- Chat management buttons -->
@@ -251,46 +248,6 @@
                 </div>
             </div>
 
-            <!-- Knowledge Base View -->
-            <div id="knowledge-view" class="view">
-                <div class="view-header">
-                    <h2>Knowledge Base</h2>
-                    <p>Add documents to enhance AI responses with your own data.</p>
-                </div>
-
-                <div class="kb-content">
-                    <div class="upload-zone" id="upload-zone">
-                        <div class="upload-icon">+</div>
-                        <p>Drag & drop files here or click to upload</p>
-                        <p class="upload-hint">Supports: PDF, TXT, MD, DOCX</p>
-                        <input type="file" id="file-input" multiple accept=".pdf,.txt,.md,.docx" hidden>
-                    </div>
-
-                    <div class="kb-stats" id="kb-stats">
-                        <div class="stat-card">
-                            <span class="stat-value" id="doc-count">0</span>
-                            <span class="stat-label">Documents</span>
-                        </div>
-                        <div class="stat-card">
-                            <span class="stat-value" id="chunk-count">0</span>
-                            <span class="stat-label">Chunks</span>
-                        </div>
-                    </div>
-
-                    <h3>Your Documents</h3>
-                    <div id="kb-docs-list" class="kb-docs-list">
-                        <p class="empty-state">No documents added yet.</p>
-                    </div>
-
-                    <h3>Search</h3>
-                    <div class="kb-search">
-                        <input type="text" id="kb-search-input" placeholder="Search your knowledge base...">
-                        <button id="kb-search-btn" class="btn-primary">Search</button>
-                    </div>
-
-                    <div class="kb-results" id="kb-results"></div>
-                </div>
-            </div>
 
             <!-- Settings View -->
             <div id="settings-view" class="view">
@@ -320,11 +277,49 @@
                     </section>
 
                     <section class="settings-section">
+                        <h3>Knowledge Base</h3>
+                        <p class="settings-note">Add documents to enhance AI responses with your own data.</p>
+
+                        <div class="kb-content">
+                            <div class="upload-zone" id="upload-zone">
+                                <div class="upload-icon">+</div>
+                                <p>Drag & drop files here or click to upload</p>
+                                <p class="upload-hint">Supports: PDF, TXT, MD, DOCX</p>
+                                <input type="file" id="file-input" multiple accept=".pdf,.txt,.md,.docx" hidden>
+                            </div>
+
+                            <div class="kb-stats" id="kb-stats">
+                                <div class="stat-card">
+                                    <span class="stat-value" id="doc-count">0</span>
+                                    <span class="stat-label">Documents</span>
+                                </div>
+                                <div class="stat-card">
+                                    <span class="stat-value" id="chunk-count">0</span>
+                                    <span class="stat-label">Chunks</span>
+                                </div>
+                            </div>
+
+                            <h4>Your Documents</h4>
+                            <div id="kb-docs-list" class="kb-docs-list">
+                                <p class="empty-state">No documents added yet.</p>
+                            </div>
+
+                            <h4>Search</h4>
+                            <div class="kb-search">
+                                <input type="text" id="kb-search-input" placeholder="Search your knowledge base...">
+                                <button id="kb-search-btn" class="btn-primary">Search</button>
+                            </div>
+
+                            <div class="kb-results" id="kb-results"></div>
+                        </div>
+                    </section>
+
+                    <section class="settings-section">
                         <h3>About</h3>
                         <div class="about-info">
                             <p><strong>AI Goodbye Desktop</strong></p>
                             <p>Version 1.0.0</p>
-                            <p>2024 AI Goodbye. All rights reserved.</p>
+                            <p>2026 AI Goodbye. All rights reserved.</p>
                             <p><a href="https://aigoodbye.ai" target="_blank">aigoodbye.ai</a></p>
                         </div>
                         <button id="check-updates" class="btn-secondary">Check for Updates</button>

@@ -1,109 +1,150 @@
 #!/usr/bin/env python3
 """
-Generate placeholder icons for CI builds.
+Generate app icons from the source icon for desktop builds.
 
-Creates the minimum required icon files for Tauri and PyInstaller builds.
-These are simple yellow banana-colored squares as placeholders.
+Uses the AIGoodbye iPhone app icon as the source and creates all required
+icon formats for Tauri (macOS, Windows, Linux).
 """
 
 import os
 import struct
 import sys
+import zlib
 
-# Banana yellow color: #f7d716 -> RGB(247, 215, 22)
-BANANA_YELLOW = (247, 215, 22)
+# Path to source icon (relative to this script)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SOURCE_ICON = os.path.join(SCRIPT_DIR, '..', '..', 'AIGoodbye', 'AIGoodbye',
+                           'Assets.xcassets', 'AppIcon.appiconset', 'AppIcon.png')
 
-def create_png(width, height, color, output_path):
+def resize_image_with_pil(source_path, sizes, icons_dir):
+    """Use PIL to resize source image and create all icon formats."""
+    from PIL import Image
+
+    print(f"Using source icon: {source_path}")
+    img = Image.open(source_path).convert('RGBA')
+
+    # Create PNG files
+    for size, filename in [(32, '32x32.png'), (128, '128x128.png'), (256, '128x128@2x.png')]:
+        resized = img.resize((size, size), Image.Resampling.LANCZOS)
+        output_path = os.path.join(icons_dir, filename)
+        resized.save(output_path, 'PNG')
+        print(f"Created: {output_path}")
+
+    # Create Windows ICO
+    ico_sizes = [16, 32, 48, 64, 128, 256]
+    ico_images = [img.resize((s, s), Image.Resampling.LANCZOS) for s in ico_sizes]
+    ico_path = os.path.join(icons_dir, 'icon.ico')
+    ico_images[0].save(ico_path, format='ICO', sizes=[(s, s) for s in ico_sizes], append_images=ico_images[1:])
+    print(f"Created: {ico_path}")
+
+    # Create macOS ICNS
+    icns_path = os.path.join(icons_dir, 'icon.icns')
+    create_icns_from_pil(img, icns_path)
+    print(f"Created: {icns_path}")
+
+    # Create Windows installer images (header.bmp and sidebar.bmp)
+    # These need to be 24-bit BMP files
+    header = img.resize((150, 57), Image.Resampling.LANCZOS).convert('RGB')
+    header_path = os.path.join(icons_dir, 'header.bmp')
+    header.save(header_path, 'BMP')
+    print(f"Created: {header_path}")
+
+    sidebar = img.resize((164, 314), Image.Resampling.LANCZOS).convert('RGB')
+    sidebar_path = os.path.join(icons_dir, 'sidebar.bmp')
+    sidebar.save(sidebar_path, 'BMP')
+    print(f"Created: {sidebar_path}")
+
+
+def create_icns_from_pil(img, output_path):
+    """Create macOS ICNS file from PIL Image."""
+    from PIL import Image
+    import io
+
+    # ICNS type codes for different sizes (PNG-based for modern macOS)
+    type_codes = {
+        16: b'icp4',
+        32: b'icp5',
+        64: b'icp6',
+        128: b'ic07',
+        256: b'ic08',
+        512: b'ic09',
+        1024: b'ic10',
+    }
+
+    icons_data = b''
+
+    for size, type_code in type_codes.items():
+        resized = img.resize((size, size), Image.Resampling.LANCZOS)
+
+        # Save as PNG to bytes
+        png_buffer = io.BytesIO()
+        resized.save(png_buffer, format='PNG')
+        png_data = png_buffer.getvalue()
+
+        # Add to ICNS data
+        chunk_size = len(png_data) + 8
+        icons_data += type_code + struct.pack('>I', chunk_size) + png_data
+
+    # ICNS header
+    total_size = len(icons_data) + 8
+    icns_header = b'icns' + struct.pack('>I', total_size)
+
+    with open(output_path, 'wb') as f:
+        f.write(icns_header + icons_data)
+
+
+# Fallback: Create placeholder icons without PIL
+# (keeping the original fallback code for environments without PIL)
+
+FALLBACK_COLOR = (147, 112, 219)  # Purple-ish color as fallback
+
+def create_png_fallback(width, height, color, output_path):
     """Create a simple solid-color PNG file without external dependencies."""
-    import zlib
-
     def write_chunk(chunk_type, data):
         chunk = chunk_type + data
         return struct.pack('>I', len(data)) + chunk + struct.pack('>I', zlib.crc32(chunk) & 0xffffffff)
 
-    # PNG signature
     signature = b'\x89PNG\r\n\x1a\n'
-
-    # IHDR chunk - color type 6 = RGBA (truecolor with alpha)
     ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)
     ihdr = write_chunk(b'IHDR', ihdr_data)
 
-    # IDAT chunk (image data)
     raw_data = b''
     for y in range(height):
-        raw_data += b'\x00'  # Filter byte
+        raw_data += b'\x00'
         for x in range(width):
-            raw_data += bytes(color) + b'\xff'  # RGBA (with full alpha)
+            raw_data += bytes(color) + b'\xff'
 
     compressed = zlib.compress(raw_data, 9)
     idat = write_chunk(b'IDAT', compressed)
-
-    # IEND chunk
     iend = write_chunk(b'IEND', b'')
 
     with open(output_path, 'wb') as f:
         f.write(signature + ihdr + idat + iend)
+    print(f"Created (fallback): {output_path}")
 
-    print(f"Created: {output_path}")
 
-
-def create_ico(sizes, color, output_path):
-    """Create a Windows ICO file with multiple sizes."""
-    import zlib
-
+def create_ico_fallback(sizes, color, output_path):
+    """Create a Windows ICO file with multiple sizes (fallback)."""
     def create_bmp_data(width, height, color):
-        """Create BMP image data for ICO (no file header, 32-bit BGRA)."""
-        # BITMAPINFOHEADER (40 bytes)
-        header = struct.pack('<IiiHHIIiiII',
-            40,           # biSize
-            width,        # biWidth
-            height * 2,   # biHeight (doubled for ICO format with mask)
-            1,            # biPlanes
-            32,           # biBitCount (32-bit BGRA)
-            0,            # biCompression
-            0,            # biSizeImage
-            0,            # biXPelsPerMeter
-            0,            # biYPelsPerMeter
-            0,            # biClrUsed
-            0             # biClrImportant
-        )
-
-        # Pixel data (BGRA, bottom-up)
+        header = struct.pack('<IiiHHIIiiII', 40, width, height * 2, 1, 32, 0, 0, 0, 0, 0, 0)
         pixels = b''
         for y in range(height):
             for x in range(width):
-                # BGRA format
                 pixels += bytes([color[2], color[1], color[0], 255])
-
-        # AND mask (1 bit per pixel, all zeros = fully opaque)
         mask_row_size = ((width + 31) // 32) * 4
         mask = b'\x00' * (mask_row_size * height)
-
         return header + pixels + mask
 
-    # ICO header
     ico_header = struct.pack('<HHH', 0, 1, len(sizes))
-
-    # Calculate offsets
-    offset = 6 + len(sizes) * 16  # Header + directory entries
-
+    offset = 6 + len(sizes) * 16
     entries = []
     images = []
 
     for size in sizes:
         bmp_data = create_bmp_data(size, size, color)
-
-        # Directory entry
         entry = struct.pack('<BBBBHHII',
-            size if size < 256 else 0,  # Width (0 = 256)
-            size if size < 256 else 0,  # Height (0 = 256)
-            0,                           # Color palette
-            0,                           # Reserved
-            1,                           # Color planes
-            32,                          # Bits per pixel
-            len(bmp_data),              # Size of image data
-            offset                       # Offset to image data
-        )
+            size if size < 256 else 0, size if size < 256 else 0,
+            0, 0, 1, 32, len(bmp_data), offset)
         entries.append(entry)
         images.append(bmp_data)
         offset += len(bmp_data)
@@ -114,33 +155,19 @@ def create_ico(sizes, color, output_path):
             f.write(entry)
         for image in images:
             f.write(image)
+    print(f"Created (fallback): {output_path}")
 
-    print(f"Created: {output_path}")
 
-
-def create_icns(sizes, color, output_path):
-    """Create a macOS ICNS file."""
-    # ICNS type codes for different sizes
-    type_codes = {
-        16: b'icp4',   # 16x16
-        32: b'icp5',   # 32x32
-        64: b'icp6',   # 64x64
-        128: b'ic07',  # 128x128
-        256: b'ic08',  # 256x256
-        512: b'ic09',  # 512x512
-        1024: b'ic10', # 1024x1024
-    }
-
-    import zlib
+def create_icns_fallback(sizes, color, output_path):
+    """Create a macOS ICNS file (fallback)."""
+    type_codes = {16: b'icp4', 32: b'icp5', 64: b'icp6', 128: b'ic07', 256: b'ic08', 512: b'ic09', 1024: b'ic10'}
 
     def create_png_data(width, height, color):
-        """Create PNG data in memory with RGBA format."""
         def write_chunk(chunk_type, data):
             chunk = chunk_type + data
             return struct.pack('>I', len(data)) + chunk + struct.pack('>I', zlib.crc32(chunk) & 0xffffffff)
 
         signature = b'\x89PNG\r\n\x1a\n'
-        # Color type 6 = RGBA (truecolor with alpha)
         ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)
         ihdr = write_chunk(b'IHDR', ihdr_data)
 
@@ -148,106 +175,88 @@ def create_icns(sizes, color, output_path):
         for y in range(height):
             raw_data += b'\x00'
             for x in range(width):
-                raw_data += bytes(color) + b'\xff'  # RGBA with full alpha
+                raw_data += bytes(color) + b'\xff'
 
         compressed = zlib.compress(raw_data, 9)
         idat = write_chunk(b'IDAT', compressed)
         iend = write_chunk(b'IEND', b'')
-
         return signature + ihdr + idat + iend
 
-    # Build ICNS file
     icons_data = b''
-
     for size in sizes:
         if size in type_codes:
             png_data = create_png_data(size, size, color)
-            type_code = type_codes[size]
             chunk_size = len(png_data) + 8
-            icons_data += type_code + struct.pack('>I', chunk_size) + png_data
+            icons_data += type_codes[size] + struct.pack('>I', chunk_size) + png_data
 
-    # ICNS header
     total_size = len(icons_data) + 8
-    icns_header = b'icns' + struct.pack('>I', total_size)
-
     with open(output_path, 'wb') as f:
-        f.write(icns_header + icons_data)
+        f.write(b'icns' + struct.pack('>I', total_size) + icons_data)
+    print(f"Created (fallback): {output_path}")
 
-    print(f"Created: {output_path}")
 
-
-def create_bmp(width, height, color, output_path):
-    """Create a simple 24-bit BMP file."""
-    # BMP header (14 bytes)
-    row_size = ((width * 3 + 3) // 4) * 4  # Rows must be 4-byte aligned
+def create_bmp_fallback(width, height, color, output_path):
+    """Create a simple 24-bit BMP file (fallback)."""
+    row_size = ((width * 3 + 3) // 4) * 4
     pixel_data_size = row_size * height
     file_size = 54 + pixel_data_size
 
-    bmp_header = struct.pack('<2sIHHI',
-        b'BM',          # Signature
-        file_size,      # File size
-        0,              # Reserved 1
-        0,              # Reserved 2
-        54              # Offset to pixel data
-    )
+    bmp_header = struct.pack('<2sIHHI', b'BM', file_size, 0, 0, 54)
+    dib_header = struct.pack('<IiiHHIIiiII', 40, width, height, 1, 24, 0, pixel_data_size, 2835, 2835, 0, 0)
 
-    # DIB header (40 bytes)
-    dib_header = struct.pack('<IiiHHIIiiII',
-        40,             # Header size
-        width,          # Width
-        height,         # Height (positive = bottom-up)
-        1,              # Color planes
-        24,             # Bits per pixel
-        0,              # Compression (none)
-        pixel_data_size,# Image size
-        2835,           # Horizontal resolution (72 DPI)
-        2835,           # Vertical resolution (72 DPI)
-        0,              # Colors in palette
-        0               # Important colors
-    )
-
-    # Pixel data (BGR, bottom-up, padded to 4-byte boundary)
     pixels = b''
     padding = b'\x00' * (row_size - width * 3)
     for y in range(height):
         for x in range(width):
-            pixels += bytes([color[2], color[1], color[0]])  # BGR
+            pixels += bytes([color[2], color[1], color[0]])
         pixels += padding
 
     with open(output_path, 'wb') as f:
         f.write(bmp_header + dib_header + pixels)
+    print(f"Created (fallback): {output_path}")
 
-    print(f"Created: {output_path}")
+
+def generate_fallback_icons(icons_dir):
+    """Generate placeholder icons without PIL."""
+    print("WARNING: PIL not available. Generating placeholder icons.")
+    print("Install Pillow for proper icons: pip install Pillow")
+    print()
+
+    create_png_fallback(32, 32, FALLBACK_COLOR, os.path.join(icons_dir, '32x32.png'))
+    create_png_fallback(128, 128, FALLBACK_COLOR, os.path.join(icons_dir, '128x128.png'))
+    create_png_fallback(256, 256, FALLBACK_COLOR, os.path.join(icons_dir, '128x128@2x.png'))
+    create_ico_fallback([16, 32, 48, 64, 128, 256], FALLBACK_COLOR, os.path.join(icons_dir, 'icon.ico'))
+    create_icns_fallback([16, 32, 64, 128, 256, 512], FALLBACK_COLOR, os.path.join(icons_dir, 'icon.icns'))
+    create_bmp_fallback(150, 57, FALLBACK_COLOR, os.path.join(icons_dir, 'header.bmp'))
+    create_bmp_fallback(164, 314, FALLBACK_COLOR, os.path.join(icons_dir, 'sidebar.bmp'))
 
 
 def main():
-    # Determine icons directory
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    icons_dir = os.path.join(script_dir, '..', 'src-tauri', 'icons')
+    icons_dir = os.path.join(SCRIPT_DIR, '..', 'src-tauri', 'icons')
     os.makedirs(icons_dir, exist_ok=True)
 
-    print("Generating placeholder icons...")
+    print("Generating AIGoodbye desktop icons...")
     print(f"Output directory: {icons_dir}")
     print()
 
-    # Create PNG files
-    create_png(32, 32, BANANA_YELLOW, os.path.join(icons_dir, '32x32.png'))
-    create_png(128, 128, BANANA_YELLOW, os.path.join(icons_dir, '128x128.png'))
-    create_png(256, 256, BANANA_YELLOW, os.path.join(icons_dir, '128x128@2x.png'))
+    # Check if source icon exists
+    source_exists = os.path.exists(SOURCE_ICON)
 
-    # Create Windows ICO (multiple sizes)
-    create_ico([16, 32, 48, 64, 128, 256], BANANA_YELLOW, os.path.join(icons_dir, 'icon.ico'))
-
-    # Create macOS ICNS
-    create_icns([16, 32, 64, 128, 256, 512], BANANA_YELLOW, os.path.join(icons_dir, 'icon.icns'))
-
-    # Create Windows NSIS installer images
-    create_bmp(150, 57, BANANA_YELLOW, os.path.join(icons_dir, 'header.bmp'))
-    create_bmp(164, 314, BANANA_YELLOW, os.path.join(icons_dir, 'sidebar.bmp'))
+    if source_exists:
+        try:
+            from PIL import Image
+            resize_image_with_pil(SOURCE_ICON, None, icons_dir)
+            print()
+            print("All icons generated successfully from source!")
+        except ImportError:
+            print("PIL not available, using fallback...")
+            generate_fallback_icons(icons_dir)
+    else:
+        print(f"Source icon not found: {SOURCE_ICON}")
+        generate_fallback_icons(icons_dir)
 
     print()
-    print("All icons generated successfully!")
-    print("Note: These are placeholder icons. Replace with proper branding before release.")
+    print("Icon generation complete!")
 
 
 if __name__ == '__main__':

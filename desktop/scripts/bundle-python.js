@@ -25,7 +25,7 @@ const binaryName = platform === 'win32' ? 'banana-backend.exe' : 'banana-backend
 const targetTriple = process.env.TAURI_TARGET || getTargetTriple();
 
 console.log('='.repeat(60));
-console.log('Banana AI - Python Backend Bundler');
+console.log('AI Goodbye - Python Backend Bundler');
 console.log('='.repeat(60));
 console.log(`Platform: ${platform}`);
 console.log(`Architecture: ${arch}`);

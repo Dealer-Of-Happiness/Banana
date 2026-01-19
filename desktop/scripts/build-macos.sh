@@ -1,11 +1,11 @@
 #!/bin/bash
-# Banana AI Desktop - macOS Build Script
+# AI Goodbye Desktop - macOS Build Script
 # Run this on a Mac to build the macOS installer
 
 set -e
 
 echo "========================================"
-echo "Banana AI - macOS Build"
+echo "AI Goodbye - macOS Build"
 echo "========================================"
 echo ""
 
@@ -82,5 +82,5 @@ echo ""
 # Code signing reminder
 echo "IMPORTANT: For distribution, you should code sign the app:"
 echo "  1. Get an Apple Developer certificate"
-echo "  2. Sign with: codesign --deep --force --sign 'Developer ID' 'Banana AI.app'"
-echo "  3. Notarize with: xcrun notarytool submit 'Banana AI.dmg' --wait"
+echo "  2. Sign with: codesign --deep --force --sign 'Developer ID' 'AI Goodbye.app'"
+echo "  3. Notarize with: xcrun notarytool submit 'AI Goodbye.dmg' --wait"

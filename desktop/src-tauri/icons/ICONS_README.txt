@@ -1,4 +1,4 @@
-Banana AI Desktop - Icon Files Required
+AI Goodbye Desktop - Icon Files Required
 
 Please add the following icon files to this directory before building:
 
@@ -60,7 +60,7 @@ Option 4: Command Line (ImageMagick)
 RECOMMENDED DESIGN:
 ==================
 
-Your Banana AI icon should be:
+Your AI Goodbye icon should be:
 - Simple and recognizable at small sizes
 - Work on both light and dark backgrounds
 - Use the brand color #f7d716 (banana yellow)

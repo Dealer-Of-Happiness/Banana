@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Banana AI</title>
+    <title>AI Goodbye</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,12 +11,9 @@
     <div id="loading-screen" class="loading-screen">
         <div class="loading-content">
             <div class="logo-container">
-                <svg class="logo" viewBox="0 0 100 100" width="80" height="80">
-                    <circle cx="50" cy="50" r="45" fill="#f7d716" stroke="#e6c200" stroke-width="3"/>
-                    <text x="50" y="65" text-anchor="middle" font-size="40" font-weight="bold" fill="#1a1a2e">AI</text>
-                </svg>
+                <img class="logo" src="app-icon.png" width="80" height="80" alt="AI Goodbye">
             </div>
-            <h1>Banana AI</h1>
+            <h1>AI Goodbye</h1>
             <p class="loading-text">Starting AI engine...</p>
             <div class="loading-bar">
                 <div class="loading-progress"></div>
@@ -28,11 +25,8 @@
     <div id="model-setup-screen" class="model-setup-screen hidden">
         <div class="model-setup-content">
             <div class="setup-header">
-                <svg class="logo" viewBox="0 0 100 100" width="60" height="60">
-                    <circle cx="50" cy="50" r="45" fill="#f7d716" stroke="#e6c200" stroke-width="3"/>
-                    <text x="50" y="65" text-anchor="middle" font-size="40" font-weight="bold" fill="#1a1a2e">AI</text>
-                </svg>
-                <h1>Welcome to Banana AI</h1>
+                <img class="logo" src="app-icon.png" width="60" height="60" alt="AI Goodbye">
+                <h1>Welcome to AI Goodbye</h1>
                 <p>Choose at least one AI model to download. You can download more later.</p>
             </div>
 
@@ -43,17 +37,18 @@
                         <input type="checkbox" id="model-small" class="model-checkbox">
                         <label for="model-small">
                             <span class="model-name">Llama 3.2 1B</span>
-                            <span class="model-badge small">Small</span>
+                            <span class="model-badge small">Lite</span>
                         </label>
                     </div>
                     <div class="model-info">
-                        <p class="model-size">~1.3 GB download</p>
-                        <p class="model-desc">Fast responses, ideal for quick tasks and basic conversations. Works great on older hardware.</p>
+                        <p class="model-size">~1.3 GB download • 4GB+ RAM</p>
+                        <p class="model-desc">Lightweight text model for instant responses. Ideal for simple Q&amp;A, quick lookups, and basic conversations on any hardware.</p>
                         <ul class="model-features">
-                            <li>✓ Quick responses</li>
-                            <li>✓ Low memory usage</li>
-                            <li>✓ Basic conversations</li>
+                            <li>⚡ Fastest response time</li>
+                            <li>💻 Works on any computer</li>
+                            <li>💬 Text chat only</li>
                         </ul>
+                        <p class="model-best-for"><strong>Best for:</strong> Quick questions, older/basic hardware, battery saving</p>
                     </div>
                     <div class="model-progress hidden">
                         <div class="progress-bar">
@@ -67,23 +62,23 @@
                 </div>
 
                 <!-- Medium Model -->
-                <div class="model-card recommended" data-model="llama3.2:3b">
-                    <div class="recommended-badge">Recommended</div>
+                <div class="model-card" data-model="llama3.2:3b">
                     <div class="model-card-header">
                         <input type="checkbox" id="model-medium" class="model-checkbox">
                         <label for="model-medium">
                             <span class="model-name">Llama 3.2 3B</span>
-                            <span class="model-badge medium">Medium</span>
+                            <span class="model-badge medium">Standard</span>
                         </label>
                     </div>
                     <div class="model-info">
-                        <p class="model-size">~2.0 GB download</p>
-                        <p class="model-desc">Best balance of speed and quality. Great for most tasks including writing and analysis.</p>
+                        <p class="model-size">~2.0 GB download • 8GB+ RAM</p>
+                        <p class="model-desc">Balanced text model with improved reasoning. Great for writing, coding help, and thoughtful conversations.</p>
                         <ul class="model-features">
-                            <li>✓ Balanced performance</li>
-                            <li>✓ Better comprehension</li>
-                            <li>✓ Most use cases</li>
+                            <li>⚡ Fast responses</li>
+                            <li>🧠 Better comprehension</li>
+                            <li>💬 Text chat only</li>
                         </ul>
+                        <p class="model-best-for"><strong>Best for:</strong> Daily use, writing assistance, general productivity</p>
                     </div>
                     <div class="model-progress hidden">
                         <div class="progress-bar">
@@ -96,23 +91,54 @@
                     </div>
                 </div>
 
-                <!-- Large Model -->
-                <div class="model-card" data-model="llama3.1:8b">
+                <!-- Large Vision Model -->
+                <div class="model-card" data-model="llama3.2-vision:11b">
                     <div class="model-card-header">
                         <input type="checkbox" id="model-large" class="model-checkbox">
                         <label for="model-large">
-                            <span class="model-name">Llama 3.1 8B</span>
-                            <span class="model-badge large">Large</span>
+                            <span class="model-name">Llama 3.2 Vision 11B</span>
+                            <span class="model-badge large">Vision</span>
                         </label>
                     </div>
                     <div class="model-info">
-                        <p class="model-size">~4.7 GB download</p>
-                        <p class="model-desc">Most capable model with advanced reasoning. Best for complex analysis and professional tasks.</p>
+                        <p class="model-size">~8 GB download • 16GB+ RAM</p>
+                        <p class="model-desc">Multimodal AI that understands both text AND images. Analyze photos, documents, screenshots, charts, and more.</p>
                         <ul class="model-features">
-                            <li>✓ Advanced reasoning</li>
-                            <li>✓ Complex analysis</li>
-                            <li>✓ Professional quality</li>
+                            <li>📷 Analyze images &amp; photos</li>
+                            <li>📄 Read documents &amp; PDFs</li>
+                            <li>🧠 Strong reasoning</li>
                         </ul>
+                        <p class="model-best-for"><strong>Best for:</strong> Image analysis, document review, visual tasks</p>
+                    </div>
+                    <div class="model-progress hidden">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <span class="progress-text">0%</span>
+                    </div>
+                    <div class="model-status">
+                        <span class="status-text">Not downloaded</span>
+                    </div>
+                </div>
+
+                <!-- Pro Vision Model (for powerful hardware) -->
+                <div class="model-card" data-model="llama3.2-vision:90b">
+                    <div class="model-card-header">
+                        <input type="checkbox" id="model-xlarge" class="model-checkbox">
+                        <label for="model-xlarge">
+                            <span class="model-name">Llama 3.2 Vision 90B</span>
+                            <span class="model-badge xlarge">Pro</span>
+                        </label>
+                    </div>
+                    <div class="model-info">
+                        <p class="model-size">~55 GB download • 64GB+ RAM</p>
+                        <p class="model-desc">State-of-the-art multimodal AI. Maximum capability for both text and image understanding. Comparable to GPT-4V quality.</p>
+                        <ul class="model-features">
+                            <li>📷 Best-in-class image analysis</li>
+                            <li>🧠 Expert-level reasoning</li>
+                            <li>✨ Highest quality outputs</li>
+                        </ul>
+                        <p class="model-best-for"><strong>Best for:</strong> Professional work, complex analysis, research, power users</p>
                     </div>
                     <div class="model-progress hidden">
                         <div class="progress-bar">
@@ -143,7 +169,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h1 class="brand">Banana AI</h1>
+                <h1 class="brand">AI Goodbye</h1>
                 <span class="version">v1.0.0</span>
             </div>
 
@@ -171,13 +197,6 @@
                     <span id="backend-status" class="status-dot offline"></span>
                     <span id="status-text">Connecting...</span>
                 </div>
-                <div class="mode-selector">
-                    <select id="mode-select">
-                        <option value="hybrid">🔄 Hybrid Mode</option>
-                        <option value="local">🏠 Local Only</option>
-                        <option value="internet">🌐 Internet Only</option>
-                    </select>
-                </div>
             </div>
         </aside>
 
@@ -203,9 +222,9 @@
 
                 <div class="chat-container" id="chat-container">
                     <div class="message assistant">
-                        <div class="message-avatar">🍌</div>
+                        <div class="message-avatar">🤖</div>
                         <div class="message-content">
-                            <p>Hello! I'm Banana AI, your local AI assistant.</p>
+                            <p>Hello! I'm AI Goodbye, your local AI assistant.</p>
                             <p>I run completely offline on your device - no internet required, no data leaves your computer.</p>
                             <p><strong>Select a model above to start chatting!</strong></p>
                         </div>
@@ -325,16 +344,7 @@
                         <h3>AI Configuration</h3>
 
                         <div class="setting-item">
-                            <label>Default Mode</label>
-                            <select id="default-mode">
-                                <option value="hybrid">Hybrid (Local + Internet)</option>
-                                <option value="local">Local Only</option>
-                                <option value="internet">Internet Only</option>
-                            </select>
-                        </div>
-
-                        <div class="setting-item">
-                            <label>Local Model (Ollama)</label>
+                            <label>Default Model</label>
                             <input type="text" id="local-model" placeholder="llama3.2:3b">
                         </div>
 
@@ -345,29 +355,9 @@
                     </section>
 
                     <section class="settings-section">
-                        <h3>API Keys</h3>
-                        <p class="settings-note">API keys are stored locally and never sent to our servers.</p>
-
-                        <div class="setting-item">
-                            <label>OpenAI API Key</label>
-                            <input type="password" id="openai-key" placeholder="sk-...">
-                        </div>
-
-                        <div class="setting-item">
-                            <label>Anthropic API Key</label>
-                            <input type="password" id="anthropic-key" placeholder="sk-ant-...">
-                        </div>
-
-                        <div class="setting-item">
-                            <label>Google API Key</label>
-                            <input type="password" id="google-key" placeholder="AIza...">
-                        </div>
-                    </section>
-
-                    <section class="settings-section">
                         <h3>About</h3>
                         <div class="about-info">
-                            <p><strong>Banana AI Desktop</strong></p>
+                            <p><strong>AI Goodbye Desktop</strong></p>
                             <p>Version 1.0.0</p>
                             <p>© 2024 AI Goodbye. All rights reserved.</p>
                             <p><a href="https://aigoodbye.ai" target="_blank">aigoodbye.ai</a></p>

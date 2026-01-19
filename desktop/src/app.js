@@ -484,6 +484,23 @@ async function downloadModelFromOllama(modelId) {
             throw new Error('Download did not complete successfully');
         }
 
+        // Verify the model is actually available in Ollama
+        console.log(`Verifying ${modelId} is available...`);
+        const verifyResponse = await fetch(`${OLLAMA_API_URL}/api/tags`);
+        if (verifyResponse.ok) {
+            const data = await verifyResponse.json();
+            const modelExists = data.models?.some(m =>
+                m.name === modelId ||
+                m.name === modelId + ':latest' ||
+                m.name.startsWith(modelId.split(':')[0])
+            );
+            if (!modelExists) {
+                console.error(`Model ${modelId} not found after download!`);
+                throw new Error('Model not found after download - please try again');
+            }
+            console.log(`Verified: ${modelId} is installed`);
+        }
+
         // Mark as downloaded only on actual success
         if (!downloadedModels.includes(modelId)) {
             downloadedModels.push(modelId);

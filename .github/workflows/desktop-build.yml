@@ -22,6 +22,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   APP_NAME: AIGoodbye
+  OLLAMA_VERSION: "0.5.4"
 
 jobs:
   build-windows:
@@ -49,6 +50,27 @@ jobs:
 
       - name: Generate app icons
         run: python desktop/scripts/generate-icons.py
+
+      - name: Download Ollama for Windows
+        shell: pwsh
+        run: |
+          $ollamaUrl = "https://github.com/ollama/ollama/releases/download/v${{ env.OLLAMA_VERSION }}/ollama-windows-amd64.zip"
+          $ollamaZip = "$env:RUNNER_TEMP\ollama.zip"
+          $ollamaDir = "desktop/src-tauri/binaries"
+
+          Write-Host "Downloading Ollama from $ollamaUrl"
+          Invoke-WebRequest -Uri $ollamaUrl -OutFile $ollamaZip
+
+          New-Item -ItemType Directory -Force -Path $ollamaDir
+          Expand-Archive -Path $ollamaZip -DestinationPath $ollamaDir -Force
+
+          # Rename to match Tauri's expected naming
+          if (Test-Path "$ollamaDir/ollama.exe") {
+            Move-Item "$ollamaDir/ollama.exe" "$ollamaDir/ollama-x86_64-pc-windows-msvc.exe" -Force
+          }
+
+          Write-Host "Ollama binary ready:"
+          Get-ChildItem $ollamaDir
 
       - name: Install npm dependencies
         working-directory: desktop
@@ -116,12 +138,12 @@ jobs:
             arch: arm64
             target: aarch64-apple-darwin
             artifact_suffix: arm64
-          # Use macos-15-intel for Intel builds - macos-14/15 are ARM64 (Apple Silicon)
-          # PyInstaller cannot cross-compile, so we need an actual Intel runner
+            ollama_arch: arm64
           - runner: macos-15-intel
             arch: x64
             target: x86_64-apple-darwin
             artifact_suffix: x64
+            ollama_arch: amd64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -147,6 +169,19 @@ jobs:
 
       - name: Generate app icons
         run: python desktop/scripts/generate-icons.py
+
+      - name: Download Ollama for macOS
+        run: |
+          OLLAMA_URL="https://github.com/ollama/ollama/releases/download/v${{ env.OLLAMA_VERSION }}/ollama-darwin"
+          OLLAMA_DIR="desktop/src-tauri/binaries"
+
+          echo "Downloading Ollama from $OLLAMA_URL"
+          mkdir -p $OLLAMA_DIR
+          curl -L -o "$OLLAMA_DIR/ollama-${{ matrix.target }}" "$OLLAMA_URL"
+          chmod +x "$OLLAMA_DIR/ollama-${{ matrix.target }}"
+
+          echo "Ollama binary ready:"
+          ls -la $OLLAMA_DIR
 
       - name: Install npm dependencies
         working-directory: desktop

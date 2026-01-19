@@ -101,11 +101,40 @@
                     </div>
                     <div class="model-info">
                         <p class="model-size">~4.7 GB download</p>
-                        <p class="model-desc">Most capable model with advanced reasoning. Best for complex analysis and professional tasks.</p>
+                        <p class="model-desc">Powerful model with advanced reasoning. Great for complex analysis and professional tasks.</p>
                         <ul class="model-features">
                             <li>✓ Advanced reasoning</li>
                             <li>✓ Complex analysis</li>
                             <li>✓ Professional quality</li>
+                        </ul>
+                    </div>
+                    <div class="model-progress hidden">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <span class="progress-text">0%</span>
+                    </div>
+                    <div class="model-status">
+                        <span class="status-text">Not downloaded</span>
+                    </div>
+                </div>
+
+                <!-- Extra Large Model (for powerful hardware) -->
+                <div class="model-card" data-model="llama3.3:70b">
+                    <div class="model-card-header">
+                        <input type="checkbox" id="model-xlarge" class="model-checkbox">
+                        <label for="model-xlarge">
+                            <span class="model-name">Llama 3.3 70B</span>
+                            <span class="model-badge xlarge">Pro</span>
+                        </label>
+                    </div>
+                    <div class="model-info">
+                        <p class="model-size">~40 GB download</p>
+                        <p class="model-desc">State-of-the-art model for maximum capability. Requires 48GB+ RAM. Best results on high-end hardware.</p>
+                        <ul class="model-features">
+                            <li>✓ State-of-the-art quality</li>
+                            <li>✓ Expert-level reasoning</li>
+                            <li>✓ Requires 48GB+ RAM</li>
                         </ul>
                     </div>
                     <div class="model-progress hidden">
@@ -164,13 +193,6 @@
                 <div class="status-box">
                     <span id="backend-status" class="status-dot offline"></span>
                     <span id="status-text">Connecting...</span>
-                </div>
-                <div class="mode-selector">
-                    <select id="mode-select">
-                        <option value="hybrid">🔄 Hybrid Mode</option>
-                        <option value="local">🏠 Local Only</option>
-                        <option value="internet">🌐 Internet Only</option>
-                    </select>
                 </div>
             </div>
         </aside>
@@ -319,42 +341,13 @@
                         <h3>AI Configuration</h3>
 
                         <div class="setting-item">
-                            <label>Default Mode</label>
-                            <select id="default-mode">
-                                <option value="hybrid">Hybrid (Local + Internet)</option>
-                                <option value="local">Local Only</option>
-                                <option value="internet">Internet Only</option>
-                            </select>
-                        </div>
-
-                        <div class="setting-item">
-                            <label>Local Model (Ollama)</label>
+                            <label>Default Model</label>
                             <input type="text" id="local-model" placeholder="llama3.2:3b">
                         </div>
 
                         <div class="setting-item">
                             <label>System Prompt</label>
                             <textarea id="system-prompt" rows="4" placeholder="You are a helpful AI assistant..."></textarea>
-                        </div>
-                    </section>
-
-                    <section class="settings-section">
-                        <h3>API Keys</h3>
-                        <p class="settings-note">API keys are stored locally and never sent to our servers.</p>
-
-                        <div class="setting-item">
-                            <label>OpenAI API Key</label>
-                            <input type="password" id="openai-key" placeholder="sk-...">
-                        </div>
-
-                        <div class="setting-item">
-                            <label>Anthropic API Key</label>
-                            <input type="password" id="anthropic-key" placeholder="sk-ant-...">
-                        </div>
-
-                        <div class="setting-item">
-                            <label>Google API Key</label>
-                            <input type="password" id="google-key" placeholder="AIza...">
                         </div>
                     </section>
 

@@ -13,7 +13,8 @@ const API_BASE_URL = 'http://127.0.0.1:8765';
 const AVAILABLE_MODELS = [
     { id: 'llama3.2:1b', name: 'Llama 3.2 1B', size: 'small', sizeGB: '~1.3 GB' },
     { id: 'llama3.2:3b', name: 'Llama 3.2 3B', size: 'medium', sizeGB: '~2.0 GB' },
-    { id: 'llama3.1:8b', name: 'Llama 3.1 8B', size: 'large', sizeGB: '~4.7 GB' }
+    { id: 'llama3.1:8b', name: 'Llama 3.1 8B', size: 'large', sizeGB: '~4.7 GB' },
+    { id: 'llama3.3:70b', name: 'Llama 3.3 70B', size: 'xlarge', sizeGB: '~40 GB' }
 ];
 
 // DOM Elements
@@ -22,7 +23,6 @@ const modelSetupScreen = document.getElementById('model-setup-screen');
 const app = document.getElementById('app');
 const backendStatus = document.getElementById('backend-status');
 const statusText = document.getElementById('status-text');
-const modeSelect = document.getElementById('mode-select');
 const chatContainer = document.getElementById('chat-container');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
@@ -412,14 +412,6 @@ function setupChat() {
     sendButton.addEventListener('click', sendMessage);
 
     newChatBtn.addEventListener('click', clearChat);
-
-    modeSelect.addEventListener('change', async () => {
-        try {
-            await fetch(`${API_BASE_URL}/api/mode/${modeSelect.value}`, { method: 'POST' });
-        } catch (error) {
-            console.error('Failed to set mode:', error);
-        }
-    });
 }
 
 async function sendMessage() {
@@ -459,7 +451,6 @@ async function sendMessage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: message,
-                    mode: modeSelect.value,
                     use_knowledge_base: useKbCheckbox.checked
                 })
             });
@@ -488,7 +479,7 @@ function addMessage(content, isUser = false) {
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
 
-    const avatar = isUser ? '👤' : '🍌';
+    const avatar = isUser ? '👤' : '🤖';
 
     msgDiv.innerHTML = `
         <div class="message-avatar">${avatar}</div>
@@ -740,22 +731,14 @@ function setupSettings() {
 function loadSettings() {
     const settings = JSON.parse(localStorage.getItem('bananaSettings') || '{}');
 
-    if (settings.defaultMode) document.getElementById('default-mode').value = settings.defaultMode;
     if (settings.localModel) document.getElementById('local-model').value = settings.localModel;
     if (settings.systemPrompt) document.getElementById('system-prompt').value = settings.systemPrompt;
-    if (settings.openaiKey) document.getElementById('openai-key').value = settings.openaiKey;
-    if (settings.anthropicKey) document.getElementById('anthropic-key').value = settings.anthropicKey;
-    if (settings.googleKey) document.getElementById('google-key').value = settings.googleKey;
 }
 
 function saveSettings() {
     const settings = {
-        defaultMode: document.getElementById('default-mode').value,
         localModel: document.getElementById('local-model').value,
-        systemPrompt: document.getElementById('system-prompt').value,
-        openaiKey: document.getElementById('openai-key').value,
-        anthropicKey: document.getElementById('anthropic-key').value,
-        googleKey: document.getElementById('google-key').value
+        systemPrompt: document.getElementById('system-prompt').value
     };
 
     localStorage.setItem('bananaSettings', JSON.stringify(settings));

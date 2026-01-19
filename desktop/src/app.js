@@ -6,8 +6,8 @@
 // Tauri API imports (will be available when running in Tauri)
 const { invoke } = window.__TAURI__ ? window.__TAURI__.core : { invoke: async () => {} };
 
-// API Configuration
-const API_BASE_URL = 'http://127.0.0.1:8765';
+// Ollama API Configuration (Ollama runs on localhost:11434 by default)
+const OLLAMA_API_URL = 'http://127.0.0.1:11434';
 
 // Available Models Configuration
 const AVAILABLE_MODELS = [
@@ -21,11 +21,14 @@ const AVAILABLE_MODELS = [
 const loadingScreen = document.getElementById('loading-screen');
 const modelSetupScreen = document.getElementById('model-setup-screen');
 const app = document.getElementById('app');
-const backendStatus = document.getElementById('backend-status');
-const statusText = document.getElementById('status-text');
+const ollamaStatusDot = document.getElementById('ollama-status-dot');
+const ollamaStatusText = document.getElementById('ollama-status-text');
 const chatContainer = document.getElementById('chat-container');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
+const attachButton = document.getElementById('attach-button');
+const imageInput = document.getElementById('image-input');
+const imagePreviewContainer = document.getElementById('image-preview-container');
 const useKbCheckbox = document.getElementById('use-kb');
 const newChatBtn = document.getElementById('new-chat-btn');
 const chatModelSelect = document.getElementById('chat-model-select');
@@ -36,10 +39,11 @@ const navItems = document.querySelectorAll('.nav-item');
 const views = document.querySelectorAll('.view');
 
 // State
-let isBackendRunning = false;
-let ws = null;
+let isOllamaRunning = false;
 let downloadedModels = [];
 let currentChatModel = null;
+let pendingImages = []; // Base64 encoded images for vision models
+let conversationHistory = [];
 
 // ==================== Initialization ====================
 
@@ -53,17 +57,84 @@ async function init() {
     setupTraining();
     setupSettings();
     setupModelSetup();
+    setupImageAttachment();
 
-    // Start backend and check connection
-    await startBackend();
+    // Check Ollama status
+    await checkOllamaStatus();
 
     // Check if this is first launch or if models need to be set up
     await checkModelSetup();
+
+    // Start periodic Ollama status check
+    setInterval(checkOllamaStatus, 10000);
+}
+
+async function checkOllamaStatus() {
+    try {
+        const response = await fetch(`${OLLAMA_API_URL}/api/tags`, {
+            method: 'GET',
+            signal: AbortSignal.timeout(3000)
+        });
+
+        if (response.ok) {
+            isOllamaRunning = true;
+            if (ollamaStatusDot) ollamaStatusDot.classList.add('running');
+            if (ollamaStatusText) ollamaStatusText.textContent = 'Ollama Running';
+
+            // Get list of installed models from Ollama
+            const data = await response.json();
+            if (data.models) {
+                // Update downloaded models based on what Ollama actually has
+                const ollamaModels = data.models.map(m => m.name);
+                updateDownloadedModelsFromOllama(ollamaModels);
+            }
+        } else {
+            setOllamaOffline();
+        }
+    } catch (error) {
+        setOllamaOffline();
+    }
+}
+
+function setOllamaOffline() {
+    isOllamaRunning = false;
+    if (ollamaStatusDot) ollamaStatusDot.classList.remove('running');
+    if (ollamaStatusText) ollamaStatusText.textContent = 'Ollama Not Running';
+}
+
+function updateDownloadedModelsFromOllama(ollamaModels) {
+    // Check which of our available models are installed in Ollama
+    const installedModels = [];
+
+    AVAILABLE_MODELS.forEach(model => {
+        // Check if model ID matches any Ollama model (with or without :latest)
+        const isInstalled = ollamaModels.some(om => {
+            const normalizedOllama = om.replace(':latest', '');
+            const normalizedModel = model.id.replace(':latest', '');
+            return normalizedOllama === normalizedModel ||
+                   normalizedOllama.startsWith(normalizedModel.split(':')[0]);
+        });
+
+        if (isInstalled) {
+            installedModels.push(model.id);
+        }
+    });
+
+    downloadedModels = installedModels;
+    localStorage.setItem('aigoodbyeDownloadedModels', JSON.stringify(downloadedModels));
+
+    // Update UI
+    updateModelSetupStatus();
+    populateChatModelDropdown();
+    renderModelList();
 }
 
 async function checkModelSetup() {
-    // Load downloaded models from localStorage
+    // Load downloaded models from localStorage initially
     downloadedModels = JSON.parse(localStorage.getItem('aigoodbyeDownloadedModels') || '[]');
+
+    // Wait a moment for Ollama check to complete
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Check if any models are downloaded
     if (downloadedModels.length === 0) {
@@ -71,14 +142,76 @@ async function checkModelSetup() {
         setTimeout(() => {
             loadingScreen.classList.add('hidden');
             modelSetupScreen.classList.remove('hidden');
-        }, 1500);
+        }, 500);
     } else {
         // Models exist - proceed to app
         setTimeout(() => {
             loadingScreen.classList.add('hidden');
             app.classList.remove('hidden');
             populateChatModelDropdown();
-        }, 2000);
+            renderModelList();
+        }, 1000);
+    }
+}
+
+// ==================== Image Attachment ====================
+
+function setupImageAttachment() {
+    if (!attachButton || !imageInput) return;
+
+    attachButton.addEventListener('click', () => {
+        imageInput.click();
+    });
+
+    imageInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        files.forEach(file => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const base64 = event.target.result.split(',')[1]; // Remove data:image/...;base64, prefix
+                    pendingImages.push({
+                        base64: base64,
+                        preview: event.target.result,
+                        name: file.name
+                    });
+                    renderImagePreviews();
+                    updateSendButtonState();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        imageInput.value = ''; // Reset input
+    });
+}
+
+function renderImagePreviews() {
+    if (!imagePreviewContainer) return;
+    imagePreviewContainer.innerHTML = pendingImages.map((img, index) => `
+        <div class="image-preview">
+            <img src="${img.preview}" alt="${img.name}">
+            <button class="remove-image" onclick="removeImage(${index})">×</button>
+        </div>
+    `).join('');
+}
+
+// Make removeImage available globally
+window.removeImage = function(index) {
+    pendingImages.splice(index, 1);
+    renderImagePreviews();
+    updateSendButtonState();
+};
+
+function updateAttachButtonVisibility() {
+    if (!attachButton) return;
+    const modelInfo = AVAILABLE_MODELS.find(m => m.id === currentChatModel);
+    if (modelInfo && modelInfo.vision) {
+        attachButton.classList.remove('hidden');
+    } else {
+        attachButton.classList.add('hidden');
+        // Clear any pending images if switching to non-vision model
+        pendingImages = [];
+        renderImagePreviews();
     }
 }
 
@@ -90,6 +223,8 @@ function setupModelSetup() {
     const continueBtn = document.getElementById('continue-setup-btn');
     const selectionHint = document.getElementById('selection-hint');
     const modelCards = document.querySelectorAll('.model-setup-screen .model-card');
+
+    if (!downloadBtn) return;
 
     // Make entire card clickable to toggle checkbox
     modelCards.forEach(card => {
@@ -121,6 +256,11 @@ function setupModelSetup() {
 
     // Download button
     downloadBtn.addEventListener('click', async () => {
+        if (!isOllamaRunning) {
+            alert('Ollama is not running. Please start Ollama first.\n\nDownload Ollama from: https://ollama.ai');
+            return;
+        }
+
         const selectedModels = [];
         modelCheckboxes.forEach(checkbox => {
             if (checkbox.checked) {
@@ -137,14 +277,24 @@ function setupModelSetup() {
         modelCheckboxes.forEach(cb => cb.disabled = true);
 
         // Download each model
+        let allSuccessful = true;
         for (const modelId of selectedModels) {
-            await downloadModel(modelId);
+            const success = await downloadModelFromOllama(modelId);
+            if (!success) {
+                allSuccessful = false;
+            }
         }
 
-        // Show continue button
-        downloadBtn.classList.add('hidden');
-        continueBtn.classList.remove('hidden');
-        selectionHint.textContent = 'Models downloaded successfully!';
+        if (allSuccessful && downloadedModels.length > 0) {
+            // Show continue button
+            downloadBtn.classList.add('hidden');
+            continueBtn.classList.remove('hidden');
+            selectionHint.textContent = 'Models downloaded successfully!';
+        } else {
+            downloadBtn.disabled = false;
+            downloadBtn.textContent = 'Download Selected Models';
+            modelCheckboxes.forEach(cb => cb.disabled = false);
+        }
     });
 
     // Continue button
@@ -152,44 +302,66 @@ function setupModelSetup() {
         modelSetupScreen.classList.add('hidden');
         app.classList.remove('hidden');
         populateChatModelDropdown();
+        renderModelList();
     });
 
     // Update model cards with current download status
     updateModelSetupStatus();
 }
 
-async function downloadModel(modelId) {
+async function downloadModelFromOllama(modelId) {
     const card = document.querySelector(`.model-card[data-model="${modelId}"]`);
-    const progressContainer = card.querySelector('.model-progress');
-    const progressFill = card.querySelector('.progress-fill');
-    const progressText = card.querySelector('.progress-text');
-    const statusText = card.querySelector('.status-text');
+    const progressContainer = card?.querySelector('.model-progress');
+    const progressFill = card?.querySelector('.progress-fill');
+    const progressText = card?.querySelector('.progress-text');
+    const statusTextEl = card?.querySelector('.status-text');
 
     // Show progress
-    progressContainer.classList.remove('hidden');
-    statusText.textContent = 'Downloading...';
-    statusText.className = 'status-text downloading';
+    if (progressContainer) progressContainer.classList.remove('hidden');
+    if (statusTextEl) {
+        statusTextEl.textContent = 'Downloading...';
+        statusTextEl.className = 'status-text downloading';
+    }
 
     try {
-        // Try to pull model via Ollama API
-        if (isBackendRunning) {
-            // Use backend API to pull model
-            const response = await fetch(`${API_BASE_URL}/api/models/pull`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model: modelId })
-            });
+        // Use Ollama pull API with streaming
+        const response = await fetch(`${OLLAMA_API_URL}/api/pull`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: modelId, stream: true })
+        });
 
-            if (response.ok) {
-                // Simulate progress (actual progress would come from streaming response)
-                await simulateDownloadProgress(progressFill, progressText);
-            } else {
-                // Backend doesn't have this endpoint yet, simulate download
-                await simulateDownloadProgress(progressFill, progressText);
+        if (!response.ok) {
+            throw new Error(`Failed to pull model: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const text = decoder.decode(value);
+            const lines = text.split('\n').filter(line => line.trim());
+
+            for (const line of lines) {
+                try {
+                    const data = JSON.parse(line);
+
+                    if (data.total && data.completed) {
+                        const percent = Math.round((data.completed / data.total) * 100);
+                        if (progressFill) progressFill.style.width = percent + '%';
+                        if (progressText) progressText.textContent = percent + '%';
+                    }
+
+                    if (data.status) {
+                        // Keep showing progress
+                    }
+                } catch (e) {
+                    // Ignore JSON parse errors for incomplete chunks
+                }
             }
-        } else {
-            // Simulate download progress for demo
-            await simulateDownloadProgress(progressFill, progressText);
         }
 
         // Mark as downloaded
@@ -199,32 +371,58 @@ async function downloadModel(modelId) {
         }
 
         // Update UI
-        statusText.textContent = 'Downloaded';
-        statusText.className = 'status-text downloaded';
-        progressContainer.classList.add('hidden');
+        if (statusTextEl) {
+            statusTextEl.textContent = 'Downloaded';
+            statusTextEl.className = 'status-text downloaded';
+        }
+        if (progressContainer) progressContainer.classList.add('hidden');
+
+        return true;
 
     } catch (error) {
         console.error(`Error downloading model ${modelId}:`, error);
-        statusText.textContent = 'Download failed';
-        statusText.className = 'status-text';
 
-        // Still mark as downloaded for demo purposes
-        if (!downloadedModels.includes(modelId)) {
-            downloadedModels.push(modelId);
-            localStorage.setItem('aigoodbyeDownloadedModels', JSON.stringify(downloadedModels));
+        if (statusTextEl) {
+            statusTextEl.textContent = 'Download failed - Is Ollama running?';
+            statusTextEl.className = 'status-text';
         }
+        if (progressContainer) progressContainer.classList.add('hidden');
 
-        statusText.textContent = 'Downloaded';
-        statusText.className = 'status-text downloaded';
-        progressContainer.classList.add('hidden');
+        return false;
     }
 }
 
-async function simulateDownloadProgress(progressFill, progressText) {
-    for (let i = 0; i <= 100; i += 2) {
-        progressFill.style.width = i + '%';
-        progressText.textContent = i + '%';
-        await new Promise(resolve => setTimeout(resolve, 50));
+async function deleteModelFromOllama(modelId) {
+    if (!confirm(`Are you sure you want to delete ${modelId}? This will free up disk space.`)) {
+        return false;
+    }
+
+    try {
+        const response = await fetch(`${OLLAMA_API_URL}/api/delete`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: modelId })
+        });
+
+        if (response.ok) {
+            // Remove from downloaded models
+            downloadedModels = downloadedModels.filter(m => m !== modelId);
+            localStorage.setItem('aigoodbyeDownloadedModels', JSON.stringify(downloadedModels));
+
+            // Update UI
+            renderModelList();
+            populateChatModelDropdown();
+            updateModelSetupStatus();
+
+            return true;
+        } else {
+            alert('Failed to delete model. Please try again.');
+            return false;
+        }
+    } catch (error) {
+        console.error('Error deleting model:', error);
+        alert('Failed to delete model. Is Ollama running?');
+        return false;
     }
 }
 
@@ -232,12 +430,68 @@ function updateModelSetupStatus() {
     downloadedModels.forEach(modelId => {
         const card = document.querySelector(`.model-card[data-model="${modelId}"]`);
         if (card) {
-            const statusText = card.querySelector('.status-text');
-            statusText.textContent = 'Downloaded';
-            statusText.className = 'status-text downloaded';
+            const statusTextEl = card.querySelector('.status-text');
+            if (statusTextEl) {
+                statusTextEl.textContent = 'Downloaded';
+                statusTextEl.className = 'status-text downloaded';
+            }
         }
     });
 }
+
+// ==================== Model Management in Settings ====================
+
+function renderModelList() {
+    const modelListEl = document.getElementById('model-list');
+    if (!modelListEl) return;
+
+    modelListEl.innerHTML = AVAILABLE_MODELS.map(model => {
+        const isDownloaded = downloadedModels.includes(model.id);
+        const visionBadge = model.vision ? ' (Vision)' : '';
+
+        return `
+            <div class="model-item" data-model="${model.id}">
+                <div class="model-item-info">
+                    <div class="model-item-name">${model.name}${visionBadge}</div>
+                    <div class="model-item-size">${model.sizeGB}</div>
+                </div>
+                <div class="model-item-actions">
+                    ${isDownloaded ?
+                        `<span class="model-item-status downloaded">Downloaded</span>
+                         <button class="btn-delete-small" onclick="handleDeleteModel('${model.id}')">Delete</button>` :
+                        `<span class="model-item-status not-downloaded">Not Downloaded</span>
+                         <button class="btn-download-small" onclick="handleDownloadModel('${model.id}')">Download</button>`
+                    }
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Make functions available globally for onclick handlers
+window.handleDownloadModel = async function(modelId) {
+    if (!isOllamaRunning) {
+        alert('Ollama is not running. Please start Ollama first.\n\nDownload Ollama from: https://ollama.ai');
+        return;
+    }
+
+    // Update UI to show downloading
+    const modelItem = document.querySelector(`.model-item[data-model="${modelId}"]`);
+    if (modelItem) {
+        const actionsDiv = modelItem.querySelector('.model-item-actions');
+        actionsDiv.innerHTML = `<span class="model-item-status downloading">Downloading...</span>`;
+    }
+
+    const success = await downloadModelFromOllama(modelId);
+
+    // Re-render the list
+    renderModelList();
+    populateChatModelDropdown();
+};
+
+window.handleDeleteModel = async function(modelId) {
+    await deleteModelFromOllama(modelId);
+};
 
 // ==================== Chat Model Selection ====================
 
@@ -251,9 +505,10 @@ function populateChatModelDropdown() {
     downloadedModels.forEach(modelId => {
         const modelInfo = AVAILABLE_MODELS.find(m => m.id === modelId);
         if (modelInfo) {
+            const visionTag = modelInfo.vision ? ' [Vision]' : '';
             const option = document.createElement('option');
             option.value = modelId;
-            option.textContent = `${modelInfo.name} (${modelInfo.size})`;
+            option.textContent = `${modelInfo.name}${visionTag}`;
             chatModelSelect.appendChild(option);
         }
     });
@@ -263,19 +518,16 @@ function populateChatModelDropdown() {
         chatModelSelect.value = downloadedModels[0];
         currentChatModel = downloadedModels[0];
         updateModelIndicator();
+        updateAttachButtonVisibility();
     }
 
     // Handle model selection change
-    chatModelSelect.addEventListener('change', () => {
+    chatModelSelect.onchange = () => {
         currentChatModel = chatModelSelect.value;
         updateModelIndicator();
-
-        // Update backend with selected model
-        if (isBackendRunning && currentChatModel) {
-            fetch(`${API_BASE_URL}/api/model/${currentChatModel}`, { method: 'POST' })
-                .catch(err => console.error('Failed to set model:', err));
-        }
-    });
+        updateAttachButtonVisibility();
+        updateSendButtonState();
+    };
 }
 
 function updateModelIndicator() {
@@ -284,7 +536,8 @@ function updateModelIndicator() {
     if (currentChatModel) {
         const modelInfo = AVAILABLE_MODELS.find(m => m.id === currentChatModel);
         if (modelInfo) {
-            modelIndicator.textContent = `Ready`;
+            const visionTag = modelInfo.vision ? ' (Vision)' : '';
+            modelIndicator.textContent = `Ready${visionTag}`;
             modelIndicator.className = 'model-indicator';
         }
     } else {
@@ -293,83 +546,15 @@ function updateModelIndicator() {
     }
 }
 
-async function startBackend() {
-    try {
-        // Try Tauri command first (when running as desktop app)
-        if (window.__TAURI__) {
-            await invoke('start_backend');
-        }
+function updateSendButtonState() {
+    const hasMessage = messageInput && messageInput.value.trim().length > 0;
+    const hasImages = pendingImages.length > 0;
+    const hasModel = !!currentChatModel;
+    const ollamaReady = isOllamaRunning;
 
-        // Poll for backend availability
-        let attempts = 0;
-        const maxAttempts = 30;
-
-        while (attempts < maxAttempts) {
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/status`);
-                if (response.ok) {
-                    isBackendRunning = true;
-                    updateStatus(true);
-                    connectWebSocket();
-                    return;
-                }
-            } catch (e) {
-                // Backend not ready yet
-            }
-
-            await new Promise(resolve => setTimeout(resolve, 500));
-            attempts++;
-        }
-
-        updateStatus(false);
-        console.error('Failed to connect to backend');
-
-    } catch (error) {
-        console.error('Error starting backend:', error);
-        updateStatus(false);
+    if (sendButton) {
+        sendButton.disabled = !(hasModel && ollamaReady && (hasMessage || hasImages));
     }
-}
-
-function updateStatus(online) {
-    isBackendRunning = online;
-    backendStatus.classList.toggle('online', online);
-    statusText.textContent = online ? 'Connected' : 'Disconnected';
-}
-
-// ==================== WebSocket ====================
-
-function connectWebSocket() {
-    const wsUrl = `ws://127.0.0.1:8765/ws/chat`;
-    ws = new WebSocket(wsUrl);
-
-    ws.onopen = () => {
-        console.log('WebSocket connected');
-        updateStatus(true);
-    };
-
-    ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        updateStatus(false);
-        // Attempt to reconnect
-        setTimeout(connectWebSocket, 3000);
-    };
-
-    ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-    };
-
-    ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-
-        if (data.chunk) {
-            appendToLastMessage(data.chunk);
-        }
-
-        if (data.done) {
-            sendButton.disabled = false;
-            messageInput.disabled = false;
-        }
-    };
 }
 
 // ==================== Navigation ====================
@@ -387,6 +572,11 @@ function setupNavigation() {
             views.forEach(view => {
                 view.classList.toggle('active', view.id === `${viewName}-view`);
             });
+
+            // Refresh model list when entering settings
+            if (viewName === 'settings') {
+                renderModelList();
+            }
         });
     });
 }
@@ -394,96 +584,147 @@ function setupNavigation() {
 // ==================== Chat ====================
 
 function setupChat() {
+    if (!messageInput || !sendButton) return;
+
     // Auto-resize textarea
     messageInput.addEventListener('input', () => {
         messageInput.style.height = 'auto';
         messageInput.style.height = Math.min(messageInput.scrollHeight, 150) + 'px';
-        sendButton.disabled = !messageInput.value.trim();
+        updateSendButtonState();
     });
 
     // Send on Enter (Shift+Enter for new line)
     messageInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            sendMessage();
+            if (!sendButton.disabled) {
+                sendMessage();
+            }
         }
     });
 
     sendButton.addEventListener('click', sendMessage);
 
-    newChatBtn.addEventListener('click', clearChat);
+    if (newChatBtn) {
+        newChatBtn.addEventListener('click', clearChat);
+    }
 }
 
 async function sendMessage() {
     const message = messageInput.value.trim();
-    if (!message || !isBackendRunning) return;
 
-    // Check if a model is selected
     if (!currentChatModel) {
         alert('Please select a model from the dropdown above before sending a message.');
-        chatModelSelect.focus();
+        if (chatModelSelect) chatModelSelect.focus();
         return;
     }
 
+    if (!isOllamaRunning) {
+        alert('Ollama is not running. Please start Ollama to chat.\n\nDownload Ollama from: https://ollama.ai');
+        return;
+    }
+
+    if (!message && pendingImages.length === 0) return;
+
     // Add user message
-    addMessage(message, true);
+    addMessage(message, true, pendingImages.length > 0 ? [...pendingImages] : null);
+
+    // Store for API call
+    const imagesToSend = [...pendingImages];
 
     // Clear input
     messageInput.value = '';
     messageInput.style.height = 'auto';
+    pendingImages = [];
+    renderImagePreviews();
     sendButton.disabled = true;
     messageInput.disabled = true;
 
     // Add empty assistant message for streaming
-    addMessage('', false);
+    const assistantMsg = addMessage('', false);
+    const contentEl = assistantMsg.querySelector('.message-content p');
 
-    // Send via WebSocket if available
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-            message: message,
-            use_knowledge_base: useKbCheckbox.checked
-        }));
-    } else {
-        // Fallback to REST API
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: message,
-                    use_knowledge_base: useKbCheckbox.checked
-                })
-            });
+    try {
+        // Build the request for Ollama
+        const requestBody = {
+            model: currentChatModel,
+            prompt: message,
+            stream: true
+        };
 
-            const data = await response.json();
-
-            // Update the last message
-            const messages = chatContainer.querySelectorAll('.message.assistant');
-            const lastMsg = messages[messages.length - 1];
-            if (lastMsg) {
-                const content = lastMsg.querySelector('.message-content');
-                content.innerHTML = `<p>${escapeHtml(data.content)}</p>
-                    <div class="message-source">${data.source} • ${data.model} • ${data.tokens_used} tokens</div>`;
-            }
-        } catch (error) {
-            console.error('Chat error:', error);
-            appendToLastMessage(`Error: ${error.message}`);
-        } finally {
-            sendButton.disabled = false;
-            messageInput.disabled = false;
+        // Add images for vision models
+        if (imagesToSend.length > 0) {
+            requestBody.images = imagesToSend.map(img => img.base64);
         }
+
+        // Call Ollama generate API
+        const response = await fetch(`${OLLAMA_API_URL}/api/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Ollama error: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullResponse = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const text = decoder.decode(value);
+            const lines = text.split('\n').filter(line => line.trim());
+
+            for (const line of lines) {
+                try {
+                    const data = JSON.parse(line);
+                    if (data.response) {
+                        fullResponse += data.response;
+                        contentEl.textContent = fullResponse;
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    }
+                } catch (e) {
+                    // Ignore JSON parse errors
+                }
+            }
+        }
+
+        // Add to conversation history
+        conversationHistory.push({ role: 'user', content: message });
+        conversationHistory.push({ role: 'assistant', content: fullResponse });
+
+    } catch (error) {
+        console.error('Chat error:', error);
+        contentEl.textContent = `Error: ${error.message}. Make sure Ollama is running and the model is downloaded.`;
+    } finally {
+        sendButton.disabled = false;
+        messageInput.disabled = false;
+        messageInput.focus();
+        updateSendButtonState();
     }
 }
 
-function addMessage(content, isUser = false) {
+function addMessage(content, isUser = false, images = null) {
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
 
     const avatar = isUser ? '👤' : '🤖';
 
+    let imagesHtml = '';
+    if (images && images.length > 0) {
+        imagesHtml = `<div class="message-images">${images.map(img =>
+            `<img src="${img.preview}" alt="attached image" style="max-width: 200px; border-radius: 8px; margin-bottom: 10px;">`
+        ).join('')}</div>`;
+    }
+
     msgDiv.innerHTML = `
         <div class="message-avatar">${avatar}</div>
         <div class="message-content">
+            ${imagesHtml}
             <p>${escapeHtml(content)}</p>
         </div>
     `;
@@ -494,35 +735,15 @@ function addMessage(content, isUser = false) {
     return msgDiv;
 }
 
-function appendToLastMessage(chunk) {
-    const messages = chatContainer.querySelectorAll('.message.assistant');
-    const lastMsg = messages[messages.length - 1];
-
-    if (lastMsg) {
-        const content = lastMsg.querySelector('.message-content p');
-        if (content) {
-            content.textContent += chunk;
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-    }
-}
-
 async function clearChat() {
-    try {
-        await fetch(`${API_BASE_URL}/api/clear`, { method: 'POST' });
-        chatContainer.innerHTML = '';
+    chatContainer.innerHTML = '';
+    conversationHistory = [];
 
-        // Reset model selection for new chat
-        if (chatModelSelect) {
-            chatModelSelect.value = '';
-            currentChatModel = null;
-            updateModelIndicator();
-        }
+    // Reset pending images
+    pendingImages = [];
+    renderImagePreviews();
 
-        addMessage('New chat started. Please select a model above to begin.', false);
-    } catch (error) {
-        console.error('Failed to clear chat:', error);
-    }
+    addMessage('Chat cleared. Select a model and start a new conversation!', false);
 }
 
 // ==================== Knowledge Base ====================
@@ -532,6 +753,8 @@ function setupKnowledgeBase() {
     const fileInput = document.getElementById('file-input');
     const kbSearchInput = document.getElementById('kb-search-input');
     const kbSearchBtn = document.getElementById('kb-search-btn');
+
+    if (!uploadZone) return;
 
     // File upload
     uploadZone.addEventListener('click', () => fileInput.click());
@@ -563,30 +786,37 @@ function setupKnowledgeBase() {
     });
 
     // Search
-    kbSearchBtn.addEventListener('click', searchKnowledgeBase);
-    kbSearchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') searchKnowledgeBase();
-    });
+    if (kbSearchBtn) {
+        kbSearchBtn.addEventListener('click', searchKnowledgeBase);
+    }
+    if (kbSearchInput) {
+        kbSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchKnowledgeBase();
+        });
+    }
 
     // Load stats
     loadKBStats();
 }
 
 async function uploadFile(file) {
+    // Store in localStorage for now (simple implementation)
+    // In a full implementation, this would use a vector database
     try {
         const content = await file.text();
 
-        await fetch(`${API_BASE_URL}/api/kb/add`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                content: content,
-                metadata: { filename: file.name, type: file.type }
-            })
+        // Store document in localStorage
+        const docs = JSON.parse(localStorage.getItem('aigoodbyeKnowledgeBase') || '[]');
+        docs.push({
+            id: Date.now(),
+            filename: file.name,
+            content: content,
+            uploadedAt: new Date().toISOString()
         });
+        localStorage.setItem('aigoodbyeKnowledgeBase', JSON.stringify(docs));
 
         loadKBStats();
-        alert(`File "${file.name}" uploaded successfully!`);
+        alert(`File "${file.name}" added to knowledge base!`);
 
     } catch (error) {
         console.error('Upload error:', error);
@@ -594,42 +824,49 @@ async function uploadFile(file) {
     }
 }
 
-async function loadKBStats() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/kb/stats`);
-        const stats = await response.json();
+function loadKBStats() {
+    const docs = JSON.parse(localStorage.getItem('aigoodbyeKnowledgeBase') || '[]');
+    const totalChunks = docs.reduce((sum, doc) => sum + Math.ceil(doc.content.length / 500), 0);
 
-        document.getElementById('doc-count').textContent = stats.documents || 0;
-        document.getElementById('chunk-count').textContent = stats.chunks || 0;
+    const docCountEl = document.getElementById('doc-count');
+    const chunkCountEl = document.getElementById('chunk-count');
 
-    } catch (error) {
-        console.error('Failed to load KB stats:', error);
-    }
+    if (docCountEl) docCountEl.textContent = docs.length;
+    if (chunkCountEl) chunkCountEl.textContent = totalChunks;
 }
 
 async function searchKnowledgeBase() {
-    const query = document.getElementById('kb-search-input').value.trim();
+    const kbSearchInput = document.getElementById('kb-search-input');
+    const query = kbSearchInput ? kbSearchInput.value.trim().toLowerCase() : '';
     if (!query) return;
 
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/kb/search?query=${encodeURIComponent(query)}`);
-        const data = await response.json();
+    const docs = JSON.parse(localStorage.getItem('aigoodbyeKnowledgeBase') || '[]');
+    const resultsDiv = document.getElementById('kb-results');
 
-        const resultsDiv = document.getElementById('kb-results');
+    if (!resultsDiv) return;
 
-        if (data.results && data.results.length > 0) {
-            resultsDiv.innerHTML = data.results.map(result => `
-                <div class="kb-result">
-                    <p>${escapeHtml(result.content)}</p>
-                    <small>Score: ${result.score?.toFixed(3) || 'N/A'}</small>
-                </div>
-            `).join('');
-        } else {
-            resultsDiv.innerHTML = '<p class="empty-state">No results found.</p>';
-        }
+    // Simple text search
+    const results = docs
+        .filter(doc => doc.content.toLowerCase().includes(query) || doc.filename.toLowerCase().includes(query))
+        .map(doc => {
+            // Find the matching section
+            const index = doc.content.toLowerCase().indexOf(query);
+            const start = Math.max(0, index - 100);
+            const end = Math.min(doc.content.length, index + query.length + 100);
+            const snippet = '...' + doc.content.substring(start, end) + '...';
 
-    } catch (error) {
-        console.error('Search error:', error);
+            return { filename: doc.filename, snippet };
+        });
+
+    if (results.length > 0) {
+        resultsDiv.innerHTML = results.map(result => `
+            <div class="kb-result">
+                <strong>${escapeHtml(result.filename)}</strong>
+                <p>${escapeHtml(result.snippet)}</p>
+            </div>
+        `).join('');
+    } else {
+        resultsDiv.innerHTML = '<p class="empty-state">No results found.</p>';
     }
 }
 
@@ -637,77 +874,13 @@ async function searchKnowledgeBase() {
 
 function setupTraining() {
     const startTrainingBtn = document.getElementById('start-training');
-
-    startTrainingBtn.addEventListener('click', startTraining);
-
-    loadTrainedModels();
+    if (startTrainingBtn) {
+        startTrainingBtn.addEventListener('click', startTraining);
+    }
 }
 
 async function startTraining() {
-    const taskName = document.getElementById('task-name').value.trim();
-    const baseModel = document.getElementById('base-model').value;
-    const trainingDataStr = document.getElementById('training-data').value.trim();
-
-    if (!taskName || !trainingDataStr) {
-        alert('Please fill in all fields');
-        return;
-    }
-
-    let trainingData;
-    try {
-        trainingData = JSON.parse(trainingDataStr);
-    } catch (e) {
-        alert('Invalid JSON in training data');
-        return;
-    }
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/train`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                task_name: taskName,
-                training_data: trainingData,
-                base_model: baseModel
-            })
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            alert('Training started successfully!');
-            loadTrainedModels();
-        } else {
-            alert(`Training failed: ${result.detail || 'Unknown error'}`);
-        }
-
-    } catch (error) {
-        console.error('Training error:', error);
-        alert(`Training error: ${error.message}`);
-    }
-}
-
-async function loadTrainedModels() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/models`);
-        const data = await response.json();
-
-        const modelsList = document.getElementById('models-list');
-
-        if (data.models && data.models.length > 0) {
-            modelsList.innerHTML = data.models.map(model => `
-                <div class="model-card">
-                    <span>${escapeHtml(model.name)}</span>
-                    <button class="btn-secondary" onclick="loadModel('${model.name}')">Load</button>
-                </div>
-            `).join('');
-        } else {
-            modelsList.innerHTML = '<p class="empty-state">No trained models yet.</p>';
-        }
-
-    } catch (error) {
-        console.error('Failed to load models:', error);
-    }
+    alert('Model training requires significant computational resources.\n\nFor fine-tuning, we recommend using Ollama\'s modelfile feature to create custom models based on existing ones.\n\nVisit: https://ollama.ai/docs/modelfile');
 }
 
 // ==================== Settings ====================
@@ -725,30 +898,29 @@ function setupSettings() {
     });
 
     // Check for updates
-    checkUpdatesBtn.addEventListener('click', checkForUpdates);
+    if (checkUpdatesBtn) {
+        checkUpdatesBtn.addEventListener('click', checkForUpdates);
+    }
+
+    // Initial render of model list
+    renderModelList();
 }
 
 function loadSettings() {
     const settings = JSON.parse(localStorage.getItem('aigoodbyeSettings') || '{}');
-
-    if (settings.localModel) document.getElementById('local-model').value = settings.localModel;
-    if (settings.systemPrompt) document.getElementById('system-prompt').value = settings.systemPrompt;
+    const systemPromptEl = document.getElementById('system-prompt');
+    if (settings.systemPrompt && systemPromptEl) {
+        systemPromptEl.value = settings.systemPrompt;
+    }
 }
 
 function saveSettings() {
+    const systemPromptEl = document.getElementById('system-prompt');
     const settings = {
-        localModel: document.getElementById('local-model').value,
-        systemPrompt: document.getElementById('system-prompt').value
+        systemPrompt: systemPromptEl ? systemPromptEl.value : ''
     };
 
     localStorage.setItem('aigoodbyeSettings', JSON.stringify(settings));
-
-    // Apply system prompt if changed
-    if (settings.systemPrompt) {
-        fetch(`${API_BASE_URL}/api/system-prompt?prompt=${encodeURIComponent(settings.systemPrompt)}`, {
-            method: 'POST'
-        }).catch(console.error);
-    }
 }
 
 async function checkForUpdates() {

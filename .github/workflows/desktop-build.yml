@@ -163,6 +163,20 @@ jobs:
           APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
+          # Debug: Check if secrets are set (without revealing values)
+          echo "Checking secrets..."
+          if [ -z "$APPLE_CERTIFICATE_BASE64" ]; then
+            echo "Error: APPLE_CERTIFICATE_BASE64 is empty"
+            exit 1
+          fi
+          echo "APPLE_CERTIFICATE_BASE64 length: ${#APPLE_CERTIFICATE_BASE64} characters"
+
+          if [ -z "$APPLE_CERTIFICATE_PASSWORD" ]; then
+            echo "Error: APPLE_CERTIFICATE_PASSWORD is empty"
+            exit 1
+          fi
+          echo "APPLE_CERTIFICATE_PASSWORD length: ${#APPLE_CERTIFICATE_PASSWORD} characters"
+
           # Create a temporary keychain
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
@@ -172,8 +186,31 @@ jobs:
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-          # Import certificate
+          # Decode certificate and check file size
           echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > $RUNNER_TEMP/certificate.p12
+          CERT_SIZE=$(wc -c < $RUNNER_TEMP/certificate.p12)
+          echo "Decoded certificate size: $CERT_SIZE bytes"
+
+          if [ "$CERT_SIZE" -lt 1000 ]; then
+            echo "Warning: Certificate file seems too small, might be corrupted"
+          fi
+
+          # Verify it's a valid PKCS12 file
+          echo "Verifying PKCS12 file format..."
+          if ! openssl pkcs12 -in $RUNNER_TEMP/certificate.p12 -passin pass:"$APPLE_CERTIFICATE_PASSWORD" -nokeys -info 2>/dev/null; then
+            echo "Error: Failed to verify PKCS12 file. Password might be incorrect or file is corrupted."
+            echo "Trying with empty password..."
+            if openssl pkcs12 -in $RUNNER_TEMP/certificate.p12 -passin pass: -nokeys -info 2>/dev/null; then
+              echo "Certificate has an empty password!"
+              APPLE_CERTIFICATE_PASSWORD=""
+            else
+              echo "Certificate verification failed with both passwords"
+              exit 1
+            fi
+          fi
+          echo "PKCS12 file verified successfully"
+
+          # Import certificate
           security import $RUNNER_TEMP/certificate.p12 -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
 
           # Add keychain to search list

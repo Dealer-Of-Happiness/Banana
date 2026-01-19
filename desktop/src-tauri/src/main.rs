@@ -5,6 +5,7 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use tauri::{Manager, State};
@@ -12,11 +13,11 @@ use tauri::{Manager, State};
 /// State to manage the Ollama process
 struct OllamaProcess(Mutex<Option<Child>>);
 
-/// Get the path to the Ollama executable
-fn get_ollama_path() -> std::path::PathBuf {
+/// Get the path to the Ollama executable and its directory
+fn get_ollama_paths() -> (PathBuf, PathBuf) {
     // In development, try to use system Ollama
     if cfg!(debug_assertions) {
-        return std::path::PathBuf::from("ollama");
+        return (PathBuf::from("ollama"), PathBuf::from("."));
     }
 
     // Get the target triple for the current platform
@@ -42,15 +43,43 @@ fn get_ollama_path() -> std::path::PathBuf {
         .unwrap_or_default();
 
     #[cfg(target_os = "macos")]
-    let binary_path = exe_dir.join("../Resources/binaries").join(binary_name);
+    let binaries_dir = exe_dir.join("../Resources/binaries");
 
     #[cfg(target_os = "windows")]
-    let binary_path = exe_dir.join("binaries").join(binary_name);
+    let binaries_dir = exe_dir.join("binaries");
 
     #[cfg(target_os = "linux")]
-    let binary_path = exe_dir.join("binaries").join(binary_name);
+    let binaries_dir = exe_dir.join("binaries");
 
-    binary_path
+    let binary_path = binaries_dir.join(binary_name);
+
+    (binary_path, binaries_dir)
+}
+
+/// Prepare the Ollama binary for execution (macOS specific)
+#[cfg(target_os = "macos")]
+fn prepare_binary(binary_path: &PathBuf) -> Result<(), String> {
+    use std::os::unix::fs::PermissionsExt;
+
+    // Ensure the binary is executable
+    if let Ok(metadata) = std::fs::metadata(binary_path) {
+        let mut perms = metadata.permissions();
+        perms.set_mode(0o755);
+        let _ = std::fs::set_permissions(binary_path, perms);
+    }
+
+    // Remove quarantine attribute on macOS (downloaded files are quarantined)
+    let _ = Command::new("xattr")
+        .args(["-d", "com.apple.quarantine"])
+        .arg(binary_path)
+        .output();
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn prepare_binary(_binary_path: &PathBuf) -> Result<(), String> {
+    Ok(())
 }
 
 /// Start the Ollama server
@@ -61,26 +90,49 @@ fn start_ollama_server(state: &State<'_, OllamaProcess>) -> Result<(), String> {
         return Ok(()); // Already running
     }
 
-    let ollama_path = get_ollama_path();
+    let (ollama_path, binaries_dir) = get_ollama_paths();
 
     // Log the path we're trying to use
-    eprintln!("Ollama binary path: {:?}", ollama_path);
+    eprintln!("=== Ollama Startup ===");
+    eprintln!("Binary path: {:?}", ollama_path);
+    eprintln!("Binaries dir: {:?}", binaries_dir);
     eprintln!("Binary exists: {}", ollama_path.exists());
+    eprintln!("Dir exists: {}", binaries_dir.exists());
+
+    // List binaries directory contents for debugging
+    if let Ok(entries) = std::fs::read_dir(&binaries_dir) {
+        eprintln!("Binaries directory contents:");
+        for entry in entries.flatten() {
+            eprintln!("  - {:?}", entry.file_name());
+        }
+    }
 
     if !ollama_path.exists() && !cfg!(debug_assertions) {
         return Err(format!("Ollama binary not found at: {:?}", ollama_path));
     }
 
-    // Set OLLAMA_HOST to ensure it binds to localhost
+    // Prepare binary (set permissions, remove quarantine on macOS)
+    prepare_binary(&ollama_path)?;
+
+    // Set HOME directory for Ollama to store models
+    let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+
+    eprintln!("Starting Ollama server...");
+    eprintln!("Working directory: {:?}", binaries_dir);
+    eprintln!("HOME: {:?}", home_dir);
+
+    // Start Ollama with current_dir set (like electron-ollama does)
     let child = Command::new(&ollama_path)
         .arg("serve")
+        .current_dir(&binaries_dir)
         .env("OLLAMA_HOST", "127.0.0.1:11434")
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .env("HOME", &home_dir)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
         .map_err(|e| format!("Failed to start Ollama at {:?}: {}", ollama_path, e))?;
 
-    eprintln!("Ollama server started successfully");
+    eprintln!("Ollama process spawned with PID: {:?}", child.id());
     *process_guard = Some(child);
 
     Ok(())
@@ -91,8 +143,10 @@ fn stop_ollama_server(state: &State<'_, OllamaProcess>) -> Result<(), String> {
     let mut process_guard = state.0.lock().map_err(|e| e.to_string())?;
 
     if let Some(mut child) = process_guard.take() {
+        eprintln!("Stopping Ollama server...");
         let _ = child.kill();
         let _ = child.wait();
+        eprintln!("Ollama server stopped");
     }
 
     Ok(())

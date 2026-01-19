@@ -261,6 +261,8 @@ function setupModelSetup() {
 
     // Download button click handler
     downloadBtn.addEventListener('click', async () => {
+        console.log('Download button clicked');
+
         const selectedModels = [];
         modelCheckboxes.forEach(checkbox => {
             if (checkbox.checked) {
@@ -269,36 +271,55 @@ function setupModelSetup() {
             }
         });
 
-        if (selectedModels.length === 0) return;
+        console.log('Selected models:', selectedModels);
+
+        if (selectedModels.length === 0) {
+            selectionHint.textContent = 'Please select at least one model';
+            selectionHint.style.color = '#ff6b6b';
+            return;
+        }
+
+        // Show starting status
+        selectionHint.textContent = 'Checking AI engine...';
+        selectionHint.style.color = '';
+        downloadBtn.disabled = true;
 
         // Check if embedded Ollama is ready
+        console.log('Checking Ollama availability...');
         const ollamaAvailable = await checkOllamaAvailable();
+        console.log('Ollama available:', ollamaAvailable);
+
         if (!ollamaAvailable) {
-            alert('AI engine is still starting. Please wait a moment and try again.');
+            selectionHint.textContent = 'AI engine not ready. Please restart the app and try again.';
+            selectionHint.style.color = '#ff6b6b';
+            downloadBtn.disabled = false;
             return;
         }
 
         // Disable UI during download
-        downloadBtn.disabled = true;
         downloadBtn.textContent = 'Downloading...';
         modelCheckboxes.forEach(cb => cb.disabled = true);
+        selectionHint.textContent = `Downloading ${selectedModels.length} model${selectedModels.length > 1 ? 's' : ''}...`;
 
-        // Download each selected model
-        let successCount = 0;
-        for (const modelId of selectedModels) {
-            const success = await downloadModelFromOllama(modelId);
-            if (success) successCount++;
-        }
+        // Download all selected models in parallel
+        console.log('Starting parallel downloads...');
+        const downloadPromises = selectedModels.map(modelId => downloadModelFromOllama(modelId));
+        const results = await Promise.all(downloadPromises);
+        const successCount = results.filter(r => r).length;
+
+        console.log('Download results:', results, 'Success count:', successCount);
 
         if (successCount > 0) {
             downloadBtn.classList.add('hidden');
             continueBtn.classList.remove('hidden');
             selectionHint.textContent = `${successCount} model${successCount > 1 ? 's' : ''} downloaded successfully!`;
+            selectionHint.style.color = '#51cf66';
         } else {
             downloadBtn.disabled = false;
             downloadBtn.textContent = 'Download Selected Models';
             modelCheckboxes.forEach(cb => cb.disabled = false);
-            selectionHint.textContent = 'Download failed. Please try again.';
+            selectionHint.textContent = 'Download failed. Check console for details.';
+            selectionHint.style.color = '#ff6b6b';
         }
     });
 
@@ -315,38 +336,53 @@ function setupModelSetup() {
 
 async function checkOllamaAvailable() {
     try {
+        console.log('Checking Ollama at:', OLLAMA_API_URL);
         const response = await fetch(`${OLLAMA_API_URL}/api/tags`, {
             method: 'GET',
             signal: AbortSignal.timeout(5000)
         });
+        console.log('Ollama response status:', response.status);
         return response.ok;
     } catch (error) {
+        console.error('Ollama check failed:', error.message);
         return false;
     }
 }
 
 async function downloadModelFromOllama(modelId) {
+    console.log(`Starting download for model: ${modelId}`);
+
     const card = document.querySelector(`.model-card[data-model="${modelId}"]`);
     const progressContainer = card?.querySelector('.model-progress');
     const progressFill = card?.querySelector('.progress-fill');
     const progressText = card?.querySelector('.progress-text');
     const statusTextEl = card?.querySelector('.status-text');
 
+    console.log(`Found card for ${modelId}:`, !!card);
+
     if (progressContainer) progressContainer.classList.remove('hidden');
+    if (progressFill) progressFill.style.width = '0%';
+    if (progressText) progressText.textContent = '0%';
     if (statusTextEl) {
         statusTextEl.textContent = 'Connecting...';
         statusTextEl.className = 'status-text downloading';
     }
 
     try {
+        console.log(`Sending pull request for ${modelId} to ${OLLAMA_API_URL}/api/pull`);
+
         const response = await fetch(`${OLLAMA_API_URL}/api/pull`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: modelId, stream: true })
         });
 
+        console.log(`Pull response status for ${modelId}:`, response.status);
+
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            const errorText = await response.text();
+            console.error(`Pull failed for ${modelId}:`, errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
 
         const reader = response.body.getReader();
@@ -354,6 +390,7 @@ async function downloadModelFromOllama(modelId) {
 
         if (statusTextEl) statusTextEl.textContent = 'Downloading...';
 
+        let lastPercent = 0;
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -364,16 +401,37 @@ async function downloadModelFromOllama(modelId) {
             for (const line of lines) {
                 try {
                     const data = JSON.parse(line);
+
+                    // Update status text based on Ollama's status
+                    if (data.status && statusTextEl) {
+                        if (data.status.includes('pulling')) {
+                            statusTextEl.textContent = 'Downloading...';
+                        } else if (data.status.includes('verifying')) {
+                            statusTextEl.textContent = 'Verifying...';
+                        } else if (data.status === 'success') {
+                            statusTextEl.textContent = 'Complete!';
+                        }
+                    }
+
+                    // Update progress bar
                     if (data.total && data.completed) {
                         const percent = Math.round((data.completed / data.total) * 100);
-                        if (progressFill) progressFill.style.width = percent + '%';
-                        if (progressText) progressText.textContent = percent + '%';
+                        if (percent !== lastPercent) {
+                            lastPercent = percent;
+                            if (progressFill) progressFill.style.width = percent + '%';
+                            if (progressText) progressText.textContent = percent + '%';
+                            console.log(`${modelId} download progress: ${percent}%`);
+                        }
                     }
+
                     if (data.status === 'success') {
                         if (progressFill) progressFill.style.width = '100%';
                         if (progressText) progressText.textContent = '100%';
+                        console.log(`${modelId} download complete!`);
                     }
-                } catch (e) {}
+                } catch (e) {
+                    // Ignore JSON parse errors for partial lines
+                }
             }
         }
 
@@ -389,13 +447,14 @@ async function downloadModelFromOllama(modelId) {
         }
         if (progressContainer) progressContainer.classList.add('hidden');
 
+        console.log(`Successfully downloaded ${modelId}`);
         return true;
 
     } catch (error) {
         console.error(`Download error for ${modelId}:`, error);
         if (statusTextEl) {
-            statusTextEl.textContent = 'Failed';
-            statusTextEl.className = 'status-text';
+            statusTextEl.textContent = `Failed: ${error.message}`;
+            statusTextEl.className = 'status-text error';
         }
         if (progressContainer) progressContainer.classList.add('hidden');
         return false;
@@ -472,19 +531,42 @@ function renderModelList() {
 }
 
 window.handleDownloadModel = async function(modelId) {
+    console.log('handleDownloadModel called for:', modelId);
+
+    const modelItem = document.querySelector(`.model-item[data-model="${modelId}"]`);
+    if (modelItem) {
+        const actionsDiv = modelItem.querySelector('.model-item-actions');
+        actionsDiv.innerHTML = `<span class="model-item-status downloading">Checking...</span>`;
+    }
+
     const ollamaAvailable = await checkOllamaAvailable();
     if (!ollamaAvailable) {
-        alert('AI engine is still starting. Please wait a moment and try again.');
+        if (modelItem) {
+            const actionsDiv = modelItem.querySelector('.model-item-actions');
+            actionsDiv.innerHTML = `
+                <span class="model-item-status error">AI engine not ready</span>
+                <button class="btn-download-small" onclick="handleDownloadModel('${modelId}')">Retry</button>
+            `;
+        }
         return;
     }
 
-    const modelItem = document.querySelector(`.model-item[data-model="${modelId}"]`);
     if (modelItem) {
         const actionsDiv = modelItem.querySelector('.model-item-actions');
         actionsDiv.innerHTML = `<span class="model-item-status downloading">Downloading...</span>`;
     }
 
-    await downloadModelFromOllama(modelId);
+    const success = await downloadModelFromOllama(modelId);
+
+    if (!success && modelItem) {
+        const actionsDiv = modelItem.querySelector('.model-item-actions');
+        actionsDiv.innerHTML = `
+            <span class="model-item-status error">Failed</span>
+            <button class="btn-download-small" onclick="handleDownloadModel('${modelId}')">Retry</button>
+        `;
+        return;
+    }
+
     renderModelList();
     populateChatModelDropdown();
 };

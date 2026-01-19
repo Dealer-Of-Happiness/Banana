@@ -951,6 +951,11 @@ body {
     color: var(--primary);
 }
 
+.model-status .status-text.error {
+    color: var(--error);
+    font-size: 0.75rem;
+}
+
 .setup-actions {
     text-align: center;
 }
@@ -1213,6 +1218,11 @@ body {
 .model-item-status.downloading {
     background: rgba(247, 215, 22, 0.2);
     color: var(--primary);
+}
+
+.model-item-status.error {
+    background: rgba(244, 67, 54, 0.2);
+    color: var(--error);
 }
 
 .model-item .progress-bar {

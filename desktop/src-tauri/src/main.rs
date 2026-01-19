@@ -69,10 +69,10 @@ fn get_backend_url() -> String {
 /// Get the path to the backend executable
 fn get_backend_path() -> String {
     #[cfg(target_os = "windows")]
-    let binary_name = "banana-backend.exe";
+    let binary_name = "aigoodbye-backend.exe";
 
     #[cfg(not(target_os = "windows"))]
-    let binary_name = "banana-backend";
+    let binary_name = "aigoodbye-backend";
 
     // In development, use the local Python installation
     if cfg!(debug_assertions) {

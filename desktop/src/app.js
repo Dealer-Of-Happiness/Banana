@@ -63,7 +63,7 @@ async function init() {
 
 async function checkModelSetup() {
     // Load downloaded models from localStorage
-    downloadedModels = JSON.parse(localStorage.getItem('bananaDownloadedModels') || '[]');
+    downloadedModels = JSON.parse(localStorage.getItem('aigoodbyeDownloadedModels') || '[]');
 
     // Check if any models are downloaded
     if (downloadedModels.length === 0) {
@@ -195,7 +195,7 @@ async function downloadModel(modelId) {
         // Mark as downloaded
         if (!downloadedModels.includes(modelId)) {
             downloadedModels.push(modelId);
-            localStorage.setItem('bananaDownloadedModels', JSON.stringify(downloadedModels));
+            localStorage.setItem('aigoodbyeDownloadedModels', JSON.stringify(downloadedModels));
         }
 
         // Update UI
@@ -211,7 +211,7 @@ async function downloadModel(modelId) {
         // Still mark as downloaded for demo purposes
         if (!downloadedModels.includes(modelId)) {
             downloadedModels.push(modelId);
-            localStorage.setItem('bananaDownloadedModels', JSON.stringify(downloadedModels));
+            localStorage.setItem('aigoodbyeDownloadedModels', JSON.stringify(downloadedModels));
         }
 
         statusText.textContent = 'Downloaded';
@@ -729,7 +729,7 @@ function setupSettings() {
 }
 
 function loadSettings() {
-    const settings = JSON.parse(localStorage.getItem('bananaSettings') || '{}');
+    const settings = JSON.parse(localStorage.getItem('aigoodbyeSettings') || '{}');
 
     if (settings.localModel) document.getElementById('local-model').value = settings.localModel;
     if (settings.systemPrompt) document.getElementById('system-prompt').value = settings.systemPrompt;
@@ -741,7 +741,7 @@ function saveSettings() {
         systemPrompt: document.getElementById('system-prompt').value
     };
 
-    localStorage.setItem('bananaSettings', JSON.stringify(settings));
+    localStorage.setItem('aigoodbyeSettings', JSON.stringify(settings));
 
     // Apply system prompt if changed
     if (settings.systemPrompt) {

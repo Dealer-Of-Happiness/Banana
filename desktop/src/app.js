@@ -13,7 +13,7 @@ const OLLAMA_API_URL = 'http://127.0.0.1:11434';
 const AVAILABLE_MODELS = [
     { id: 'llama3.2:1b', name: 'Llama 3.2 1B', size: 'small', sizeGB: '~1.3 GB', vision: false },
     { id: 'llama3.2:3b', name: 'Llama 3.2 3B', size: 'medium', sizeGB: '~2.0 GB', vision: false },
-    { id: 'llama3.2-vision:11b', name: 'Llama 3.2 Vision 11B', size: 'large', sizeGB: '~8 GB', vision: true },
+    { id: 'llama3.2-vision', name: 'Llama 3.2 Vision 11B', size: 'large', sizeGB: '~8 GB', vision: true },
     { id: 'llama3.2-vision:90b', name: 'Llama 3.2 Vision 90B', size: 'xlarge', sizeGB: '~55 GB', vision: true }
 ];
 
@@ -484,6 +484,23 @@ async function downloadModelFromOllama(modelId) {
             throw new Error('Download did not complete successfully');
         }
 
+        // Verify the model is actually available in Ollama
+        console.log(`Verifying ${modelId} is available...`);
+        const verifyResponse = await fetch(`${OLLAMA_API_URL}/api/tags`);
+        if (verifyResponse.ok) {
+            const data = await verifyResponse.json();
+            const modelExists = data.models?.some(m =>
+                m.name === modelId ||
+                m.name === modelId + ':latest' ||
+                m.name.startsWith(modelId.split(':')[0])
+            );
+            if (!modelExists) {
+                console.error(`Model ${modelId} not found after download!`);
+                throw new Error('Model not found after download - please try again');
+            }
+            console.log(`Verified: ${modelId} is installed`);
+        }
+
         // Mark as downloaded only on actual success
         if (!downloadedModels.includes(modelId)) {
             downloadedModels.push(modelId);
@@ -746,9 +763,21 @@ async function sendMessage() {
     const contentEl = assistantMsg.querySelector('.message-content p');
 
     try {
+        // System prompt to ensure model understands it runs locally
+        const systemPrompt = `You are an AI assistant running completely offline and locally on the user's computer through the AIGoodbye desktop application. Important facts about yourself:
+- You run entirely on the user's local machine, not on any remote server
+- You do not have internet access and cannot browse the web or access online services
+- All your processing happens locally on this computer
+- You cannot share any user information with anyone because you have no network connectivity
+- User conversations and data never leave this device
+- You provide a private, secure AI experience with complete data privacy
+
+When users ask about your capabilities or where you run, be honest about these facts.`;
+
         const requestBody = {
             model: currentChatModel,
             prompt: message,
+            system: systemPrompt,
             stream: true
         };
 

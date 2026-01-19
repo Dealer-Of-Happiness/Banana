@@ -45,9 +45,9 @@
                         <p class="model-size">~1.3 GB download • 4GB+ RAM</p>
                         <p class="model-desc">Lightweight text model for instant responses. Ideal for simple Q&amp;A, quick lookups, and basic conversations on any hardware.</p>
                         <ul class="model-features">
-                            <li>⚡ Fastest response time</li>
-                            <li>💻 Works on any computer</li>
-                            <li>💬 Text chat only</li>
+                            <li>Fast response time</li>
+                            <li>Works on any computer</li>
+                            <li>Text chat only</li>
                         </ul>
                         <p class="model-best-for"><strong>Best for:</strong> Quick questions, older/basic hardware, battery saving</p>
                     </div>
@@ -75,9 +75,9 @@
                         <p class="model-size">~2.0 GB download • 8GB+ RAM</p>
                         <p class="model-desc">Balanced text model with improved reasoning. Great for writing, coding help, and thoughtful conversations.</p>
                         <ul class="model-features">
-                            <li>⚡ Fast responses</li>
-                            <li>🧠 Better comprehension</li>
-                            <li>💬 Text chat only</li>
+                            <li>Fast responses</li>
+                            <li>Better comprehension</li>
+                            <li>Text chat only</li>
                         </ul>
                         <p class="model-best-for"><strong>Best for:</strong> Daily use, writing assistance, general productivity</p>
                     </div>
@@ -105,9 +105,9 @@
                         <p class="model-size">~8 GB download • 16GB+ RAM</p>
                         <p class="model-desc">Multimodal AI that understands both text AND images. Analyze photos, documents, screenshots, charts, and more.</p>
                         <ul class="model-features">
-                            <li>📷 Analyze images &amp; photos</li>
-                            <li>📄 Read documents &amp; PDFs</li>
-                            <li>🧠 Strong reasoning</li>
+                            <li>Analyze images &amp; photos</li>
+                            <li>Read documents &amp; PDFs</li>
+                            <li>Strong reasoning</li>
                         </ul>
                         <p class="model-best-for"><strong>Best for:</strong> Image analysis, document review, visual tasks</p>
                     </div>
@@ -135,9 +135,9 @@
                         <p class="model-size">~55 GB download • 64GB+ RAM</p>
                         <p class="model-desc">State-of-the-art multimodal AI. Maximum capability for both text and image understanding. Comparable to GPT-4V quality.</p>
                         <ul class="model-features">
-                            <li>📷 Best-in-class image analysis</li>
-                            <li>🧠 Expert-level reasoning</li>
-                            <li>✨ Highest quality outputs</li>
+                            <li>Best-in-class image analysis</li>
+                            <li>Expert-level reasoning</li>
+                            <li>Highest quality outputs</li>
                         </ul>
                         <p class="model-best-for"><strong>Best for:</strong> Professional work, complex analysis, research, power users</p>
                     </div>
@@ -159,7 +159,7 @@
                     Download Selected Models
                 </button>
                 <button id="continue-setup-btn" class="btn-continue hidden">
-                    Continue to App →
+                    Continue to App
                 </button>
             </div>
         </div>
@@ -171,27 +171,28 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h1 class="brand">AI Goodbye</h1>
-                <span class="version">v1.0.0</span>
             </div>
 
-            <nav class="sidebar-nav">
-                <button class="nav-item active" data-view="chat">
-                    <span class="icon">💬</span>
-                    Chat
+            <!-- Fixed navigation items -->
+            <nav class="sidebar-nav-fixed">
+                <button class="nav-item" data-view="settings">
+                    <span class="icon">Settings</span>
                 </button>
                 <button class="nav-item" data-view="knowledge">
-                    <span class="icon">📚</span>
-                    Knowledge Base
-                </button>
-                <button class="nav-item" data-view="training">
-                    <span class="icon">🧠</span>
-                    Training
-                </button>
-                <button class="nav-item" data-view="settings">
-                    <span class="icon">⚙️</span>
-                    Settings
+                    <span class="icon">Knowledge Base</span>
                 </button>
             </nav>
+
+            <!-- Chat management buttons -->
+            <div class="chat-management">
+                <button id="new-chat-btn" class="btn-new-chat" title="New Chat">+ New Chat</button>
+                <button id="new-folder-btn" class="btn-new-folder" title="New Folder">+ Folder</button>
+            </div>
+
+            <!-- Chat list -->
+            <div id="chat-list" class="chat-list">
+                <!-- Chats and folders will be rendered here by JavaScript -->
+            </div>
 
         </aside>
 
@@ -201,9 +202,6 @@
             <div id="chat-view" class="view active">
                 <div class="chat-header">
                     <h2>Chat</h2>
-                    <div class="chat-actions">
-                        <button id="new-chat-btn" class="btn-icon" title="New Chat">🗑️ Clear</button>
-                    </div>
                 </div>
 
                 <!-- Model Selection Bar -->
@@ -217,7 +215,7 @@
 
                 <div class="chat-container" id="chat-container">
                     <div class="message assistant">
-                        <div class="message-avatar">🤖</div>
+                        <div class="message-avatar">AI</div>
                         <div class="message-content">
                             <p>Hello! I'm AI Goodbye, your local AI assistant.</p>
                             <p>I run completely offline on your device - no internet required, no data leaves your computer.</p>
@@ -230,7 +228,7 @@
                     <div id="image-preview-container" class="image-preview-container"></div>
                     <div class="input-wrapper">
                         <button id="attach-button" class="attach-btn hidden" title="Attach image (Vision models only)">
-                            📎
+                            +
                         </button>
                         <input type="file" id="image-input" accept="image/*" multiple hidden>
                         <textarea
@@ -262,7 +260,7 @@
 
                 <div class="kb-content">
                     <div class="upload-zone" id="upload-zone">
-                        <div class="upload-icon">📄</div>
+                        <div class="upload-icon">+</div>
                         <p>Drag & drop files here or click to upload</p>
                         <p class="upload-hint">Supports: PDF, TXT, MD, DOCX</p>
                         <input type="file" id="file-input" multiple accept=".pdf,.txt,.md,.docx" hidden>
@@ -279,57 +277,18 @@
                         </div>
                     </div>
 
+                    <h3>Your Documents</h3>
+                    <div id="kb-docs-list" class="kb-docs-list">
+                        <p class="empty-state">No documents added yet.</p>
+                    </div>
+
+                    <h3>Search</h3>
                     <div class="kb-search">
                         <input type="text" id="kb-search-input" placeholder="Search your knowledge base...">
                         <button id="kb-search-btn" class="btn-primary">Search</button>
                     </div>
 
                     <div class="kb-results" id="kb-results"></div>
-                </div>
-            </div>
-
-            <!-- Training View -->
-            <div id="training-view" class="view">
-                <div class="view-header">
-                    <h2>Model Training</h2>
-                    <p>Fine-tune models with LoRA on your own data.</p>
-                </div>
-
-                <div class="training-content">
-                    <div class="training-form">
-                        <div class="form-group">
-                            <label>Task Name</label>
-                            <input type="text" id="task-name" placeholder="e.g., customer-support-bot">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Base Model</label>
-                            <select id="base-model">
-                                <option value="meta-llama/Llama-3.2-3B">Llama 3.2 3B</option>
-                                <option value="meta-llama/Llama-3.2-1B">Llama 3.2 1B</option>
-                                <option value="mistralai/Mistral-7B-v0.1">Mistral 7B</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Training Data (JSON)</label>
-                            <textarea id="training-data" rows="10" placeholder='[
-  {"input": "Hello", "output": "Hi there!"},
-  {"input": "How are you?", "output": "I am doing great, thanks for asking!"}
-]'></textarea>
-                        </div>
-
-                        <button id="start-training" class="btn-primary btn-large">
-                            🚀 Start Training
-                        </button>
-                    </div>
-
-                    <div class="trained-models">
-                        <h3>Trained Models</h3>
-                        <div id="models-list" class="models-list">
-                            <p class="empty-state">No trained models yet.</p>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -355,8 +314,8 @@
                         <h3>AI Configuration</h3>
 
                         <div class="setting-item">
-                            <label>System Prompt</label>
-                            <textarea id="system-prompt" rows="4" placeholder="You are a helpful AI assistant..."></textarea>
+                            <label>Custom System Prompt (optional)</label>
+                            <textarea id="system-prompt" rows="4" placeholder="Add custom instructions for the AI..."></textarea>
                         </div>
                     </section>
 
@@ -365,7 +324,7 @@
                         <div class="about-info">
                             <p><strong>AI Goodbye Desktop</strong></p>
                             <p>Version 1.0.0</p>
-                            <p>© 2024 AI Goodbye. All rights reserved.</p>
+                            <p>2024 AI Goodbye. All rights reserved.</p>
                             <p><a href="https://aigoodbye.ai" target="_blank">aigoodbye.ai</a></p>
                         </div>
                         <button id="check-updates" class="btn-secondary">Check for Updates</button>

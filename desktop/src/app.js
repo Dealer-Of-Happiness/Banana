@@ -17,47 +17,61 @@ const AVAILABLE_MODELS = [
     { id: 'llama3.2-vision:90b', name: 'Llama 3.2 Vision 90B', size: 'xlarge', sizeGB: '~55 GB', vision: true }
 ];
 
-// DOM Elements
-const loadingScreen = document.getElementById('loading-screen');
-const modelSetupScreen = document.getElementById('model-setup-screen');
-const app = document.getElementById('app');
-const chatContainer = document.getElementById('chat-container');
-const messageInput = document.getElementById('message-input');
-const sendButton = document.getElementById('send-button');
-const attachButton = document.getElementById('attach-button');
-const imageInput = document.getElementById('image-input');
-const imagePreviewContainer = document.getElementById('image-preview-container');
-const useKbCheckbox = document.getElementById('use-kb');
-const newChatBtn = document.getElementById('new-chat-btn');
-const chatModelSelect = document.getElementById('chat-model-select');
-const modelIndicator = document.getElementById('model-indicator');
-
-// Navigation elements
-const navItems = document.querySelectorAll('.nav-item');
-const views = document.querySelectorAll('.view');
+// DOM Elements - will be initialized after DOM loads
+let loadingScreen, modelSetupScreen, app, chatContainer, messageInput, sendButton;
+let attachButton, imageInput, imagePreviewContainer, useKbCheckbox, newChatBtn;
+let chatModelSelect, modelIndicator, navItems, views;
 
 // State
 let downloadedModels = [];
 let currentChatModel = null;
 let pendingImages = []; // Base64 encoded images for vision models
 let conversationHistory = [];
+let ollamaReady = false;
+
+// Chat & Folder Management State
+let chats = [];
+let folders = [];
+let currentChatId = null;
 
 // ==================== Initialization ====================
 
-let ollamaReady = false;
+function initDOMElements() {
+    loadingScreen = document.getElementById('loading-screen');
+    modelSetupScreen = document.getElementById('model-setup-screen');
+    app = document.getElementById('app');
+    chatContainer = document.getElementById('chat-container');
+    messageInput = document.getElementById('message-input');
+    sendButton = document.getElementById('send-button');
+    attachButton = document.getElementById('attach-button');
+    imageInput = document.getElementById('image-input');
+    imagePreviewContainer = document.getElementById('image-preview-container');
+    useKbCheckbox = document.getElementById('use-kb');
+    newChatBtn = document.getElementById('new-chat-btn');
+    chatModelSelect = document.getElementById('chat-model-select');
+    modelIndicator = document.getElementById('model-indicator');
+    navItems = document.querySelectorAll('.nav-item');
+    views = document.querySelectorAll('.view');
+}
 
 async function init() {
     console.log('Initializing AI Goodbye Desktop...');
+
+    // Initialize DOM references
+    initDOMElements();
+
+    // Load saved data
+    loadChatsAndFolders();
 
     // Set up event listeners
     setupNavigation();
     setupChat();
     setupKnowledgeBase();
-    setupTraining();
     setupSettings();
     setupModelSetup();
     setupImageAttachment();
     setupRetryButton();
+    setupChatFolderManagement();
 
     // Start Ollama and wait for it
     await startupSequence();
@@ -196,6 +210,7 @@ async function checkModelSetup() {
             app.classList.remove('hidden');
             populateChatModelDropdown();
             renderModelList();
+            renderChatList();
         }, 1000);
     }
 }
@@ -203,57 +218,105 @@ async function checkModelSetup() {
 // ==================== Image Attachment ====================
 
 function setupImageAttachment() {
-    if (!attachButton || !imageInput) return;
+    if (!attachButton || !imageInput) {
+        console.log('Image attachment elements not found');
+        return;
+    }
 
-    attachButton.addEventListener('click', () => {
+    console.log('Setting up image attachment...');
+
+    attachButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Attach button clicked');
         imageInput.click();
     });
 
     imageInput.addEventListener('change', (e) => {
+        console.log('Files selected:', e.target.files.length);
         const files = Array.from(e.target.files);
+
         files.forEach(file => {
+            console.log('Processing file:', file.name, file.type);
             if (file.type.startsWith('image/')) {
                 const reader = new FileReader();
                 reader.onload = (event) => {
+                    console.log('File loaded, adding to pendingImages');
                     const base64 = event.target.result.split(',')[1];
                     pendingImages.push({
                         base64: base64,
                         preview: event.target.result,
                         name: file.name
                     });
+                    console.log('pendingImages count:', pendingImages.length);
                     renderImagePreviews();
                     updateSendButtonState();
                 };
+                reader.onerror = (error) => {
+                    console.error('FileReader error:', error);
+                };
                 reader.readAsDataURL(file);
+            } else {
+                console.log('File is not an image:', file.type);
             }
         });
+        // Reset input so same file can be selected again
         imageInput.value = '';
     });
 }
 
 function renderImagePreviews() {
-    if (!imagePreviewContainer) return;
+    console.log('Rendering image previews, count:', pendingImages.length);
+    if (!imagePreviewContainer) {
+        console.error('imagePreviewContainer not found!');
+        return;
+    }
+
+    if (pendingImages.length === 0) {
+        imagePreviewContainer.innerHTML = '';
+        imagePreviewContainer.style.display = 'none';
+        return;
+    }
+
+    imagePreviewContainer.style.display = 'flex';
     imagePreviewContainer.innerHTML = pendingImages.map((img, index) => `
         <div class="image-preview">
             <img src="${img.preview}" alt="${img.name}">
-            <button class="remove-image" onclick="removeImage(${index})">×</button>
+            <button type="button" class="remove-image" data-index="${index}">×</button>
         </div>
     `).join('');
+
+    // Add click handlers for remove buttons
+    imagePreviewContainer.querySelectorAll('.remove-image').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const index = parseInt(btn.dataset.index);
+            removeImage(index);
+        });
+    });
 }
 
-window.removeImage = function(index) {
+function removeImage(index) {
+    console.log('Removing image at index:', index);
     pendingImages.splice(index, 1);
     renderImagePreviews();
     updateSendButtonState();
-};
+}
+
+// Expose globally for onclick handlers
+window.removeImage = removeImage;
 
 function updateAttachButtonVisibility() {
     if (!attachButton) return;
     const modelInfo = AVAILABLE_MODELS.find(m => m.id === currentChatModel);
+    console.log('Updating attach button visibility. Model:', currentChatModel, 'Vision:', modelInfo?.vision);
     if (modelInfo && modelInfo.vision) {
         attachButton.classList.remove('hidden');
+        attachButton.style.display = 'flex';
     } else {
         attachButton.classList.add('hidden');
+        attachButton.style.display = 'none';
         pendingImages = [];
         renderImagePreviews();
     }
@@ -355,6 +418,7 @@ function setupModelSetup() {
         app.classList.remove('hidden');
         populateChatModelDropdown();
         renderModelList();
+        renderChatList();
     });
 
     updateModelSetupStatus();
@@ -417,8 +481,8 @@ async function downloadModelFromOllama(modelId) {
         if (statusTextEl) statusTextEl.textContent = 'Starting download...';
 
         let lastPercent = 0;
-        let downloadSuccess = false;  // Track if we actually received success
-        let errorMessage = null;      // Track any error from Ollama
+        let downloadSuccess = false;
+        let errorMessage = null;
 
         while (true) {
             const { done, value } = await reader.read();
@@ -432,11 +496,9 @@ async function downloadModelFromOllama(modelId) {
                     const data = JSON.parse(line);
                     console.log(`[${modelId}] Ollama response:`, data);
 
-                    // Check for error from Ollama - break immediately
                     if (data.error) {
                         errorMessage = data.error;
                         console.error(`[${modelId}] Ollama error:`, data.error);
-                        // Show error immediately to user
                         if (statusTextEl) {
                             statusTextEl.textContent = `Error: ${data.error.substring(0, 50)}`;
                             statusTextEl.className = 'status-text error';
@@ -444,7 +506,6 @@ async function downloadModelFromOllama(modelId) {
                         break;
                     }
 
-                    // Update status text based on Ollama's status
                     if (data.status && statusTextEl) {
                         if (data.status.includes('pulling')) {
                             statusTextEl.textContent = 'Downloading...';
@@ -452,11 +513,10 @@ async function downloadModelFromOllama(modelId) {
                             statusTextEl.textContent = 'Verifying...';
                         } else if (data.status === 'success') {
                             statusTextEl.textContent = 'Complete!';
-                            downloadSuccess = true;  // Mark as actually successful
+                            downloadSuccess = true;
                         }
                     }
 
-                    // Update progress bar
                     if (data.total && data.completed) {
                         const percent = Math.round((data.completed / data.total) * 100);
                         if (percent !== lastPercent) {
@@ -473,26 +533,22 @@ async function downloadModelFromOllama(modelId) {
                         console.log(`${modelId} download complete!`);
                     }
                 } catch (e) {
-                    // Ignore JSON parse errors for partial lines
                     console.log(`[${modelId}] Parse error for line:`, line);
                 }
             }
 
-            // Break outer loop if we got an error
             if (errorMessage) break;
         }
 
-        // Check if Ollama returned an error
         if (errorMessage) {
             throw new Error(errorMessage);
         }
 
-        // Only mark as downloaded if we actually received success status
         if (!downloadSuccess) {
             throw new Error('Download did not complete successfully');
         }
 
-        // Verify the model is actually available in Ollama
+        // Verify the model is actually available
         console.log(`Verifying ${modelId} is available...`);
         const verifyResponse = await fetch(`${OLLAMA_API_URL}/api/tags`);
         if (verifyResponse.ok) {
@@ -509,7 +565,6 @@ async function downloadModelFromOllama(modelId) {
             console.log(`Verified: ${modelId} is installed`);
         }
 
-        // Mark as downloaded only on actual success
         if (!downloadedModels.includes(modelId)) {
             downloadedModels.push(modelId);
             localStorage.setItem('aigoodbyeDownloadedModels', JSON.stringify(downloadedModels));
@@ -708,9 +763,242 @@ function setupNavigation() {
             if (viewName === 'settings') {
                 renderModelList();
             }
+            if (viewName === 'knowledge') {
+                loadKBStats();
+                renderKBDocuments();
+            }
         });
     });
 }
+
+// ==================== Chat & Folder Management ====================
+
+function loadChatsAndFolders() {
+    chats = JSON.parse(localStorage.getItem('aigoodbyeChats') || '[]');
+    folders = JSON.parse(localStorage.getItem('aigoodbyeFolders') || '[]');
+
+    // Create default chat if none exists
+    if (chats.length === 0) {
+        const defaultChat = {
+            id: Date.now().toString(),
+            name: 'New Chat',
+            folderId: null,
+            messages: [],
+            createdAt: new Date().toISOString()
+        };
+        chats.push(defaultChat);
+        currentChatId = defaultChat.id;
+        saveChatsAndFolders();
+    } else {
+        currentChatId = chats[0].id;
+    }
+}
+
+function saveChatsAndFolders() {
+    localStorage.setItem('aigoodbyeChats', JSON.stringify(chats));
+    localStorage.setItem('aigoodbyeFolders', JSON.stringify(folders));
+}
+
+function setupChatFolderManagement() {
+    // New Chat button
+    const newChatButton = document.getElementById('new-chat-btn');
+    if (newChatButton) {
+        newChatButton.onclick = () => createNewChat();
+    }
+
+    // New Folder button
+    const newFolderBtn = document.getElementById('new-folder-btn');
+    if (newFolderBtn) {
+        newFolderBtn.onclick = () => createNewFolder();
+    }
+}
+
+function createNewChat(folderId = null) {
+    const newChat = {
+        id: Date.now().toString(),
+        name: 'New Chat',
+        folderId: folderId,
+        messages: [],
+        createdAt: new Date().toISOString()
+    };
+    chats.unshift(newChat);
+    currentChatId = newChat.id;
+    saveChatsAndFolders();
+    renderChatList();
+    loadCurrentChat();
+}
+
+function createNewFolder() {
+    const name = prompt('Enter folder name:');
+    if (name && name.trim()) {
+        const newFolder = {
+            id: Date.now().toString(),
+            name: name.trim(),
+            createdAt: new Date().toISOString()
+        };
+        folders.push(newFolder);
+        saveChatsAndFolders();
+        renderChatList();
+    }
+}
+
+function renameChat(chatId) {
+    const chat = chats.find(c => c.id === chatId);
+    if (chat) {
+        const newName = prompt('Enter new name:', chat.name);
+        if (newName && newName.trim()) {
+            chat.name = newName.trim();
+            saveChatsAndFolders();
+            renderChatList();
+        }
+    }
+}
+
+function deleteChat(chatId) {
+    if (confirm('Delete this chat?')) {
+        chats = chats.filter(c => c.id !== chatId);
+        if (currentChatId === chatId) {
+            currentChatId = chats.length > 0 ? chats[0].id : null;
+            if (!currentChatId) {
+                createNewChat();
+                return;
+            }
+        }
+        saveChatsAndFolders();
+        renderChatList();
+        loadCurrentChat();
+    }
+}
+
+function renameFolder(folderId) {
+    const folder = folders.find(f => f.id === folderId);
+    if (folder) {
+        const newName = prompt('Enter new name:', folder.name);
+        if (newName && newName.trim()) {
+            folder.name = newName.trim();
+            saveChatsAndFolders();
+            renderChatList();
+        }
+    }
+}
+
+function deleteFolder(folderId) {
+    if (confirm('Delete this folder? Chats inside will be moved out.')) {
+        // Move chats out of folder
+        chats.forEach(chat => {
+            if (chat.folderId === folderId) {
+                chat.folderId = null;
+            }
+        });
+        folders = folders.filter(f => f.id !== folderId);
+        saveChatsAndFolders();
+        renderChatList();
+    }
+}
+
+function moveChatToFolder(chatId, folderId) {
+    const chat = chats.find(c => c.id === chatId);
+    if (chat) {
+        chat.folderId = folderId;
+        saveChatsAndFolders();
+        renderChatList();
+    }
+}
+
+function selectChat(chatId) {
+    currentChatId = chatId;
+    renderChatList();
+    loadCurrentChat();
+}
+
+function loadCurrentChat() {
+    const chat = chats.find(c => c.id === currentChatId);
+    if (chat && chatContainer) {
+        chatContainer.innerHTML = '';
+        conversationHistory = [...chat.messages];
+
+        if (chat.messages.length === 0) {
+            addMessage('Hello! I\'m AI Goodbye, your local AI assistant. I run completely offline on your device. Select a model above to start chatting!', false);
+        } else {
+            chat.messages.forEach(msg => {
+                addMessage(msg.content, msg.role === 'user', msg.images || null);
+            });
+        }
+    }
+}
+
+function renderChatList() {
+    const chatListEl = document.getElementById('chat-list');
+    if (!chatListEl) return;
+
+    let html = '';
+
+    // Render folders with their chats
+    folders.forEach(folder => {
+        const folderChats = chats.filter(c => c.folderId === folder.id);
+        html += `
+            <div class="folder-item" data-folder-id="${folder.id}">
+                <div class="folder-header">
+                    <span class="folder-icon">📁</span>
+                    <span class="folder-name">${escapeHtml(folder.name)}</span>
+                    <div class="folder-actions">
+                        <button onclick="renameFolder('${folder.id}')" title="Rename">✏️</button>
+                        <button onclick="deleteFolder('${folder.id}')" title="Delete">🗑️</button>
+                    </div>
+                </div>
+                <div class="folder-chats">
+                    ${folderChats.map(chat => renderChatItem(chat)).join('')}
+                </div>
+            </div>
+        `;
+    });
+
+    // Render chats without folders
+    const unfolderedChats = chats.filter(c => !c.folderId);
+    unfolderedChats.forEach(chat => {
+        html += renderChatItem(chat);
+    });
+
+    chatListEl.innerHTML = html;
+}
+
+function renderChatItem(chat) {
+    const isActive = chat.id === currentChatId;
+    const preview = chat.messages.length > 0
+        ? chat.messages[chat.messages.length - 1].content.substring(0, 30) + '...'
+        : 'No messages yet';
+
+    return `
+        <div class="chat-item ${isActive ? 'active' : ''}" onclick="selectChat('${chat.id}')">
+            <div class="chat-item-content">
+                <span class="chat-icon">💬</span>
+                <div class="chat-item-text">
+                    <span class="chat-name">${escapeHtml(chat.name)}</span>
+                    <span class="chat-preview">${escapeHtml(preview)}</span>
+                </div>
+            </div>
+            <div class="chat-item-actions">
+                <button onclick="event.stopPropagation(); renameChat('${chat.id}')" title="Rename">✏️</button>
+                <button onclick="event.stopPropagation(); deleteChat('${chat.id}')" title="Delete">🗑️</button>
+                <select onchange="moveChatToFolder('${chat.id}', this.value); this.value='';" onclick="event.stopPropagation();">
+                    <option value="">Move to...</option>
+                    <option value="null">No folder</option>
+                    ${folders.map(f => `<option value="${f.id}">${escapeHtml(f.name)}</option>`).join('')}
+                </select>
+            </div>
+        </div>
+    `;
+}
+
+// Expose functions globally
+window.selectChat = selectChat;
+window.renameChat = renameChat;
+window.deleteChat = deleteChat;
+window.renameFolder = renameFolder;
+window.deleteFolder = deleteFolder;
+window.moveChatToFolder = moveChatToFolder;
+window.createNewChat = createNewChat;
+window.createNewFolder = createNewFolder;
 
 // ==================== Chat ====================
 
@@ -733,10 +1021,70 @@ function setupChat() {
     });
 
     sendButton.addEventListener('click', sendMessage);
+}
 
-    if (newChatBtn) {
-        newChatBtn.addEventListener('click', clearChat);
+// Get relevant knowledge base content for the query
+function getRelevantKBContent(query) {
+    if (!useKbCheckbox || !useKbCheckbox.checked) {
+        return null;
     }
+
+    const docs = JSON.parse(localStorage.getItem('aigoodbyeKnowledgeBase') || '[]');
+    if (docs.length === 0) return null;
+
+    // Simple keyword matching - find documents containing query words
+    const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    if (queryWords.length === 0) return null;
+
+    const relevantDocs = [];
+
+    docs.forEach(doc => {
+        const contentLower = doc.content.toLowerCase();
+        const filenameLower = doc.filename.toLowerCase();
+
+        // Count matching words
+        let matches = 0;
+        queryWords.forEach(word => {
+            if (contentLower.includes(word) || filenameLower.includes(word)) {
+                matches++;
+            }
+        });
+
+        if (matches > 0) {
+            // Find the most relevant snippet
+            let bestSnippet = '';
+            for (const word of queryWords) {
+                const idx = contentLower.indexOf(word);
+                if (idx !== -1) {
+                    const start = Math.max(0, idx - 200);
+                    const end = Math.min(doc.content.length, idx + 500);
+                    bestSnippet = doc.content.substring(start, end);
+                    break;
+                }
+            }
+
+            relevantDocs.push({
+                filename: doc.filename,
+                snippet: bestSnippet || doc.content.substring(0, 500),
+                matches: matches
+            });
+        }
+    });
+
+    // Sort by relevance and take top 3
+    relevantDocs.sort((a, b) => b.matches - a.matches);
+    const topDocs = relevantDocs.slice(0, 3);
+
+    if (topDocs.length === 0) return null;
+
+    // Format as context
+    let context = '\n\n--- KNOWLEDGE BASE CONTEXT ---\n';
+    topDocs.forEach(doc => {
+        context += `\nFrom "${doc.filename}":\n${doc.snippet}\n`;
+    });
+    context += '\n--- END CONTEXT ---\n\nUse the above context to help answer the user\'s question if relevant.';
+
+    return context;
 }
 
 async function sendMessage() {
@@ -756,6 +1104,7 @@ async function sendMessage() {
         return;
     }
 
+    // Add user message to UI
     addMessage(message, true, pendingImages.length > 0 ? [...pendingImages] : null);
 
     const imagesToSend = [...pendingImages];
@@ -771,8 +1120,11 @@ async function sendMessage() {
     const contentEl = assistantMsg.querySelector('.message-content p');
 
     try {
+        // Get knowledge base context if enabled
+        const kbContext = getRelevantKBContent(message);
+
         // System prompt to ensure model understands it runs locally
-        const systemPrompt = `You are an AI assistant running completely offline and locally on the user's computer through the AIGoodbye desktop application. Important facts about yourself:
+        let systemPrompt = `You are an AI assistant running completely offline and locally on the user's computer through the AIGoodbye desktop application. Important facts about yourself:
 - You run entirely on the user's local machine, not on any remote server
 - You do not have internet access and cannot browse the web or access online services
 - All your processing happens locally on this computer
@@ -782,6 +1134,11 @@ async function sendMessage() {
 
 When users ask about your capabilities or where you run, be honest about these facts.`;
 
+        // Append knowledge base context if available
+        if (kbContext) {
+            systemPrompt += kbContext;
+        }
+
         const requestBody = {
             model: currentChatModel,
             prompt: message,
@@ -789,9 +1146,13 @@ When users ask about your capabilities or where you run, be honest about these f
             stream: true
         };
 
+        // Add images if present
         if (imagesToSend.length > 0) {
             requestBody.images = imagesToSend.map(img => img.base64);
+            console.log('Sending message with', imagesToSend.length, 'images');
         }
+
+        console.log('Request body:', { ...requestBody, images: requestBody.images ? `[${requestBody.images.length} images]` : undefined });
 
         const response = await fetch(`${OLLAMA_API_URL}/api/generate`, {
             method: 'POST',
@@ -826,8 +1187,21 @@ When users ask about your capabilities or where you run, be honest about these f
             }
         }
 
-        conversationHistory.push({ role: 'user', content: message });
+        // Save to conversation history and current chat
+        conversationHistory.push({ role: 'user', content: message, images: imagesToSend.length > 0 ? imagesToSend : undefined });
         conversationHistory.push({ role: 'assistant', content: fullResponse });
+
+        // Update current chat
+        const currentChat = chats.find(c => c.id === currentChatId);
+        if (currentChat) {
+            currentChat.messages = [...conversationHistory];
+            // Auto-name chat based on first message
+            if (currentChat.messages.length === 2 && currentChat.name === 'New Chat') {
+                currentChat.name = message.substring(0, 30) + (message.length > 30 ? '...' : '');
+            }
+            saveChatsAndFolders();
+            renderChatList();
+        }
 
     } catch (error) {
         console.error('Chat error:', error);
@@ -865,14 +1239,6 @@ function addMessage(content, isUser = false, images = null) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 
     return msgDiv;
-}
-
-async function clearChat() {
-    chatContainer.innerHTML = '';
-    conversationHistory = [];
-    pendingImages = [];
-    renderImagePreviews();
-    addMessage('Chat cleared. Select a model to start chatting!', false);
 }
 
 // ==================== Knowledge Base ====================
@@ -916,6 +1282,7 @@ function setupKnowledgeBase() {
     });
 
     loadKBStats();
+    renderKBDocuments();
 }
 
 async function uploadFile(file) {
@@ -930,6 +1297,7 @@ async function uploadFile(file) {
         });
         localStorage.setItem('aigoodbyeKnowledgeBase', JSON.stringify(docs));
         loadKBStats();
+        renderKBDocuments();
         alert(`"${file.name}" added to knowledge base!`);
     } catch (error) {
         alert(`Failed to upload: ${error.message}`);
@@ -944,6 +1312,39 @@ function loadKBStats() {
     if (docCountEl) docCountEl.textContent = docs.length;
     if (chunkCountEl) chunkCountEl.textContent = chunks;
 }
+
+function renderKBDocuments() {
+    const docsListEl = document.getElementById('kb-docs-list');
+    if (!docsListEl) return;
+
+    const docs = JSON.parse(localStorage.getItem('aigoodbyeKnowledgeBase') || '[]');
+
+    if (docs.length === 0) {
+        docsListEl.innerHTML = '<p class="empty-state">No documents added yet.</p>';
+        return;
+    }
+
+    docsListEl.innerHTML = docs.map(doc => `
+        <div class="kb-doc-item">
+            <div class="kb-doc-info">
+                <span class="kb-doc-icon">📄</span>
+                <span class="kb-doc-name">${escapeHtml(doc.filename)}</span>
+                <span class="kb-doc-size">${Math.round(doc.content.length / 1024)}KB</span>
+            </div>
+            <button class="btn-delete-small" onclick="deleteKBDocument(${doc.id})">Delete</button>
+        </div>
+    `).join('');
+}
+
+window.deleteKBDocument = function(docId) {
+    if (confirm('Delete this document from knowledge base?')) {
+        let docs = JSON.parse(localStorage.getItem('aigoodbyeKnowledgeBase') || '[]');
+        docs = docs.filter(d => d.id !== docId);
+        localStorage.setItem('aigoodbyeKnowledgeBase', JSON.stringify(docs));
+        loadKBStats();
+        renderKBDocuments();
+    }
+};
 
 function searchKnowledgeBase() {
     const input = document.getElementById('kb-search-input');
@@ -966,15 +1367,6 @@ function searchKnowledgeBase() {
     resultsDiv.innerHTML = results.length > 0
         ? results.map(r => `<div class="kb-result"><strong>${escapeHtml(r.filename)}</strong><p>${escapeHtml(r.snippet)}</p></div>`).join('')
         : '<p class="empty-state">No results found.</p>';
-}
-
-// ==================== Training ====================
-
-function setupTraining() {
-    const btn = document.getElementById('start-training');
-    if (btn) btn.addEventListener('click', () => {
-        alert('For model fine-tuning, use Ollama modelfiles.\n\nVisit: https://ollama.ai/docs/modelfile');
-    });
 }
 
 // ==================== Settings ====================

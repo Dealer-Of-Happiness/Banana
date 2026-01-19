@@ -63,13 +63,13 @@ RECOMMENDED DESIGN:
 Your AI Goodbye icon should be:
 - Simple and recognizable at small sizes
 - Work on both light and dark backgrounds
-- Use the brand color #f7d716 (banana yellow)
-- Consider a banana or AI-themed design
+- Use the brand colors
+- Consider an AI-themed design
 
 Example concept:
-- A stylized banana with an "AI" or circuit pattern
-- A banana-shaped chat bubble
-- Abstract banana curves forming a brain shape
+- A waving hand with AI elements
+- A friendly goodbye gesture
+- Abstract AI/circuit pattern
 
 
 TIPS:

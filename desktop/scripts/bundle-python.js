@@ -18,7 +18,7 @@ const tauriDir = path.join(desktopDir, 'src-tauri');
 const platform = process.platform;
 const arch = process.arch;
 
-const binaryName = platform === 'win32' ? 'banana-backend.exe' : 'banana-backend';
+const binaryName = platform === 'win32' ? 'aigoodbye-backend.exe' : 'aigoodbye-backend';
 
 // Support explicit target via environment variable (useful for CI)
 // This allows overriding auto-detection when needed
@@ -108,7 +108,7 @@ aiohttp>=3.9.0
 function buildBackend() {
     console.log('Building Python backend with PyInstaller...');
 
-    const specFile = path.join(desktopDir, 'banana-backend.spec');
+    const specFile = path.join(desktopDir, 'aigoodbye-backend.spec');
     const distDir = path.join(desktopDir, 'dist');
 
     // Clean previous build
@@ -136,7 +136,7 @@ function copyToTauri(distDir) {
 
     const binDir = ensureBinariesDir();
     const sourceBinary = path.join(distDir, binaryName);
-    const targetBinary = path.join(binDir, `banana-backend-${targetTriple}${platform === 'win32' ? '.exe' : ''}`);
+    const targetBinary = path.join(binDir, `aigoodbye-backend-${targetTriple}${platform === 'win32' ? '.exe' : ''}`);
 
     if (!fs.existsSync(sourceBinary)) {
         console.error(`ERROR: Built binary not found at ${sourceBinary}`);

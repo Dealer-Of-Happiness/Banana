@@ -1,4 +1,4 @@
-# Banana AI Desktop
+# AI Goodbye Desktop
 
 Desktop application for Windows and macOS, downloadable from [aigoodbye.ai](https://aigoodbye.ai).
 
@@ -6,7 +6,7 @@ Desktop application for Windows and macOS, downloadable from [aigoodbye.ai](http
 
 ## Overview
 
-Banana AI Desktop is a native application that provides:
+AI Goodbye Desktop is a native application that provides:
 
 - **Offline AI Chat** - Run AI locally with Ollama
 - **Internet AI Access** - Connect to ChatGPT and Claude
@@ -18,7 +18,7 @@ Banana AI Desktop is a native application that provides:
 
 ```
 ┌─────────────────────────────────────────────────┐
-│              Banana AI Desktop                   │
+│              AI Goodbye Desktop                   │
 ├─────────────────────────────────────────────────┤
 │  ┌─────────────────────────────────────────┐    │
 │  │         Tauri (Native Wrapper)           │    │
@@ -133,7 +133,7 @@ Options:
 
 ```
 ┌─────────────────────────────────────┐
-│         Banana AI Desktop           │
+│         AI Goodbye Desktop           │
 │                                     │
 │  Your Offline AI with Internet      │
 │         Connectivity                │
@@ -183,17 +183,17 @@ Options:
    ```bash
    # Sign
    codesign --deep --force --sign "Developer ID Application: Your Name" \
-     "target/release/bundle/macos/Banana AI.app"
+     "target/release/bundle/macos/AI Goodbye.app"
 
    # Notarize
-   xcrun notarytool submit "Banana AI.dmg" \
+   xcrun notarytool submit "AI Goodbye.dmg" \
      --apple-id "your@email.com" \
      --password "app-specific-password" \
      --team-id "YOUR_TEAM_ID" \
      --wait
 
    # Staple
-   xcrun stapler staple "Banana AI.dmg"
+   xcrun stapler staple "AI Goodbye.dmg"
    ```
 
 ## Auto-Updates
@@ -208,7 +208,7 @@ See `update-server/README.md` for setup instructions.
 desktop/
 ├── package.json           # npm configuration
 ├── vite.config.js         # Vite bundler config
-├── banana-backend.spec    # PyInstaller config
+├── aigoodbye-backend.spec    # PyInstaller config
 ├── LICENSE                # Proprietary license
 │
 ├── src/                   # Frontend source
@@ -252,7 +252,7 @@ desktop/
 
 The app needs to be signed and notarized. For testing:
 ```bash
-xattr -cr "/Applications/Banana AI.app"
+xattr -cr "/Applications/AI Goodbye.app"
 ```
 
 ## Support

@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "AIGoodbye",
   "version": "1.0.0",
-  "identifier": "ai.aigoodbye.banana",
+  "identifier": "ai.aigoodbye.desktop",
   "build": {
     "beforeBuildCommand": "npm run bundle:python",
     "beforeDevCommand": "",
@@ -40,7 +40,7 @@
     ],
     "targets": "all",
     "externalBin": [
-      "binaries/banana-backend"
+      "binaries/aigoodbye-backend"
     ],
     "resources": [],
     "category": "Productivity",

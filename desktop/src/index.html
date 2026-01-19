@@ -193,9 +193,9 @@
             </nav>
 
             <div class="sidebar-footer">
-                <div class="status-box">
-                    <span id="backend-status" class="status-dot offline"></span>
-                    <span id="status-text">Connecting...</span>
+                <div class="ollama-status">
+                    <span id="ollama-status-dot" class="status-dot"></span>
+                    <span id="ollama-status-text" class="ollama-status-text">Checking Ollama...</span>
                 </div>
             </div>
         </aside>
@@ -232,7 +232,12 @@
                 </div>
 
                 <div class="chat-input-container">
+                    <div id="image-preview-container" class="image-preview-container"></div>
                     <div class="input-wrapper">
+                        <button id="attach-button" class="attach-btn hidden" title="Attach image (Vision models only)">
+                            📎
+                        </button>
+                        <input type="file" id="image-input" accept="image/*" multiple hidden>
                         <textarea
                             id="message-input"
                             placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
@@ -341,12 +346,18 @@
 
                 <div class="settings-content">
                     <section class="settings-section">
-                        <h3>AI Configuration</h3>
+                        <h3>AI Models</h3>
+                        <p class="settings-note">Download and manage AI models. Models run locally on your device.</p>
 
-                        <div class="setting-item">
-                            <label>Default Model</label>
-                            <input type="text" id="local-model" placeholder="llama3.2:3b">
+                        <div class="model-management">
+                            <div id="model-list" class="model-list">
+                                <!-- Model items will be populated by JavaScript -->
+                            </div>
                         </div>
+                    </section>
+
+                    <section class="settings-section">
+                        <h3>AI Configuration</h3>
 
                         <div class="setting-item">
                             <label>System Prompt</label>

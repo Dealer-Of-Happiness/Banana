@@ -1,4 +1,4 @@
-# Banana AI - Auto-Update Server Configuration
+# AI Goodbye - Auto-Update Server Configuration
 
 This directory contains the configuration for the Tauri auto-update system.
 
@@ -19,7 +19,7 @@ First, generate a signing key pair:
 cargo install tauri-cli
 
 # Generate keys
-cargo tauri signer generate -w ~/.tauri/banana-ai.key
+cargo tauri signer generate -w ~/.tauri/aigoodbye.key
 ```
 
 Save the public key and add it to `tauri.conf.json`:
@@ -43,7 +43,7 @@ Create an API endpoint at `https://aigoodbye.ai/api/updates/{target}/{arch}/{cur
   "version": "1.0.1",
   "notes": "Bug fixes and improvements",
   "pub_date": "2024-01-15T12:00:00Z",
-  "url": "https://aigoodbye.ai/downloads/Banana-AI_1.0.1_x64-setup.nsis.zip",
+  "url": "https://aigoodbye.ai/downloads/AIGoodbye_1.0.1_x64-setup.nsis.zip",
   "signature": "SIGNATURE_HERE"
 }
 ```
@@ -53,7 +53,7 @@ Create an API endpoint at `https://aigoodbye.ai/api/updates/{target}/{arch}/{cur
 When building a release, the artifacts are automatically signed if the private key is available:
 
 ```bash
-export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/banana-ai.key)"
+export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/aigoodbye.key)"
 npm run build
 ```
 
@@ -61,10 +61,10 @@ npm run build
 
 Upload the following to your server:
 
-- **Windows**: `Banana-AI_X.X.X_x64-setup.nsis.zip`
-- **macOS (Intel)**: `Banana-AI_X.X.X_x64.dmg.tar.gz`
-- **macOS (Apple Silicon)**: `Banana-AI_X.X.X_aarch64.dmg.tar.gz`
-- **Linux**: `Banana-AI_X.X.X_amd64.AppImage.tar.gz`
+- **Windows**: `AIGoodbye_X.X.X_x64-setup.nsis.zip`
+- **macOS (Intel)**: `AIGoodbye_X.X.X_x64.dmg.tar.gz`
+- **macOS (Apple Silicon)**: `AIGoodbye_X.X.X_aarch64.dmg.tar.gz`
+- **Linux**: `AIGoodbye_X.X.X_amd64.AppImage.tar.gz`
 
 ## Example Server Implementation (Node.js)
 
@@ -84,7 +84,7 @@ app.get('/api/updates/:target/:arch/:version', (req, res) => {
     version: latestVersion,
     notes: 'Bug fixes and improvements',
     pub_date: '2024-01-15T12:00:00Z',
-    url: `https://aigoodbye.ai/downloads/Banana-AI_${latestVersion}_${arch}-setup.zip`,
+    url: `https://aigoodbye.ai/downloads/AIGoodbye_${latestVersion}_${arch}-setup.zip`,
     signature: 'SIGNATURE_FROM_BUILD'
   });
 });
@@ -94,12 +94,12 @@ app.get('/api/updates/:target/:arch/:version', (req, res) => {
 
 ```
 /downloads/
-├── Banana-AI_1.0.0_x64-setup.nsis.zip
-├── Banana-AI_1.0.0_x64-setup.nsis.zip.sig
-├── Banana-AI_1.0.0_x64.dmg.tar.gz
-├── Banana-AI_1.0.0_x64.dmg.tar.gz.sig
-├── Banana-AI_1.0.0_aarch64.dmg.tar.gz
-├── Banana-AI_1.0.0_aarch64.dmg.tar.gz.sig
+├── AIGoodbye_1.0.0_x64-setup.nsis.zip
+├── AIGoodbye_1.0.0_x64-setup.nsis.zip.sig
+├── AIGoodbye_1.0.0_x64.dmg.tar.gz
+├── AIGoodbye_1.0.0_x64.dmg.tar.gz.sig
+├── AIGoodbye_1.0.0_aarch64.dmg.tar.gz
+├── AIGoodbye_1.0.0_aarch64.dmg.tar.gz.sig
 └── update.json
 ```
 

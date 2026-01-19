@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec file for Banana AI Backend
+PyInstaller spec file for AI Goodbye Backend
 
 This creates a standalone executable that can be bundled with the Tauri desktop app.
 """
@@ -119,7 +119,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='banana-backend',
+    name='aigoodbye-backend',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

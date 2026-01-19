@@ -414,9 +414,12 @@ async function downloadModelFromOllama(modelId) {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
 
-        if (statusTextEl) statusTextEl.textContent = 'Downloading...';
+        if (statusTextEl) statusTextEl.textContent = 'Starting download...';
 
         let lastPercent = 0;
+        let downloadSuccess = false;  // Track if we actually received success
+        let errorMessage = null;      // Track any error from Ollama
+
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -427,6 +430,14 @@ async function downloadModelFromOllama(modelId) {
             for (const line of lines) {
                 try {
                     const data = JSON.parse(line);
+                    console.log(`[${modelId}] Ollama response:`, data);
+
+                    // Check for error from Ollama
+                    if (data.error) {
+                        errorMessage = data.error;
+                        console.error(`[${modelId}] Ollama error:`, data.error);
+                        continue;
+                    }
 
                     // Update status text based on Ollama's status
                     if (data.status && statusTextEl) {
@@ -436,6 +447,7 @@ async function downloadModelFromOllama(modelId) {
                             statusTextEl.textContent = 'Verifying...';
                         } else if (data.status === 'success') {
                             statusTextEl.textContent = 'Complete!';
+                            downloadSuccess = true;  // Mark as actually successful
                         }
                     }
 
@@ -457,11 +469,22 @@ async function downloadModelFromOllama(modelId) {
                     }
                 } catch (e) {
                     // Ignore JSON parse errors for partial lines
+                    console.log(`[${modelId}] Parse error for line:`, line);
                 }
             }
         }
 
-        // Mark as downloaded
+        // Check if Ollama returned an error
+        if (errorMessage) {
+            throw new Error(errorMessage);
+        }
+
+        // Only mark as downloaded if we actually received success status
+        if (!downloadSuccess) {
+            throw new Error('Download did not complete successfully');
+        }
+
+        // Mark as downloaded only on actual success
         if (!downloadedModels.includes(modelId)) {
             downloadedModels.push(modelId);
             localStorage.setItem('aigoodbyeDownloadedModels', JSON.stringify(downloadedModels));

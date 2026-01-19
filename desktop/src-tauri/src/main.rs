@@ -17,13 +17,40 @@ struct OllamaProcess(Mutex<Option<CommandChild>>);
 fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
     eprintln!("=== Starting Ollama via Tauri Sidecar ===");
 
-    // Use Tauri's sidecar API - it knows exactly where the binary is
-    let sidecar_command = app
+    // Build the sidecar command
+    let mut sidecar_command = app
         .shell()
         .sidecar("ollama")
         .map_err(|e| format!("Failed to create sidecar command: {}", e))?
         .args(["serve"])
         .env("OLLAMA_HOST", "127.0.0.1:11434");
+
+    // On Windows, we need to add the lib folder to PATH for DLL dependencies
+    #[cfg(target_os = "windows")]
+    {
+        eprintln!("Windows detected - setting up library path...");
+
+        // Get the resource directory where lib folder is bundled
+        if let Ok(resource_dir) = app.path().resource_dir() {
+            let lib_path = resource_dir.join("lib").join("ollama");
+            eprintln!("Library path: {:?}", lib_path);
+
+            if lib_path.exists() {
+                // Get current PATH and prepend the lib path
+                let current_path = std::env::var("PATH").unwrap_or_default();
+                let new_path = format!("{};{}", lib_path.display(), current_path);
+                eprintln!("Setting PATH to include: {}", lib_path.display());
+                sidecar_command = sidecar_command.env("PATH", new_path);
+            } else {
+                eprintln!("Warning: lib/ollama folder not found at {:?}", lib_path);
+                // Try alternative locations
+                let app_dir = app.path().app_local_data_dir().ok();
+                eprintln!("App local data dir: {:?}", app_dir);
+            }
+        } else {
+            eprintln!("Warning: Could not get resource directory");
+        }
+    }
 
     eprintln!("Spawning Ollama sidecar...");
 
@@ -98,6 +125,14 @@ fn main() {
         ])
         .setup(|app| {
             eprintln!("=== AIGoodbye App Setup ===");
+
+            // Log paths for debugging
+            if let Ok(resource_dir) = app.path().resource_dir() {
+                eprintln!("Resource dir: {:?}", resource_dir);
+            }
+            if let Ok(app_dir) = app.path().app_local_data_dir() {
+                eprintln!("App local data dir: {:?}", app_dir);
+            }
 
             // Start Ollama when the app launches
             match start_ollama_server(app) {

@@ -30,11 +30,23 @@ def resize_image_with_pil(source_path, sizes, icons_dir):
         resized.save(output_path, 'PNG')
         print(f"Created: {output_path}")
 
-    # Create Windows ICO
-    ico_sizes = [16, 32, 48, 64, 128, 256]
-    ico_images = [img.resize((s, s), Image.Resampling.LANCZOS) for s in ico_sizes]
+    # Create Windows ICO with high-resolution images
+    # Include 256x256 PNG for modern Windows (Vista+) for crisp display
+    ico_sizes = [16, 24, 32, 48, 64, 128, 256]
+    ico_images = []
+    for s in ico_sizes:
+        resized = img.resize((s, s), Image.Resampling.LANCZOS)
+        ico_images.append(resized)
+
     ico_path = os.path.join(icons_dir, 'icon.ico')
-    ico_images[0].save(ico_path, format='ICO', sizes=[(s, s) for s in ico_sizes], append_images=ico_images[1:])
+    # Save with all sizes - PIL will handle the format correctly
+    # The 256x256 will be stored as PNG inside the ICO for quality
+    ico_images[-1].save(
+        ico_path,
+        format='ICO',
+        sizes=[(s, s) for s in ico_sizes],
+        append_images=ico_images[:-1]
+    )
     print(f"Created: {ico_path}")
 
     # Create macOS ICNS

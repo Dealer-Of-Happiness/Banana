@@ -62,15 +62,27 @@ jobs:
           Invoke-WebRequest -Uri $ollamaUrl -OutFile $ollamaZip
 
           New-Item -ItemType Directory -Force -Path $ollamaDir
-          Expand-Archive -Path $ollamaZip -DestinationPath $ollamaDir -Force
 
-          # Rename to match Tauri's expected naming
-          if (Test-Path "$ollamaDir/ollama.exe") {
-            Move-Item "$ollamaDir/ollama.exe" "$ollamaDir/ollama-x86_64-pc-windows-msvc.exe" -Force
+          # Extract to temp directory first to see structure
+          $extractDir = "$env:RUNNER_TEMP\ollama-extract"
+          Expand-Archive -Path $ollamaZip -DestinationPath $extractDir -Force
+
+          Write-Host "Extracted contents:"
+          Get-ChildItem -Recurse $extractDir
+
+          # Copy ollama.exe with correct name for Tauri sidecar
+          if (Test-Path "$extractDir/ollama.exe") {
+            Copy-Item "$extractDir/ollama.exe" "$ollamaDir/ollama-x86_64-pc-windows-msvc.exe" -Force
           }
 
-          Write-Host "Ollama binary ready:"
-          Get-ChildItem $ollamaDir
+          # Copy the lib folder if it exists (contains required DLLs)
+          if (Test-Path "$extractDir/lib") {
+            Write-Host "Copying lib folder with DLL dependencies..."
+            Copy-Item "$extractDir/lib" "$ollamaDir/lib" -Recurse -Force
+          }
+
+          Write-Host "Ollama binaries ready:"
+          Get-ChildItem -Recurse $ollamaDir
 
       - name: Install npm dependencies
         working-directory: desktop

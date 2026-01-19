@@ -223,6 +223,10 @@ jobs:
           echo "Installed certificates:"
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
+          echo ""
+          echo "All identities in keychain:"
+          security find-identity -v "$KEYCHAIN_PATH"
+
           # Export keychain path for later steps
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
 
@@ -250,10 +254,22 @@ jobs:
           echo "Found app at: $APP_PATH"
 
           # Get the signing identity
+          echo "Looking for signing identity..."
+          echo "Available identities:"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+          # Try to find Developer ID Application first
           SIGNING_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}')
 
+          # If not found, try any valid codesigning identity
           if [ -z "$SIGNING_IDENTITY" ]; then
-            echo "Error: Could not find Developer ID Application certificate"
+            echo "Developer ID Application not found, looking for any valid identity..."
+            SIGNING_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep -E "^\s+[0-9]+\)" | head -1 | awk -F'"' '{print $2}')
+          fi
+
+          if [ -z "$SIGNING_IDENTITY" ]; then
+            echo "Error: Could not find any valid codesigning certificate"
+            echo "Make sure you exported a 'Developer ID Application' certificate from Keychain Access"
             exit 1
           fi
 
@@ -308,6 +324,9 @@ jobs:
 
           # Get the signing identity
           SIGNING_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}')
+          if [ -z "$SIGNING_IDENTITY" ]; then
+            SIGNING_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep -E "^\s+[0-9]+\)" | head -1 | awk -F'"' '{print $2}')
+          fi
 
           # Create DMG from the signed app
           echo "Creating DMG..."

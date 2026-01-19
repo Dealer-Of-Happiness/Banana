@@ -158,30 +158,149 @@ jobs:
           TAURI_TARGET: ${{ matrix.target }}
         run: npm run bundle:python
 
+      - name: Import Apple Developer Certificate
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          # Create a temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          # Create keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Import certificate
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > $RUNNER_TEMP/certificate.p12
+          security import $RUNNER_TEMP/certificate.p12 -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+
+          # Add keychain to search list
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          # Allow codesign to access the keychain
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Verify certificate is installed
+          echo "Installed certificates:"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+          # Export keychain path for later steps
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
+
       - name: Build Tauri
         working-directory: desktop
         run: npx tauri build --target ${{ matrix.target }}
 
-      - name: Rename and organize artifacts
+      - name: Sign and Notarize macOS App
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          # Find the .app bundle
+          APP_PATH=$(find desktop/src-tauri/target/${{ matrix.target }}/release/bundle/macos -name "*.app" 2>/dev/null | head -1)
+          if [ -z "$APP_PATH" ]; then
+            APP_PATH=$(find desktop/src-tauri/target/release/bundle/macos -name "*.app" 2>/dev/null | head -1)
+          fi
+
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: Could not find .app bundle"
+            exit 1
+          fi
+
+          echo "Found app at: $APP_PATH"
+
+          # Get the signing identity
+          SIGNING_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}')
+
+          if [ -z "$SIGNING_IDENTITY" ]; then
+            echo "Error: Could not find Developer ID Application certificate"
+            exit 1
+          fi
+
+          echo "Signing with identity: $SIGNING_IDENTITY"
+
+          # Sign all nested components first (frameworks, dylibs, etc.)
+          find "$APP_PATH" -type f \( -name "*.dylib" -o -name "*.so" -o -perm +111 \) -exec codesign --force --options runtime --sign "$SIGNING_IDENTITY" --timestamp {} \; 2>/dev/null || true
+
+          # Sign any nested .app bundles
+          find "$APP_PATH" -name "*.app" -type d -mindepth 1 -exec codesign --force --options runtime --sign "$SIGNING_IDENTITY" --timestamp --deep {} \; 2>/dev/null || true
+
+          # Sign the main app bundle
+          codesign --force --options runtime --sign "$SIGNING_IDENTITY" --timestamp --deep "$APP_PATH"
+
+          # Verify the signature
+          echo "Verifying signature..."
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+
+          # Create a ZIP for notarization
+          echo "Creating ZIP for notarization..."
+          ZIP_PATH="$RUNNER_TEMP/app-for-notarization.zip"
+          ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+
+          # Submit for notarization
+          echo "Submitting for notarization..."
+          xcrun notarytool submit "$ZIP_PATH" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --wait
+
+          # Staple the notarization ticket to the app
+          echo "Stapling notarization ticket..."
+          xcrun stapler staple "$APP_PATH"
+
+          # Verify stapling
+          echo "Verifying stapled app..."
+          xcrun stapler validate "$APP_PATH"
+          spctl --assess --type exec -vvv "$APP_PATH"
+
+          echo "APP_PATH=$APP_PATH" >> $GITHUB_ENV
+
+      - name: Create signed DMG
         run: |
           VERSION="${{ github.event.inputs.version || github.ref_name }}"
           VERSION="${VERSION#v}"
           OUTPUT_DIR="release-artifacts"
           mkdir -p $OUTPUT_DIR
 
-          # Find and rename DMG file
-          DMG=$(find desktop/src-tauri/target/${{ matrix.target }}/release/bundle/dmg -name "*.dmg" 2>/dev/null | head -1)
-          if [ -n "$DMG" ]; then
-            cp "$DMG" "$OUTPUT_DIR/${{ env.APP_NAME }}-macOS-${{ matrix.artifact_suffix }}.dmg"
-          fi
+          DMG_NAME="${{ env.APP_NAME }}-macOS-${{ matrix.artifact_suffix }}.dmg"
+          DMG_PATH="$OUTPUT_DIR/$DMG_NAME"
 
-          # Fallback to release directory
-          RELEASE_DMG=$(find desktop/src-tauri/target/release/bundle/dmg -name "*.dmg" 2>/dev/null | head -1)
-          if [ -n "$RELEASE_DMG" ] && [ ! -f "$OUTPUT_DIR/${{ env.APP_NAME }}-macOS-${{ matrix.artifact_suffix }}.dmg" ]; then
-            cp "$RELEASE_DMG" "$OUTPUT_DIR/${{ env.APP_NAME }}-macOS-${{ matrix.artifact_suffix }}.dmg"
-          fi
+          # Get the signing identity
+          SIGNING_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}')
 
+          # Create DMG from the signed app
+          echo "Creating DMG..."
+          hdiutil create -volname "${{ env.APP_NAME }}" -srcfolder "$APP_PATH" -ov -format UDZO "$DMG_PATH"
+
+          # Sign the DMG
+          echo "Signing DMG..."
+          codesign --force --sign "$SIGNING_IDENTITY" --timestamp "$DMG_PATH"
+
+          # Notarize the DMG
+          echo "Notarizing DMG..."
+          xcrun notarytool submit "$DMG_PATH" \
+            --apple-id "${{ secrets.APPLE_ID }}" \
+            --team-id "${{ secrets.APPLE_TEAM_ID }}" \
+            --password "${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}" \
+            --wait
+
+          # Staple the DMG
+          echo "Stapling DMG..."
+          xcrun stapler staple "$DMG_PATH"
+
+          echo "Final artifacts:"
           ls -la $OUTPUT_DIR
+
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          if [ -n "$KEYCHAIN_PATH" ] && [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH" || true
+          fi
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4

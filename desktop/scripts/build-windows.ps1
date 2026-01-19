@@ -1,10 +1,10 @@
-# Banana AI Desktop - Windows Build Script
+# AI Goodbye Desktop - Windows Build Script
 # Run this on a Windows machine to build the Windows installer
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "Banana AI - Windows Build" -ForegroundColor Cyan
+Write-Host "AI Goodbye - Windows Build" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 

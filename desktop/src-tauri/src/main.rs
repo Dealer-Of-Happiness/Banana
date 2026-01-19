@@ -13,17 +13,27 @@ use tauri::{Manager, State};
 struct OllamaProcess(Mutex<Option<Child>>);
 
 /// Get the path to the Ollama executable
-fn get_ollama_path() -> String {
-    #[cfg(target_os = "windows")]
-    let binary_name = "ollama.exe";
-
-    #[cfg(not(target_os = "windows"))]
-    let binary_name = "ollama";
-
+fn get_ollama_path() -> std::path::PathBuf {
     // In development, try to use system Ollama
     if cfg!(debug_assertions) {
-        return "ollama".to_string();
+        return std::path::PathBuf::from("ollama");
     }
+
+    // Get the target triple for the current platform
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    let binary_name = "ollama-aarch64-apple-darwin";
+
+    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+    let binary_name = "ollama-x86_64-apple-darwin";
+
+    #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+    let binary_name = "ollama-x86_64-pc-windows-msvc.exe";
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    let binary_name = "ollama-x86_64-unknown-linux-gnu";
+
+    #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+    let binary_name = "ollama-aarch64-unknown-linux-gnu";
 
     // In production, use the bundled binary
     let exe_dir = std::env::current_exe()
@@ -40,7 +50,7 @@ fn get_ollama_path() -> String {
     #[cfg(target_os = "linux")]
     let binary_path = exe_dir.join("binaries").join(binary_name);
 
-    binary_path.to_string_lossy().to_string()
+    binary_path
 }
 
 /// Start the Ollama server
@@ -53,6 +63,14 @@ fn start_ollama_server(state: &State<'_, OllamaProcess>) -> Result<(), String> {
 
     let ollama_path = get_ollama_path();
 
+    // Log the path we're trying to use
+    eprintln!("Ollama binary path: {:?}", ollama_path);
+    eprintln!("Binary exists: {}", ollama_path.exists());
+
+    if !ollama_path.exists() && !cfg!(debug_assertions) {
+        return Err(format!("Ollama binary not found at: {:?}", ollama_path));
+    }
+
     // Set OLLAMA_HOST to ensure it binds to localhost
     let child = Command::new(&ollama_path)
         .arg("serve")
@@ -60,8 +78,9 @@ fn start_ollama_server(state: &State<'_, OllamaProcess>) -> Result<(), String> {
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
-        .map_err(|e| format!("Failed to start Ollama: {}", e))?;
+        .map_err(|e| format!("Failed to start Ollama at {:?}: {}", ollama_path, e))?;
 
+    eprintln!("Ollama server started successfully");
     *process_guard = Some(child);
 
     Ok(())

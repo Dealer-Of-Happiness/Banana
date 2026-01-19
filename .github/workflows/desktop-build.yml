@@ -172,12 +172,18 @@ jobs:
 
       - name: Download Ollama for macOS
         run: |
-          OLLAMA_URL="https://github.com/ollama/ollama/releases/download/v${{ env.OLLAMA_VERSION }}/ollama-darwin"
+          OLLAMA_URL="https://github.com/ollama/ollama/releases/download/v${{ env.OLLAMA_VERSION }}/ollama-darwin.tgz"
           OLLAMA_DIR="desktop/src-tauri/binaries"
 
           echo "Downloading Ollama from $OLLAMA_URL"
           mkdir -p $OLLAMA_DIR
-          curl -L -o "$OLLAMA_DIR/ollama-${{ matrix.target }}" "$OLLAMA_URL"
+
+          # Download and extract the tgz archive
+          curl -L -o /tmp/ollama-darwin.tgz "$OLLAMA_URL"
+          tar -xzf /tmp/ollama-darwin.tgz -C /tmp
+
+          # Move the ollama binary to the binaries directory with correct name
+          mv /tmp/ollama "$OLLAMA_DIR/ollama-${{ matrix.target }}"
           chmod +x "$OLLAMA_DIR/ollama-${{ matrix.target }}"
 
           echo "Ollama binary ready:"

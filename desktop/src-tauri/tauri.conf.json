@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Banana AI",
+  "productName": "AIGoodbye",
   "version": "1.0.0",
-  "identifier": "ai.aigoodbye.banana",
+  "identifier": "ai.aigoodbye.app",
   "build": {
     "beforeBuildCommand": "npm run bundle:python",
     "beforeDevCommand": "",
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Banana AI",
+        "title": "AIGoodbye",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
@@ -45,7 +45,7 @@
     "resources": [],
     "category": "Productivity",
     "shortDescription": "Your Offline AI with Internet Connectivity",
-    "longDescription": "Banana AI is a powerful AI assistant that works offline with local models and can connect to the internet when needed. Train your own models, use knowledge bases, and chat with AI - all with complete privacy.",
+    "longDescription": "AIGoodbye is a powerful AI assistant that works offline with local models and can connect to the internet when needed. Train your own models, use knowledge bases, and chat with AI - all with complete privacy.",
     "copyright": "Copyright 2024 AI Goodbye. All rights reserved.",
     "publisher": "AI Goodbye",
     "licenseFile": "../LICENSE",

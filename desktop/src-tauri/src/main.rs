@@ -32,7 +32,7 @@ fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
 
         // Get the resource directory where lib folder is bundled
         if let Ok(resource_dir) = app.path().resource_dir() {
-            let lib_path = resource_dir.join("lib").join("ollama");
+            let lib_path = resource_dir.join("binaries").join("lib").join("ollama");
             eprintln!("Library path: {:?}", lib_path);
 
             if lib_path.exists() {

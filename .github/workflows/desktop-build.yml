@@ -45,9 +45,9 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install pyinstaller
+          pip install pyinstaller pillow
 
-      - name: Generate placeholder icons
+      - name: Generate app icons
         run: python desktop/scripts/generate-icons.py
 
       - name: Install npm dependencies
@@ -143,9 +143,9 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install pyinstaller
+          pip install pyinstaller pillow
 
-      - name: Generate placeholder icons
+      - name: Generate app icons
         run: python desktop/scripts/generate-icons.py
 
       - name: Install npm dependencies

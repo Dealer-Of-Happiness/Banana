@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Banana AI",
+  "productName": "AIGoodbye",
   "version": "1.0.0",
   "identifier": "ai.aigoodbye.banana",
   "build": {
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Banana AI",
+        "title": "AIGoodbye",
         "width": 1200,
         "height": 800,
         "minWidth": 800,

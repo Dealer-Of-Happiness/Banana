@@ -1,4 +1,4 @@
-//! Banana AI Desktop Application
+//! AI Goodbye Desktop Application
 //!
 //! This is the main entry point for the Tauri desktop wrapper.
 //! It manages the Python backend process and provides the native desktop experience.

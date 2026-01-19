@@ -1,5 +1,5 @@
 /**
- * Banana AI Desktop Application
+ * AI Goodbye Desktop Application
  * Frontend JavaScript for Tauri desktop wrapper
  */
 
@@ -44,7 +44,7 @@ let currentChatModel = null;
 // ==================== Initialization ====================
 
 async function init() {
-    console.log('Initializing Banana AI Desktop...');
+    console.log('Initializing AI Goodbye Desktop...');
 
     // Set up event listeners
     setupNavigation();

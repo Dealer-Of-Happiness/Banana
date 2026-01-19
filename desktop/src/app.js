@@ -11,10 +11,10 @@ const API_BASE_URL = 'http://127.0.0.1:8765';
 
 // Available Models Configuration
 const AVAILABLE_MODELS = [
-    { id: 'llama3.2:1b', name: 'Llama 3.2 1B', size: 'small', sizeGB: '~1.3 GB' },
-    { id: 'llama3.2:3b', name: 'Llama 3.2 3B', size: 'medium', sizeGB: '~2.0 GB' },
-    { id: 'llama3.1:8b', name: 'Llama 3.1 8B', size: 'large', sizeGB: '~4.7 GB' },
-    { id: 'llama3.3:70b', name: 'Llama 3.3 70B', size: 'xlarge', sizeGB: '~40 GB' }
+    { id: 'llama3.2:1b', name: 'Llama 3.2 1B', size: 'small', sizeGB: '~1.3 GB', vision: false },
+    { id: 'llama3.2:3b', name: 'Llama 3.2 3B', size: 'medium', sizeGB: '~2.0 GB', vision: false },
+    { id: 'llama3.2-vision:11b', name: 'Llama 3.2 Vision 11B', size: 'large', sizeGB: '~8 GB', vision: true },
+    { id: 'llama3.2-vision:90b', name: 'Llama 3.2 Vision 90B', size: 'xlarge', sizeGB: '~55 GB', vision: true }
 ];
 
 // DOM Elements

@@ -56,11 +56,41 @@ async function init() {
     setupModelSetup();
     setupImageAttachment();
 
+    // Wait for embedded Ollama to start
+    updateLoadingText('Starting AI engine...');
+    await waitForOllama();
+
     // Check for installed models
     await syncWithOllama();
 
     // Check if this is first launch or if models need to be set up
     await checkModelSetup();
+}
+
+function updateLoadingText(text) {
+    const loadingTextEl = document.querySelector('.loading-text');
+    if (loadingTextEl) {
+        loadingTextEl.textContent = text;
+    }
+}
+
+// Wait for embedded Ollama to become ready (started by Tauri)
+async function waitForOllama(maxAttempts = 30) {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const ready = await checkOllamaAvailable();
+        if (ready) {
+            console.log('Ollama is ready');
+            return true;
+        }
+        // Wait 500ms between attempts (total ~15 seconds max)
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        if (attempt % 4 === 0) {
+            updateLoadingText('Starting AI engine' + '.'.repeat((attempt / 4) % 4 + 1));
+        }
+    }
+    console.warn('Ollama did not start within expected time');
+    return false;
 }
 
 // Check if Ollama is running and get installed models
@@ -241,15 +271,10 @@ function setupModelSetup() {
 
         if (selectedModels.length === 0) return;
 
-        // Check if Ollama is running first
+        // Check if embedded Ollama is ready
         const ollamaAvailable = await checkOllamaAvailable();
         if (!ollamaAvailable) {
-            alert('Ollama is required to run AI models locally.\n\n' +
-                  'Please install Ollama first:\n' +
-                  '1. Visit https://ollama.ai\n' +
-                  '2. Download and install Ollama\n' +
-                  '3. Start Ollama\n' +
-                  '4. Come back and try again');
+            alert('AI engine is still starting. Please wait a moment and try again.');
             return;
         }
 
@@ -273,7 +298,7 @@ function setupModelSetup() {
             downloadBtn.disabled = false;
             downloadBtn.textContent = 'Download Selected Models';
             modelCheckboxes.forEach(cb => cb.disabled = false);
-            selectionHint.textContent = 'Download failed. Make sure Ollama is running.';
+            selectionHint.textContent = 'Download failed. Please try again.';
         }
     });
 
@@ -449,7 +474,7 @@ function renderModelList() {
 window.handleDownloadModel = async function(modelId) {
     const ollamaAvailable = await checkOllamaAvailable();
     if (!ollamaAvailable) {
-        alert('Ollama is required.\n\nPlease install from https://ollama.ai and start it.');
+        alert('AI engine is still starting. Please wait a moment and try again.');
         return;
     }
 
@@ -585,10 +610,10 @@ async function sendMessage() {
 
     if (!message && pendingImages.length === 0) return;
 
-    // Check Ollama before sending
+    // Check AI engine is ready before sending
     const ollamaAvailable = await checkOllamaAvailable();
     if (!ollamaAvailable) {
-        alert('Cannot connect to Ollama.\n\nPlease make sure Ollama is running.');
+        alert('AI engine is not ready. Please wait a moment and try again.');
         return;
     }
 

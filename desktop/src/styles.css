@@ -1221,14 +1221,6 @@ body {
     margin-left: 15px;
 }
 
-/* App Version */
-.app-version {
-    text-align: center;
-    padding: 10px;
-    color: var(--text-muted);
-    font-size: 0.8rem;
-}
-
 /* Responsive for model setup */
 @media (max-width: 900px) {
     .model-cards {

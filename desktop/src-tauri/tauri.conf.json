@@ -40,7 +40,7 @@
     ],
     "targets": "all",
     "externalBin": [
-      "binaries/aigoodbye-backend"
+      "binaries/ollama"
     ],
     "resources": [],
     "category": "Productivity",

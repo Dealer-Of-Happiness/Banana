@@ -1221,30 +1221,12 @@ body {
     margin-left: 15px;
 }
 
-/* Ollama Status */
-.ollama-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+/* App Version */
+.app-version {
+    text-align: center;
     padding: 10px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 8px;
-}
-
-.ollama-status .status-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--error);
-}
-
-.ollama-status .status-dot.running {
-    background: var(--success);
-}
-
-.ollama-status-text {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
+    font-size: 0.8rem;
 }
 
 /* Responsive for model setup */

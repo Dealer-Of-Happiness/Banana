@@ -160,6 +160,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Free disk space
+        run: |
+          echo "Disk space before cleanup:"
+          df -h
+          # Remove unnecessary tools and caches to free space
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /usr/local/share/boost || true
+          brew cleanup -s 2>/dev/null || true
+          echo "Disk space after cleanup:"
+          df -h
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -245,6 +258,22 @@ jobs:
       - name: Build Tauri
         working-directory: desktop
         run: npx tauri build --target ${{ matrix.target }}
+
+      - name: Clean up build artifacts to free space
+        run: |
+          echo "Disk space before cleanup:"
+          df -h
+          # Remove large intermediate build artifacts, keeping only the bundle
+          cd desktop/src-tauri/target/${{ matrix.target }}/release
+          # Keep bundle directory, remove everything else
+          find . -maxdepth 1 -type f -name "*.d" -delete || true
+          find . -maxdepth 1 -type f -name "*.rlib" -delete || true
+          rm -rf deps || true
+          rm -rf build || true
+          rm -rf incremental || true
+          rm -rf .fingerprint || true
+          echo "Disk space after cleanup:"
+          df -h
 
       - name: Sign and Notarize macOS App
         env:

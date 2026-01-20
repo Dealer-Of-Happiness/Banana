@@ -18,6 +18,8 @@ fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
     eprintln!("=== Starting Ollama via Tauri Sidecar ===");
 
     // Build the sidecar command
+    // Note: mut is needed on Windows where we modify it to add DLL path
+    #[allow(unused_mut)]
     let mut sidecar_command = app
         .shell()
         .sidecar("ollama")

@@ -75,14 +75,12 @@ jobs:
             Copy-Item "$extractDir/ollama.exe" "$ollamaDir/ollama-x86_64-pc-windows-msvc.exe" -Force
           }
 
-          # Copy the lib folder if it exists (contains required DLLs)
-          if (Test-Path "$extractDir/lib") {
-            Write-Host "Copying lib folder with DLL dependencies..."
-            Copy-Item "$extractDir/lib" "$ollamaDir/lib" -Recurse -Force
-          }
+          # Note: We don't copy the lib folder (GPU libraries) because it's too large (800MB+)
+          # Ollama will run in CPU-only mode. Users who want GPU acceleration can install
+          # Ollama separately: https://ollama.com/download
 
           Write-Host "Ollama binaries ready:"
-          Get-ChildItem -Recurse $ollamaDir
+          Get-ChildItem $ollamaDir
 
       - name: Install npm dependencies
         working-directory: desktop

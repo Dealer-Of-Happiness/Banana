@@ -267,6 +267,42 @@
                         </div>
                     </section>
 
+                    <!-- Windows-only GPU Acceleration section -->
+                    <section class="settings-section" id="gpu-acceleration-section" style="display: none;">
+                        <h3>GPU Acceleration (Windows)</h3>
+                        <div class="gpu-info">
+                            <div class="gpu-notice">
+                                <p><strong>Why GPU Acceleration?</strong></p>
+                                <p>The bundled AI engine runs in <strong>CPU-only mode</strong> on Windows. While this works fine, GPU acceleration can make responses <strong>2-10x faster</strong>, especially for larger models.</p>
+                            </div>
+
+                            <div class="gpu-benefits">
+                                <p><strong>Benefits of GPU acceleration:</strong></p>
+                                <ul>
+                                    <li>Much faster response times</li>
+                                    <li>Better performance with large models</li>
+                                    <li>Smoother experience during long conversations</li>
+                                </ul>
+                            </div>
+
+                            <div class="gpu-setup">
+                                <p><strong>How to enable GPU acceleration:</strong></p>
+                                <ol>
+                                    <li>Download and install Ollama from <a href="https://ollama.com/download" target="_blank">ollama.com/download</a></li>
+                                    <li>Run the Ollama installer - it will automatically detect your GPU (NVIDIA or AMD)</li>
+                                    <li>After installation, Ollama runs in the background as a service</li>
+                                    <li><strong>Restart AI Goodbye</strong> - it will automatically use the system Ollama with GPU support</li>
+                                </ol>
+                            </div>
+
+                            <div class="gpu-note">
+                                <p><strong>Note:</strong> If system Ollama is detected on port 11434, AI Goodbye will use it instead of the bundled CPU-only version. Your downloaded models will be shared between both.</p>
+                            </div>
+
+                            <a href="https://ollama.com/download" target="_blank" class="btn-primary gpu-download-btn">Download Ollama for GPU Support</a>
+                        </div>
+                    </section>
+
                     <section class="settings-section">
                         <h3>AI Configuration</h3>
 

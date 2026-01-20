@@ -1425,6 +1425,27 @@ function setupSettings() {
 
     if (checkUpdatesBtn) checkUpdatesBtn.addEventListener('click', checkForUpdates);
     renderModelList();
+
+    // Show GPU acceleration section only on Windows
+    setupGpuAccelerationSection();
+}
+
+function setupGpuAccelerationSection() {
+    const gpuSection = document.getElementById('gpu-acceleration-section');
+    if (!gpuSection) return;
+
+    // Detect if running on Windows
+    const isWindows = navigator.userAgent.includes('Windows') ||
+                      navigator.platform.includes('Win') ||
+                      (window.__TAURI__ && navigator.userAgent.includes('Windows'));
+
+    if (isWindows) {
+        gpuSection.style.display = 'block';
+        console.log('Windows detected - showing GPU acceleration section');
+    } else {
+        gpuSection.style.display = 'none';
+        console.log('Not Windows - hiding GPU acceleration section');
+    }
 }
 
 function loadSettings() {

@@ -18,65 +18,14 @@ fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
     eprintln!("=== Starting Ollama via Tauri Sidecar ===");
 
     // Build the sidecar command
-    // Note: mut is needed on Windows where we modify it to add DLL path
-    #[allow(unused_mut)]
-    let mut sidecar_command = app
+    // Note: Ollama runs in CPU-only mode on Windows since GPU libraries (800MB+)
+    // are too large to bundle. Users who want GPU acceleration can install Ollama separately.
+    let sidecar_command = app
         .shell()
         .sidecar("ollama")
         .map_err(|e| format!("Failed to create sidecar command: {}", e))?
         .args(["serve"])
         .env("OLLAMA_HOST", "127.0.0.1:11434");
-
-    // On Windows, we need to set OLLAMA_LIBRARY_PATH for GPU libraries
-    #[cfg(target_os = "windows")]
-    {
-        eprintln!("Windows detected - setting up library path...");
-
-        // Get the resource directory where lib folder is bundled
-        if let Ok(resource_dir) = app.path().resource_dir() {
-            eprintln!("Resource dir: {:?}", resource_dir);
-
-            // List contents of resource directory for debugging
-            if let Ok(entries) = std::fs::read_dir(&resource_dir) {
-                eprintln!("Resource dir contents:");
-                for entry in entries.flatten() {
-                    eprintln!("  {:?}", entry.path());
-                }
-            }
-
-            let lib_path = resource_dir.join("lib").join("ollama");
-            eprintln!("Looking for lib path: {:?}", lib_path);
-
-            if lib_path.exists() {
-                let lib_path_str = lib_path.to_string_lossy().to_string();
-                eprintln!("Setting OLLAMA_LIBRARY_PATH to: {}", lib_path_str);
-
-                // Set OLLAMA_LIBRARY_PATH - this is what Ollama uses to find GPU libraries
-                sidecar_command = sidecar_command.env("OLLAMA_LIBRARY_PATH", &lib_path_str);
-
-                // Also add to PATH for any other DLL dependencies
-                let current_path = std::env::var("PATH").unwrap_or_default();
-                let new_path = format!("{};{}", lib_path_str, current_path);
-                sidecar_command = sidecar_command.env("PATH", new_path);
-            } else {
-                eprintln!("Warning: lib/ollama folder not found at {:?}", lib_path);
-
-                // Try the lib folder directly (maybe structure is different)
-                let lib_folder = resource_dir.join("lib");
-                if lib_folder.exists() {
-                    eprintln!("Found lib folder at: {:?}", lib_folder);
-                    if let Ok(entries) = std::fs::read_dir(&lib_folder) {
-                        eprintln!("lib folder contents:");
-                        for entry in entries.flatten() {
-                            eprintln!("  {:?}", entry.path());
-                        }
-                    }
-                }
-            }
-        } else {
-            eprintln!("Warning: Could not get resource directory");
-        }
-    }
 
     eprintln!("Spawning Ollama sidecar...");
 

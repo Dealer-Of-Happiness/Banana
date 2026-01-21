@@ -23,10 +23,11 @@ const CONFIG = {
     OLLAMA_STARTUP_TIMEOUT_MS: navigator.userAgent.includes('Windows') ? 90000 : 30000,
     // Timeout for API requests
     API_TIMEOUT_MS: 120000, // 2 minutes for vision models
-    // Max context tokens before summarization
-    MAX_CONTEXT_TOKENS: 4000,
+    // Max context tokens before summarization (Llama 3.2 supports 128K, but we limit based on typical RAM)
+    // 16K is comfortable for 16GB RAM systems, allows ~20-40 message exchanges before summarization
+    MAX_CONTEXT_TOKENS: 16000,
     // Summary target length
-    SUMMARY_TARGET_TOKENS: 500
+    SUMMARY_TARGET_TOKENS: 800
 };
 
 // DOM Elements - will be initialized after DOM loads

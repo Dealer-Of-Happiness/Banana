@@ -17,6 +17,18 @@ const AVAILABLE_MODELS = [
     { id: 'llama3.2-vision:90b', name: 'Llama 3.2 Vision 90B', size: 'xlarge', sizeGB: '~55 GB', vision: true }
 ];
 
+// Configuration
+const CONFIG = {
+    // Timeout for Ollama startup (Windows needs 90s due to antivirus DLL scanning)
+    OLLAMA_STARTUP_TIMEOUT_MS: navigator.userAgent.includes('Windows') ? 90000 : 30000,
+    // Timeout for API requests
+    API_TIMEOUT_MS: 120000, // 2 minutes for vision models
+    // Max context tokens before summarization
+    MAX_CONTEXT_TOKENS: 4000,
+    // Summary target length
+    SUMMARY_TARGET_TOKENS: 500
+};
+
 // DOM Elements - will be initialized after DOM loads
 let loadingScreen, modelSetupScreen, app, chatContainer, messageInput, sendButton;
 let attachButton, imageInput, imagePreviewContainer, useKbCheckbox, newChatBtn;
@@ -26,13 +38,17 @@ let chatModelSelect, modelIndicator, navItems, views;
 let downloadedModels = [];
 let currentChatModel = null;
 let pendingImages = []; // Base64 encoded images for vision models
+let pendingDocuments = []; // Text content from documents
 let conversationHistory = [];
 let ollamaReady = false;
+let isGenerating = false; // Flag to track if model is generating
+let currentAbortController = null; // For canceling requests
 
 // Chat & Folder Management State
 let chats = [];
 let folders = [];
 let currentChatId = null;
+let expandedFolders = new Set(); // Track which folders are expanded
 
 // ==================== Initialization ====================
 
@@ -69,7 +85,7 @@ async function init() {
     setupKnowledgeBase();
     setupSettings();
     setupModelSetup();
-    setupImageAttachment();
+    setupFileAttachment();
     setupRetryButton();
     setupChatFolderManagement();
 
@@ -97,16 +113,38 @@ async function startupSequence() {
     if (loadingTextEl) loadingTextEl.className = 'loading-text';
     updateLoadingText('Starting AI engine...');
 
-    // Wait for Ollama to be ready
-    console.log('Waiting for Ollama...');
-    ollamaReady = await waitForOllama();
+    // First check if system Ollama is already running
+    console.log('Checking for system Ollama...');
+    const systemOllamaReady = await checkOllamaAvailable();
+
+    if (systemOllamaReady) {
+        console.log('System Ollama detected and ready!');
+        ollamaReady = true;
+    } else {
+        // Wait for bundled Ollama to start
+        console.log('Waiting for Ollama to start...');
+        const isWindows = navigator.userAgent.includes('Windows');
+        const timeoutSeconds = CONFIG.OLLAMA_STARTUP_TIMEOUT_MS / 1000;
+
+        if (isWindows) {
+            updateLoadingText('Starting AI engine (this may take a moment on Windows)...');
+        }
+
+        ollamaReady = await waitForOllama();
+    }
 
     if (!ollamaReady) {
-        // Ollama failed to start - show error and retry button
+        // Ollama failed to start - show error and retry button with helpful message
         console.error('Ollama failed to start');
         if (loadingBar) loadingBar.style.display = 'none';
         if (loadingTextEl) loadingTextEl.className = 'loading-text error';
-        updateLoadingText('Could not start AI engine. Click Retry.');
+
+        const isWindows = navigator.userAgent.includes('Windows');
+        if (isWindows) {
+            updateLoadingText('Could not start AI engine. Try installing Ollama from ollama.com/download, then click Retry.');
+        } else {
+            updateLoadingText('Could not start AI engine. Click Retry.');
+        }
         if (retryBtn) retryBtn.classList.remove('hidden');
         return;
     }
@@ -128,23 +166,27 @@ function updateLoadingText(text) {
 }
 
 // Wait for Ollama to become ready
-async function waitForOllama(maxAttempts = 60) {
-    // Try up to 60 times with 500ms delay = 30 seconds total
+async function waitForOllama() {
+    const maxTimeMs = CONFIG.OLLAMA_STARTUP_TIMEOUT_MS;
+    const intervalMs = 500;
+    const maxAttempts = Math.ceil(maxTimeMs / intervalMs);
+
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
         const ready = await checkOllamaAvailable();
         if (ready) {
-            console.log(`Ollama ready after ${attempt + 1} attempts`);
+            console.log(`Ollama ready after ${attempt + 1} attempts (${(attempt * intervalMs / 1000).toFixed(1)}s)`);
             return true;
         }
 
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, intervalMs));
 
         // Update loading text with dots
         const dots = '.'.repeat((attempt % 3) + 1);
-        updateLoadingText(`Starting AI engine${dots}`);
+        const elapsed = Math.round(attempt * intervalMs / 1000);
+        updateLoadingText(`Starting AI engine${dots} (${elapsed}s)`);
     }
 
-    console.warn('Ollama did not start within 30 seconds');
+    console.warn(`Ollama did not start within ${maxTimeMs / 1000} seconds`);
     return false;
 }
 
@@ -153,7 +195,7 @@ async function syncWithOllama() {
     try {
         const response = await fetch(`${OLLAMA_API_URL}/api/tags`, {
             method: 'GET',
-            signal: AbortSignal.timeout(3000)
+            signal: AbortSignal.timeout(5000)
         });
 
         if (response.ok) {
@@ -215,125 +257,311 @@ async function checkModelSetup() {
     }
 }
 
-// ==================== Image Attachment ====================
+// ==================== File Attachment (Images & Documents) ====================
 
-function setupImageAttachment() {
-    if (!attachButton || !imageInput) {
-        console.log('Image attachment elements not found');
+function setupFileAttachment() {
+    if (!attachButton) {
+        console.log('Attach button not found');
         return;
     }
 
-    console.log('Setting up image attachment...');
+    console.log('Setting up file attachment...');
 
-    // Use a more direct approach - create new input each time for reliability
     attachButton.onclick = function(e) {
         e.preventDefault();
         e.stopPropagation();
         console.log('Attach button clicked');
 
-        // Create a fresh file input to avoid caching issues
+        const modelInfo = AVAILABLE_MODELS.find(m => m.id === currentChatModel);
+        const isVisionModel = modelInfo?.vision;
+
+        // Create a fresh file input
         const tempInput = document.createElement('input');
         tempInput.type = 'file';
-        tempInput.accept = 'image/*';
         tempInput.multiple = true;
+
+        // Vision models can accept images + documents, text models accept documents only
+        if (isVisionModel) {
+            tempInput.accept = 'image/*,.pdf,.txt,.md,.docx,.doc';
+        } else {
+            tempInput.accept = '.pdf,.txt,.md,.docx,.doc';
+        }
 
         tempInput.onchange = function() {
             console.log('Files selected:', tempInput.files.length);
             const files = Array.from(tempInput.files);
-
-            files.forEach(file => {
-                console.log('Processing file:', file.name, file.type, file.size);
-
-                // Check by file extension as well as MIME type
-                const isImage = file.type.startsWith('image/') ||
-                    /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(file.name);
-
-                if (isImage) {
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        console.log('File loaded successfully, adding to pendingImages');
-                        const dataUrl = event.target.result;
-                        const base64 = dataUrl.split(',')[1];
-                        pendingImages.push({
-                            base64: base64,
-                            preview: dataUrl,
-                            name: file.name
-                        });
-                        console.log('pendingImages count:', pendingImages.length);
-                        renderImagePreviews();
-                        updateSendButtonState();
-                    };
-                    reader.onerror = function(error) {
-                        console.error('FileReader error:', error);
-                        alert('Failed to read file: ' + file.name);
-                    };
-                    reader.readAsDataURL(file);
-                } else {
-                    console.log('File is not an image:', file.type);
-                    alert('Please select an image file (JPG, PNG, GIF, etc.)');
-                }
-            });
+            processAttachedFiles(files, isVisionModel);
         };
 
-        // Trigger file selection
         tempInput.click();
     };
 }
 
-function renderImagePreviews() {
-    console.log('Rendering image previews, count:', pendingImages.length);
-    if (!imagePreviewContainer) {
-        console.error('imagePreviewContainer not found!');
-        return;
-    }
+async function processAttachedFiles(files, isVisionModel) {
+    for (const file of files) {
+        console.log('Processing file:', file.name, file.type, file.size);
 
-    if (pendingImages.length === 0) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const isImage = file.type.startsWith('image/') ||
+            ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext);
+
+        if (isImage && isVisionModel) {
+            // Process as image for vision models
+            await processImageFile(file);
+        } else if (['txt', 'md'].includes(ext)) {
+            // Plain text files
+            await processTextFile(file);
+        } else if (ext === 'pdf') {
+            // PDF files - extract text
+            await processPdfFile(file);
+        } else if (['doc', 'docx'].includes(ext)) {
+            // Word documents - extract text
+            await processDocxFile(file);
+        } else if (isImage && !isVisionModel) {
+            alert(`Images require a Vision model. Currently using: ${currentChatModel}`);
+        } else {
+            alert(`Unsupported file type: ${ext}`);
+        }
+    }
+}
+
+async function processImageFile(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const dataUrl = event.target.result;
+            const base64 = dataUrl.split(',')[1];
+            pendingImages.push({
+                base64: base64,
+                preview: dataUrl,
+                name: file.name
+            });
+            console.log('Image added, pendingImages count:', pendingImages.length);
+            renderAttachmentPreviews();
+            updateSendButtonState();
+            resolve();
+        };
+        reader.onerror = function(error) {
+            console.error('FileReader error:', error);
+            alert('Failed to read image: ' + file.name);
+            resolve();
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+async function processTextFile(file) {
+    try {
+        const content = await file.text();
+        pendingDocuments.push({
+            name: file.name,
+            content: content,
+            type: 'text'
+        });
+        console.log('Text file added:', file.name);
+        renderAttachmentPreviews();
+        updateSendButtonState();
+    } catch (error) {
+        console.error('Error reading text file:', error);
+        alert('Failed to read file: ' + file.name);
+    }
+}
+
+async function processPdfFile(file) {
+    try {
+        // Use pdf.js if available, otherwise just note it's a PDF
+        if (typeof pdfjsLib !== 'undefined') {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let fullText = '';
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += `[Page ${i}]\n${pageText}\n\n`;
+            }
+
+            pendingDocuments.push({
+                name: file.name,
+                content: fullText,
+                type: 'pdf'
+            });
+        } else {
+            // Fallback: just note it's a PDF that can't be read
+            const reader = new FileReader();
+            const text = await new Promise((resolve) => {
+                reader.onload = () => {
+                    // Try to extract any readable text from PDF
+                    const text = reader.result;
+                    // Basic text extraction from PDF binary
+                    const matches = text.match(/\(([^)]+)\)/g) || [];
+                    const extracted = matches
+                        .map(m => m.slice(1, -1))
+                        .filter(s => s.length > 2 && /[a-zA-Z]/.test(s))
+                        .join(' ');
+                    resolve(extracted || `[PDF file: ${file.name} - Content could not be extracted. Consider copy-pasting the text manually.]`);
+                };
+                reader.readAsText(file);
+            });
+
+            pendingDocuments.push({
+                name: file.name,
+                content: text,
+                type: 'pdf'
+            });
+        }
+        console.log('PDF added:', file.name);
+        renderAttachmentPreviews();
+        updateSendButtonState();
+    } catch (error) {
+        console.error('Error reading PDF:', error);
+        pendingDocuments.push({
+            name: file.name,
+            content: `[PDF file: ${file.name} - Failed to extract content: ${error.message}]`,
+            type: 'pdf'
+        });
+        renderAttachmentPreviews();
+        updateSendButtonState();
+    }
+}
+
+async function processDocxFile(file) {
+    try {
+        // Try using mammoth.js if available
+        if (typeof mammoth !== 'undefined') {
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            pendingDocuments.push({
+                name: file.name,
+                content: result.value,
+                type: 'docx'
+            });
+        } else {
+            // Fallback: extract text from docx XML structure
+            const arrayBuffer = await file.arrayBuffer();
+            const text = await extractDocxText(arrayBuffer);
+            pendingDocuments.push({
+                name: file.name,
+                content: text || `[DOCX file: ${file.name} - Content could not be fully extracted. Consider copy-pasting the text manually.]`,
+                type: 'docx'
+            });
+        }
+        console.log('DOCX added:', file.name);
+        renderAttachmentPreviews();
+        updateSendButtonState();
+    } catch (error) {
+        console.error('Error reading DOCX:', error);
+        pendingDocuments.push({
+            name: file.name,
+            content: `[DOCX file: ${file.name} - Failed to extract content: ${error.message}]`,
+            type: 'docx'
+        });
+        renderAttachmentPreviews();
+        updateSendButtonState();
+    }
+}
+
+// Basic DOCX text extraction without external libraries
+async function extractDocxText(arrayBuffer) {
+    try {
+        // DOCX is a zip file, we need JSZip or similar
+        // Fallback: try to find readable text patterns
+        const bytes = new Uint8Array(arrayBuffer);
+        const decoder = new TextDecoder('utf-8', { fatal: false });
+        const text = decoder.decode(bytes);
+
+        // Look for XML content with text
+        const matches = text.match(/<w:t[^>]*>([^<]+)<\/w:t>/g) || [];
+        return matches
+            .map(m => m.replace(/<[^>]+>/g, ''))
+            .join(' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    } catch (e) {
+        return null;
+    }
+}
+
+function renderAttachmentPreviews() {
+    if (!imagePreviewContainer) return;
+
+    const hasAttachments = pendingImages.length > 0 || pendingDocuments.length > 0;
+
+    if (!hasAttachments) {
         imagePreviewContainer.innerHTML = '';
         imagePreviewContainer.style.display = 'none';
         return;
     }
 
     imagePreviewContainer.style.display = 'flex';
-    imagePreviewContainer.innerHTML = pendingImages.map((img, index) => `
+
+    // Render images
+    const imagesHtml = pendingImages.map((img, index) => `
         <div class="image-preview">
-            <img src="${img.preview}" alt="${img.name}">
-            <button type="button" class="remove-image" data-index="${index}">×</button>
+            <img src="${img.preview}" alt="${escapeHtml(img.name)}">
+            <button type="button" class="remove-attachment" data-type="image" data-index="${index}">×</button>
         </div>
     `).join('');
 
+    // Render documents
+    const docsHtml = pendingDocuments.map((doc, index) => `
+        <div class="document-preview">
+            <span class="doc-icon">${getDocIcon(doc.type)}</span>
+            <span class="doc-name" title="${escapeHtml(doc.name)}">${escapeHtml(doc.name.substring(0, 15))}${doc.name.length > 15 ? '...' : ''}</span>
+            <button type="button" class="remove-attachment" data-type="doc" data-index="${index}">×</button>
+        </div>
+    `).join('');
+
+    imagePreviewContainer.innerHTML = imagesHtml + docsHtml;
+
     // Add click handlers for remove buttons
-    imagePreviewContainer.querySelectorAll('.remove-image').forEach(btn => {
+    imagePreviewContainer.querySelectorAll('.remove-attachment').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            const type = btn.dataset.type;
             const index = parseInt(btn.dataset.index);
-            removeImage(index);
+            if (type === 'image') {
+                pendingImages.splice(index, 1);
+            } else {
+                pendingDocuments.splice(index, 1);
+            }
+            renderAttachmentPreviews();
+            updateSendButtonState();
         });
     });
 }
 
+function getDocIcon(type) {
+    switch (type) {
+        case 'pdf': return '📄';
+        case 'docx': return '📝';
+        case 'text': return '📃';
+        default: return '📎';
+    }
+}
+
 function removeImage(index) {
-    console.log('Removing image at index:', index);
     pendingImages.splice(index, 1);
-    renderImagePreviews();
+    renderAttachmentPreviews();
     updateSendButtonState();
 }
 
-// Expose globally for onclick handlers
 window.removeImage = removeImage;
 
 function updateAttachButtonVisibility() {
     if (!attachButton) return;
+    // Always show attach button - text models can accept documents
+    attachButton.classList.remove('hidden');
+    attachButton.style.display = 'flex';
+
+    // Update tooltip based on model type
     const modelInfo = AVAILABLE_MODELS.find(m => m.id === currentChatModel);
-    console.log('Updating attach button visibility. Model:', currentChatModel, 'Vision:', modelInfo?.vision);
-    if (modelInfo && modelInfo.vision) {
-        attachButton.classList.remove('hidden');
-        attachButton.style.display = 'flex';
+    if (modelInfo?.vision) {
+        attachButton.title = 'Attach images or documents';
     } else {
-        attachButton.classList.add('hidden');
-        attachButton.style.display = 'none';
-        pendingImages = [];
-        renderImagePreviews();
+        attachButton.title = 'Attach documents (PDF, TXT, DOCX)';
     }
 }
 
@@ -754,10 +982,11 @@ function updateModelIndicator() {
 function updateSendButtonState() {
     const hasMessage = messageInput && messageInput.value.trim().length > 0;
     const hasImages = pendingImages.length > 0;
+    const hasDocs = pendingDocuments.length > 0;
     const hasModel = !!currentChatModel;
 
     if (sendButton) {
-        sendButton.disabled = !(hasModel && (hasMessage || hasImages));
+        sendButton.disabled = !(hasModel && (hasMessage || hasImages || hasDocs)) || isGenerating;
     }
 }
 
@@ -784,6 +1013,10 @@ function loadChatsAndFolders() {
     chats = JSON.parse(localStorage.getItem('aigoodbyeChats') || '[]');
     folders = JSON.parse(localStorage.getItem('aigoodbyeFolders') || '[]');
 
+    // Load expanded folders state
+    const savedExpanded = JSON.parse(localStorage.getItem('aigoodbyeExpandedFolders') || '[]');
+    expandedFolders = new Set(savedExpanded);
+
     // Create default chat if none exists
     if (chats.length === 0) {
         const defaultChat = {
@@ -791,6 +1024,7 @@ function loadChatsAndFolders() {
             name: 'New Chat',
             folderId: null,
             messages: [],
+            summary: null, // For context summarization
             createdAt: new Date().toISOString()
         };
         chats.push(defaultChat);
@@ -804,6 +1038,7 @@ function loadChatsAndFolders() {
 function saveChatsAndFolders() {
     localStorage.setItem('aigoodbyeChats', JSON.stringify(chats));
     localStorage.setItem('aigoodbyeFolders', JSON.stringify(folders));
+    localStorage.setItem('aigoodbyeExpandedFolders', JSON.stringify([...expandedFolders]));
 }
 
 function setupChatFolderManagement() {
@@ -826,6 +1061,7 @@ function createNewChat(folderId = null) {
         name: 'New Chat',
         folderId: folderId,
         messages: [],
+        summary: null,
         createdAt: new Date().toISOString()
     };
     chats.unshift(newChat);
@@ -848,6 +1084,16 @@ function createNewFolder() {
             renderChatList();
         }
     });
+}
+
+function toggleFolder(folderId) {
+    if (expandedFolders.has(folderId)) {
+        expandedFolders.delete(folderId);
+    } else {
+        expandedFolders.add(folderId);
+    }
+    saveChatsAndFolders();
+    renderChatList();
 }
 
 function renameChat(chatId) {
@@ -908,6 +1154,7 @@ function deleteFolder(folderId) {
 
             // Delete the folder
             folders = folders.filter(f => f.id !== folderId);
+            expandedFolders.delete(folderId);
 
             // If current chat was deleted, select another
             if (chatIdsToDelete.includes(currentChatId)) {
@@ -928,7 +1175,7 @@ function deleteFolder(folderId) {
 function moveChatToFolder(chatId, folderId) {
     const chat = chats.find(c => c.id === chatId);
     if (chat) {
-        chat.folderId = folderId;
+        chat.folderId = folderId === 'null' ? null : folderId;
         saveChatsAndFolders();
         renderChatList();
     }
@@ -977,22 +1224,28 @@ function renderChatList() {
 
     let html = '';
 
-    // Render folders with their chats
+    // Render folders with their chats (collapsed by default)
     folders.forEach(folder => {
         const folderChats = chats.filter(c => c.folderId === folder.id);
+        const isExpanded = expandedFolders.has(folder.id);
+        const hasCurrentChat = folderChats.some(c => c.id === currentChatId);
+
         html += `
             <div class="folder-item" data-folder-id="${folder.id}">
-                <div class="folder-header">
-                    <span class="folder-icon">📁</span>
+                <div class="folder-header ${hasCurrentChat ? 'has-active' : ''}" onclick="toggleFolder('${folder.id}')">
+                    <span class="folder-icon">${isExpanded ? '📂' : '📁'}</span>
                     <span class="folder-name">${escapeHtml(folder.name)}</span>
+                    <span class="folder-count">(${folderChats.length})</span>
                     <div class="folder-actions">
-                        <button onclick="renameFolder('${folder.id}')" title="Rename">✏️</button>
-                        <button onclick="deleteFolder('${folder.id}')" title="Delete">🗑️</button>
+                        <button onclick="event.stopPropagation(); renameFolder('${folder.id}')" title="Rename">✏️</button>
+                        <button onclick="event.stopPropagation(); deleteFolder('${folder.id}')" title="Delete">🗑️</button>
                     </div>
                 </div>
-                <div class="folder-chats">
-                    ${folderChats.map(chat => renderChatItem(chat)).join('')}
-                </div>
+                ${isExpanded ? `
+                    <div class="folder-chats">
+                        ${folderChats.map(chat => renderChatItem(chat)).join('')}
+                    </div>
+                ` : ''}
             </div>
         `;
     });
@@ -1043,6 +1296,7 @@ window.deleteFolder = deleteFolder;
 window.moveChatToFolder = moveChatToFolder;
 window.createNewChat = createNewChat;
 window.createNewFolder = createNewFolder;
+window.toggleFolder = toggleFolder;
 
 // ==================== Chat ====================
 
@@ -1065,6 +1319,87 @@ function setupChat() {
     });
 
     sendButton.addEventListener('click', sendMessage);
+}
+
+// Estimate token count (rough approximation: ~4 chars per token)
+function estimateTokens(text) {
+    return Math.ceil(text.length / 4);
+}
+
+// Get conversation context with summarization if needed
+async function getConversationContext(currentChat) {
+    const messages = currentChat.messages;
+    let context = [];
+    let tokenCount = 0;
+
+    // Start from most recent messages
+    for (let i = messages.length - 1; i >= 0; i--) {
+        const msg = messages[i];
+        const msgTokens = estimateTokens(msg.content);
+
+        if (tokenCount + msgTokens > CONFIG.MAX_CONTEXT_TOKENS) {
+            // Need to summarize older messages
+            break;
+        }
+
+        context.unshift(msg);
+        tokenCount += msgTokens;
+    }
+
+    // If we have older messages that weren't included, add summary
+    if (context.length < messages.length) {
+        const olderMessages = messages.slice(0, messages.length - context.length);
+
+        // Check if we already have a summary that covers these messages
+        if (!currentChat.summary || currentChat.summaryUpTo < olderMessages.length) {
+            // Generate summary of older messages
+            const summary = await summarizeMessages(olderMessages);
+            currentChat.summary = summary;
+            currentChat.summaryUpTo = olderMessages.length;
+            saveChatsAndFolders();
+        }
+
+        // Prepend summary context
+        if (currentChat.summary) {
+            context.unshift({
+                role: 'system',
+                content: `[Earlier conversation summary: ${currentChat.summary}]`
+            });
+        }
+    }
+
+    return context;
+}
+
+// Summarize older messages
+async function summarizeMessages(messages) {
+    if (messages.length === 0) return null;
+
+    try {
+        const messagesText = messages.map(m =>
+            `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`
+        ).join('\n');
+
+        const response = await fetch(`${OLLAMA_API_URL}/api/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: currentChatModel,
+                prompt: `Summarize the following conversation in 2-3 sentences, capturing the key topics and any important decisions or information shared:\n\n${messagesText}\n\nSummary:`,
+                stream: false
+            }),
+            signal: AbortSignal.timeout(30000)
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            return data.response?.trim() || null;
+        }
+    } catch (error) {
+        console.error('Failed to summarize messages:', error);
+    }
+
+    return null;
 }
 
 // Get relevant knowledge base content for the query
@@ -1139,13 +1474,27 @@ async function sendMessage() {
         return;
     }
 
-    if (!message && pendingImages.length === 0) return;
+    if (!message && pendingImages.length === 0 && pendingDocuments.length === 0) return;
+
+    // Prevent double-sending
+    if (isGenerating) return;
+    isGenerating = true;
 
     // Check AI engine is ready before sending
     const ollamaAvailable = await checkOllamaAvailable();
     if (!ollamaAvailable) {
         alert('AI engine is not ready. Please wait a moment and try again.');
+        isGenerating = false;
         return;
+    }
+
+    // Build the full message content including documents
+    let fullMessage = message;
+    if (pendingDocuments.length > 0) {
+        const docsContent = pendingDocuments.map(doc =>
+            `\n\n--- Document: ${doc.name} ---\n${doc.content}\n--- End of ${doc.name} ---`
+        ).join('');
+        fullMessage = message + docsContent;
     }
 
     // Add user message to UI
@@ -1156,12 +1505,16 @@ async function sendMessage() {
     messageInput.value = '';
     messageInput.style.height = 'auto';
     pendingImages = [];
-    renderImagePreviews();
+    pendingDocuments = [];
+    renderAttachmentPreviews();
     sendButton.disabled = true;
     messageInput.disabled = true;
 
-    const assistantMsg = addMessage('', false);
-    const contentEl = assistantMsg.querySelector('.message-content p');
+    // Add thinking indicator
+    const assistantMsg = addThinkingMessage();
+
+    // Create abort controller for this request
+    currentAbortController = new AbortController();
 
     try {
         // Get knowledge base context if enabled
@@ -1183,14 +1536,33 @@ When users ask about your capabilities or where you run, be honest about these f
             systemPrompt += kbContext;
         }
 
+        // Get current chat for context management
+        const currentChat = chats.find(c => c.id === currentChatId);
+
+        // Get conversation context with summarization
+        const contextMessages = currentChat ? await getConversationContext(currentChat) : [];
+
+        // Build context string from previous messages (limited)
+        let contextStr = '';
+        if (contextMessages.length > 0) {
+            contextStr = contextMessages
+                .filter(m => m.role !== 'system')
+                .slice(-6) // Last 3 exchanges
+                .map(m => `${m.role === 'user' ? 'Human' : 'Assistant'}: ${m.content}`)
+                .join('\n\n');
+            if (contextStr) {
+                contextStr = '\n\nPrevious conversation:\n' + contextStr + '\n\nHuman: ';
+            }
+        }
+
         const requestBody = {
             model: currentChatModel,
-            prompt: message,
+            prompt: contextStr + fullMessage,
             system: systemPrompt,
             stream: true
         };
 
-        // Add images if present
+        // Add images if present (for vision models)
         if (imagesToSend.length > 0) {
             requestBody.images = imagesToSend.map(img => img.base64);
             console.log('Sending message with', imagesToSend.length, 'images');
@@ -1201,7 +1573,8 @@ When users ask about your capabilities or where you run, be honest about these f
         const response = await fetch(`${OLLAMA_API_URL}/api/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify(requestBody),
+            signal: currentAbortController.signal
         });
 
         if (!response.ok) {
@@ -1211,24 +1584,59 @@ When users ask about your capabilities or where you run, be honest about these f
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let fullResponse = '';
+        let hasContent = false;
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+        // Convert thinking indicator to regular message once we get content
+        const contentEl = assistantMsg.querySelector('.message-content p');
 
-            const text = decoder.decode(value);
-            const lines = text.split('\n').filter(line => line.trim());
-
-            for (const line of lines) {
-                try {
-                    const data = JSON.parse(line);
-                    if (data.response) {
-                        fullResponse += data.response;
-                        contentEl.textContent = fullResponse;
-                        chatContainer.scrollTop = chatContainer.scrollHeight;
-                    }
-                } catch (e) {}
+        // Set a timeout for the entire response
+        const responseTimeout = setTimeout(() => {
+            if (!hasContent) {
+                currentAbortController.abort();
             }
+        }, CONFIG.API_TIMEOUT_MS);
+
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const text = decoder.decode(value);
+                const lines = text.split('\n').filter(line => line.trim());
+
+                for (const line of lines) {
+                    try {
+                        const data = JSON.parse(line);
+                        if (data.response) {
+                            if (!hasContent) {
+                                hasContent = true;
+                                // Remove thinking indicator class
+                                assistantMsg.classList.remove('thinking');
+                                contentEl.innerHTML = '';
+                            }
+                            fullResponse += data.response;
+                            contentEl.textContent = fullResponse;
+                            chatContainer.scrollTop = chatContainer.scrollHeight;
+                        }
+
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                    } catch (e) {
+                        if (e.message && !e.message.includes('JSON')) {
+                            throw e;
+                        }
+                    }
+                }
+            }
+        } finally {
+            clearTimeout(responseTimeout);
+        }
+
+        // Handle empty response
+        if (!fullResponse.trim()) {
+            contentEl.textContent = 'I apologize, but I was unable to generate a response. This can happen with large images or complex requests. Please try again with a smaller image or simpler question.';
+            fullResponse = '[No response generated - model may be overloaded]';
         }
 
         // Save to conversation history and current chat
@@ -1236,7 +1644,6 @@ When users ask about your capabilities or where you run, be honest about these f
         conversationHistory.push({ role: 'assistant', content: fullResponse });
 
         // Update current chat
-        const currentChat = chats.find(c => c.id === currentChatId);
         if (currentChat) {
             currentChat.messages = [...conversationHistory];
             // Auto-name chat based on first message
@@ -1249,13 +1656,41 @@ When users ask about your capabilities or where you run, be honest about these f
 
     } catch (error) {
         console.error('Chat error:', error);
-        contentEl.textContent = `Error: ${error.message}`;
+
+        // Get the content element
+        const contentEl = assistantMsg.querySelector('.message-content p');
+        assistantMsg.classList.remove('thinking');
+
+        if (error.name === 'AbortError') {
+            contentEl.textContent = 'Request was cancelled or timed out. The model may be overloaded. Please try again.';
+        } else {
+            contentEl.textContent = `Error: ${error.message}. Please try again.`;
+        }
     } finally {
+        isGenerating = false;
+        currentAbortController = null;
         sendButton.disabled = false;
         messageInput.disabled = false;
         messageInput.focus();
         updateSendButtonState();
     }
+}
+
+function addThinkingMessage() {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'message assistant thinking';
+
+    msgDiv.innerHTML = `
+        <div class="message-avatar">🤖</div>
+        <div class="message-content">
+            <p><span class="typing-indicator"><span></span><span></span><span></span></span></p>
+        </div>
+    `;
+
+    chatContainer.appendChild(msgDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    return msgDiv;
 }
 
 function addMessage(content, isUser = false, images = null) {

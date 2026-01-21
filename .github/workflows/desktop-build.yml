@@ -55,32 +55,52 @@ jobs:
         shell: pwsh
         run: |
           $ollamaUrl = "https://github.com/ollama/ollama/releases/download/v${{ env.OLLAMA_VERSION }}/ollama-windows-amd64.zip"
-          $ollamaZip = "$env:RUNNER_TEMP\ollama.zip"
-          $ollamaDir = "desktop/src-tauri/binaries"
+          $ollamaZip = Join-Path $env:RUNNER_TEMP "ollama.zip"
+          $ollamaDir = "desktop\src-tauri\binaries"
+          $extractDir = Join-Path $env:RUNNER_TEMP "ollama-extract"
 
           Write-Host "Downloading Ollama from $ollamaUrl"
           Invoke-WebRequest -Uri $ollamaUrl -OutFile $ollamaZip
 
-          New-Item -ItemType Directory -Force -Path $ollamaDir
+          Write-Host "Creating directories..."
+          New-Item -ItemType Directory -Force -Path $ollamaDir | Out-Null
+          New-Item -ItemType Directory -Force -Path $extractDir | Out-Null
 
-          # Extract to temp directory first to see structure
-          $extractDir = "$env:RUNNER_TEMP\ollama-extract"
+          Write-Host "Extracting to $extractDir"
           Expand-Archive -Path $ollamaZip -DestinationPath $extractDir -Force
 
           Write-Host "Extracted contents:"
-          Get-ChildItem -Recurse $extractDir
+          Get-ChildItem -Recurse $extractDir | ForEach-Object { Write-Host $_.FullName }
 
-          # Copy ollama.exe with correct name for Tauri sidecar
-          if (Test-Path "$extractDir/ollama.exe") {
-            Copy-Item "$extractDir/ollama.exe" "$ollamaDir/ollama-x86_64-pc-windows-msvc.exe" -Force
+          # Find ollama.exe - it might be in root or a subdirectory
+          $ollamaExe = Get-ChildItem -Path $extractDir -Filter "ollama.exe" -Recurse | Select-Object -First 1
+
+          if ($ollamaExe) {
+            $targetPath = Join-Path $ollamaDir "ollama-x86_64-pc-windows-msvc.exe"
+            Write-Host "Found ollama.exe at: $($ollamaExe.FullName)"
+            Write-Host "Copying to: $targetPath"
+            Copy-Item $ollamaExe.FullName $targetPath -Force
+
+            # Verify copy succeeded
+            if (Test-Path $targetPath) {
+              Write-Host "SUCCESS: Ollama binary copied successfully"
+              $fileInfo = Get-Item $targetPath
+              Write-Host "File size: $($fileInfo.Length) bytes"
+            } else {
+              Write-Host "ERROR: Failed to copy ollama.exe"
+              exit 1
+            }
+          } else {
+            Write-Host "ERROR: ollama.exe not found in extracted files!"
+            exit 1
           }
 
           # Note: We don't copy the lib folder (GPU libraries) because it's too large (800MB+)
           # Ollama will run in CPU-only mode. Users who want GPU acceleration can install
           # Ollama separately: https://ollama.com/download
 
-          Write-Host "Ollama binaries ready:"
-          Get-ChildItem $ollamaDir
+          Write-Host "Final binaries directory contents:"
+          Get-ChildItem $ollamaDir | ForEach-Object { Write-Host "$($_.Name) - $($_.Length) bytes" }
 
       - name: Install npm dependencies
         working-directory: desktop

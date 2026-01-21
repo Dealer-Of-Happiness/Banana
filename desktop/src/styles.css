@@ -1738,3 +1738,141 @@ body {
 .gpu-download-btn:hover {
     text-decoration: none;
 }
+
+/* ==================== Typing Indicator ==================== */
+
+.typing-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.typing-indicator span {
+    width: 8px;
+    height: 8px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    animation: typingBounce 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typingBounce {
+    0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.4;
+    }
+    30% {
+        transform: translateY(-8px);
+        opacity: 1;
+    }
+}
+
+.message.thinking .message-content {
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+}
+
+/* ==================== Document Preview ==================== */
+
+.document-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.document-preview .doc-icon {
+    font-size: 1.2rem;
+}
+
+.document-preview .doc-name {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.document-preview .remove-attachment {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(244, 67, 54, 0.9);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+}
+
+.image-preview .remove-attachment {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(244, 67, 54, 0.9);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ==================== Folder Collapse/Expand ==================== */
+
+.folder-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+.folder-header:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.folder-header.has-active {
+    border-left: 2px solid var(--primary);
+}
+
+.folder-count {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-left: 4px;
+}
+
+.folder-chats {
+    animation: folderExpand 0.2s ease-out;
+}
+
+@keyframes folderExpand {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 500px;
+    }
+}

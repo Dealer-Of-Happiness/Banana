@@ -310,6 +310,42 @@
                             <label>Custom System Prompt (optional)</label>
                             <textarea id="system-prompt" rows="4" placeholder="Add custom instructions for the AI..."></textarea>
                         </div>
+
+                        <div class="setting-item context-limit-setting">
+                            <label>Conversation Memory Limit</label>
+                            <p class="setting-description">
+                                Controls how much conversation history the AI remembers before summarizing older messages.
+                                Higher values need more RAM but allow longer conversations without summarization.
+                            </p>
+
+                            <div class="slider-container">
+                                <input type="range" id="context-limit-slider"
+                                       min="4000" max="64000" step="2000" value="16000"
+                                       class="context-slider">
+                                <div class="slider-labels">
+                                    <span>4K</span>
+                                    <span>16K</span>
+                                    <span>32K</span>
+                                    <span>64K</span>
+                                </div>
+                            </div>
+
+                            <div class="context-info">
+                                <div class="context-value">
+                                    <span id="context-limit-value">16,000</span> tokens
+                                </div>
+                                <div class="context-details">
+                                    <div class="detail-item">
+                                        <span class="detail-icon">💬</span>
+                                        <span>~<span id="context-messages">40</span> messages before summarization</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">💾</span>
+                                        <span>Recommended RAM: <span id="context-ram">16GB</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </section>
 
                     <section class="settings-section">

@@ -1856,6 +1856,8 @@ function setupSettings() {
     loadSettings();
 
     document.querySelectorAll('.settings-content input, .settings-content textarea').forEach(input => {
+        // Skip the context slider - it has its own handler
+        if (input.id === 'context-limit-slider') return;
         input.addEventListener('change', saveSettings);
     });
 
@@ -1864,6 +1866,64 @@ function setupSettings() {
 
     // Show GPU acceleration section only on Windows
     setupGpuAccelerationSection();
+
+    // Setup context limit slider
+    setupContextLimitSlider();
+}
+
+function setupContextLimitSlider() {
+    const slider = document.getElementById('context-limit-slider');
+    if (!slider) return;
+
+    // Load saved value or use default
+    const settings = JSON.parse(localStorage.getItem('aigoodbyeSettings') || '{}');
+    const savedLimit = settings.contextLimit || CONFIG.MAX_CONTEXT_TOKENS;
+    slider.value = savedLimit;
+    CONFIG.MAX_CONTEXT_TOKENS = savedLimit;
+
+    // Update display
+    updateContextLimitDisplay(savedLimit);
+
+    // Handle slider changes
+    slider.addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        updateContextLimitDisplay(value);
+    });
+
+    slider.addEventListener('change', (e) => {
+        const value = parseInt(e.target.value);
+        CONFIG.MAX_CONTEXT_TOKENS = value;
+        saveSettings();
+        console.log('Context limit updated to:', value);
+    });
+}
+
+function updateContextLimitDisplay(tokens) {
+    const valueEl = document.getElementById('context-limit-value');
+    const messagesEl = document.getElementById('context-messages');
+    const ramEl = document.getElementById('context-ram');
+
+    if (valueEl) {
+        valueEl.textContent = tokens.toLocaleString();
+    }
+
+    if (messagesEl) {
+        // Estimate: average message ~400 tokens, so messages = tokens / 400
+        const estimatedMessages = Math.round(tokens / 400);
+        messagesEl.textContent = estimatedMessages;
+    }
+
+    if (ramEl) {
+        // RAM recommendations based on token count
+        let ram;
+        if (tokens <= 4000) ram = '8GB';
+        else if (tokens <= 8000) ram = '8-16GB';
+        else if (tokens <= 16000) ram = '16GB';
+        else if (tokens <= 32000) ram = '16-32GB';
+        else if (tokens <= 48000) ram = '32GB';
+        else ram = '32GB+';
+        ramEl.textContent = ram;
+    }
 }
 
 function setupGpuAccelerationSection() {
@@ -1886,14 +1946,25 @@ function setupGpuAccelerationSection() {
 
 function loadSettings() {
     const settings = JSON.parse(localStorage.getItem('aigoodbyeSettings') || '{}');
-    const el = document.getElementById('system-prompt');
-    if (settings.systemPrompt && el) el.value = settings.systemPrompt;
+
+    const systemPromptEl = document.getElementById('system-prompt');
+    if (settings.systemPrompt && systemPromptEl) {
+        systemPromptEl.value = settings.systemPrompt;
+    }
+
+    // Load context limit
+    if (settings.contextLimit) {
+        CONFIG.MAX_CONTEXT_TOKENS = settings.contextLimit;
+    }
 }
 
 function saveSettings() {
-    const el = document.getElementById('system-prompt');
+    const systemPromptEl = document.getElementById('system-prompt');
+    const contextSlider = document.getElementById('context-limit-slider');
+
     localStorage.setItem('aigoodbyeSettings', JSON.stringify({
-        systemPrompt: el ? el.value : ''
+        systemPrompt: systemPromptEl ? systemPromptEl.value : '',
+        contextLimit: contextSlider ? parseInt(contextSlider.value) : CONFIG.MAX_CONTEXT_TOKENS
     }));
 }
 

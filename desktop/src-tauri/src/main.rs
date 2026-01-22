@@ -188,6 +188,88 @@ fn check_gpu_runners(app: tauri::AppHandle) -> Result<bool, String> {
     Ok(false)
 }
 
+/// Download and install GPU libraries (Windows only)
+#[tauri::command]
+async fn download_gpu_runners(app: tauri::AppHandle, download_url: String) -> Result<String, String> {
+    use std::io::Write;
+
+    let app_data_dir = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+
+    let gpu_runners_path = app_data_dir.join("gpu-runners");
+    let zip_path = app_data_dir.join("gpu-runners.zip");
+
+    eprintln!("Downloading GPU runners from: {}", download_url);
+    eprintln!("Target path: {:?}", gpu_runners_path);
+
+    // Create directory if needed
+    if !gpu_runners_path.exists() {
+        std::fs::create_dir_all(&gpu_runners_path)
+            .map_err(|e| format!("Failed to create directory: {}", e))?;
+    }
+
+    // Download the file using reqwest
+    let response = reqwest::get(&download_url)
+        .await
+        .map_err(|e| format!("Download failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("Download failed with status: {}", response.status()));
+    }
+
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+
+    eprintln!("Downloaded {} bytes", bytes.len());
+
+    // Save to zip file
+    let mut file = std::fs::File::create(&zip_path)
+        .map_err(|e| format!("Failed to create zip file: {}", e))?;
+    file.write_all(&bytes)
+        .map_err(|e| format!("Failed to write zip file: {}", e))?;
+    drop(file);
+
+    eprintln!("Saved zip file, extracting...");
+
+    // Extract using PowerShell (Windows)
+    #[cfg(target_os = "windows")]
+    {
+        let zip_path_str = zip_path.to_string_lossy();
+        let dest_path_str = gpu_runners_path.to_string_lossy();
+
+        let output = std::process::Command::new("powershell")
+            .args([
+                "-Command",
+                &format!(
+                    "Expand-Archive -Path '{}' -DestinationPath '{}' -Force",
+                    zip_path_str, dest_path_str
+                ),
+            ])
+            .output()
+            .map_err(|e| format!("Failed to run PowerShell: {}", e))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(format!("Extraction failed: {}", stderr));
+        }
+
+        // Clean up zip file
+        let _ = std::fs::remove_file(&zip_path);
+
+        eprintln!("GPU runners installed successfully");
+        Ok("GPU acceleration installed successfully".to_string())
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        Err("GPU download is only supported on Windows".to_string())
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -201,7 +283,8 @@ fn main() {
             check_ollama_status,
             get_ollama_url,
             get_gpu_runners_path,
-            check_gpu_runners
+            check_gpu_runners,
+            download_gpu_runners
         ])
         .setup(|app| {
             eprintln!("=== AIGoodbye App Setup ===");

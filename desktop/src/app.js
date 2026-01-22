@@ -2046,69 +2046,17 @@ async function startGpuDownload() {
     const progressText = document.getElementById('gpu-progress-text');
 
     try {
-        // Get the path where GPU runners should be saved
-        const gpuRunnersPath = await invoke('get_gpu_runners_path');
-        console.log('GPU runners will be saved to:', gpuRunnersPath);
-
-        // Import Tauri plugins
-        const { Command } = await import('@tauri-apps/plugin-shell');
-        const { mkdir, exists } = await import('@tauri-apps/plugin-fs');
-
-        // Ensure directory exists
-        const dirExists = await exists(gpuRunnersPath);
-        if (!dirExists) {
-            await mkdir(gpuRunnersPath, { recursive: true });
-        }
-
-        const zipPath = gpuRunnersPath + '\\gpu-runners.zip';
-
-        progressText.textContent = 'Downloading GPU libraries...';
-        progressFill.style.width = '10%';
-
-        // Use PowerShell to download (bypasses CORS issues with browser fetch)
-        // Invoke-WebRequest handles redirects and large files properly
-        const downloadScript = `
-            $ProgressPreference = 'SilentlyContinue'
-            try {
-                Invoke-WebRequest -Uri "${CONFIG.GPU_RUNNERS_URL}" -OutFile "${zipPath}" -UseBasicParsing
-                Write-Output "SUCCESS"
-            } catch {
-                Write-Output "ERROR: $($_.Exception.Message)"
-            }
-        `;
-
-        console.log('Starting PowerShell download...');
         progressText.textContent = 'Downloading GPU libraries (this may take a few minutes)...';
-        progressFill.style.width = '20%';
+        progressFill.style.width = '30%';
 
-        const downloadCmd = await Command.create('powershell', ['-Command', downloadScript]).execute();
+        console.log('Starting GPU download via Rust backend...');
 
-        if (downloadCmd.code !== 0 || !downloadCmd.stdout.includes('SUCCESS')) {
-            const errorMsg = downloadCmd.stderr || downloadCmd.stdout || 'Unknown download error';
-            throw new Error('Download failed: ' + errorMsg);
-        }
+        // Use Rust backend to download - avoids all JavaScript module issues
+        const result = await invoke('download_gpu_runners', {
+            downloadUrl: CONFIG.GPU_RUNNERS_URL
+        });
 
-        console.log('Download complete, extracting...');
-        progressText.textContent = 'Extracting GPU libraries...';
-        progressFill.style.width = '70%';
-
-        // Extract zip using PowerShell
-        const extractScript = `
-            try {
-                Expand-Archive -Path "${zipPath}" -DestinationPath "${gpuRunnersPath}" -Force
-                Remove-Item "${zipPath}" -Force
-                Write-Output "SUCCESS"
-            } catch {
-                Write-Output "ERROR: $($_.Exception.Message)"
-            }
-        `;
-
-        const extractCmd = await Command.create('powershell', ['-Command', extractScript]).execute();
-
-        if (extractCmd.code !== 0 || !extractCmd.stdout.includes('SUCCESS')) {
-            const errorMsg = extractCmd.stderr || extractCmd.stdout || 'Unknown extraction error';
-            throw new Error('Extraction failed: ' + errorMsg);
-        }
+        console.log('GPU download result:', result);
 
         progressFill.style.width = '100%';
         progressText.textContent = 'GPU acceleration installed!';
@@ -2131,13 +2079,16 @@ async function startGpuDownload() {
                 </div>
             `;
 
-            document.getElementById('gpu-restart-app').addEventListener('click', async () => {
-                try {
-                    const { relaunch } = await import('@tauri-apps/plugin-process');
-                    await relaunch();
-                } catch (e) {
-                    console.error('Failed to restart:', e);
-                    modal.remove();
+            document.getElementById('gpu-restart-app').addEventListener('click', () => {
+                // Request app restart via Tauri
+                if (window.__TAURI__) {
+                    invoke('tauri', { __tauriModule: 'Process', message: { cmd: 'restart' } })
+                        .catch(() => {
+                            // Fallback: reload the page (won't fully restart but better than nothing)
+                            window.location.reload();
+                        });
+                } else {
+                    window.location.reload();
                 }
             });
 
@@ -2156,7 +2107,7 @@ async function startGpuDownload() {
                     <h2>Download Failed</h2>
                 </div>
                 <p class="gpu-download-description">
-                    Could not download GPU acceleration: ${error.message}
+                    Could not download GPU acceleration: ${error.message || error}
                 </p>
                 <p class="gpu-download-description" style="font-size: 0.85rem; opacity: 0.7;">
                     The app will continue using CPU mode. You can try again later from Settings.

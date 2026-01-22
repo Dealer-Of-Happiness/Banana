@@ -101,7 +101,9 @@ jobs:
           $libSource = Get-ChildItem -Path $extractDir -Filter "lib" -Directory -Recurse | Select-Object -First 1
           if ($libSource) {
             $ollamaLibSource = Join-Path $libSource.FullName "ollama"
-            $ollamaLibTarget = Join-Path $ollamaDir "lib\ollama"
+
+            # Place lib folder at src-tauri root level for simpler resource bundling
+            $ollamaLibTarget = "desktop\src-tauri\lib\ollama"
 
             Write-Host "Found Ollama lib at: $ollamaLibSource"
             New-Item -ItemType Directory -Force -Path $ollamaLibTarget | Out-Null
@@ -459,7 +461,7 @@ jobs:
       - name: Organize release files
         run: |
           mkdir -p release-files
-          find artifacts -type f \( -name "*.exe" -o -name "*.msi" -o -name "*.dmg" \) -exec cp {} release-files/ \;
+          find artifacts -type f \( -name "*.exe" -o -name "*.msi" -o -name "*.dmg" -o -name "*.zip" \) -exec cp {} release-files/ \;
           ls -la release-files/
 
       - name: Get version
@@ -490,6 +492,7 @@ jobs:
             | macOS | Apple Silicon | [AIGoodbye-macOS-arm64.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-macOS-arm64.dmg) |
             | macOS | Intel | [AIGoodbye-macOS-x64.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-macOS-x64.dmg) |
             | Windows | 64-bit | [AIGoodbye-Windows-Setup.exe](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-Windows-Setup.exe) |
+            | Windows | GPU Acceleration | [AIGoodbye-GPU-Runners.zip](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-GPU-Runners.zip) |
 
             ## Installation
 

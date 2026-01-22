@@ -54,11 +54,19 @@ fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
             for entry in entries.flatten() {
                 let path = entry.path();
                 eprintln!("  {:?} (is_dir: {})", path, path.is_dir());
-                // If it's a directory, list its contents too
+                // If it's a directory, list its contents recursively (2 levels)
                 if path.is_dir() {
                     if let Ok(sub_entries) = std::fs::read_dir(&path) {
                         for sub_entry in sub_entries.flatten() {
-                            eprintln!("    {:?}", sub_entry.path());
+                            let sub_path = sub_entry.path();
+                            eprintln!("    {:?}", sub_path);
+                            if sub_path.is_dir() {
+                                if let Ok(sub_sub_entries) = std::fs::read_dir(&sub_path) {
+                                    for sub_sub_entry in sub_sub_entries.flatten() {
+                                        eprintln!("      {:?}", sub_sub_entry.path());
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -66,19 +74,22 @@ fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
         }
 
         // Try multiple possible paths for bundled libraries
-        // Tauri might place them in different locations depending on config
+        // Resources are bundled as lib/ollama/*.dll and placed in resource_dir
         let mut possible_lib_paths = vec![
-            resource_dir.join("binaries").join("lib").join("ollama"),
+            // Primary location - resources bundled from src-tauri/lib/
             resource_dir.join("lib").join("ollama"),
-            resource_dir.join("binaries").join("ollama"),
+            // Fallback locations
             resource_dir.join("ollama"),
         ];
 
-        // Also check relative to the executable
+        // Also check relative to the executable (for dev mode or alternative bundling)
         if let Some(ref exe) = exe_dir {
-            possible_lib_paths.push(exe.join("binaries").join("lib").join("ollama"));
             possible_lib_paths.push(exe.join("lib").join("ollama"));
             possible_lib_paths.push(exe.join("ollama"));
+            // Check parent directory too (in case exe is in a subdirectory)
+            if let Some(parent) = exe.parent() {
+                possible_lib_paths.push(parent.join("lib").join("ollama"));
+            }
         }
 
         let mut lib_paths = Vec::new();

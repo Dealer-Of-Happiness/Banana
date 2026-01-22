@@ -162,6 +162,8 @@ desktop/src-tauri/icons/*.bmp
 # Tauri build artifacts
 desktop/src-tauri/target/
 desktop/src-tauri/binaries/
+desktop/src-tauri/lib/
+desktop/src-tauri/gpu-runners.zip
 desktop/dist/
 desktop/build/
 desktop/requirements-minimal.txt

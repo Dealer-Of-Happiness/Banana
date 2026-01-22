@@ -39,30 +39,75 @@ fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
             .app_local_data_dir()
             .map_err(|e| format!("Failed to get app data dir: {}", e))?;
 
-        // Bundled CPU libraries (included in installer) - new structure: lib/ollama/*.dll
-        let bundled_lib = resource_dir.join("binaries").join("lib").join("ollama");
+        // Get the executable's directory - DLLs might be relative to this
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()));
+
+        eprintln!("Resource dir: {:?}", resource_dir);
+        eprintln!("App data dir: {:?}", app_data_dir);
+        eprintln!("Exe dir: {:?}", exe_dir);
+
+        // Debug: List contents of resource directory to find where DLLs actually are
+        eprintln!("Resource directory contents:");
+        if let Ok(entries) = std::fs::read_dir(&resource_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                eprintln!("  {:?} (is_dir: {})", path, path.is_dir());
+                // If it's a directory, list its contents too
+                if path.is_dir() {
+                    if let Ok(sub_entries) = std::fs::read_dir(&path) {
+                        for sub_entry in sub_entries.flatten() {
+                            eprintln!("    {:?}", sub_entry.path());
+                        }
+                    }
+                }
+            }
+        }
+
+        // Try multiple possible paths for bundled libraries
+        // Tauri might place them in different locations depending on config
+        let mut possible_lib_paths = vec![
+            resource_dir.join("binaries").join("lib").join("ollama"),
+            resource_dir.join("lib").join("ollama"),
+            resource_dir.join("binaries").join("ollama"),
+            resource_dir.join("ollama"),
+        ];
+
+        // Also check relative to the executable
+        if let Some(ref exe) = exe_dir {
+            possible_lib_paths.push(exe.join("binaries").join("lib").join("ollama"));
+            possible_lib_paths.push(exe.join("lib").join("ollama"));
+            possible_lib_paths.push(exe.join("ollama"));
+        }
+
+        let mut lib_paths = Vec::new();
+
+        // Find bundled CPU libraries
+        for path in &possible_lib_paths {
+            eprintln!("Checking for libs at: {:?} (exists: {})", path, path.exists());
+            if path.exists() {
+                // Check if this directory has DLLs
+                if let Ok(entries) = std::fs::read_dir(path) {
+                    let dlls: Vec<_> = entries
+                        .flatten()
+                        .filter(|e| e.path().extension().map(|ext| ext == "dll").unwrap_or(false))
+                        .collect();
+
+                    if !dlls.is_empty() {
+                        eprintln!("Found {} DLLs at {:?}:", dlls.len(), path);
+                        for dll in &dlls {
+                            eprintln!("  - {:?}", dll.path());
+                        }
+                        lib_paths.push(path.to_string_lossy().to_string());
+                        break; // Found the right directory
+                    }
+                }
+            }
+        }
 
         // Downloaded GPU libraries (fetched on demand by the app)
         let gpu_lib = app_data_dir.join("gpu-runners");
-
-        eprintln!("Resource dir: {:?}", resource_dir);
-        eprintln!("Bundled lib: {:?}", bundled_lib);
-        eprintln!("GPU lib dir: {:?}", gpu_lib);
-
-        // Build library paths - include both bundled and downloaded libraries
-        // Ollama will use whichever libraries are available
-        let mut lib_paths = Vec::new();
-
-        if bundled_lib.exists() {
-            eprintln!("Bundled libraries found:");
-            if let Ok(entries) = std::fs::read_dir(&bundled_lib) {
-                for entry in entries.flatten() {
-                    eprintln!("  - {:?}", entry.path());
-                }
-            }
-            lib_paths.push(bundled_lib.to_string_lossy().to_string());
-        }
-
         if gpu_lib.exists() {
             eprintln!("GPU libraries found (downloaded):");
             if let Ok(entries) = std::fs::read_dir(&gpu_lib) {
@@ -74,7 +119,11 @@ fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
         }
 
         if lib_paths.is_empty() {
-            eprintln!("WARNING: No library directories found!");
+            eprintln!("WARNING: No library directories found! Ollama may not start.");
+            eprintln!("Searched paths:");
+            for path in &possible_lib_paths {
+                eprintln!("  - {:?}", path);
+            }
         } else {
             // Join paths with semicolon for Windows
             let lib_dir_str = lib_paths.join(";");

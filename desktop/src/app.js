@@ -140,12 +140,7 @@ async function startupSequence() {
         if (loadingBar) loadingBar.style.display = 'none';
         if (loadingTextEl) loadingTextEl.className = 'loading-text error';
 
-        const isWindows = navigator.userAgent.includes('Windows');
-        if (isWindows) {
-            updateLoadingText('Could not start AI engine. Try installing Ollama from ollama.com/download, then click Retry.');
-        } else {
-            updateLoadingText('Could not start AI engine. Click Retry.');
-        }
+        updateLoadingText('Could not start AI engine. Click Retry or restart the app.');
         if (retryBtn) retryBtn.classList.remove('hidden');
         return;
     }

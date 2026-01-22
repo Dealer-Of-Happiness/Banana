@@ -95,9 +95,28 @@ jobs:
             exit 1
           }
 
-          # Note: We don't copy the lib folder (GPU libraries) because it's too large (800MB+)
-          # Ollama will run in CPU-only mode. Users who want GPU acceleration can install
-          # Ollama separately: https://ollama.com/download
+          # Copy the lib folder containing runtime runners (required for Ollama to work)
+          # This includes CPU runners and GPU runners (CUDA, ROCm)
+          $libSource = Get-ChildItem -Path $extractDir -Filter "lib" -Directory -Recurse | Select-Object -First 1
+          if ($libSource) {
+            $libTarget = Join-Path $ollamaDir "lib"
+            Write-Host "Found lib folder at: $($libSource.FullName)"
+            Write-Host "Copying lib folder to: $libTarget"
+            Copy-Item -Path $libSource.FullName -Destination $libTarget -Recurse -Force
+
+            # Show what was copied
+            Write-Host "Lib folder contents:"
+            Get-ChildItem -Recurse $libTarget | ForEach-Object {
+              $relativePath = $_.FullName.Substring($libTarget.Length + 1)
+              if ($_.PSIsContainer) {
+                Write-Host "  [DIR] $relativePath"
+              } else {
+                Write-Host "  $relativePath - $($_.Length) bytes"
+              }
+            }
+          } else {
+            Write-Host "WARNING: lib folder not found - Ollama may not work correctly!"
+          }
 
           Write-Host "Final binaries directory contents:"
           Get-ChildItem $ollamaDir | ForEach-Object { Write-Host "$($_.Name) - $($_.Length) bytes" }

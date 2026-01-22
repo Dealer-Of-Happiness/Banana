@@ -95,31 +95,21 @@ jobs:
             exit 1
           }
 
-          # Copy only CPU runners from lib folder (GPU libraries are too large for NSIS ~800MB)
-          # This allows the app to work out of the box. GPU users can install Ollama separately.
+          # Copy the full lib folder with all runners (CPU + GPU)
+          # Using MSI installer which handles large files better than NSIS
           $libSource = Get-ChildItem -Path $extractDir -Filter "lib" -Directory -Recurse | Select-Object -First 1
           if ($libSource) {
-            $runnersSource = Join-Path $libSource.FullName "ollama\runners"
-            $runnersTarget = Join-Path $ollamaDir "lib\ollama\runners"
-
-            Write-Host "Found runners at: $runnersSource"
-            New-Item -ItemType Directory -Force -Path $runnersTarget | Out-Null
-
-            # Copy only CPU runners (skip cuda_* and rocm_* which are 600MB+)
-            Get-ChildItem -Path $runnersSource -Directory | Where-Object {
-              $_.Name -like "cpu*"
-            } | ForEach-Object {
-              Write-Host "Copying CPU runner: $($_.Name)"
-              Copy-Item -Path $_.FullName -Destination (Join-Path $runnersTarget $_.Name) -Recurse -Force
-            }
+            $libTarget = Join-Path $ollamaDir "lib"
+            Write-Host "Found lib folder at: $($libSource.FullName)"
+            Write-Host "Copying full lib folder to: $libTarget (includes GPU support)"
+            Copy-Item -Path $libSource.FullName -Destination $libTarget -Recurse -Force
 
             # Show what was copied
-            Write-Host "Runners copied:"
-            Get-ChildItem -Recurse $runnersTarget | ForEach-Object {
-              if (-not $_.PSIsContainer) {
-                $size = [math]::Round($_.Length / 1MB, 2)
-                Write-Host "  $($_.Name) - ${size}MB"
-              }
+            Write-Host "Lib folder contents:"
+            Get-ChildItem $libTarget -Directory -Recurse | ForEach-Object {
+              $size = (Get-ChildItem $_.FullName -Recurse -File | Measure-Object -Property Length -Sum).Sum
+              $sizeMB = [math]::Round($size / 1MB, 2)
+              Write-Host "  $($_.Name) - ${sizeMB}MB"
             }
           } else {
             Write-Host "WARNING: lib folder not found - Ollama may not work correctly!"
@@ -151,19 +141,7 @@ jobs:
           $targetDir = "desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle"
           $fallbackDir = "desktop/src-tauri/target/release/bundle"
 
-          # Find and rename the NSIS installer
-          $nsisFiles = Get-ChildItem -Path "$targetDir/nsis/*.exe" -ErrorAction SilentlyContinue
-          if (-not $nsisFiles) {
-            $nsisFiles = Get-ChildItem -Path "$fallbackDir/nsis/*.exe" -ErrorAction SilentlyContinue
-          }
-          if ($nsisFiles) {
-            Copy-Item $nsisFiles[0].FullName "$outputDir/${{ env.APP_NAME }}-Windows-Setup.exe"
-            Write-Host "Copied NSIS installer: $($nsisFiles[0].FullName)"
-          } else {
-            Write-Host "Warning: No NSIS installer found"
-          }
-
-          # Find and rename the MSI installer
+          # Find and rename the MSI installer (primary installer - handles large GPU libs)
           $msiFiles = Get-ChildItem -Path "$targetDir/msi/*.msi" -ErrorAction SilentlyContinue
           if (-not $msiFiles) {
             $msiFiles = Get-ChildItem -Path "$fallbackDir/msi/*.msi" -ErrorAction SilentlyContinue
@@ -479,7 +457,7 @@ jobs:
             |----------|--------------|----------|
             | macOS | Apple Silicon | [AIGoodbye-macOS-arm64.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-macOS-arm64.dmg) |
             | macOS | Intel | [AIGoodbye-macOS-x64.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-macOS-x64.dmg) |
-            | Windows | 64-bit | [AIGoodbye-Windows-Setup.exe](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-Windows-Setup.exe) |
+            | Windows | 64-bit | [AIGoodbye-Windows.msi](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-Windows.msi) |
 
             ## Installation
 

@@ -13,6 +13,10 @@
           "name": "binaries/ollama",
           "sidecar": true,
           "args": true
+        },
+        {
+          "name": "powershell",
+          "args": true
         }
       ]
     },
@@ -23,12 +27,28 @@
           "name": "binaries/ollama",
           "sidecar": true,
           "args": true
+        },
+        {
+          "name": "powershell",
+          "args": true
         }
+      ]
+    },
+    "fs:default",
+    "fs:allow-exists",
+    "fs:allow-mkdir",
+    "fs:allow-read",
+    "fs:allow-write",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        "$APPLOCALDATA/**"
       ]
     },
     "dialog:default",
     "notification:default",
     "process:default",
+    "process:allow-restart",
     "updater:default"
   ]
 }

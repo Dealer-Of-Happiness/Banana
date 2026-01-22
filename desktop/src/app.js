@@ -2050,49 +2050,9 @@ async function startGpuDownload() {
         const gpuRunnersPath = await invoke('get_gpu_runners_path');
         console.log('GPU runners will be saved to:', gpuRunnersPath);
 
-        progressText.textContent = 'Downloading GPU libraries...';
-        progressFill.style.width = '10%';
-
-        // Download the GPU runners zip
-        const response = await fetch(CONFIG.GPU_RUNNERS_URL);
-        if (!response.ok) {
-            throw new Error(`Download failed: ${response.status}`);
-        }
-
-        const contentLength = response.headers.get('content-length');
-        const total = parseInt(contentLength, 10);
-        let loaded = 0;
-
-        const reader = response.body.getReader();
-        const chunks = [];
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            chunks.push(value);
-            loaded += value.length;
-
-            if (total) {
-                const percent = Math.round((loaded / total) * 70) + 10; // 10-80%
-                progressFill.style.width = `${percent}%`;
-                const mbLoaded = (loaded / 1024 / 1024).toFixed(1);
-                const mbTotal = (total / 1024 / 1024).toFixed(1);
-                progressText.textContent = `Downloading... ${mbLoaded}MB / ${mbTotal}MB`;
-            }
-        }
-
-        progressText.textContent = 'Extracting files...';
-        progressFill.style.width = '85%';
-
-        // Combine chunks into a single blob
-        const blob = new Blob(chunks);
-        const arrayBuffer = await blob.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-
-        // Use JSZip to extract (we'll need to include it or use Tauri fs)
-        // For now, save the zip and extract using Tauri commands
-        const { writeFile, mkdir, exists } = await import('@tauri-apps/plugin-fs');
+        // Import Tauri plugins
+        const { Command } = await import('@tauri-apps/plugin-shell');
+        const { mkdir, exists } = await import('@tauri-apps/plugin-fs');
 
         // Ensure directory exists
         const dirExists = await exists(gpuRunnersPath);
@@ -2100,22 +2060,54 @@ async function startGpuDownload() {
             await mkdir(gpuRunnersPath, { recursive: true });
         }
 
-        // Save zip file temporarily
-        const zipPath = gpuRunnersPath + '/gpu-runners.zip';
-        await writeFile(zipPath, uint8Array);
+        const zipPath = gpuRunnersPath + '\\gpu-runners.zip';
 
+        progressText.textContent = 'Downloading GPU libraries...';
+        progressFill.style.width = '10%';
+
+        // Use PowerShell to download (bypasses CORS issues with browser fetch)
+        // Invoke-WebRequest handles redirects and large files properly
+        const downloadScript = `
+            $ProgressPreference = 'SilentlyContinue'
+            try {
+                Invoke-WebRequest -Uri "${CONFIG.GPU_RUNNERS_URL}" -OutFile "${zipPath}" -UseBasicParsing
+                Write-Output "SUCCESS"
+            } catch {
+                Write-Output "ERROR: $($_.Exception.Message)"
+            }
+        `;
+
+        console.log('Starting PowerShell download...');
+        progressText.textContent = 'Downloading GPU libraries (this may take a few minutes)...';
+        progressFill.style.width = '20%';
+
+        const downloadCmd = await Command.create('powershell', ['-Command', downloadScript]).execute();
+
+        if (downloadCmd.code !== 0 || !downloadCmd.stdout.includes('SUCCESS')) {
+            const errorMsg = downloadCmd.stderr || downloadCmd.stdout || 'Unknown download error';
+            throw new Error('Download failed: ' + errorMsg);
+        }
+
+        console.log('Download complete, extracting...');
         progressText.textContent = 'Extracting GPU libraries...';
-        progressFill.style.width = '90%';
+        progressFill.style.width = '70%';
 
-        // Extract zip using PowerShell (Windows)
-        const { Command } = await import('@tauri-apps/plugin-shell');
-        const extractCmd = await Command.create('powershell', [
-            '-Command',
-            `Expand-Archive -Path "${zipPath}" -DestinationPath "${gpuRunnersPath}" -Force; Remove-Item "${zipPath}"`
-        ]).execute();
+        // Extract zip using PowerShell
+        const extractScript = `
+            try {
+                Expand-Archive -Path "${zipPath}" -DestinationPath "${gpuRunnersPath}" -Force
+                Remove-Item "${zipPath}" -Force
+                Write-Output "SUCCESS"
+            } catch {
+                Write-Output "ERROR: $($_.Exception.Message)"
+            }
+        `;
 
-        if (extractCmd.code !== 0) {
-            throw new Error('Failed to extract GPU runners: ' + extractCmd.stderr);
+        const extractCmd = await Command.create('powershell', ['-Command', extractScript]).execute();
+
+        if (extractCmd.code !== 0 || !extractCmd.stdout.includes('SUCCESS')) {
+            const errorMsg = extractCmd.stderr || extractCmd.stdout || 'Unknown extraction error';
+            throw new Error('Extraction failed: ' + errorMsg);
         }
 
         progressFill.style.width = '100%';

@@ -39,47 +39,47 @@ fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
             .app_local_data_dir()
             .map_err(|e| format!("Failed to get app data dir: {}", e))?;
 
-        // Bundled CPU runners (included in installer)
-        let bundled_runners = resource_dir.join("binaries").join("lib").join("ollama").join("runners");
+        // Bundled CPU libraries (included in installer) - new structure: lib/ollama/*.dll
+        let bundled_lib = resource_dir.join("binaries").join("lib").join("ollama");
 
-        // Downloaded GPU runners (fetched on demand by the app)
-        let gpu_runners = app_data_dir.join("gpu-runners");
+        // Downloaded GPU libraries (fetched on demand by the app)
+        let gpu_lib = app_data_dir.join("gpu-runners");
 
         eprintln!("Resource dir: {:?}", resource_dir);
-        eprintln!("Bundled runners: {:?}", bundled_runners);
-        eprintln!("GPU runners dir: {:?}", gpu_runners);
+        eprintln!("Bundled lib: {:?}", bundled_lib);
+        eprintln!("GPU lib dir: {:?}", gpu_lib);
 
-        // Build runners path - include both bundled and downloaded runners
-        // Ollama will use whichever runners are available
-        let mut runners_paths = Vec::new();
+        // Build library paths - include both bundled and downloaded libraries
+        // Ollama will use whichever libraries are available
+        let mut lib_paths = Vec::new();
 
-        if bundled_runners.exists() {
-            eprintln!("Bundled runners found:");
-            if let Ok(entries) = std::fs::read_dir(&bundled_runners) {
+        if bundled_lib.exists() {
+            eprintln!("Bundled libraries found:");
+            if let Ok(entries) = std::fs::read_dir(&bundled_lib) {
                 for entry in entries.flatten() {
                     eprintln!("  - {:?}", entry.path());
                 }
             }
-            runners_paths.push(bundled_runners.to_string_lossy().to_string());
+            lib_paths.push(bundled_lib.to_string_lossy().to_string());
         }
 
-        if gpu_runners.exists() {
-            eprintln!("GPU runners found (downloaded):");
-            if let Ok(entries) = std::fs::read_dir(&gpu_runners) {
+        if gpu_lib.exists() {
+            eprintln!("GPU libraries found (downloaded):");
+            if let Ok(entries) = std::fs::read_dir(&gpu_lib) {
                 for entry in entries.flatten() {
                     eprintln!("  - {:?}", entry.path());
                 }
             }
-            runners_paths.push(gpu_runners.to_string_lossy().to_string());
+            lib_paths.push(gpu_lib.to_string_lossy().to_string());
         }
 
-        if runners_paths.is_empty() {
-            eprintln!("WARNING: No runners directories found!");
+        if lib_paths.is_empty() {
+            eprintln!("WARNING: No library directories found!");
         } else {
             // Join paths with semicolon for Windows
-            let runners_dir_str = runners_paths.join(";");
-            eprintln!("OLLAMA_RUNNERS_DIR: {}", runners_dir_str);
-            sidecar_command = sidecar_command.env("OLLAMA_RUNNERS_DIR", &runners_dir_str);
+            let lib_dir_str = lib_paths.join(";");
+            eprintln!("OLLAMA_LIB_DIR: {}", lib_dir_str);
+            sidecar_command = sidecar_command.env("OLLAMA_LIB_DIR", &lib_dir_str);
         }
     }
 
@@ -154,7 +154,7 @@ fn get_gpu_runners_path(app: tauri::AppHandle) -> Result<String, String> {
     Ok(gpu_runners.to_string_lossy().to_string())
 }
 
-/// Check if GPU runners are installed
+/// Check if GPU libraries are installed
 #[tauri::command]
 fn check_gpu_runners(app: tauri::AppHandle) -> Result<bool, String> {
     let app_data_dir = app
@@ -162,15 +162,15 @@ fn check_gpu_runners(app: tauri::AppHandle) -> Result<bool, String> {
         .app_local_data_dir()
         .map_err(|e| format!("Failed to get app data dir: {}", e))?;
 
-    let gpu_runners = app_data_dir.join("gpu-runners");
+    let gpu_lib = app_data_dir.join("gpu-runners");
 
-    // Check if directory exists and has cuda or rocm subdirectories
-    if gpu_runners.exists() {
-        if let Ok(entries) = std::fs::read_dir(&gpu_runners) {
+    // Check if directory exists and has cuda, rocm, or vulkan subdirectories
+    if gpu_lib.exists() {
+        if let Ok(entries) = std::fs::read_dir(&gpu_lib) {
             for entry in entries.flatten() {
                 let name = entry.file_name();
                 let name_str = name.to_string_lossy();
-                if name_str.starts_with("cuda") || name_str.starts_with("rocm") {
+                if name_str.starts_with("cuda") || name_str.starts_with("rocm") || name_str.starts_with("vulkan") {
                     return Ok(true);
                 }
             }

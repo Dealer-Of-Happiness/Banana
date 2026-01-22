@@ -95,32 +95,31 @@ jobs:
             exit 1
           }
 
-          # Copy only CPU runners for the main installer (keeps size manageable for NSIS)
-          # GPU runners will be available as a separate download that the app fetches on demand
+          # Copy only CPU libraries for the main installer (keeps size manageable for NSIS)
+          # GPU libraries will be available as a separate download that the app fetches on demand
+          # New Ollama structure: lib/ollama/ contains DLLs directly, GPU libs in subdirs
           $libSource = Get-ChildItem -Path $extractDir -Filter "lib" -Directory -Recurse | Select-Object -First 1
           if ($libSource) {
-            $runnersSource = Join-Path $libSource.FullName "ollama\runners"
-            $runnersTarget = Join-Path $ollamaDir "lib\ollama\runners"
+            $ollamaLibSource = Join-Path $libSource.FullName "ollama"
+            $ollamaLibTarget = Join-Path $ollamaDir "lib\ollama"
 
-            Write-Host "Found runners at: $runnersSource"
-            New-Item -ItemType Directory -Force -Path $runnersTarget | Out-Null
+            Write-Host "Found Ollama lib at: $ollamaLibSource"
+            New-Item -ItemType Directory -Force -Path $ollamaLibTarget | Out-Null
 
-            # Copy only CPU runners (cpu, cpu_avx, cpu_avx2)
-            Get-ChildItem -Path $runnersSource -Directory | Where-Object {
-              $_.Name -like "cpu*"
-            } | ForEach-Object {
-              Write-Host "Copying CPU runner: $($_.Name)"
-              Copy-Item -Path $_.FullName -Destination (Join-Path $runnersTarget $_.Name) -Recurse -Force
+            # Copy base and CPU DLLs (ggml-base.dll, ggml-cpu-*.dll)
+            Get-ChildItem -Path $ollamaLibSource -Filter "*.dll" -File | ForEach-Object {
+              Write-Host "Copying CPU library: $($_.Name)"
+              Copy-Item -Path $_.FullName -Destination $ollamaLibTarget -Force
             }
 
-            # Create GPU runners package for separate download
+            # Create GPU runners package for separate download (cuda_*, vulkan folders)
             $gpuPackageDir = Join-Path $env:RUNNER_TEMP "gpu-runners"
             New-Item -ItemType Directory -Force -Path $gpuPackageDir | Out-Null
 
-            Get-ChildItem -Path $runnersSource -Directory | Where-Object {
-              $_.Name -like "cuda*" -or $_.Name -like "rocm*"
+            Get-ChildItem -Path $ollamaLibSource -Directory | Where-Object {
+              $_.Name -like "cuda*" -or $_.Name -like "rocm*" -or $_.Name -like "vulkan*"
             } | ForEach-Object {
-              Write-Host "Packaging GPU runner: $($_.Name)"
+              Write-Host "Packaging GPU library: $($_.Name)"
               Copy-Item -Path $_.FullName -Destination (Join-Path $gpuPackageDir $_.Name) -Recurse -Force
             }
 
@@ -132,10 +131,9 @@ jobs:
             Write-Host "GPU package size: ${gpuZipSize}MB"
 
             # Show what was bundled
-            Write-Host "CPU runners bundled:"
-            Get-ChildItem $runnersTarget -Directory | ForEach-Object {
-              $size = (Get-ChildItem $_.FullName -Recurse -File | Measure-Object -Property Length -Sum).Sum
-              $sizeMB = [math]::Round($size / 1MB, 2)
+            Write-Host "CPU libraries bundled:"
+            Get-ChildItem $ollamaLibTarget -File | ForEach-Object {
+              $sizeMB = [math]::Round($_.Length / 1MB, 2)
               Write-Host "  $($_.Name) - ${sizeMB}MB"
             }
           } else {

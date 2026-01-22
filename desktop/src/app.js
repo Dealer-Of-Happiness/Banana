@@ -27,7 +27,9 @@ const CONFIG = {
     // 16K is comfortable for 16GB RAM systems, allows ~20-40 message exchanges before summarization
     MAX_CONTEXT_TOKENS: 16000,
     // Summary target length
-    SUMMARY_TARGET_TOKENS: 800
+    SUMMARY_TARGET_TOKENS: 800,
+    // GPU runners download URL (from GitHub releases)
+    GPU_RUNNERS_URL: 'https://github.com/Dealer-Of-Happiness/Banana/releases/latest/download/AIGoodbye-GPU-Runners.zip'
 };
 
 // DOM Elements - will be initialized after DOM loads
@@ -1921,21 +1923,267 @@ function updateContextLimitDisplay(tokens) {
     }
 }
 
-function setupGpuAccelerationSection() {
-    const gpuSection = document.getElementById('gpu-acceleration-section');
-    if (!gpuSection) return;
+// ==================== GPU Acceleration (Windows) ====================
 
-    // Detect if running on Windows
+async function setupGpuAccelerationSection() {
+    // Only relevant on Windows
     const isWindows = navigator.userAgent.includes('Windows') ||
-                      navigator.platform.includes('Win') ||
-                      (window.__TAURI__ && navigator.userAgent.includes('Windows'));
+                      navigator.platform.includes('Win');
 
-    if (isWindows) {
-        gpuSection.style.display = 'block';
-        console.log('Windows detected - showing GPU acceleration section');
-    } else {
-        gpuSection.style.display = 'none';
-        console.log('Not Windows - hiding GPU acceleration section');
+    if (!isWindows || !window.__TAURI__) {
+        console.log('Not Windows or not Tauri - GPU download not applicable');
+        return;
+    }
+
+    // Check if GPU runners are already installed
+    try {
+        const hasGpuRunners = await invoke('check_gpu_runners');
+        if (hasGpuRunners) {
+            console.log('GPU runners already installed');
+            return;
+        }
+    } catch (e) {
+        console.error('Error checking GPU runners:', e);
+        return;
+    }
+
+    // Check if user has dismissed the prompt before
+    const dismissed = localStorage.getItem('gpuPromptDismissed');
+    if (dismissed) {
+        console.log('GPU prompt was previously dismissed');
+        return;
+    }
+
+    // Show GPU download prompt after a short delay
+    setTimeout(() => {
+        showGpuDownloadPrompt();
+    }, 2000);
+}
+
+function showGpuDownloadPrompt() {
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.className = 'gpu-download-modal';
+    modal.innerHTML = `
+        <div class="gpu-download-content">
+            <div class="gpu-download-header">
+                <span class="gpu-icon">🚀</span>
+                <h2>Enable GPU Acceleration?</h2>
+            </div>
+            <p class="gpu-download-description">
+                We detected you're on Windows. Download GPU acceleration for <strong>2-10x faster</strong> AI responses?
+            </p>
+            <div class="gpu-download-details">
+                <div class="gpu-detail-item">
+                    <span class="gpu-detail-icon">📦</span>
+                    <span>~500MB download (one-time)</span>
+                </div>
+                <div class="gpu-detail-item">
+                    <span class="gpu-detail-icon">⚡</span>
+                    <span>Supports NVIDIA & AMD GPUs</span>
+                </div>
+                <div class="gpu-detail-item">
+                    <span class="gpu-detail-icon">✓</span>
+                    <span>Works without GPU too (CPU fallback)</span>
+                </div>
+            </div>
+            <div class="gpu-download-actions">
+                <button class="gpu-btn-primary" id="gpu-download-yes">Download Now</button>
+                <button class="gpu-btn-secondary" id="gpu-download-later">Maybe Later</button>
+            </div>
+            <label class="gpu-dont-ask">
+                <input type="checkbox" id="gpu-dont-ask-again">
+                <span>Don't ask again</span>
+            </label>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Handle button clicks
+    document.getElementById('gpu-download-yes').addEventListener('click', () => {
+        modal.remove();
+        startGpuDownload();
+    });
+
+    document.getElementById('gpu-download-later').addEventListener('click', () => {
+        const dontAsk = document.getElementById('gpu-dont-ask-again').checked;
+        if (dontAsk) {
+            localStorage.setItem('gpuPromptDismissed', 'true');
+        }
+        modal.remove();
+    });
+
+    // Close on overlay click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+async function startGpuDownload() {
+    // Show download progress modal
+    const modal = document.createElement('div');
+    modal.className = 'gpu-download-modal';
+    modal.innerHTML = `
+        <div class="gpu-download-content">
+            <div class="gpu-download-header">
+                <span class="gpu-icon">⬇️</span>
+                <h2>Downloading GPU Acceleration</h2>
+            </div>
+            <div class="gpu-progress-container">
+                <div class="gpu-progress-bar">
+                    <div class="gpu-progress-fill" id="gpu-progress-fill"></div>
+                </div>
+                <p class="gpu-progress-text" id="gpu-progress-text">Starting download...</p>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const progressFill = document.getElementById('gpu-progress-fill');
+    const progressText = document.getElementById('gpu-progress-text');
+
+    try {
+        // Get the path where GPU runners should be saved
+        const gpuRunnersPath = await invoke('get_gpu_runners_path');
+        console.log('GPU runners will be saved to:', gpuRunnersPath);
+
+        progressText.textContent = 'Downloading GPU libraries...';
+        progressFill.style.width = '10%';
+
+        // Download the GPU runners zip
+        const response = await fetch(CONFIG.GPU_RUNNERS_URL);
+        if (!response.ok) {
+            throw new Error(`Download failed: ${response.status}`);
+        }
+
+        const contentLength = response.headers.get('content-length');
+        const total = parseInt(contentLength, 10);
+        let loaded = 0;
+
+        const reader = response.body.getReader();
+        const chunks = [];
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            chunks.push(value);
+            loaded += value.length;
+
+            if (total) {
+                const percent = Math.round((loaded / total) * 70) + 10; // 10-80%
+                progressFill.style.width = `${percent}%`;
+                const mbLoaded = (loaded / 1024 / 1024).toFixed(1);
+                const mbTotal = (total / 1024 / 1024).toFixed(1);
+                progressText.textContent = `Downloading... ${mbLoaded}MB / ${mbTotal}MB`;
+            }
+        }
+
+        progressText.textContent = 'Extracting files...';
+        progressFill.style.width = '85%';
+
+        // Combine chunks into a single blob
+        const blob = new Blob(chunks);
+        const arrayBuffer = await blob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+
+        // Use JSZip to extract (we'll need to include it or use Tauri fs)
+        // For now, save the zip and extract using Tauri commands
+        const { writeFile, mkdir, exists } = await import('@tauri-apps/plugin-fs');
+
+        // Ensure directory exists
+        const dirExists = await exists(gpuRunnersPath);
+        if (!dirExists) {
+            await mkdir(gpuRunnersPath, { recursive: true });
+        }
+
+        // Save zip file temporarily
+        const zipPath = gpuRunnersPath + '/gpu-runners.zip';
+        await writeFile(zipPath, uint8Array);
+
+        progressText.textContent = 'Extracting GPU libraries...';
+        progressFill.style.width = '90%';
+
+        // Extract zip using PowerShell (Windows)
+        const { Command } = await import('@tauri-apps/plugin-shell');
+        const extractCmd = await Command.create('powershell', [
+            '-Command',
+            `Expand-Archive -Path "${zipPath}" -DestinationPath "${gpuRunnersPath}" -Force; Remove-Item "${zipPath}"`
+        ]).execute();
+
+        if (extractCmd.code !== 0) {
+            throw new Error('Failed to extract GPU runners: ' + extractCmd.stderr);
+        }
+
+        progressFill.style.width = '100%';
+        progressText.textContent = 'GPU acceleration installed!';
+
+        // Show success message
+        setTimeout(() => {
+            modal.innerHTML = `
+                <div class="gpu-download-content">
+                    <div class="gpu-download-header">
+                        <span class="gpu-icon">✅</span>
+                        <h2>GPU Acceleration Ready!</h2>
+                    </div>
+                    <p class="gpu-download-description">
+                        GPU acceleration has been installed. <strong>Restart the app</strong> to enable faster AI responses.
+                    </p>
+                    <div class="gpu-download-actions">
+                        <button class="gpu-btn-primary" id="gpu-restart-app">Restart Now</button>
+                        <button class="gpu-btn-secondary" id="gpu-restart-later">Restart Later</button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('gpu-restart-app').addEventListener('click', async () => {
+                try {
+                    const { relaunch } = await import('@tauri-apps/plugin-process');
+                    await relaunch();
+                } catch (e) {
+                    console.error('Failed to restart:', e);
+                    modal.remove();
+                }
+            });
+
+            document.getElementById('gpu-restart-later').addEventListener('click', () => {
+                modal.remove();
+            });
+        }, 1000);
+
+    } catch (error) {
+        console.error('GPU download failed:', error);
+
+        modal.innerHTML = `
+            <div class="gpu-download-content">
+                <div class="gpu-download-header">
+                    <span class="gpu-icon">❌</span>
+                    <h2>Download Failed</h2>
+                </div>
+                <p class="gpu-download-description">
+                    Could not download GPU acceleration: ${error.message}
+                </p>
+                <p class="gpu-download-description" style="font-size: 0.85rem; opacity: 0.7;">
+                    The app will continue using CPU mode. You can try again later from Settings.
+                </p>
+                <div class="gpu-download-actions">
+                    <button class="gpu-btn-primary" id="gpu-retry">Try Again</button>
+                    <button class="gpu-btn-secondary" id="gpu-close">Close</button>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('gpu-retry').addEventListener('click', () => {
+            modal.remove();
+            startGpuDownload();
+        });
+
+        document.getElementById('gpu-close').addEventListener('click', () => {
+            modal.remove();
+        });
     }
 }
 

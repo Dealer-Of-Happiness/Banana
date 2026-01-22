@@ -25,7 +25,7 @@ fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
         .args(["serve"])
         .env("OLLAMA_HOST", "127.0.0.1:11434");
 
-    // On Windows, we need to tell Ollama where to find its bundled runtime libraries
+    // On Windows, we need to tell Ollama where to find its runtime libraries
     // macOS Ollama binary is self-contained and doesn't need this
     #[cfg(target_os = "windows")]
     {
@@ -34,24 +34,53 @@ fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
             .resource_dir()
             .map_err(|e| format!("Failed to get resource dir: {}", e))?;
 
-        let runners_dir = resource_dir.join("binaries").join("lib").join("ollama").join("runners");
-        let runners_dir_str = runners_dir.to_string_lossy().to_string();
+        let app_data_dir = app
+            .path()
+            .app_local_data_dir()
+            .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+
+        // Bundled CPU runners (included in installer)
+        let bundled_runners = resource_dir.join("binaries").join("lib").join("ollama").join("runners");
+
+        // Downloaded GPU runners (fetched on demand by the app)
+        let gpu_runners = app_data_dir.join("gpu-runners");
 
         eprintln!("Resource dir: {:?}", resource_dir);
-        eprintln!("Ollama runners dir: {:?}", runners_dir);
+        eprintln!("Bundled runners: {:?}", bundled_runners);
+        eprintln!("GPU runners dir: {:?}", gpu_runners);
 
-        if runners_dir.exists() {
-            eprintln!("Runners directory found with contents:");
-            if let Ok(entries) = std::fs::read_dir(&runners_dir) {
+        // Build runners path - include both bundled and downloaded runners
+        // Ollama will use whichever runners are available
+        let mut runners_paths = Vec::new();
+
+        if bundled_runners.exists() {
+            eprintln!("Bundled runners found:");
+            if let Ok(entries) = std::fs::read_dir(&bundled_runners) {
                 for entry in entries.flatten() {
                     eprintln!("  - {:?}", entry.path());
                 }
             }
-        } else {
-            eprintln!("WARNING: Runners directory not found at {:?}", runners_dir);
+            runners_paths.push(bundled_runners.to_string_lossy().to_string());
         }
 
-        sidecar_command = sidecar_command.env("OLLAMA_RUNNERS_DIR", &runners_dir_str);
+        if gpu_runners.exists() {
+            eprintln!("GPU runners found (downloaded):");
+            if let Ok(entries) = std::fs::read_dir(&gpu_runners) {
+                for entry in entries.flatten() {
+                    eprintln!("  - {:?}", entry.path());
+                }
+            }
+            runners_paths.push(gpu_runners.to_string_lossy().to_string());
+        }
+
+        if runners_paths.is_empty() {
+            eprintln!("WARNING: No runners directories found!");
+        } else {
+            // Join paths with semicolon for Windows
+            let runners_dir_str = runners_paths.join(";");
+            eprintln!("OLLAMA_RUNNERS_DIR: {}", runners_dir_str);
+            sidecar_command = sidecar_command.env("OLLAMA_RUNNERS_DIR", &runners_dir_str);
+        }
     }
 
     eprintln!("Spawning Ollama sidecar...");
@@ -113,6 +142,43 @@ fn get_ollama_url() -> String {
     "http://127.0.0.1:11434".to_string()
 }
 
+/// Get the path where GPU runners should be downloaded (Windows only)
+#[tauri::command]
+fn get_gpu_runners_path(app: tauri::AppHandle) -> Result<String, String> {
+    let app_data_dir = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+
+    let gpu_runners = app_data_dir.join("gpu-runners");
+    Ok(gpu_runners.to_string_lossy().to_string())
+}
+
+/// Check if GPU runners are installed
+#[tauri::command]
+fn check_gpu_runners(app: tauri::AppHandle) -> Result<bool, String> {
+    let app_data_dir = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+
+    let gpu_runners = app_data_dir.join("gpu-runners");
+
+    // Check if directory exists and has cuda or rocm subdirectories
+    if gpu_runners.exists() {
+        if let Ok(entries) = std::fs::read_dir(&gpu_runners) {
+            for entry in entries.flatten() {
+                let name = entry.file_name();
+                let name_str = name.to_string_lossy();
+                if name_str.starts_with("cuda") || name_str.starts_with("rocm") {
+                    return Ok(true);
+                }
+            }
+        }
+    }
+    Ok(false)
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -123,7 +189,9 @@ fn main() {
         .manage(OllamaProcess(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![
             check_ollama_status,
-            get_ollama_url
+            get_ollama_url,
+            get_gpu_runners_path,
+            check_gpu_runners
         ])
         .setup(|app| {
             eprintln!("=== AIGoodbye App Setup ===");

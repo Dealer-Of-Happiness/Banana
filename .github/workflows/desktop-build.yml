@@ -220,12 +220,25 @@ jobs:
         run: |
           echo "Disk space before cleanup:"
           df -h
+
           # Remove unnecessary tools and caches to free space
           sudo rm -rf /usr/share/dotnet || true
           sudo rm -rf /usr/local/lib/android || true
           sudo rm -rf /opt/ghc || true
           sudo rm -rf /usr/local/share/boost || true
+          sudo rm -rf /Library/Developer/CommandLineTools/SDKs || true
+          sudo rm -rf /Applications/Xcode_14*.app || true
+          sudo rm -rf /Applications/Xcode_15.0*.app || true
+
+          # Remove homebrew cache and unnecessary packages
           brew cleanup -s 2>/dev/null || true
+          rm -rf ~/Library/Caches/Homebrew || true
+
+          # Remove other large directories
+          sudo rm -rf /usr/local/share/powershell || true
+          sudo rm -rf /usr/local/share/chromium || true
+          sudo rm -rf ~/.rustup/toolchains/*/share/doc || true
+
           echo "Disk space after cleanup:"
           df -h
 
@@ -319,6 +332,7 @@ jobs:
         run: |
           echo "Disk space before cleanup:"
           df -h
+
           # Remove large intermediate build artifacts, keeping only the bundle
           cd desktop/src-tauri/target/${{ matrix.target }}/release
           # Keep bundle directory, remove everything else
@@ -328,6 +342,32 @@ jobs:
           rm -rf build || true
           rm -rf incremental || true
           rm -rf .fingerprint || true
+
+          # Go back to root
+          cd $GITHUB_WORKSPACE
+
+          # Remove node_modules (no longer needed after build)
+          rm -rf desktop/node_modules || true
+
+          # Remove npm cache
+          npm cache clean --force || true
+
+          # Remove Python cache and pip cache
+          rm -rf ~/.cache/pip || true
+          pip cache purge || true
+
+          # Remove the downloaded Ollama archive if it exists
+          rm -f /tmp/ollama-darwin.tgz || true
+          rm -rf /tmp/ollama || true
+
+          # Remove Rust registry cache (large)
+          rm -rf ~/.cargo/registry/cache || true
+          rm -rf ~/.cargo/git/checkouts || true
+
+          # Remove debug symbols and other unnecessary files from target
+          find desktop/src-tauri/target -name "*.dSYM" -type d -exec rm -rf {} + 2>/dev/null || true
+          find desktop/src-tauri/target -name "*.pdb" -delete 2>/dev/null || true
+
           echo "Disk space after cleanup:"
           df -h
 

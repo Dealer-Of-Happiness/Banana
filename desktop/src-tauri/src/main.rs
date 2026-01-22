@@ -17,15 +17,41 @@ struct OllamaProcess(Mutex<Option<CommandChild>>);
 fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
     eprintln!("=== Starting Ollama via Tauri Sidecar ===");
 
-    // Build the sidecar command
-    // Note: Ollama runs in CPU-only mode on Windows since GPU libraries (800MB+)
-    // are too large to bundle. Users who want GPU acceleration can install Ollama separately.
+    // Get the resource directory where bundled files are located
+    let resource_dir = app
+        .path()
+        .resource_dir()
+        .map_err(|e| format!("Failed to get resource dir: {}", e))?;
+
+    // Set up the runners directory path (where Ollama looks for its runtime libraries)
+    // On Windows, this contains the CPU and GPU runners needed to serve models
+    let runners_dir = resource_dir.join("binaries").join("lib").join("ollama").join("runners");
+    let runners_dir_str = runners_dir.to_string_lossy().to_string();
+
+    eprintln!("Resource dir: {:?}", resource_dir);
+    eprintln!("Ollama runners dir: {:?}", runners_dir);
+
+    // Check if runners directory exists
+    if runners_dir.exists() {
+        eprintln!("Runners directory found with contents:");
+        if let Ok(entries) = std::fs::read_dir(&runners_dir) {
+            for entry in entries.flatten() {
+                eprintln!("  - {:?}", entry.path());
+            }
+        }
+    } else {
+        eprintln!("WARNING: Runners directory not found at {:?}", runners_dir);
+    }
+
+    // Build the sidecar command with OLLAMA_RUNNERS_DIR set
+    // This tells Ollama where to find its bundled runtime libraries
     let sidecar_command = app
         .shell()
         .sidecar("ollama")
         .map_err(|e| format!("Failed to create sidecar command: {}", e))?
         .args(["serve"])
-        .env("OLLAMA_HOST", "127.0.0.1:11434");
+        .env("OLLAMA_HOST", "127.0.0.1:11434")
+        .env("OLLAMA_RUNNERS_DIR", &runners_dir_str);
 
     eprintln!("Spawning Ollama sidecar...");
 

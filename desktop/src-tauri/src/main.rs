@@ -79,7 +79,16 @@ fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
             // Join paths with semicolon for Windows
             let lib_dir_str = lib_paths.join(";");
             eprintln!("OLLAMA_LIB_DIR: {}", lib_dir_str);
-            sidecar_command = sidecar_command.env("OLLAMA_LIB_DIR", &lib_dir_str);
+
+            // Get current PATH and prepend our library paths
+            // This is crucial for Windows DLL loading - the DLLs must be in PATH
+            let current_path = std::env::var("PATH").unwrap_or_default();
+            let new_path = format!("{};{}", lib_dir_str, current_path);
+            eprintln!("Updated PATH with library directories");
+
+            sidecar_command = sidecar_command
+                .env("OLLAMA_LIB_DIR", &lib_dir_str)
+                .env("PATH", &new_path);
         }
     }
 

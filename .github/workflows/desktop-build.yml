@@ -95,23 +95,30 @@ jobs:
             exit 1
           }
 
-          # Copy the lib folder containing runtime runners (required for Ollama to work)
-          # This includes CPU runners and GPU runners (CUDA, ROCm)
+          # Copy only CPU runners from lib folder (GPU libraries are too large for NSIS ~800MB)
+          # This allows the app to work out of the box. GPU users can install Ollama separately.
           $libSource = Get-ChildItem -Path $extractDir -Filter "lib" -Directory -Recurse | Select-Object -First 1
           if ($libSource) {
-            $libTarget = Join-Path $ollamaDir "lib"
-            Write-Host "Found lib folder at: $($libSource.FullName)"
-            Write-Host "Copying lib folder to: $libTarget"
-            Copy-Item -Path $libSource.FullName -Destination $libTarget -Recurse -Force
+            $runnersSource = Join-Path $libSource.FullName "ollama\runners"
+            $runnersTarget = Join-Path $ollamaDir "lib\ollama\runners"
+
+            Write-Host "Found runners at: $runnersSource"
+            New-Item -ItemType Directory -Force -Path $runnersTarget | Out-Null
+
+            # Copy only CPU runners (skip cuda_* and rocm_* which are 600MB+)
+            Get-ChildItem -Path $runnersSource -Directory | Where-Object {
+              $_.Name -like "cpu*"
+            } | ForEach-Object {
+              Write-Host "Copying CPU runner: $($_.Name)"
+              Copy-Item -Path $_.FullName -Destination (Join-Path $runnersTarget $_.Name) -Recurse -Force
+            }
 
             # Show what was copied
-            Write-Host "Lib folder contents:"
-            Get-ChildItem -Recurse $libTarget | ForEach-Object {
-              $relativePath = $_.FullName.Substring($libTarget.Length + 1)
-              if ($_.PSIsContainer) {
-                Write-Host "  [DIR] $relativePath"
-              } else {
-                Write-Host "  $relativePath - $($_.Length) bytes"
+            Write-Host "Runners copied:"
+            Get-ChildItem -Recurse $runnersTarget | ForEach-Object {
+              if (-not $_.PSIsContainer) {
+                $size = [math]::Round($_.Length / 1MB, 2)
+                Write-Host "  $($_.Name) - ${size}MB"
               }
             }
           } else {

@@ -95,18 +95,45 @@ jobs:
             exit 1
           }
 
-          # Copy the full lib folder with all runners (CPU + GPU)
-          # Using MSI installer which handles large files better than NSIS
+          # Copy only CPU runners for the main installer (keeps size manageable for NSIS)
+          # GPU runners will be available as a separate download that the app fetches on demand
           $libSource = Get-ChildItem -Path $extractDir -Filter "lib" -Directory -Recurse | Select-Object -First 1
           if ($libSource) {
-            $libTarget = Join-Path $ollamaDir "lib"
-            Write-Host "Found lib folder at: $($libSource.FullName)"
-            Write-Host "Copying full lib folder to: $libTarget (includes GPU support)"
-            Copy-Item -Path $libSource.FullName -Destination $libTarget -Recurse -Force
+            $runnersSource = Join-Path $libSource.FullName "ollama\runners"
+            $runnersTarget = Join-Path $ollamaDir "lib\ollama\runners"
 
-            # Show what was copied
-            Write-Host "Lib folder contents:"
-            Get-ChildItem $libTarget -Directory -Recurse | ForEach-Object {
+            Write-Host "Found runners at: $runnersSource"
+            New-Item -ItemType Directory -Force -Path $runnersTarget | Out-Null
+
+            # Copy only CPU runners (cpu, cpu_avx, cpu_avx2)
+            Get-ChildItem -Path $runnersSource -Directory | Where-Object {
+              $_.Name -like "cpu*"
+            } | ForEach-Object {
+              Write-Host "Copying CPU runner: $($_.Name)"
+              Copy-Item -Path $_.FullName -Destination (Join-Path $runnersTarget $_.Name) -Recurse -Force
+            }
+
+            # Create GPU runners package for separate download
+            $gpuPackageDir = Join-Path $env:RUNNER_TEMP "gpu-runners"
+            New-Item -ItemType Directory -Force -Path $gpuPackageDir | Out-Null
+
+            Get-ChildItem -Path $runnersSource -Directory | Where-Object {
+              $_.Name -like "cuda*" -or $_.Name -like "rocm*"
+            } | ForEach-Object {
+              Write-Host "Packaging GPU runner: $($_.Name)"
+              Copy-Item -Path $_.FullName -Destination (Join-Path $gpuPackageDir $_.Name) -Recurse -Force
+            }
+
+            # Create zip of GPU runners
+            $gpuZipPath = "desktop\src-tauri\gpu-runners.zip"
+            Compress-Archive -Path "$gpuPackageDir\*" -DestinationPath $gpuZipPath -Force
+            Write-Host "Created GPU runners package: $gpuZipPath"
+            $gpuZipSize = [math]::Round((Get-Item $gpuZipPath).Length / 1MB, 2)
+            Write-Host "GPU package size: ${gpuZipSize}MB"
+
+            # Show what was bundled
+            Write-Host "CPU runners bundled:"
+            Get-ChildItem $runnersTarget -Directory | ForEach-Object {
               $size = (Get-ChildItem $_.FullName -Recurse -File | Measure-Object -Property Length -Sum).Sum
               $sizeMB = [math]::Round($size / 1MB, 2)
               Write-Host "  $($_.Name) - ${sizeMB}MB"
@@ -141,16 +168,23 @@ jobs:
           $targetDir = "desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle"
           $fallbackDir = "desktop/src-tauri/target/release/bundle"
 
-          # Find and rename the MSI installer (primary installer - handles large GPU libs)
-          $msiFiles = Get-ChildItem -Path "$targetDir/msi/*.msi" -ErrorAction SilentlyContinue
-          if (-not $msiFiles) {
-            $msiFiles = Get-ChildItem -Path "$fallbackDir/msi/*.msi" -ErrorAction SilentlyContinue
+          # Find and rename the NSIS installer
+          $nsisFiles = Get-ChildItem -Path "$targetDir/nsis/*.exe" -ErrorAction SilentlyContinue
+          if (-not $nsisFiles) {
+            $nsisFiles = Get-ChildItem -Path "$fallbackDir/nsis/*.exe" -ErrorAction SilentlyContinue
           }
-          if ($msiFiles) {
-            Copy-Item $msiFiles[0].FullName "$outputDir/${{ env.APP_NAME }}-Windows.msi"
-            Write-Host "Copied MSI installer: $($msiFiles[0].FullName)"
+          if ($nsisFiles) {
+            Copy-Item $nsisFiles[0].FullName "$outputDir/${{ env.APP_NAME }}-Windows-Setup.exe"
+            Write-Host "Copied NSIS installer: $($nsisFiles[0].FullName)"
           } else {
-            Write-Host "Warning: No MSI installer found"
+            Write-Host "Warning: No NSIS installer found"
+          }
+
+          # Copy GPU runners package for separate download
+          $gpuZipPath = "desktop/src-tauri/gpu-runners.zip"
+          if (Test-Path $gpuZipPath) {
+            Copy-Item $gpuZipPath "$outputDir/${{ env.APP_NAME }}-GPU-Runners.zip"
+            Write-Host "Copied GPU runners package"
           }
 
           Write-Host "Release artifacts:"
@@ -457,12 +491,16 @@ jobs:
             |----------|--------------|----------|
             | macOS | Apple Silicon | [AIGoodbye-macOS-arm64.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-macOS-arm64.dmg) |
             | macOS | Intel | [AIGoodbye-macOS-x64.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-macOS-x64.dmg) |
-            | Windows | 64-bit | [AIGoodbye-Windows.msi](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-Windows.msi) |
+            | Windows | 64-bit | [AIGoodbye-Windows-Setup.exe](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/AIGoodbye-Windows-Setup.exe) |
 
             ## Installation
 
             **macOS:** Download the DMG file for your Mac type, open it, and drag AI Goodbye to your Applications folder.
 
             **Windows:** Download the Setup.exe and run the installer.
+
+            ## GPU Acceleration (Windows)
+
+            The Windows installer includes CPU support out of the box. If you have an NVIDIA or AMD GPU, the app will offer to download GPU acceleration on first launch for faster AI responses.
 
             ## What's New

@@ -2036,7 +2036,7 @@ async function startGpuDownload() {
                 <div class="gpu-progress-bar">
                     <div class="gpu-progress-fill" id="gpu-progress-fill"></div>
                 </div>
-                <p class="gpu-progress-text" id="gpu-progress-text">Starting download...</p>
+                <p class="gpu-progress-text" id="gpu-progress-text">Connecting to server...</p>
             </div>
         </div>
     `;
@@ -2045,9 +2045,23 @@ async function startGpuDownload() {
     const progressFill = document.getElementById('gpu-progress-fill');
     const progressText = document.getElementById('gpu-progress-text');
 
+    // Set up progress listener
+    let unlisten = null;
     try {
-        progressText.textContent = 'Downloading GPU libraries (this may take a few minutes)...';
-        progressFill.style.width = '30%';
+        // Listen for progress events from Rust backend
+        if (window.__TAURI__ && window.__TAURI__.event) {
+            unlisten = await window.__TAURI__.event.listen('gpu-download-progress', (event) => {
+                const data = event.payload;
+                console.log('GPU download progress:', data);
+
+                if (progressFill && data.percent !== undefined) {
+                    progressFill.style.width = data.percent + '%';
+                }
+                if (progressText && data.message) {
+                    progressText.textContent = data.message;
+                }
+            });
+        }
 
         console.log('Starting GPU download via Rust backend...');
 
@@ -2057,6 +2071,9 @@ async function startGpuDownload() {
         });
 
         console.log('GPU download result:', result);
+
+        // Clean up listener
+        if (unlisten) unlisten();
 
         progressFill.style.width = '100%';
         progressText.textContent = 'GPU acceleration installed!';
@@ -2099,6 +2116,9 @@ async function startGpuDownload() {
 
     } catch (error) {
         console.error('GPU download failed:', error);
+
+        // Clean up listener on error
+        if (unlisten) unlisten();
 
         modal.innerHTML = `
             <div class="gpu-download-content">

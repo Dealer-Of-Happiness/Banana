@@ -31,23 +31,29 @@ def resize_image_with_pil(source_path, sizes, icons_dir):
         print(f"Created: {output_path}")
 
     # Create Windows ICO with high-resolution images
-    # Include 256x256 PNG for modern Windows (Vista+) for crisp display
-    ico_sizes = [16, 24, 32, 48, 64, 128, 256]
+    # Include 256x256 PNG for modern Windows (Vista+) for crisp taskbar display
+    # Windows taskbar typically uses 48x48 or 64x64, but scales from larger sizes
+    # Order from largest to smallest for best quality selection
+    ico_sizes = [256, 128, 64, 48, 40, 32, 24, 20, 16]
     ico_images = []
     for s in ico_sizes:
         resized = img.resize((s, s), Image.Resampling.LANCZOS)
         ico_images.append(resized)
 
     ico_path = os.path.join(icons_dir, 'icon.ico')
-    # Save with all sizes - PIL will handle the format correctly
-    # The 256x256 will be stored as PNG inside the ICO for quality
-    ico_images[-1].save(
+    # PIL's ICO save: save 256x256 first (stored as PNG inside ICO for quality)
+    # then append smaller sizes
+    ico_images[0].save(
         ico_path,
         format='ICO',
-        sizes=[(s, s) for s in ico_sizes],
-        append_images=ico_images[:-1]
+        append_images=ico_images[1:]
     )
-    print(f"Created: {ico_path}")
+    print(f"Created: {ico_path} with sizes: {ico_sizes}")
+
+    # Also create a separate high-res icon for additional uses
+    icon_png_256 = os.path.join(icons_dir, 'icon-256.png')
+    img.resize((256, 256), Image.Resampling.LANCZOS).save(icon_png_256, 'PNG')
+    print(f"Created: {icon_png_256}")
 
     # Create macOS ICNS
     icns_path = os.path.join(icons_dir, 'icon.icns')

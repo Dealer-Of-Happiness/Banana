@@ -237,7 +237,7 @@ jobs:
           # Remove other large directories
           sudo rm -rf /usr/local/share/powershell || true
           sudo rm -rf /usr/local/share/chromium || true
-          sudo rm -rf ~/.rustup/toolchains/*/share/doc || true
+          # Note: Do NOT remove ~/.rustup/toolchains/*/share/doc - breaks rustup updates
 
           echo "Disk space after cleanup:"
           df -h

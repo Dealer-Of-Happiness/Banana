@@ -248,10 +248,12 @@ fn check_gpu_runners(app: tauri::AppHandle) -> Result<bool, String> {
     Ok(false)
 }
 
-/// Download and install GPU libraries (Windows only)
+/// Download and install GPU libraries (Windows only) with progress tracking
 #[tauri::command]
 async fn download_gpu_runners(app: tauri::AppHandle, download_url: String) -> Result<String, String> {
+    use futures_util::StreamExt;
     use std::io::Write;
+    use tauri::Emitter;
 
     let app_data_dir = app
         .path()
@@ -270,8 +272,18 @@ async fn download_gpu_runners(app: tauri::AppHandle, download_url: String) -> Re
             .map_err(|e| format!("Failed to create directory: {}", e))?;
     }
 
-    // Download the file using reqwest
-    let response = reqwest::get(&download_url)
+    // Emit initial progress
+    let _ = app.emit("gpu-download-progress", serde_json::json!({
+        "phase": "connecting",
+        "percent": 0,
+        "message": "Connecting to server..."
+    }));
+
+    // Download the file using reqwest with streaming
+    let client = reqwest::Client::new();
+    let response = client
+        .get(&download_url)
+        .send()
         .await
         .map_err(|e| format!("Download failed: {}", e))?;
 
@@ -279,21 +291,54 @@ async fn download_gpu_runners(app: tauri::AppHandle, download_url: String) -> Re
         return Err(format!("Download failed with status: {}", response.status()));
     }
 
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|e| format!("Failed to read response: {}", e))?;
+    // Get content length if available
+    let total_size = response.content_length().unwrap_or(0);
+    eprintln!("Total download size: {} bytes ({:.1} MB)", total_size, total_size as f64 / 1024.0 / 1024.0);
 
-    eprintln!("Downloaded {} bytes", bytes.len());
-
-    // Save to zip file
+    // Create file for writing
     let mut file = std::fs::File::create(&zip_path)
         .map_err(|e| format!("Failed to create zip file: {}", e))?;
-    file.write_all(&bytes)
-        .map_err(|e| format!("Failed to write zip file: {}", e))?;
-    drop(file);
 
-    eprintln!("Saved zip file, extracting...");
+    // Stream the response body and track progress
+    let mut downloaded: u64 = 0;
+    let mut last_percent: u64 = 0;
+    let mut stream = response.bytes_stream();
+
+    while let Some(chunk_result) = stream.next().await {
+        let chunk = chunk_result.map_err(|e| format!("Download error: {}", e))?;
+        file.write_all(&chunk)
+            .map_err(|e| format!("Failed to write chunk: {}", e))?;
+
+        downloaded += chunk.len() as u64;
+
+        // Calculate and emit progress (only when percent changes to avoid spam)
+        if total_size > 0 {
+            let percent = (downloaded * 100 / total_size).min(99); // Cap at 99% until extraction
+            if percent != last_percent {
+                last_percent = percent;
+                let downloaded_mb = downloaded as f64 / 1024.0 / 1024.0;
+                let total_mb = total_size as f64 / 1024.0 / 1024.0;
+                let _ = app.emit("gpu-download-progress", serde_json::json!({
+                    "phase": "downloading",
+                    "percent": percent,
+                    "downloaded": downloaded,
+                    "total": total_size,
+                    "message": format!("Downloading... {:.1} MB / {:.1} MB", downloaded_mb, total_mb)
+                }));
+                eprintln!("Download progress: {}% ({:.1} MB / {:.1} MB)", percent, downloaded_mb, total_mb);
+            }
+        }
+    }
+
+    drop(file);
+    eprintln!("Download complete, {} bytes saved", downloaded);
+
+    // Emit extracting phase
+    let _ = app.emit("gpu-download-progress", serde_json::json!({
+        "phase": "extracting",
+        "percent": 99,
+        "message": "Extracting files..."
+    }));
 
     // Extract using PowerShell (Windows)
     #[cfg(target_os = "windows")]
@@ -319,6 +364,13 @@ async fn download_gpu_runners(app: tauri::AppHandle, download_url: String) -> Re
 
         // Clean up zip file
         let _ = std::fs::remove_file(&zip_path);
+
+        // Emit completion
+        let _ = app.emit("gpu-download-progress", serde_json::json!({
+            "phase": "complete",
+            "percent": 100,
+            "message": "Installation complete!"
+        }));
 
         eprintln!("GPU runners installed successfully");
         Ok("GPU acceleration installed successfully".to_string())

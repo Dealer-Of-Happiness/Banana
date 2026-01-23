@@ -13,142 +13,205 @@ use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 /// State to manage the Ollama process
 struct OllamaProcess(Mutex<Option<CommandChild>>);
 
+/// Copy DLLs from resources to the correct location for Ollama (Windows only)
+/// Ollama expects DLLs in lib/ollama/ relative to its executable
+#[cfg(target_os = "windows")]
+fn setup_ollama_libraries(app: &tauri::App) -> Result<std::path::PathBuf, String> {
+    use std::fs;
+
+    eprintln!("=== Setting up Ollama libraries ===");
+
+    let resource_dir = app
+        .path()
+        .resource_dir()
+        .map_err(|e| format!("Failed to get resource dir: {}", e))?;
+
+    let app_data_dir = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+
+    // The sidecar (ollama.exe) is placed next to the main app executable
+    let exe_dir = std::env::current_exe()
+        .map_err(|e| format!("Failed to get exe path: {}", e))?
+        .parent()
+        .ok_or("Failed to get exe directory")?
+        .to_path_buf();
+
+    eprintln!("Resource dir: {:?}", resource_dir);
+    eprintln!("App data dir: {:?}", app_data_dir);
+    eprintln!("Exe dir: {:?}", exe_dir);
+
+    // Target location: lib/ollama/ relative to the exe (where sidecar is)
+    let target_lib_dir = exe_dir.join("lib").join("ollama");
+
+    // Source locations to check for bundled DLLs
+    let source_paths = vec![
+        resource_dir.join("lib").join("ollama"),
+        resource_dir.join("ollama"),
+        resource_dir.clone(),
+    ];
+
+    // Find DLLs in resources
+    let mut source_dll_dir: Option<std::path::PathBuf> = None;
+    for path in &source_paths {
+        eprintln!("Checking for DLLs at: {:?}", path);
+        if path.exists() {
+            if let Ok(entries) = fs::read_dir(path) {
+                let dlls: Vec<_> = entries
+                    .flatten()
+                    .filter(|e| {
+                        e.path()
+                            .extension()
+                            .map(|ext| ext == "dll")
+                            .unwrap_or(false)
+                    })
+                    .collect();
+                if !dlls.is_empty() {
+                    eprintln!("Found {} DLLs at {:?}", dlls.len(), path);
+                    source_dll_dir = Some(path.clone());
+                    break;
+                }
+            }
+        }
+    }
+
+    // Copy DLLs to the correct location if found
+    if let Some(source_dir) = source_dll_dir {
+        // Only copy if target doesn't exist or source is newer
+        let should_copy = if target_lib_dir.exists() {
+            // Check if we need to update (simple check: compare file counts)
+            let source_count = fs::read_dir(&source_dir)
+                .map(|e| e.count())
+                .unwrap_or(0);
+            let target_count = fs::read_dir(&target_lib_dir)
+                .map(|e| e.count())
+                .unwrap_or(0);
+            source_count != target_count
+        } else {
+            true
+        };
+
+        if should_copy {
+            eprintln!("Copying DLLs from {:?} to {:?}", source_dir, target_lib_dir);
+
+            // Create target directory
+            fs::create_dir_all(&target_lib_dir)
+                .map_err(|e| format!("Failed to create lib dir: {}", e))?;
+
+            // Copy all DLL files
+            if let Ok(entries) = fs::read_dir(&source_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.extension().map(|e| e == "dll").unwrap_or(false) {
+                        let filename = path.file_name().unwrap();
+                        let target_path = target_lib_dir.join(filename);
+                        eprintln!("  Copying: {:?} -> {:?}", path, target_path);
+                        if let Err(e) = fs::copy(&path, &target_path) {
+                            eprintln!("  Warning: Failed to copy {:?}: {}", filename, e);
+                        }
+                    }
+                }
+            }
+            eprintln!("DLL copy complete");
+        } else {
+            eprintln!("DLLs already in place at {:?}", target_lib_dir);
+        }
+    } else {
+        eprintln!("WARNING: No bundled DLLs found in resources!");
+        eprintln!("Searched paths:");
+        for path in &source_paths {
+            eprintln!("  - {:?} (exists: {})", path, path.exists());
+        }
+    }
+
+    // Also copy downloaded GPU libraries if available
+    let gpu_source = app_data_dir.join("gpu-runners");
+    if gpu_source.exists() {
+        eprintln!("Setting up GPU libraries from {:?}", gpu_source);
+        if let Ok(entries) = fs::read_dir(&gpu_source) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    // GPU libraries are in subdirectories (cuda_v12, vulkan, etc.)
+                    let dir_name = path.file_name().unwrap();
+                    let target_gpu_dir = target_lib_dir.join(dir_name);
+
+                    if !target_gpu_dir.exists() {
+                        eprintln!("  Copying GPU dir: {:?}", dir_name);
+                        copy_dir_recursive(&path, &target_gpu_dir)?;
+                    }
+                }
+            }
+        }
+    }
+
+    // List final contents of target lib dir
+    eprintln!("Final lib directory contents ({:?}):", target_lib_dir);
+    if let Ok(entries) = fs::read_dir(&target_lib_dir) {
+        for entry in entries.flatten() {
+            eprintln!("  {:?}", entry.path());
+        }
+    }
+
+    Ok(target_lib_dir)
+}
+
+/// Recursively copy a directory
+#[cfg(target_os = "windows")]
+fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> Result<(), String> {
+    use std::fs;
+
+    fs::create_dir_all(dst).map_err(|e| format!("Failed to create dir {:?}: {}", dst, e))?;
+
+    for entry in fs::read_dir(src).map_err(|e| format!("Failed to read dir {:?}: {}", src, e))? {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path();
+        let target = dst.join(entry.file_name());
+
+        if path.is_dir() {
+            copy_dir_recursive(&path, &target)?;
+        } else {
+            fs::copy(&path, &target)
+                .map_err(|e| format!("Failed to copy {:?}: {}", path, e))?;
+        }
+    }
+    Ok(())
+}
+
 /// Start the Ollama server using Tauri's sidecar API
 fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
     eprintln!("=== Starting Ollama via Tauri Sidecar ===");
 
     // Build the base sidecar command
+    // Set OLLAMA_ORIGINS to allow Tauri's localhost origin
     let mut sidecar_command = app
         .shell()
         .sidecar("ollama")
         .map_err(|e| format!("Failed to create sidecar command: {}", e))?
         .args(["serve"])
-        .env("OLLAMA_HOST", "127.0.0.1:11434");
+        .env("OLLAMA_HOST", "127.0.0.1:11434")
+        .env("OLLAMA_ORIGINS", "*");  // Allow all origins for Tauri
 
-    // On Windows, we need to tell Ollama where to find its runtime libraries
-    // macOS Ollama binary is self-contained and doesn't need this
+    // On Windows, set up libraries and environment
     #[cfg(target_os = "windows")]
     {
-        let resource_dir = app
-            .path()
-            .resource_dir()
-            .map_err(|e| format!("Failed to get resource dir: {}", e))?;
+        // Set up libraries (copy DLLs to correct location)
+        match setup_ollama_libraries(app) {
+            Ok(lib_dir) => {
+                eprintln!("Libraries set up at: {:?}", lib_dir);
 
-        let app_data_dir = app
-            .path()
-            .app_local_data_dir()
-            .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+                // Add library directory to PATH as a fallback
+                let current_path = std::env::var("PATH").unwrap_or_default();
+                let lib_dir_str = lib_dir.to_string_lossy();
+                let new_path = format!("{};{}", lib_dir_str, current_path);
 
-        // Get the executable's directory - DLLs might be relative to this
-        let exe_dir = std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|p| p.to_path_buf()));
-
-        eprintln!("Resource dir: {:?}", resource_dir);
-        eprintln!("App data dir: {:?}", app_data_dir);
-        eprintln!("Exe dir: {:?}", exe_dir);
-
-        // Debug: List contents of resource directory to find where DLLs actually are
-        eprintln!("Resource directory contents:");
-        if let Ok(entries) = std::fs::read_dir(&resource_dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                eprintln!("  {:?} (is_dir: {})", path, path.is_dir());
-                // If it's a directory, list its contents recursively (2 levels)
-                if path.is_dir() {
-                    if let Ok(sub_entries) = std::fs::read_dir(&path) {
-                        for sub_entry in sub_entries.flatten() {
-                            let sub_path = sub_entry.path();
-                            eprintln!("    {:?}", sub_path);
-                            if sub_path.is_dir() {
-                                if let Ok(sub_sub_entries) = std::fs::read_dir(&sub_path) {
-                                    for sub_sub_entry in sub_sub_entries.flatten() {
-                                        eprintln!("      {:?}", sub_sub_entry.path());
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                sidecar_command = sidecar_command.env("PATH", &new_path);
+                eprintln!("Added {:?} to PATH", lib_dir);
             }
-        }
-
-        // Try multiple possible paths for bundled libraries
-        // Resources are bundled as lib/ollama/*.dll and placed in resource_dir
-        let mut possible_lib_paths = vec![
-            // Primary location - resources bundled from src-tauri/lib/
-            resource_dir.join("lib").join("ollama"),
-            // Fallback locations
-            resource_dir.join("ollama"),
-        ];
-
-        // Also check relative to the executable (for dev mode or alternative bundling)
-        if let Some(ref exe) = exe_dir {
-            possible_lib_paths.push(exe.join("lib").join("ollama"));
-            possible_lib_paths.push(exe.join("ollama"));
-            // Check parent directory too (in case exe is in a subdirectory)
-            if let Some(parent) = exe.parent() {
-                possible_lib_paths.push(parent.join("lib").join("ollama"));
+            Err(e) => {
+                eprintln!("Warning: Failed to set up libraries: {}", e);
             }
-        }
-
-        let mut lib_paths = Vec::new();
-
-        // Find bundled CPU libraries
-        for path in &possible_lib_paths {
-            eprintln!("Checking for libs at: {:?} (exists: {})", path, path.exists());
-            if path.exists() {
-                // Check if this directory has DLLs
-                if let Ok(entries) = std::fs::read_dir(path) {
-                    let dlls: Vec<_> = entries
-                        .flatten()
-                        .filter(|e| e.path().extension().map(|ext| ext == "dll").unwrap_or(false))
-                        .collect();
-
-                    if !dlls.is_empty() {
-                        eprintln!("Found {} DLLs at {:?}:", dlls.len(), path);
-                        for dll in &dlls {
-                            eprintln!("  - {:?}", dll.path());
-                        }
-                        lib_paths.push(path.to_string_lossy().to_string());
-                        break; // Found the right directory
-                    }
-                }
-            }
-        }
-
-        // Downloaded GPU libraries (fetched on demand by the app)
-        let gpu_lib = app_data_dir.join("gpu-runners");
-        if gpu_lib.exists() {
-            eprintln!("GPU libraries found (downloaded):");
-            if let Ok(entries) = std::fs::read_dir(&gpu_lib) {
-                for entry in entries.flatten() {
-                    eprintln!("  - {:?}", entry.path());
-                }
-            }
-            lib_paths.push(gpu_lib.to_string_lossy().to_string());
-        }
-
-        if lib_paths.is_empty() {
-            eprintln!("WARNING: No library directories found! Ollama may not start.");
-            eprintln!("Searched paths:");
-            for path in &possible_lib_paths {
-                eprintln!("  - {:?}", path);
-            }
-        } else {
-            // Join paths with semicolon for Windows
-            let lib_dir_str = lib_paths.join(";");
-            eprintln!("OLLAMA_LIB_DIR: {}", lib_dir_str);
-
-            // Get current PATH and prepend our library paths
-            // This is crucial for Windows DLL loading - the DLLs must be in PATH
-            let current_path = std::env::var("PATH").unwrap_or_default();
-            let new_path = format!("{};{}", lib_dir_str, current_path);
-            eprintln!("Updated PATH with library directories");
-
-            sidecar_command = sidecar_command
-                .env("OLLAMA_LIB_DIR", &lib_dir_str)
-                .env("PATH", &new_path);
         }
     }
 

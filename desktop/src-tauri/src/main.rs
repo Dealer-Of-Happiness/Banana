@@ -250,12 +250,18 @@ fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
     Ok(child)
 }
 
-/// Unload all loaded models to free RAM
+/// Unload all loaded models to free RAM (with timeout)
 async fn unload_all_models() {
+    use std::time::Duration;
+
     eprintln!("Attempting to unload all models...");
 
-    // Get list of loaded models
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .unwrap_or_default();
+
+    // Try to get list of loaded models
     if let Ok(response) = client.get("http://127.0.0.1:11434/api/ps").send().await {
         if let Ok(data) = response.json::<serde_json::Value>().await {
             if let Some(models) = data.get("models").and_then(|m| m.as_array()) {
@@ -279,6 +285,52 @@ async fn unload_all_models() {
     eprintln!("Model unload complete");
 }
 
+/// Kill all Ollama processes (including child processes like GPU runners)
+fn kill_all_ollama_processes() {
+    eprintln!("Killing all Ollama processes...");
+
+    #[cfg(target_os = "macos")]
+    {
+        // On macOS, use pkill to kill all ollama processes
+        let _ = std::process::Command::new("pkill")
+            .args(["-9", "-f", "ollama"])
+            .output();
+
+        // Also try to kill any llama runner processes
+        let _ = std::process::Command::new("pkill")
+            .args(["-9", "-f", "llama"])
+            .output();
+
+        eprintln!("Sent SIGKILL to all ollama/llama processes");
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let _ = std::process::Command::new("pkill")
+            .args(["-9", "-f", "ollama"])
+            .output();
+        let _ = std::process::Command::new("pkill")
+            .args(["-9", "-f", "llama"])
+            .output();
+        eprintln!("Sent SIGKILL to all ollama/llama processes");
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        // On Windows, use taskkill to forcefully terminate
+        let _ = std::process::Command::new("taskkill")
+            .args(["/F", "/IM", "ollama.exe"])
+            .output();
+
+        // Also kill any runner processes
+        let _ = std::process::Command::new("taskkill")
+            .args(["/F", "/IM", "ollama_llama_server.exe"])
+            .output();
+
+        eprintln!("Sent taskkill to ollama processes");
+    }
+}
+
 /// Stop the Ollama server
 fn stop_ollama_server(state: &State<'_, OllamaProcess>) {
     let mut process_guard = state.0.lock().unwrap();
@@ -286,8 +338,12 @@ fn stop_ollama_server(state: &State<'_, OllamaProcess>) {
     if let Some(child) = process_guard.take() {
         eprintln!("Stopping Ollama server (PID: {:?})...", child.pid());
         let _ = child.kill();
-        eprintln!("Ollama server stopped");
     }
+
+    // Always try to kill any remaining Ollama processes
+    kill_all_ollama_processes();
+
+    eprintln!("Ollama cleanup complete");
 }
 
 /// Check if Ollama is ready
@@ -519,15 +575,25 @@ fn main() {
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                // Unload models and stop Ollama when the window closes
+                // Stop Ollama when the window closes
                 let handle = window.app_handle();
 
-                // Unload models first (run async task synchronously)
-                tauri::async_runtime::block_on(async {
-                    unload_all_models().await;
+                // Try to unload models gracefully first (with short timeout)
+                // This is best-effort - we'll force kill processes regardless
+                let unload_result = std::panic::catch_unwind(|| {
+                    tauri::async_runtime::block_on(async {
+                        tokio::time::timeout(
+                            std::time::Duration::from_secs(3),
+                            unload_all_models()
+                        ).await
+                    })
                 });
 
-                // Then stop Ollama
+                if unload_result.is_err() {
+                    eprintln!("Model unload timed out or failed, proceeding with force kill");
+                }
+
+                // Force stop all Ollama processes
                 let state: State<OllamaProcess> = handle.state();
                 stop_ollama_server(&state);
             }

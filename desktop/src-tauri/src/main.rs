@@ -185,13 +185,15 @@ fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
 
     // Build the base sidecar command
     // Set OLLAMA_ORIGINS to allow Tauri's localhost origin
+    // Set OLLAMA_KEEP_ALIVE=0 to unload models immediately after use (saves RAM)
     let mut sidecar_command = app
         .shell()
         .sidecar("ollama")
         .map_err(|e| format!("Failed to create sidecar command: {}", e))?
         .args(["serve"])
         .env("OLLAMA_HOST", "127.0.0.1:11434")
-        .env("OLLAMA_ORIGINS", "*");  // Allow all origins for Tauri
+        .env("OLLAMA_ORIGINS", "*")  // Allow all origins for Tauri
+        .env("OLLAMA_KEEP_ALIVE", "0");  // Unload models immediately after use to free RAM
 
     // On Windows, set up libraries and environment
     #[cfg(target_os = "windows")]
@@ -246,6 +248,35 @@ fn start_ollama_server(app: &tauri::App) -> Result<CommandChild, String> {
     });
 
     Ok(child)
+}
+
+/// Unload all loaded models to free RAM
+async fn unload_all_models() {
+    eprintln!("Attempting to unload all models...");
+
+    // Get list of loaded models
+    let client = reqwest::Client::new();
+    if let Ok(response) = client.get("http://127.0.0.1:11434/api/ps").send().await {
+        if let Ok(data) = response.json::<serde_json::Value>().await {
+            if let Some(models) = data.get("models").and_then(|m| m.as_array()) {
+                for model in models {
+                    if let Some(name) = model.get("name").and_then(|n| n.as_str()) {
+                        eprintln!("Unloading model: {}", name);
+                        // Send a request with keep_alive=0 to force unload
+                        let _ = client
+                            .post("http://127.0.0.1:11434/api/generate")
+                            .json(&serde_json::json!({
+                                "model": name,
+                                "keep_alive": 0
+                            }))
+                            .send()
+                            .await;
+                    }
+                }
+            }
+        }
+    }
+    eprintln!("Model unload complete");
 }
 
 /// Stop the Ollama server
@@ -488,8 +519,15 @@ fn main() {
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                // Stop Ollama when the window closes
+                // Unload models and stop Ollama when the window closes
                 let handle = window.app_handle();
+
+                // Unload models first (run async task synchronously)
+                tauri::async_runtime::block_on(async {
+                    unload_all_models().await;
+                });
+
+                // Then stop Ollama
                 let state: State<OllamaProcess> = handle.state();
                 stop_ollama_server(&state);
             }

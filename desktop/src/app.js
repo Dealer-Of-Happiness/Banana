@@ -156,7 +156,7 @@ function updateHardwareRequirements() {
 
 // DOM Elements - will be initialized after DOM loads
 let loadingScreen, modelSetupScreen, app, chatContainer, messageInput, sendButton;
-let attachButton, imageInput, imagePreviewContainer, useKbCheckbox, newChatBtn;
+let attachButton, imageInput, imagePreviewContainer, newChatBtn;
 let chatModelSelect, modelIndicator, navItems, views;
 
 // State
@@ -187,7 +187,6 @@ function initDOMElements() {
     attachButton = document.getElementById('attach-button');
     imageInput = document.getElementById('image-input');
     imagePreviewContainer = document.getElementById('image-preview-container');
-    useKbCheckbox = document.getElementById('use-kb');
     newChatBtn = document.getElementById('new-chat-btn');
     chatModelSelect = document.getElementById('chat-model-select');
     modelIndicator = document.getElementById('model-indicator');
@@ -207,7 +206,6 @@ async function init() {
     // Set up event listeners
     setupNavigation();
     setupChat();
-    setupKnowledgeBase();
     setupSettings();
     setupModelSetup();
     setupFileAttachment();
@@ -451,9 +449,11 @@ async function processImageFile(file) {
         reader.onload = function(event) {
             const dataUrl = event.target.result;
             const base64 = dataUrl.split(',')[1];
+            const mimeType = file.type || 'image/png';
+            // Only store base64, generate preview data URL when needed to save memory
             pendingImages.push({
                 base64: base64,
-                preview: dataUrl,
+                mimeType: mimeType,
                 name: file.name
             });
             console.log('Image added, pendingImages count:', pendingImages.length);
@@ -468,6 +468,11 @@ async function processImageFile(file) {
         };
         reader.readAsDataURL(file);
     });
+}
+
+// Generate data URL for preview from stored base64
+function getImagePreviewUrl(img) {
+    return `data:${img.mimeType || 'image/png'};base64,${img.base64}`;
 }
 
 async function processTextFile(file) {
@@ -616,10 +621,10 @@ function renderAttachmentPreviews() {
 
     imagePreviewContainer.style.display = 'flex';
 
-    // Render images
+    // Render images - generate preview URL on the fly to avoid duplicate storage
     const imagesHtml = pendingImages.map((img, index) => `
         <div class="image-preview">
-            <img src="${img.preview}" alt="${escapeHtml(img.name)}">
+            <img src="${getImagePreviewUrl(img)}" alt="${escapeHtml(img.name)}">
             <button type="button" class="remove-attachment" data-type="image" data-index="${index}">×</button>
         </div>
     `).join('');
@@ -1123,8 +1128,6 @@ function setupNavigation() {
 
             if (viewName === 'settings') {
                 renderModelList();
-                loadKBStats();
-                renderKBDocuments();
             }
         });
     });
@@ -1335,7 +1338,8 @@ function loadCurrentChat() {
             addMessage('Hello! I\'m AI Goodbye, your local AI assistant. I run completely offline on your device. Select a model above to start chatting!', false);
         } else {
             chat.messages.forEach(msg => {
-                addMessage(msg.content, msg.role === 'user', msg.images || null);
+                // Pass imageCount for historical messages (images not stored in history)
+                addMessage(msg.content, msg.role === 'user', null, msg.imageCount || 0);
             });
         }
     }
@@ -1525,70 +1529,6 @@ async function summarizeMessages(messages) {
     return null;
 }
 
-// Get relevant knowledge base content for the query
-function getRelevantKBContent(query) {
-    if (!useKbCheckbox || !useKbCheckbox.checked) {
-        return null;
-    }
-
-    const docs = JSON.parse(localStorage.getItem('aigoodbyeKnowledgeBase') || '[]');
-    if (docs.length === 0) return null;
-
-    // Simple keyword matching - find documents containing query words
-    const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-    if (queryWords.length === 0) return null;
-
-    const relevantDocs = [];
-
-    docs.forEach(doc => {
-        const contentLower = doc.content.toLowerCase();
-        const filenameLower = doc.filename.toLowerCase();
-
-        // Count matching words
-        let matches = 0;
-        queryWords.forEach(word => {
-            if (contentLower.includes(word) || filenameLower.includes(word)) {
-                matches++;
-            }
-        });
-
-        if (matches > 0) {
-            // Find the most relevant snippet
-            let bestSnippet = '';
-            for (const word of queryWords) {
-                const idx = contentLower.indexOf(word);
-                if (idx !== -1) {
-                    const start = Math.max(0, idx - 200);
-                    const end = Math.min(doc.content.length, idx + 500);
-                    bestSnippet = doc.content.substring(start, end);
-                    break;
-                }
-            }
-
-            relevantDocs.push({
-                filename: doc.filename,
-                snippet: bestSnippet || doc.content.substring(0, 500),
-                matches: matches
-            });
-        }
-    });
-
-    // Sort by relevance and take top 3
-    relevantDocs.sort((a, b) => b.matches - a.matches);
-    const topDocs = relevantDocs.slice(0, 3);
-
-    if (topDocs.length === 0) return null;
-
-    // Format as context
-    let context = '\n\n--- KNOWLEDGE BASE CONTEXT ---\n';
-    topDocs.forEach(doc => {
-        context += `\nFrom "${doc.filename}":\n${doc.snippet}\n`;
-    });
-    context += '\n--- END CONTEXT ---\n\nUse the above context to help answer the user\'s question if relevant.';
-
-    return context;
-}
-
 async function sendMessage() {
     const message = messageInput.value.trim();
 
@@ -1640,11 +1580,8 @@ async function sendMessage() {
     currentAbortController = new AbortController();
 
     try {
-        // Get knowledge base context if enabled
-        const kbContext = getRelevantKBContent(message);
-
         // System prompt to ensure model understands it runs locally
-        let systemPrompt = `You are an AI assistant running completely offline and locally on the user's computer through the AIGoodbye desktop application. Important facts about yourself:
+        const systemPrompt = `You are an AI assistant running completely offline and locally on the user's computer through the AIGoodbye desktop application. Important facts about yourself:
 - You run entirely on the user's local machine, not on any remote server
 - You do not have internet access and cannot browse the web or access online services
 - All your processing happens locally on this computer
@@ -1653,11 +1590,6 @@ async function sendMessage() {
 - You provide a private, secure AI experience with complete data privacy
 
 When users ask about your capabilities or where you run, be honest about these facts.`;
-
-        // Append knowledge base context if available
-        if (kbContext) {
-            systemPrompt += kbContext;
-        }
 
         // Get current chat for context management
         const currentChat = chats.find(c => c.id === currentChatId);
@@ -1763,7 +1695,12 @@ When users ask about your capabilities or where you run, be honest about these f
         }
 
         // Save to conversation history and current chat
-        conversationHistory.push({ role: 'user', content: message, images: imagesToSend.length > 0 ? imagesToSend : undefined });
+        // Don't store full image data - just store count to indicate images were attached
+        conversationHistory.push({
+            role: 'user',
+            content: message,
+            imageCount: imagesToSend.length > 0 ? imagesToSend.length : undefined
+        });
         conversationHistory.push({ role: 'assistant', content: fullResponse });
 
         // Update current chat
@@ -1835,17 +1772,23 @@ function addThinkingMessage() {
     return msgDiv;
 }
 
-function addMessage(content, isUser = false, images = null) {
+function addMessage(content, isUser = false, images = null, imageCount = 0) {
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
 
     const avatar = isUser ? '👤' : '🤖';
 
     let imagesHtml = '';
+    // For currently pending images (live session), show them
     if (images && images.length > 0) {
         imagesHtml = `<div class="message-images">${images.map(img =>
-            `<img src="${img.preview}" alt="attached" style="max-width: 200px; border-radius: 8px; margin-bottom: 10px;">`
+            `<img src="${getImagePreviewUrl(img)}" alt="attached" style="max-width: 200px; border-radius: 8px; margin-bottom: 10px;">`
         ).join('')}</div>`;
+    }
+    // For loaded history (where we only have image count), show placeholder
+    else if (imageCount > 0) {
+        const plural = imageCount > 1 ? 's' : '';
+        imagesHtml = `<div class="message-images-placeholder">📷 ${imageCount} image${plural} attached</div>`;
     }
 
     msgDiv.innerHTML = `
@@ -1860,134 +1803,6 @@ function addMessage(content, isUser = false, images = null) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 
     return msgDiv;
-}
-
-// ==================== Knowledge Base ====================
-
-function setupKnowledgeBase() {
-    const uploadZone = document.getElementById('upload-zone');
-    const fileInput = document.getElementById('file-input');
-    const kbSearchBtn = document.getElementById('kb-search-btn');
-    const kbSearchInput = document.getElementById('kb-search-input');
-
-    if (!uploadZone) return;
-
-    uploadZone.addEventListener('click', () => fileInput.click());
-
-    uploadZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadZone.classList.add('dragover');
-    });
-
-    uploadZone.addEventListener('dragleave', () => {
-        uploadZone.classList.remove('dragover');
-    });
-
-    uploadZone.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        uploadZone.classList.remove('dragover');
-        for (const file of Array.from(e.dataTransfer.files)) {
-            await uploadFile(file);
-        }
-    });
-
-    fileInput.addEventListener('change', async (e) => {
-        for (const file of Array.from(e.target.files)) {
-            await uploadFile(file);
-        }
-    });
-
-    if (kbSearchBtn) kbSearchBtn.addEventListener('click', searchKnowledgeBase);
-    if (kbSearchInput) kbSearchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') searchKnowledgeBase();
-    });
-
-    loadKBStats();
-    renderKBDocuments();
-}
-
-async function uploadFile(file) {
-    try {
-        const content = await file.text();
-        const docs = JSON.parse(localStorage.getItem('aigoodbyeKnowledgeBase') || '[]');
-        docs.push({
-            id: Date.now(),
-            filename: file.name,
-            content: content,
-            uploadedAt: new Date().toISOString()
-        });
-        localStorage.setItem('aigoodbyeKnowledgeBase', JSON.stringify(docs));
-        loadKBStats();
-        renderKBDocuments();
-        alert(`"${file.name}" added to knowledge base!`);
-    } catch (error) {
-        alert(`Failed to upload: ${error.message}`);
-    }
-}
-
-function loadKBStats() {
-    const docs = JSON.parse(localStorage.getItem('aigoodbyeKnowledgeBase') || '[]');
-    const chunks = docs.reduce((sum, doc) => sum + Math.ceil(doc.content.length / 500), 0);
-    const docCountEl = document.getElementById('doc-count');
-    const chunkCountEl = document.getElementById('chunk-count');
-    if (docCountEl) docCountEl.textContent = docs.length;
-    if (chunkCountEl) chunkCountEl.textContent = chunks;
-}
-
-function renderKBDocuments() {
-    const docsListEl = document.getElementById('kb-docs-list');
-    if (!docsListEl) return;
-
-    const docs = JSON.parse(localStorage.getItem('aigoodbyeKnowledgeBase') || '[]');
-
-    if (docs.length === 0) {
-        docsListEl.innerHTML = '<p class="empty-state">No documents added yet.</p>';
-        return;
-    }
-
-    docsListEl.innerHTML = docs.map(doc => `
-        <div class="kb-doc-item">
-            <div class="kb-doc-info">
-                <span class="kb-doc-icon">📄</span>
-                <span class="kb-doc-name">${escapeHtml(doc.filename)}</span>
-                <span class="kb-doc-size">${Math.round(doc.content.length / 1024)}KB</span>
-            </div>
-            <button class="btn-delete-small" onclick="deleteKBDocument(${doc.id})">Delete</button>
-        </div>
-    `).join('');
-}
-
-window.deleteKBDocument = function(docId) {
-    if (confirm('Delete this document from knowledge base?')) {
-        let docs = JSON.parse(localStorage.getItem('aigoodbyeKnowledgeBase') || '[]');
-        docs = docs.filter(d => d.id !== docId);
-        localStorage.setItem('aigoodbyeKnowledgeBase', JSON.stringify(docs));
-        loadKBStats();
-        renderKBDocuments();
-    }
-};
-
-function searchKnowledgeBase() {
-    const input = document.getElementById('kb-search-input');
-    const query = input ? input.value.trim().toLowerCase() : '';
-    if (!query) return;
-
-    const docs = JSON.parse(localStorage.getItem('aigoodbyeKnowledgeBase') || '[]');
-    const resultsDiv = document.getElementById('kb-results');
-    if (!resultsDiv) return;
-
-    const results = docs
-        .filter(doc => doc.content.toLowerCase().includes(query) || doc.filename.toLowerCase().includes(query))
-        .map(doc => {
-            const idx = doc.content.toLowerCase().indexOf(query);
-            const start = Math.max(0, idx - 100);
-            const end = Math.min(doc.content.length, idx + query.length + 100);
-            return { filename: doc.filename, snippet: '...' + doc.content.substring(start, end) + '...' };
-        });
-
-    resultsDiv.innerHTML = results.length > 0
-        ? results.map(r => `<div class="kb-result"><strong>${escapeHtml(r.filename)}</strong><p>${escapeHtml(r.snippet)}</p></div>`).join('')
-        : '<p class="empty-state">No results found.</p>';
 }
 
 // ==================== Settings ====================

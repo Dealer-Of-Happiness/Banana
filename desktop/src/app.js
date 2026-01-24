@@ -14,7 +14,7 @@ const AVAILABLE_MODELS = [
     { id: 'llama3.2:1b', name: 'Llama 3.2 1B', size: 'small', sizeGB: '~1.3 GB', vision: false },
     { id: 'llama3.2:3b', name: 'Llama 3.2 3B', size: 'medium', sizeGB: '~2.0 GB', vision: false },
     { id: 'llama3.2-vision', name: 'Llama 3.2 Vision 11B', size: 'large', sizeGB: '~8 GB', vision: true },
-    { id: 'llama3.2-vision:90b', name: 'Llama 3.2 Vision 90B', size: 'xlarge', sizeGB: '~55 GB', vision: true }
+    { id: 'llama3.2-vision:90b', name: 'Llama 3.2 Vision 90B', size: 'xlarge', sizeGB: '~55 GB', vision: true, requiresVRAM: '64GB+', enterprise: true }
 ];
 
 // Configuration
@@ -1661,6 +1661,17 @@ When users ask about your capabilities or where you run, be honest about these f
 
         if (error.name === 'AbortError') {
             contentEl.textContent = 'Request was cancelled or timed out. The model may be overloaded. Please try again.';
+        } else if (error.message && error.message.includes('500')) {
+            // Check if this is the 90B model - it requires 64GB+ VRAM
+            const modelInfo = AVAILABLE_MODELS.find(m => m.id === currentChatModel);
+            if (modelInfo?.enterprise || currentChatModel?.includes('90b')) {
+                contentEl.innerHTML = `<strong>Error: Model requires enterprise hardware.</strong><br><br>` +
+                    `The ${modelInfo?.name || '90B Vision'} model requires <strong>64GB+ GPU VRAM</strong> ` +
+                    `(enterprise GPUs like A100, H100, or multiple RTX 4090s).<br><br>` +
+                    `<strong>Recommendation:</strong> Use the <em>Llama 3.2 Vision 11B</em> model instead - it only requires 8GB VRAM and works on most modern GPUs.`;
+            } else {
+                contentEl.textContent = `Error: ${error.message}. The model may have run out of memory. Try a smaller model or restart the app.`;
+            }
         } else {
             contentEl.textContent = `Error: ${error.message}. Please try again.`;
         }

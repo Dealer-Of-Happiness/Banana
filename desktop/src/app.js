@@ -65,6 +65,12 @@ const AVAILABLE_MODELS = [
     }
 ];
 
+// App version (must match tauri.conf.json)
+const APP_VERSION = '1.0.0';
+
+// Update check URL (hosted on aigoodbye.ai via GitHub Pages)
+const UPDATE_CHECK_URL = 'https://aigoodbye.ai/version.json';
+
 // Configuration
 const CONFIG = {
     // Timeout for Ollama startup (Windows needs 90s due to antivirus DLL scanning)
@@ -371,6 +377,9 @@ async function checkModelSetup() {
             populateChatModelDropdown();
             renderModelList();
             renderChatList();
+
+            // Check for updates after app is shown (don't block UI)
+            setTimeout(() => checkForUpdateOnStartup(), 2000);
         }, 1000);
     }
 }
@@ -2133,23 +2142,144 @@ function saveSettings() {
     }));
 }
 
-async function checkForUpdates() {
+// Compare version strings (e.g., "1.0.1" > "1.0.0")
+function isNewerVersion(latest, current) {
+    const latestParts = latest.split('.').map(Number);
+    const currentParts = current.split('.').map(Number);
+
+    for (let i = 0; i < Math.max(latestParts.length, currentParts.length); i++) {
+        const l = latestParts[i] || 0;
+        const c = currentParts[i] || 0;
+        if (l > c) return true;
+        if (l < c) return false;
+    }
+    return false;
+}
+
+// Check for updates on startup (silent, shows banner if update available)
+async function checkForUpdateOnStartup() {
     try {
-        if (window.__TAURI__) {
-            const { check } = await import('@tauri-apps/plugin-updater');
-            const update = await check();
-            if (update?.available) {
-                if (confirm(`Version ${update.version} available. Update now?`)) {
-                    await update.downloadAndInstall();
-                }
-            } else {
-                alert('You have the latest version!');
+        // Don't check if user dismissed recently (check once per day)
+        const lastDismissed = localStorage.getItem('updateDismissedAt');
+        if (lastDismissed) {
+            const dismissedTime = parseInt(lastDismissed);
+            const oneDayMs = 24 * 60 * 60 * 1000;
+            if (Date.now() - dismissedTime < oneDayMs) {
+                console.log('Update check skipped - dismissed recently');
+                return;
             }
-        } else {
-            alert('Updates available in desktop app only.');
         }
-    } catch (e) {
-        alert('Update check failed.');
+
+        const response = await fetch(UPDATE_CHECK_URL, {
+            cache: 'no-store',
+            signal: AbortSignal.timeout(10000)
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const latestVersion = data.version;
+
+        if (isNewerVersion(latestVersion, APP_VERSION)) {
+            console.log(`Update available: ${latestVersion} (current: ${APP_VERSION})`);
+            showUpdateBanner(latestVersion, data.notes, data.downloadUrl);
+        } else {
+            console.log(`App is up to date (${APP_VERSION})`);
+        }
+    } catch (error) {
+        // Silently fail on startup - don't bother user
+        console.log('Update check failed (network may be unavailable):', error.message);
+    }
+}
+
+// Show update banner at top of app
+function showUpdateBanner(version, notes, downloadUrl) {
+    // Remove existing banner if any
+    const existing = document.getElementById('update-banner');
+    if (existing) existing.remove();
+
+    const banner = document.createElement('div');
+    banner.id = 'update-banner';
+    banner.className = 'update-banner';
+    banner.innerHTML = `
+        <div class="update-banner-content">
+            <span class="update-banner-icon">🎉</span>
+            <span class="update-banner-text">
+                <strong>Version ${escapeHtml(version)} is available!</strong>
+                ${notes ? `<span class="update-notes">${escapeHtml(notes)}</span>` : ''}
+            </span>
+        </div>
+        <div class="update-banner-actions">
+            <button class="update-btn-download" onclick="openDownloadPage('${escapeHtml(downloadUrl)}')">Download</button>
+            <button class="update-btn-dismiss" onclick="dismissUpdateBanner()">Later</button>
+        </div>
+    `;
+
+    // Insert at top of app
+    const appEl = document.getElementById('app');
+    if (appEl) {
+        appEl.insertBefore(banner, appEl.firstChild);
+    }
+}
+
+// Open download page in browser
+window.openDownloadPage = function(url) {
+    if (window.__TAURI__ && window.__TAURI__.shell) {
+        window.__TAURI__.shell.open(url);
+    } else {
+        window.open(url, '_blank');
+    }
+    dismissUpdateBanner();
+};
+
+// Dismiss update banner
+window.dismissUpdateBanner = function() {
+    const banner = document.getElementById('update-banner');
+    if (banner) {
+        banner.classList.add('hiding');
+        setTimeout(() => banner.remove(), 300);
+    }
+    // Remember dismissal for 24 hours
+    localStorage.setItem('updateDismissedAt', Date.now().toString());
+};
+
+// Manual check for updates (from Settings button)
+async function checkForUpdates() {
+    const btn = document.getElementById('check-updates');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Checking...';
+    }
+
+    try {
+        const response = await fetch(UPDATE_CHECK_URL, {
+            cache: 'no-store',
+            signal: AbortSignal.timeout(10000)
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to check for updates');
+        }
+
+        const data = await response.json();
+        const latestVersion = data.version;
+
+        if (isNewerVersion(latestVersion, APP_VERSION)) {
+            // Clear any dismissal so banner shows
+            localStorage.removeItem('updateDismissedAt');
+            showUpdateBanner(latestVersion, data.notes, data.downloadUrl);
+            alert(`Update available: v${latestVersion}\n\nA download banner has been added to the top of the app.`);
+        } else {
+            alert(`You're up to date!\n\nCurrent version: ${APP_VERSION}`);
+        }
+    } catch (error) {
+        console.error('Update check failed:', error);
+        alert('Could not check for updates. Please check your internet connection.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Check for Updates';
+        }
     }
 }
 

@@ -229,15 +229,34 @@ jobs:
           sudo rm -rf /Library/Developer/CommandLineTools/SDKs || true
           sudo rm -rf /Applications/Xcode_14*.app || true
           sudo rm -rf /Applications/Xcode_15.0*.app || true
+          sudo rm -rf /Applications/Xcode_15.1*.app || true
+          sudo rm -rf /Applications/Xcode_15.2*.app || true
+
+          # Remove iOS/watchOS/tvOS simulators (huge space savings)
+          sudo rm -rf ~/Library/Developer/CoreSimulator || true
+          sudo rm -rf /Library/Developer/CoreSimulator || true
+
+          # Remove Swift toolchains
+          sudo rm -rf /Library/Developer/Toolchains || true
 
           # Remove homebrew cache and unnecessary packages
           brew cleanup -s 2>/dev/null || true
           rm -rf ~/Library/Caches/Homebrew || true
+          rm -rf /usr/local/Homebrew/Library/Taps || true
 
           # Remove other large directories
           sudo rm -rf /usr/local/share/powershell || true
           sudo rm -rf /usr/local/share/chromium || true
-          # Note: Do NOT remove ~/.rustup/toolchains/*/share/doc - breaks rustup updates
+          sudo rm -rf /usr/local/.ghcup || true
+          sudo rm -rf ~/.ghcup || true
+
+          # Remove cached downloads
+          sudo rm -rf ~/Library/Caches/* || true
+
+          # Remove npm/yarn global cache
+          npm cache clean --force 2>/dev/null || true
+          rm -rf ~/.npm || true
+          rm -rf ~/.yarn || true
 
           echo "Disk space after cleanup:"
           df -h
@@ -436,6 +455,22 @@ jobs:
           spctl --assess --type exec -vvv "$APP_PATH"
 
           echo "APP_PATH=$APP_PATH" >> $GITHUB_ENV
+
+      - name: Free space before DMG creation
+        run: |
+          echo "Disk space before DMG prep cleanup:"
+          df -h
+
+          # Remove the notarization ZIP (no longer needed)
+          rm -f "$RUNNER_TEMP/app-for-notarization.zip" || true
+
+          # Remove more Rust build artifacts
+          rm -rf ~/.cargo/registry || true
+          rm -rf desktop/src-tauri/target/${{ matrix.target }}/release/deps || true
+          rm -rf desktop/src-tauri/target/${{ matrix.target }}/release/build || true
+
+          echo "Disk space after cleanup:"
+          df -h
 
       - name: Create signed DMG
         run: |

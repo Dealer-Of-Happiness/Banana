@@ -55,14 +55,30 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 200%;
+            height: 200%;
             background:
                 radial-gradient(ellipse at 20% 20%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
                 radial-gradient(ellipse at 80% 80%, rgba(255, 110, 199, 0.08) 0%, transparent 50%),
                 radial-gradient(ellipse at 50% 50%, rgba(168, 85, 247, 0.05) 0%, transparent 70%);
             pointer-events: none;
             z-index: 0;
+            animation: bgFloat 20s ease-in-out infinite;
+        }
+
+        @keyframes bgFloat {
+            0%, 100% {
+                transform: translate(0, 0);
+            }
+            25% {
+                transform: translate(-2%, -1%);
+            }
+            50% {
+                transform: translate(-1%, -2%);
+            }
+            75% {
+                transform: translate(1%, -1%);
+            }
         }
 
         .container {
@@ -133,15 +149,44 @@
         }
 
         .nav-cta {
-            background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+            background: linear-gradient(
+                90deg,
+                #00d4ff,
+                #a855f7,
+                #ff6ec7,
+                #00d4ff
+            );
+            background-size: 300% 100%;
+            animation: gradientShift 6s ease infinite;
             color: white !important;
             padding: 10px 24px;
             border-radius: 8px;
             font-weight: 600;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0, 212, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .nav-cta::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            animation: shimmer 4s infinite;
         }
 
         .nav-cta:hover {
-            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
         }
 
         /* Hero Section */
@@ -250,7 +295,7 @@
                 #00d4ff
             );
             background-size: 300% 100%;
-            animation: gradientShift 3s ease infinite;
+            animation: gradientShift 8s ease infinite;
             color: white;
             box-shadow:
                 0 4px 20px rgba(0, 212, 255, 0.3),
@@ -269,10 +314,10 @@
             background: linear-gradient(
                 90deg,
                 transparent,
-                rgba(255, 255, 255, 0.3),
+                rgba(255, 255, 255, 0.2),
                 transparent
             );
-            animation: shimmer 2s infinite;
+            animation: shimmer 4s infinite;
         }
 
         .btn-animated:hover {
@@ -280,7 +325,7 @@
             box-shadow:
                 0 8px 30px rgba(0, 212, 255, 0.4),
                 0 0 60px rgba(168, 85, 247, 0.3);
-            animation: gradientShift 1.5s ease infinite;
+            animation: gradientShift 4s ease infinite;
         }
 
         .btn-animated:active {
@@ -614,6 +659,70 @@
             content: '✓';
             color: var(--success-green);
             font-weight: bold;
+        }
+
+        /* Animated halo effect for app icon */
+        .icon-halo-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .icon-halo-container::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(
+                circle,
+                rgba(0, 212, 255, 0.3) 0%,
+                rgba(168, 85, 247, 0.2) 30%,
+                rgba(255, 110, 199, 0.1) 50%,
+                transparent 70%
+            );
+            border-radius: 50%;
+            animation: haloGlow 4s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        .icon-halo-container::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(
+                circle,
+                rgba(0, 212, 255, 0.15) 0%,
+                rgba(168, 85, 247, 0.1) 40%,
+                transparent 60%
+            );
+            border-radius: 50%;
+            animation: haloGlow 4s ease-in-out infinite reverse;
+            z-index: -2;
+        }
+
+        @keyframes haloGlow {
+            0%, 100% {
+                opacity: 0.6;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            50% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+        }
+
+        .icon-halo-container img {
+            position: relative;
+            z-index: 1;
+            max-width: 200px;
+            border-radius: 24px;
+            box-shadow: 0 0 60px rgba(0, 212, 255, 0.3);
         }
 
         /* Pricing / Download Section */
@@ -1373,7 +1482,9 @@
                         </ul>
                     </div>
                     <div style="text-align: center;">
-                        <img src="icon.png" alt="AI Goodbye" style="max-width: 200px; border-radius: 24px; box-shadow: 0 0 60px rgba(0, 212, 255, 0.3);">
+                        <div class="icon-halo-container">
+                            <img src="icon.png" alt="AI Goodbye">
+                        </div>
                     </div>
                 </div>
                 <div class="feature-card">
@@ -1395,13 +1506,6 @@
                     <h3 class="feature-title">Vision AI</h3>
                     <p class="feature-desc">
                         Analyze images, photos, and documents with powerful vision models. Describe what you see, extract text, and get insights.
-                    </p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🎓</div>
-                    <h3 class="feature-title">Custom Training</h3>
-                    <p class="feature-desc">
-                        Fine-tune models for your specific needs using LoRA technology. Create an AI that truly understands your domain.
                     </p>
                 </div>
             </div>

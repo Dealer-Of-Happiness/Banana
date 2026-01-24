@@ -368,6 +368,16 @@ body {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.message-images-placeholder {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    display: inline-block;
+}
+
 /* Chat Input */
 .chat-input-container {
     padding: 20px 30px;
@@ -1973,6 +1983,106 @@ body {
 
 .detail-icon {
     font-size: 1rem;
+}
+
+/* ==================== Update Banner ==================== */
+
+.update-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #2d5a27 0%, #1a3d15 100%);
+    border-bottom: 1px solid rgba(81, 207, 102, 0.3);
+    animation: slideDown 0.3s ease;
+}
+
+.update-banner.hiding {
+    animation: slideUp 0.3s ease forwards;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+}
+
+.update-banner-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.update-banner-icon {
+    font-size: 1.5rem;
+}
+
+.update-banner-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.update-banner-text strong {
+    color: #51cf66;
+    font-size: 0.95rem;
+}
+
+.update-notes {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.update-banner-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.update-btn-download {
+    padding: 8px 16px;
+    background: #51cf66;
+    color: #1a1a2e;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.update-btn-download:hover {
+    background: #40c057;
+    transform: translateY(-1px);
+}
+
+.update-btn-dismiss {
+    padding: 8px 16px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.update-btn-dismiss:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
 }
 
 /* ==================== GPU Download Modal ==================== */

@@ -832,21 +832,59 @@
             margin-top: 20px;
         }
 
+        .qr-halo-container {
+            position: relative;
+            display: inline-block;
+            margin: 0 auto 16px;
+        }
+
+        .qr-halo-container::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 180px;
+            height: 180px;
+            background: conic-gradient(
+                from 0deg,
+                rgba(0, 212, 255, 0.5),
+                rgba(168, 85, 247, 0.4),
+                rgba(255, 110, 199, 0.5),
+                rgba(168, 85, 247, 0.4),
+                rgba(0, 212, 255, 0.5)
+            );
+            border-radius: 20px;
+            animation: qrHaloOrbit 6s linear infinite;
+            z-index: -1;
+            filter: blur(15px);
+        }
+
+        @keyframes qrHaloOrbit {
+            0% {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+            100% {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+
         .qr-code {
+            position: relative;
             width: 150px;
             height: 150px;
             background: white;
             border-radius: 16px;
-            margin: 0 auto 16px;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 12px;
+            z-index: 1;
         }
 
         .qr-code img {
             width: 100%;
             height: 100%;
+            border-radius: 4px;
         }
 
         .qr-placeholder {
@@ -1519,12 +1557,12 @@
                         <li>Multi-language support</li>
                     </ul>
                     <div class="qr-section">
-                        <div class="qr-code">
-                            <div class="qr-placeholder" id="ios-qr">
-                                QR Code<br>Coming Soon
+                        <div class="qr-halo-container">
+                            <div class="qr-code">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://apps.apple.com/us/app/aigoodbye/id6757513032" alt="Download on App Store">
                             </div>
                         </div>
-                        <p class="qr-label">Scan to download</p>
+                        <p class="qr-label">Scan to download from App Store</p>
                     </div>
                 </div>
 

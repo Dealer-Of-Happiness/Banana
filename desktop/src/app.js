@@ -10,11 +10,59 @@ const { invoke } = window.__TAURI__ ? window.__TAURI__.core : { invoke: async ()
 const OLLAMA_API_URL = 'http://127.0.0.1:11434';
 
 // Available Models Configuration
+// Hardware requirements vary by platform:
+// - Windows: Requires dedicated GPU VRAM
+// - Mac (Apple Silicon): Uses unified memory (RAM = VRAM)
+// - Mac (Intel): Similar to Windows, but most have limited GPU
 const AVAILABLE_MODELS = [
-    { id: 'llama3.2:1b', name: 'Llama 3.2 1B', size: 'small', sizeGB: '~1.3 GB', vision: false },
-    { id: 'llama3.2:3b', name: 'Llama 3.2 3B', size: 'medium', sizeGB: '~2.0 GB', vision: false },
-    { id: 'llama3.2-vision', name: 'Llama 3.2 Vision 11B', size: 'large', sizeGB: '~8 GB', vision: true },
-    { id: 'llama3.2-vision:90b', name: 'Llama 3.2 Vision 90B', size: 'xlarge', sizeGB: '~55 GB', vision: true, requiresVRAM: '64GB+', enterprise: true }
+    {
+        id: 'llama3.2:1b',
+        name: 'Llama 3.2 1B',
+        size: 'small',
+        sizeGB: '~1.3 GB',
+        vision: false,
+        requirements: {
+            windows: '4GB+ GPU VRAM (or CPU mode)',
+            macAppleSilicon: '8GB+ unified memory',
+            macIntel: '8GB+ RAM (CPU mode)'
+        }
+    },
+    {
+        id: 'llama3.2:3b',
+        name: 'Llama 3.2 3B',
+        size: 'medium',
+        sizeGB: '~2.0 GB',
+        vision: false,
+        requirements: {
+            windows: '6GB+ GPU VRAM (or CPU mode)',
+            macAppleSilicon: '8GB+ unified memory',
+            macIntel: '16GB+ RAM (CPU mode)'
+        }
+    },
+    {
+        id: 'llama3.2-vision',
+        name: 'Llama 3.2 Vision 11B',
+        size: 'large',
+        sizeGB: '~8 GB',
+        vision: true,
+        requirements: {
+            windows: '8GB+ GPU VRAM',
+            macAppleSilicon: '16GB+ unified memory',
+            macIntel: '32GB+ RAM (very slow)'
+        }
+    },
+    {
+        id: 'llava:34b',
+        name: 'LLaVA 34B Vision',
+        size: 'xlarge',
+        sizeGB: '~20 GB',
+        vision: true,
+        requirements: {
+            windows: '24GB+ GPU VRAM (RTX 4090)',
+            macAppleSilicon: '36GB+ unified memory (M3 Pro/Max)',
+            macIntel: 'Not recommended'
+        }
+    }
 ];
 
 // Configuration
@@ -31,6 +79,80 @@ const CONFIG = {
     // GPU runners download URL (from GitHub releases)
     GPU_RUNNERS_URL: 'https://github.com/Dealer-Of-Happiness/Banana/releases/latest/download/AIGoodbye-GPU-Runners.zip'
 };
+
+// Platform detection for hardware requirements
+function detectPlatform() {
+    const ua = navigator.userAgent;
+    if (ua.includes('Windows')) {
+        return 'windows';
+    } else if (ua.includes('Mac')) {
+        // Check for Apple Silicon vs Intel Mac
+        // Apple Silicon Macs report as ARM64 in some contexts
+        // We can also check for features that indicate Apple Silicon
+        const isAppleSilicon = (
+            navigator.platform === 'MacIntel' &&
+            typeof navigator.standalone !== 'undefined'
+        ) || navigator.userAgent.includes('ARM') ||
+        (window.screen && window.screen.width && navigator.maxTouchPoints > 0);
+
+        // More reliable: check via Tauri if available
+        if (window.__TAURI__) {
+            // Default to Apple Silicon for modern Macs, can be overridden
+            return 'macAppleSilicon';
+        }
+        // Fallback heuristic - most new Macs are Apple Silicon
+        return 'macAppleSilicon';
+    }
+    return 'windows'; // Default fallback
+}
+
+// Get hardware requirement text for current platform
+function getHardwareRequirement(model) {
+    const platform = detectPlatform();
+    if (model.requirements && model.requirements[platform]) {
+        return model.requirements[platform];
+    }
+    return model.sizeGB;
+}
+
+// Update all hardware requirement labels in the UI based on detected platform
+function updateHardwareRequirements() {
+    const platform = detectPlatform();
+    const hwReqElements = document.querySelectorAll('.hw-req');
+
+    hwReqElements.forEach(el => {
+        const modelId = el.dataset.model;
+        const model = AVAILABLE_MODELS.find(m => m.id === modelId);
+        if (model && model.requirements) {
+            const req = model.requirements[platform];
+            if (req) {
+                el.textContent = req;
+                // Add warning style for "Not recommended" cases
+                if (req.includes('Not recommended') || req.includes('very slow')) {
+                    el.style.color = '#ff9800';
+                }
+            }
+        }
+    });
+
+    // Also add a platform indicator at the top of the model setup screen
+    const setupHeader = document.querySelector('.model-setup-content .setup-header');
+    if (setupHeader && !document.getElementById('platform-note')) {
+        const platformNote = document.createElement('p');
+        platformNote.id = 'platform-note';
+        platformNote.style.cssText = 'font-size: 0.85rem; color: var(--text-secondary); margin-top: 8px;';
+
+        if (platform === 'windows') {
+            platformNote.innerHTML = '💻 <strong>Windows detected</strong> — Requirements shown are for GPU acceleration. CPU mode available for smaller models.';
+        } else if (platform === 'macAppleSilicon') {
+            platformNote.innerHTML = '🍎 <strong>Apple Silicon Mac detected</strong> — Your unified memory (RAM) acts as GPU memory.';
+        } else if (platform === 'macIntel') {
+            platformNote.innerHTML = '🍎 <strong>Intel Mac detected</strong> — Models run on CPU. Larger models will be slower.';
+        }
+
+        setupHeader.appendChild(platformNote);
+    }
+}
 
 // DOM Elements - will be initialized after DOM loads
 let loadingScreen, modelSetupScreen, app, chatContainer, messageInput, sendButton;
@@ -573,6 +695,9 @@ function setupModelSetup() {
     const modelCards = document.querySelectorAll('.model-setup-screen .model-card');
 
     if (!downloadBtn) return;
+
+    // Update hardware requirements based on detected platform
+    updateHardwareRequirements();
 
     // Make entire card clickable
     modelCards.forEach(card => {
@@ -1662,13 +1787,21 @@ When users ask about your capabilities or where you run, be honest about these f
         if (error.name === 'AbortError') {
             contentEl.textContent = 'Request was cancelled or timed out. The model may be overloaded. Please try again.';
         } else if (error.message && error.message.includes('500')) {
-            // Check if this is the 90B model - it requires 64GB+ VRAM
+            // Check if this is a large model - provide hardware-specific guidance
             const modelInfo = AVAILABLE_MODELS.find(m => m.id === currentChatModel);
-            if (modelInfo?.enterprise || currentChatModel?.includes('90b')) {
-                contentEl.innerHTML = `<strong>Error: Model requires enterprise hardware.</strong><br><br>` +
-                    `The ${modelInfo?.name || '90B Vision'} model requires <strong>64GB+ GPU VRAM</strong> ` +
-                    `(enterprise GPUs like A100, H100, or multiple RTX 4090s).<br><br>` +
-                    `<strong>Recommendation:</strong> Use the <em>Llama 3.2 Vision 11B</em> model instead - it only requires 8GB VRAM and works on most modern GPUs.`;
+            const platform = detectPlatform();
+
+            if (modelInfo?.size === 'xlarge' || currentChatModel?.includes('34b')) {
+                const hwReq = modelInfo?.requirements?.[platform] || '24GB+ GPU VRAM';
+                contentEl.innerHTML = `<strong>Error: Insufficient hardware for this model.</strong><br><br>` +
+                    `The ${modelInfo?.name || 'LLaVA 34B'} model requires <strong>${hwReq}</strong>.<br><br>` +
+                    `<strong>Recommendation:</strong> Use the <em>Llama 3.2 Vision 11B</em> model instead - ` +
+                    `it works great on most hardware and still provides excellent image understanding.`;
+            } else if (modelInfo?.size === 'large') {
+                const hwReq = modelInfo?.requirements?.[platform] || '8GB+ GPU VRAM';
+                contentEl.innerHTML = `<strong>Error: Model may need more resources.</strong><br><br>` +
+                    `The ${modelInfo?.name || 'Vision 11B'} model requires <strong>${hwReq}</strong>.<br><br>` +
+                    `Try closing other applications to free up memory, or use a smaller model like <em>Llama 3.2 3B</em>.`;
             } else {
                 contentEl.textContent = `Error: ${error.message}. The model may have run out of memory. Try a smaller model or restart the app.`;
             }

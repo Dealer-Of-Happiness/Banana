@@ -239,6 +239,75 @@
             box-shadow: 0 8px 30px rgba(0, 212, 255, 0.4);
         }
 
+        /* Apple-like animated download button */
+        .btn-animated {
+            position: relative;
+            background: linear-gradient(
+                90deg,
+                #00d4ff,
+                #a855f7,
+                #ff6ec7,
+                #00d4ff
+            );
+            background-size: 300% 100%;
+            animation: gradientShift 3s ease infinite;
+            color: white;
+            box-shadow:
+                0 4px 20px rgba(0, 212, 255, 0.3),
+                0 0 40px rgba(168, 85, 247, 0.2);
+            border: none;
+            overflow: hidden;
+        }
+
+        .btn-animated::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            animation: shimmer 2s infinite;
+        }
+
+        .btn-animated:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow:
+                0 8px 30px rgba(0, 212, 255, 0.4),
+                0 0 60px rgba(168, 85, 247, 0.3);
+            animation: gradientShift 1.5s ease infinite;
+        }
+
+        .btn-animated:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+
+        @keyframes gradientShift {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                left: -100%;
+            }
+            100% {
+                left: 100%;
+            }
+        }
+
         .btn-secondary {
             background: var(--bg-card);
             color: var(--text-primary);
@@ -1322,10 +1391,10 @@
                     </p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">📚</div>
-                    <h3 class="feature-title">Knowledge Base</h3>
+                    <div class="feature-icon">🖼️</div>
+                    <h3 class="feature-title">Vision AI</h3>
                     <p class="feature-desc">
-                        Build your personal AI knowledge base. Upload documents and get contextual answers using RAG technology.
+                        Analyze images, photos, and documents with powerful vision models. Describe what you see, extract text, and get insights.
                     </p>
                 </div>
                 <div class="feature-card">
@@ -1382,14 +1451,14 @@
                         <li>Powerful LLaVA 34B vision model</li>
                         <li>📷 Analyze images, photos & documents</li>
                         <li>Choose from 4 AI model sizes</li>
-                        <li>Knowledge base & RAG</li>
                         <li>Multi-language support</li>
+                        <li>Automatic updates</li>
                     </ul>
                     <div class="mac-download-options">
-                        <button class="btn btn-primary price-btn" onclick="downloadApp('macos-arm64')">
+                        <button class="btn btn-animated price-btn" onclick="downloadApp('macos-arm64')">
                             Download for Apple Silicon
                         </button>
-                        <button class="btn btn-primary price-btn" onclick="downloadApp('macos-x64')" style="margin-top: 8px;">
+                        <button class="btn btn-animated price-btn" onclick="downloadApp('macos-x64')" style="margin-top: 8px;">
                             Download for Intel Mac
                         </button>
                         <p class="mac-help-text">Not sure? Click  > About This Mac</p>
@@ -1407,10 +1476,10 @@
                         <li>Powerful LLaVA 34B vision model</li>
                         <li>📷 Analyze images, photos & documents</li>
                         <li>Choose from 4 AI model sizes</li>
-                        <li>Knowledge base & RAG</li>
                         <li>Multi-language support</li>
+                        <li>Automatic updates</li>
                     </ul>
-                    <button class="btn btn-primary price-btn" onclick="downloadApp('windows')">
+                    <button class="btn btn-animated price-btn" onclick="downloadApp('windows')">
                         Download for Windows
                     </button>
                     <p class="beta-note">Free beta - payment coming soon</p>
@@ -1496,7 +1565,7 @@
                     </button>
                     <div class="faq-answer">
                         <div class="faq-answer-content">
-                            On Mac and Windows, AI Goodbye offers four different AI models including state-of-the-art <strong>90 billion parameter vision models</strong> that can analyze images, photos, and documents. This is comparable to GPT-4V quality—all running locally on your device with complete privacy. For users with high-end hardware (64GB+ RAM), you get the most powerful open-source multimodal AI available.
+                            On Mac and Windows, AI Goodbye offers four different AI models including the powerful <strong>LLaVA 34 billion parameter vision model</strong> that can analyze images, photos, and documents. This provides excellent quality—all running locally on your device with complete privacy. For users with high-end hardware (24GB+ GPU VRAM or 36GB+ unified memory on Mac), you get state-of-the-art multimodal AI.
                         </div>
                     </div>
                 </div>

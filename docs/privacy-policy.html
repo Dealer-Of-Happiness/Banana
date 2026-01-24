@@ -4,176 +4,412 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Privacy Policy - AI Goodbye</title>
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --neon-blue: #00d4ff;
+            --neon-pink: #ff6ec7;
+            --neon-purple: #a855f7;
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-card-hover: #1a1a25;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-muted: #6b6b7b;
+            --border-color: #2a2a3a;
+            --success-green: #10b981;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #f9f9f9;
-            padding: 20px;
+
+        html {
+            scroll-behavior: smooth;
         }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(255, 110, 199, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(168, 85, 247, 0.05) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 20px 0;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .logo img {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        /* Main Content */
         .container {
             max-width: 800px;
             margin: 0 auto;
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 140px 24px 80px;
+            position: relative;
+            z-index: 1;
         }
-        h1 {
-            color: #1a1a1a;
-            margin-bottom: 10px;
-            font-size: 2em;
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 60px;
         }
-        .app-name {
-            color: #007AFF;
-            font-weight: 600;
+
+        .page-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
+
+        .page-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+
         .last-updated {
-            color: #666;
-            font-size: 0.9em;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #eee;
+            display: inline-block;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 8px 20px;
+            border-radius: 100px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 20px;
         }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(255, 110, 199, 0.1));
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 16px;
+            padding: 24px 32px;
+            margin-bottom: 48px;
+        }
+
+        .highlight-box p {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+
+        .highlight-box strong {
+            color: var(--neon-blue);
+        }
+
+        .section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+
         h2 {
-            color: #1a1a1a;
-            margin-top: 30px;
-            margin-bottom: 15px;
-            font-size: 1.4em;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-primary);
         }
+
         p {
-            margin-bottom: 15px;
-            color: #444;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
         }
-        ul {
-            margin-left: 20px;
-            margin-bottom: 15px;
-        }
-        li {
-            margin-bottom: 8px;
-            color: #444;
-        }
-        .highlight {
-            background: #e8f4ff;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-            border-left: 4px solid #007AFF;
-        }
-        .highlight p {
+
+        p:last-child {
             margin-bottom: 0;
         }
-        .contact {
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 30px;
+
+        ul {
+            list-style: none;
+            margin: 16px 0;
         }
-        .contact a {
-            color: #007AFF;
+
+        li {
+            color: var(--text-secondary);
+            padding: 8px 0;
+            padding-left: 28px;
+            position: relative;
+        }
+
+        li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--success-green);
+            font-weight: bold;
+        }
+
+        .contact-box {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(0, 212, 255, 0.1));
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            margin-top: 48px;
+        }
+
+        .contact-box h2 {
+            margin-bottom: 12px;
+        }
+
+        .contact-box a {
+            color: var(--neon-blue);
             text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
         }
-        .contact a:hover {
+
+        .contact-box a:hover {
             text-decoration: underline;
         }
+
+        /* Footer */
         footer {
             text-align: center;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            color: #888;
-            font-size: 0.9em;
+            padding: 40px 24px;
+            border-top: 1px solid var(--border-color);
+            margin-top: 80px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        footer a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin: 0 16px;
+        }
+
+        footer a:hover {
+            color: var(--neon-blue);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .page-title {
+                font-size: 2rem;
+            }
+
+            .container {
+                padding: 120px 20px 60px;
+            }
+
+            .section {
+                padding: 24px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Privacy Policy</h1>
-        <p class="app-name">AI Goodbye</p>
-        <p class="last-updated">Last Updated: January 11, 2026</p>
+    <div class="bg-gradient"></div>
 
-        <div class="highlight">
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo">
+                <img src="icon.png" alt="AI Goodbye">
+                <span class="logo-text">AI Goodbye</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="index.html#features">Features</a></li>
+                <li><a href="index.html#pricing">Pricing</a></li>
+                <li><a href="index.html#faq">FAQ</a></li>
+                <li><a href="privacy-policy.html">Privacy</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1 class="page-title">Privacy Policy</h1>
+            <p class="page-subtitle">Your privacy is our priority. Here's how we protect it.</p>
+            <span class="last-updated">Last Updated: January 11, 2026</span>
+        </div>
+
+        <div class="highlight-box">
             <p><strong>Our Commitment:</strong> AI Goodbye is designed with privacy as its core principle. Your data stays on your device. We do not collect, store, or transmit any personal information.</p>
         </div>
 
-        <h2>Overview</h2>
-        <p>AI Goodbye ("the App") is an offline artificial intelligence assistant that runs entirely on your iPhone. This privacy policy explains how we handle your information when you use our App.</p>
-
-        <h2>Data Collection</h2>
-        <p><strong>We do not collect any data.</strong> AI Goodbye is designed to operate completely offline, and we have no servers that receive your information. Specifically:</p>
-        <ul>
-            <li>We do not collect personal information</li>
-            <li>We do not collect usage analytics</li>
-            <li>We do not use tracking technologies</li>
-            <li>We do not collect device identifiers</li>
-            <li>We do not use advertising networks</li>
-        </ul>
-
-        <h2>On-Device Processing</h2>
-        <p>All AI processing happens locally on your device:</p>
-        <ul>
-            <li><strong>Conversations:</strong> Your chats with the AI are processed and stored only on your device</li>
-            <li><strong>Documents:</strong> PDFs, images, and other files you upload are analyzed locally</li>
-            <li><strong>Voice:</strong> Speech recognition uses Apple's on-device speech recognition</li>
-            <li><strong>Knowledge Base:</strong> Any personal data you choose to include (calendar, health, reminders) is accessed and processed locally</li>
-        </ul>
-
-        <h2>Optional Cloud AI Services</h2>
-        <p>The App offers optional integration with third-party AI services (ChatGPT, Claude, Google AI). If you choose to use these features:</p>
-        <ul>
-            <li>You provide your own API keys directly to these services</li>
-            <li>Your queries are sent directly to the respective service providers</li>
-            <li>We do not proxy, store, or have access to these communications</li>
-            <li>These services have their own privacy policies that govern your use</li>
-        </ul>
-        <p>Use of cloud AI services is entirely optional. The App functions fully without them.</p>
-
-        <h2>iCloud Sync</h2>
-        <p>If you enable iCloud sync:</p>
-        <ul>
-            <li>Your conversation history is synced through Apple's iCloud service</li>
-            <li>This data is encrypted by Apple and subject to Apple's privacy policy</li>
-            <li>We do not have access to your iCloud data</li>
-            <li>iCloud sync is opt-in and can be disabled at any time</li>
-        </ul>
-
-        <h2>Children's Privacy</h2>
-        <p>We do not knowingly collect information from children under 13. Since we do not collect any data, there is no risk of inadvertently collecting children's information.</p>
-
-        <h2>Data Security</h2>
-        <p>Since all data remains on your device:</p>
-        <ul>
-            <li>Your data is protected by your device's built-in security features</li>
-            <li>Folder passwords in the App use local encryption</li>
-            <li>We recommend using a device passcode and Face ID/Touch ID for additional security</li>
-        </ul>
-
-        <h2>Your Rights</h2>
-        <p>Because we do not collect your data:</p>
-        <ul>
-            <li>There is no data to request, correct, or delete from our systems</li>
-            <li>You have complete control over all data stored locally on your device</li>
-            <li>You can delete the App at any time to remove all associated data</li>
-        </ul>
-
-        <h2>Changes to This Policy</h2>
-        <p>We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page and updating the "Last Updated" date.</p>
-
-        <h2>Contact Us</h2>
-        <div class="contact">
-            <p>If you have questions about this privacy policy, please contact us:</p>
-            <p><strong>Email:</strong> <a href="mailto:marketing@dealerofhappiness.com">marketing@dealerofhappiness.com</a></p>
+        <div class="section">
+            <h2>Overview</h2>
+            <p>AI Goodbye ("the App") is an offline artificial intelligence assistant that runs entirely on your device. This privacy policy explains how we handle your information when you use our App.</p>
         </div>
 
-        <footer>
-            <p>&copy; 2026 AI Goodbye. All rights reserved.</p>
-        </footer>
+        <div class="section">
+            <h2>Data Collection</h2>
+            <p><strong>We do not collect any data.</strong> AI Goodbye is designed to operate completely offline, and we have no servers that receive your information. Specifically:</p>
+            <ul>
+                <li>We do not collect personal information</li>
+                <li>We do not collect usage analytics</li>
+                <li>We do not use tracking technologies</li>
+                <li>We do not collect device identifiers</li>
+                <li>We do not use advertising networks</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>On-Device Processing</h2>
+            <p>All AI processing happens locally on your device:</p>
+            <ul>
+                <li><strong>Conversations:</strong> Your chats with the AI are processed and stored only on your device</li>
+                <li><strong>Documents:</strong> PDFs, images, and other files you upload are analyzed locally</li>
+                <li><strong>Voice:</strong> Speech recognition uses Apple's on-device speech recognition</li>
+                <li><strong>Settings:</strong> Your preferences are stored locally on your device</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Optional Cloud AI Services</h2>
+            <p>The App offers optional integration with third-party AI services (ChatGPT, Claude, Google AI). If you choose to use these features:</p>
+            <ul>
+                <li>You provide your own API keys directly to these services</li>
+                <li>Your queries are sent directly to the respective service providers</li>
+                <li>We do not proxy, store, or have access to these communications</li>
+                <li>These services have their own privacy policies that govern your use</li>
+            </ul>
+            <p>Use of cloud AI services is entirely optional. The App functions fully without them.</p>
+        </div>
+
+        <div class="section">
+            <h2>iCloud Sync (iOS)</h2>
+            <p>If you enable iCloud sync on iPhone:</p>
+            <ul>
+                <li>Your conversation history is synced through Apple's iCloud service</li>
+                <li>This data is encrypted by Apple and subject to Apple's privacy policy</li>
+                <li>We do not have access to your iCloud data</li>
+                <li>iCloud sync is opt-in and can be disabled at any time</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Children's Privacy</h2>
+            <p>We do not knowingly collect information from children under 13. Since we do not collect any data, there is no risk of inadvertently collecting children's information.</p>
+        </div>
+
+        <div class="section">
+            <h2>Data Security</h2>
+            <p>Since all data remains on your device:</p>
+            <ul>
+                <li>Your data is protected by your device's built-in security features</li>
+                <li>Folder passwords in the App use local encryption</li>
+                <li>We recommend using a device passcode and Face ID/Touch ID for additional security</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Your Rights</h2>
+            <p>Because we do not collect your data:</p>
+            <ul>
+                <li>There is no data to request, correct, or delete from our systems</li>
+                <li>You have complete control over all data stored locally on your device</li>
+                <li>You can delete the App at any time to remove all associated data</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Changes to This Policy</h2>
+            <p>We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page and updating the "Last Updated" date.</p>
+        </div>
+
+        <div class="contact-box">
+            <h2>Contact Us</h2>
+            <p>If you have questions about this privacy policy, please contact us:</p>
+            <a href="mailto:marketing@dealerofhappiness.com">marketing@dealerofhappiness.com</a>
+        </div>
     </div>
+
+    <footer>
+        <p>&copy; 2026 AI Goodbye. All rights reserved.</p>
+        <p>
+            <a href="index.html">Home</a>
+            <a href="privacy-policy.html">Privacy Policy</a>
+            <a href="terms.html">Terms of Service</a>
+        </p>
+    </footer>
 </body>
 </html>

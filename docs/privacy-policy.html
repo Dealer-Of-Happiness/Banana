@@ -207,16 +207,15 @@
         li {
             color: var(--text-secondary);
             padding: 8px 0;
-            padding-left: 28px;
+            padding-left: 20px;
             position: relative;
         }
 
         li::before {
-            content: '✓';
+            content: '•';
             position: absolute;
             left: 0;
-            color: var(--success-green);
-            font-weight: bold;
+            color: var(--text-muted);
         }
 
         .contact-box {
@@ -338,31 +337,7 @@
             <ul>
                 <li><strong>Conversations:</strong> Your chats with the AI are processed and stored only on your device</li>
                 <li><strong>Documents:</strong> PDFs, images, and other files you upload are analyzed locally</li>
-                <li><strong>Voice:</strong> Speech recognition uses Apple's on-device speech recognition</li>
                 <li><strong>Settings:</strong> Your preferences are stored locally on your device</li>
-            </ul>
-        </div>
-
-        <div class="section">
-            <h2>Optional Cloud AI Services</h2>
-            <p>The App offers optional integration with third-party AI services (ChatGPT, Claude, Google AI). If you choose to use these features:</p>
-            <ul>
-                <li>You provide your own API keys directly to these services</li>
-                <li>Your queries are sent directly to the respective service providers</li>
-                <li>We do not proxy, store, or have access to these communications</li>
-                <li>These services have their own privacy policies that govern your use</li>
-            </ul>
-            <p>Use of cloud AI services is entirely optional. The App functions fully without them.</p>
-        </div>
-
-        <div class="section">
-            <h2>iCloud Sync (iOS)</h2>
-            <p>If you enable iCloud sync on iPhone:</p>
-            <ul>
-                <li>Your conversation history is synced through Apple's iCloud service</li>
-                <li>This data is encrypted by Apple and subject to Apple's privacy policy</li>
-                <li>We do not have access to your iCloud data</li>
-                <li>iCloud sync is opt-in and can be disabled at any time</li>
             </ul>
         </div>
 
@@ -376,8 +351,7 @@
             <p>Since all data remains on your device:</p>
             <ul>
                 <li>Your data is protected by your device's built-in security features</li>
-                <li>Folder passwords in the App use local encryption</li>
-                <li>We recommend using a device passcode and Face ID/Touch ID for additional security</li>
+                <li>We recommend using a device passcode for additional security</li>
             </ul>
         </div>
 

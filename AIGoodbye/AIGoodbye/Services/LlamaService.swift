@@ -75,6 +75,8 @@ class LlamaService {
 
         if needsDownload {
             try await downloadModel(model)
+            // After download, wait briefly for filesystem to fully sync
+            try await Task.sleep(nanoseconds: 500_000_000) // 500ms
         }
 
         let template = templateForModel(model)
@@ -83,17 +85,128 @@ class LlamaService {
             throw LlamaError.modelNotFound
         }
 
-        // Load model - single attempt, no complex retry logic
+        // Verify file is readable before attempting to load
+        try verifyFileReadable(at: url, model: model)
+
+        // Load model with retry logic
+        // On fast devices, filesystem might not be fully synced after download
         print("[LlamaService] Loading model...")
 
-        guard let llm = LLM(from: url, template: template, historyLimit: 30) else {
-            throw LlamaError.modelLoadFailed("Could not initialize AI model. Try closing other apps to free memory, then restart the app.")
+        var lastError: Error?
+        let maxRetries = 3
+        let retryDelays: [UInt64] = [500_000_000, 1_000_000_000, 2_000_000_000] // 500ms, 1s, 2s
+
+        for attempt in 1...maxRetries {
+            if let llm = LLM(from: url, template: template, historyLimit: 30) {
+                bot = llm
+                modelURL = url
+                currentModelId = model.id
+                print("[LlamaService] Model loaded successfully on attempt \(attempt) with historyLimit: 30")
+                return
+            }
+
+            if attempt < maxRetries {
+                print("[LlamaService] Model load attempt \(attempt) failed, retrying in \(retryDelays[attempt - 1] / 1_000_000)ms...")
+                try await Task.sleep(nanoseconds: retryDelays[attempt - 1])
+            } else {
+                lastError = LlamaError.modelLoadFailed("Model initialization failed after \(maxRetries) attempts")
+            }
         }
 
-        bot = llm
-        modelURL = url
-        currentModelId = model.id
-        print("[LlamaService] Model loaded successfully with historyLimit: 30")
+        // All retries failed - try to diagnose the issue
+        let diagnosis = diagnoseModelLoadFailure(at: url, model: model)
+        throw LlamaError.modelLoadFailed(diagnosis)
+    }
+
+    /// Verify the model file is readable and has valid GGUF header
+    private func verifyFileReadable(at url: URL, model: AIModel) throws {
+        let fileManager = FileManager.default
+
+        // Check file exists
+        guard fileManager.fileExists(atPath: url.path) else {
+            throw LlamaError.modelNotFound
+        }
+
+        // Check file size
+        guard let attributes = try? fileManager.attributesOfItem(atPath: url.path),
+              let fileSize = attributes[.size] as? Int64 else {
+            throw LlamaError.modelLoadFailed("Cannot read model file attributes")
+        }
+
+        let minimumSize = model.sizeBytes / 2
+        if fileSize < minimumSize {
+            try? fileManager.removeItem(at: url)
+            throw LlamaError.modelLoadFailed("Model file is incomplete (\(fileSize / 1_000_000) MB). Please download again.")
+        }
+
+        // Verify GGUF magic header
+        do {
+            let handle = try FileHandle(forReadingFrom: url)
+            defer { try? handle.close() }
+
+            guard let headerData = try handle.read(upToCount: 4),
+                  headerData.count == 4 else {
+                throw LlamaError.modelLoadFailed("Cannot read model file header")
+            }
+
+            let magic = headerData.withUnsafeBytes { $0.load(as: UInt32.self) }
+            if magic != 0x46554747 { // "GGUF"
+                try? fileManager.removeItem(at: url)
+                throw LlamaError.modelLoadFailed("Model file is corrupted (invalid format). Please download again.")
+            }
+        } catch let error as LlamaError {
+            throw error
+        } catch {
+            throw LlamaError.modelLoadFailed("Cannot verify model file: \(error.localizedDescription)")
+        }
+
+        print("[LlamaService] File verification passed: \(fileSize / 1_000_000) MB, valid GGUF")
+    }
+
+    /// Diagnose why model loading failed and provide helpful error message
+    private func diagnoseModelLoadFailure(at url: URL, model: AIModel) -> String {
+        let fileManager = FileManager.default
+
+        // Check if file exists
+        guard fileManager.fileExists(atPath: url.path) else {
+            return "Model file not found. Please download again."
+        }
+
+        // Check file size
+        if let attributes = try? fileManager.attributesOfItem(atPath: url.path),
+           let fileSize = attributes[.size] as? Int64 {
+            let expectedSize = model.sizeBytes
+            let percentComplete = Int((Double(fileSize) / Double(expectedSize)) * 100)
+
+            if fileSize < expectedSize / 2 {
+                // File is too small - likely incomplete download
+                try? fileManager.removeItem(at: url)
+                return "Download incomplete (\(percentComplete)%). Please download again."
+            }
+
+            // File size looks OK, might be corrupted
+            if fileSize > 0 {
+                // Check GGUF header
+                if let handle = try? FileHandle(forReadingFrom: url),
+                   let headerData = try? handle.read(upToCount: 4) {
+                    try? handle.close()
+
+                    if headerData.count < 4 {
+                        try? fileManager.removeItem(at: url)
+                        return "Model file is corrupted. Please download again."
+                    }
+
+                    let magic = headerData.withUnsafeBytes { $0.load(as: UInt32.self) }
+                    if magic != 0x46554747 {
+                        try? fileManager.removeItem(at: url)
+                        return "Model file has invalid format. Please download again."
+                    }
+                }
+            }
+        }
+
+        // File looks valid but still can't load - likely memory issue
+        return "Cannot load model. Try closing other apps and restarting."
     }
 
     private func templateForModel(_ model: AIModel) -> Template {
@@ -130,24 +243,34 @@ class LlamaService {
             throw LlamaError.modelNotFound
         }
 
-        if let attributes = try? fileManager.attributesOfItem(atPath: url.path),
-           let fileSize = attributes[.size] as? Int64 {
-            let minimumSize = model.sizeBytes / 2
-            if fileSize < minimumSize {
-                try? fileManager.removeItem(at: url)
-                throw LlamaError.modelLoadFailed("Model file is incomplete. Please download again.")
-            }
-        }
+        // Verify file is readable and valid
+        try verifyFileReadable(at: url, model: model)
 
         let template = templateForModel(model)
 
-        guard let llm = LLM(from: url, template: template, historyLimit: 30) else {
-            throw LlamaError.modelLoadFailed("Model file may be corrupted. Please download again.")
+        // Load model with retry logic
+        var lastError: Error?
+        let maxRetries = 3
+        let retryDelays: [UInt64] = [500_000_000, 1_000_000_000, 2_000_000_000] // 500ms, 1s, 2s
+
+        for attempt in 1...maxRetries {
+            if let llm = LLM(from: url, template: template, historyLimit: 30) {
+                bot = llm
+                modelURL = url
+                currentModelId = model.id
+                print("[LlamaService] Model \(model.name) loaded successfully on attempt \(attempt)")
+                return
+            }
+
+            if attempt < maxRetries {
+                print("[LlamaService] Model load attempt \(attempt) failed, retrying...")
+                try await Task.sleep(nanoseconds: retryDelays[attempt - 1])
+            }
         }
 
-        bot = llm
-        modelURL = url
-        currentModelId = model.id
+        // All retries failed
+        let diagnosis = diagnoseModelLoadFailure(at: url, model: model)
+        throw LlamaError.modelLoadFailed(diagnosis)
     }
 
     private func downloadModel(_ model: AIModel) async throws {

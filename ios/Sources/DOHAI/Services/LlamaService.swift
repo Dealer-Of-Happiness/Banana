@@ -17,6 +17,9 @@ actor LlamaService {
     private let modelFileName = "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
     private let modelDownloadURL = URL(string: "https://huggingface.co/lmstudio-community/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf")!
 
+    // Expected model size in bytes (approximately 900MB for Q4_K_M)
+    private let expectedModelSize: Int64 = 900_000_000
+
     // Download state - observable from outside
     nonisolated(unsafe) static var downloadedBytes: Int64 = 0
     nonisolated(unsafe) static var totalBytes: Int64 = 0
@@ -35,7 +38,18 @@ actor LlamaService {
     }
 
     func isModelDownloaded() -> Bool {
-        FileManager.default.fileExists(atPath: modelPath.path)
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: modelPath.path) else {
+            return false
+        }
+
+        // Verify file size is at least 50% of expected size
+        if let attributes = try? fileManager.attributesOfItem(atPath: modelPath.path),
+           let fileSize = attributes[.size] as? Int64 {
+            return fileSize >= expectedModelSize / 2
+        }
+
+        return false
     }
 
     func loadModel() async throws {
@@ -43,20 +57,110 @@ actor LlamaService {
             return
         }
 
-        // Check if model already exists locally
+        // Check if model already exists locally and is valid
         if !isModelDownloaded() {
+            // Remove any corrupted/incomplete file before downloading
+            try? FileManager.default.removeItem(at: modelPath)
             try await downloadModelWithProgress()
+            // Wait for filesystem to sync after download
+            try await Task.sleep(nanoseconds: 500_000_000) // 500ms
         }
+
+        // Verify file is valid before loading
+        try verifyModelFile()
 
         // Store the path for later use
         modelPathURL = modelPath
 
-        // Load from local file
-        guard let llm = LLM(from: modelPath, template: .chatML()) else {
-            throw LlamaError.modelNotLoaded
+        // Load from local file with retry logic
+        print("[LlamaService] Loading model...")
+
+        var lastError: Error?
+        let maxRetries = 3
+        let retryDelays: [UInt64] = [500_000_000, 1_000_000_000, 2_000_000_000] // 500ms, 1s, 2s
+
+        for attempt in 1...maxRetries {
+            if let llm = LLM(from: modelPath, template: .chatML()) {
+                bot = llm
+                print("[LlamaService] Model loaded successfully on attempt \(attempt)")
+                return
+            }
+
+            if attempt < maxRetries {
+                print("[LlamaService] Model load attempt \(attempt) failed, retrying...")
+                try await Task.sleep(nanoseconds: retryDelays[attempt - 1])
+            } else {
+                lastError = LlamaError.modelLoadFailed("Model initialization failed after \(maxRetries) attempts")
+            }
         }
 
-        bot = llm
+        // All retries failed - diagnose and throw
+        let diagnosis = diagnoseLoadFailure()
+        throw LlamaError.modelLoadFailed(diagnosis)
+    }
+
+    /// Verify the model file exists, has correct size, and has valid GGUF header
+    private func verifyModelFile() throws {
+        let fileManager = FileManager.default
+
+        guard fileManager.fileExists(atPath: modelPath.path) else {
+            throw LlamaError.modelNotFound
+        }
+
+        // Check file size
+        guard let attributes = try? fileManager.attributesOfItem(atPath: modelPath.path),
+              let fileSize = attributes[.size] as? Int64 else {
+            throw LlamaError.modelLoadFailed("Cannot read model file attributes")
+        }
+
+        if fileSize < expectedModelSize / 2 {
+            try? fileManager.removeItem(at: modelPath)
+            throw LlamaError.modelLoadFailed("Model file is incomplete (\(fileSize / 1_000_000) MB). Please download again.")
+        }
+
+        // Verify GGUF magic header
+        do {
+            let handle = try FileHandle(forReadingFrom: modelPath)
+            defer { try? handle.close() }
+
+            guard let headerData = try handle.read(upToCount: 4),
+                  headerData.count == 4 else {
+                throw LlamaError.modelLoadFailed("Cannot read model file header")
+            }
+
+            let magic = headerData.withUnsafeBytes { $0.load(as: UInt32.self) }
+            if magic != 0x46554747 { // "GGUF"
+                try? fileManager.removeItem(at: modelPath)
+                throw LlamaError.modelLoadFailed("Model file is corrupted. Please download again.")
+            }
+        } catch let error as LlamaError {
+            throw error
+        } catch {
+            throw LlamaError.modelLoadFailed("Cannot verify model file: \(error.localizedDescription)")
+        }
+
+        print("[LlamaService] File verification passed: \(fileSize / 1_000_000) MB, valid GGUF")
+    }
+
+    /// Diagnose why model loading failed
+    private func diagnoseLoadFailure() -> String {
+        let fileManager = FileManager.default
+
+        guard fileManager.fileExists(atPath: modelPath.path) else {
+            return "Model file not found. Please download again."
+        }
+
+        if let attributes = try? fileManager.attributesOfItem(atPath: modelPath.path),
+           let fileSize = attributes[.size] as? Int64 {
+
+            if fileSize < expectedModelSize / 2 {
+                try? fileManager.removeItem(at: modelPath)
+                let percentComplete = Int((Double(fileSize) / Double(expectedModelSize)) * 100)
+                return "Download incomplete (\(percentComplete)%). Please download again."
+            }
+        }
+
+        return "Cannot load model. Try closing other apps and restarting."
     }
 
     private func downloadModelWithProgress() async throws {
@@ -79,30 +183,78 @@ actor LlamaService {
 
         LlamaService.totalBytes = response.expectedContentLength
 
-        // Create file and write
-        FileManager.default.createFile(atPath: modelPath.path, contents: nil)
-        let handle = try FileHandle(forWritingTo: modelPath)
+        // Download to temp file first for atomic write
+        let tempPath = modelsDir.appendingPathComponent("download_\(UUID().uuidString).tmp")
+
+        // Remove any existing file at destination
+        try? FileManager.default.removeItem(at: modelPath)
+
+        // Create temp file and write
+        FileManager.default.createFile(atPath: tempPath.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: tempPath)
 
         var buffer = Data()
         let bufferSize = 1024 * 1024 // 1MB buffer
 
-        for try await byte in asyncBytes {
-            buffer.append(byte)
-            LlamaService.downloadedBytes += 1
+        do {
+            for try await byte in asyncBytes {
+                buffer.append(byte)
+                LlamaService.downloadedBytes += 1
 
-            if buffer.count >= bufferSize {
-                try handle.write(contentsOf: buffer)
-                buffer.removeAll(keepingCapacity: true)
+                if buffer.count >= bufferSize {
+                    try handle.write(contentsOf: buffer)
+                    buffer.removeAll(keepingCapacity: true)
+                }
             }
-        }
 
-        // Write remaining buffer
-        if !buffer.isEmpty {
-            try handle.write(contentsOf: buffer)
-        }
+            // Write remaining buffer
+            if !buffer.isEmpty {
+                try handle.write(contentsOf: buffer)
+            }
 
-        try handle.close()
-        LlamaService.isDownloading = false
+            // Ensure data is flushed to disk
+            try handle.synchronize()
+            try handle.close()
+
+            // Verify downloaded file before moving
+            if let attributes = try? FileManager.default.attributesOfItem(atPath: tempPath.path),
+               let fileSize = attributes[.size] as? Int64,
+               fileSize < expectedModelSize / 2 {
+                try? FileManager.default.removeItem(at: tempPath)
+                LlamaService.isDownloading = false
+                throw LlamaError.downloadFailed("Downloaded file is incomplete")
+            }
+
+            // Verify GGUF header
+            let verifyHandle = try FileHandle(forReadingFrom: tempPath)
+            guard let headerData = try verifyHandle.read(upToCount: 4),
+                  headerData.count == 4 else {
+                try? verifyHandle.close()
+                try? FileManager.default.removeItem(at: tempPath)
+                LlamaService.isDownloading = false
+                throw LlamaError.downloadFailed("Downloaded file is invalid")
+            }
+            try verifyHandle.close()
+
+            let magic = headerData.withUnsafeBytes { $0.load(as: UInt32.self) }
+            if magic != 0x46554747 { // "GGUF"
+                try? FileManager.default.removeItem(at: tempPath)
+                LlamaService.isDownloading = false
+                throw LlamaError.downloadFailed("Downloaded file is not a valid GGUF model")
+            }
+
+            // Atomic move to final destination
+            try FileManager.default.moveItem(at: tempPath, to: modelPath)
+
+            print("[LlamaService] Download completed successfully")
+            LlamaService.isDownloading = false
+
+        } catch {
+            try? handle.close()
+            try? FileManager.default.removeItem(at: tempPath)
+            LlamaService.isDownloading = false
+            throw error
+        }
     }
 
     func unloadModel() {

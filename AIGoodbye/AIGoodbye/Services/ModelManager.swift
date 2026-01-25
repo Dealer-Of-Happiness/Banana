@@ -210,6 +210,17 @@ class ModelManager: ObservableObject {
                 return
             }
 
+            // Verify file is readable before declaring success
+            // This ensures filesystem has fully synced the file
+            guard self.verifyFileReadable(at: destinationURL) else {
+                print("[ModelManager] File verification failed after move")
+                try? FileManager.default.removeItem(at: destinationURL)
+                self.downloadStates[model.id] = .failed("File verification failed")
+                self.downloadContinuation?.resume(throwing: ModelManagerError.downloadFailed("File verification failed after download"))
+                self.cleanupDownload()
+                return
+            }
+
             print("[ModelManager] Download completed successfully: \(model.name)")
             self.downloadStates[model.id] = .downloaded
             self.downloadProgress = 1.0
@@ -222,6 +233,36 @@ class ModelManager: ObservableObject {
             self.downloadStates[model.id] = .failed(error.localizedDescription)
             self.downloadContinuation?.resume(throwing: error)
             self.cleanupDownload()
+        }
+    }
+
+    /// Verify that a file is readable by attempting to read its header
+    /// This ensures the filesystem has fully synced the file after a move operation
+    private func verifyFileReadable(at url: URL) -> Bool {
+        do {
+            // Open file for reading to verify it's accessible
+            let handle = try FileHandle(forReadingFrom: url)
+            defer { try? handle.close() }
+
+            // Read first 4KB to verify file is readable (GGUF header check)
+            let headerData = try handle.read(upToCount: 4096)
+            guard let data = headerData, data.count >= 4 else {
+                print("[ModelManager] File header too small or unreadable")
+                return false
+            }
+
+            // Check GGUF magic number: "GGUF" = 0x46554747
+            let magic = data.withUnsafeBytes { $0.load(as: UInt32.self) }
+            if magic != 0x46554747 {
+                print("[ModelManager] Invalid GGUF magic number: \(String(format: "0x%08X", magic))")
+                return false
+            }
+
+            print("[ModelManager] File verification passed - valid GGUF file")
+            return true
+        } catch {
+            print("[ModelManager] File verification error: \(error)")
+            return false
         }
     }
 

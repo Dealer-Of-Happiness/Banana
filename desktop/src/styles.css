@@ -2258,3 +2258,164 @@ body {
     color: var(--text-secondary);
     font-size: 0.9rem;
 }
+
+/* ==================== License Activation Screen ==================== */
+
+.license-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+}
+
+.license-screen.hidden {
+    display: none;
+}
+
+.license-content {
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+}
+
+.license-header {
+    margin-bottom: 40px;
+}
+
+.license-header h1 {
+    color: var(--primary);
+    font-size: 2rem;
+    margin: 20px 0 10px;
+}
+
+.license-header p {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+}
+
+.license-form {
+    margin-bottom: 30px;
+}
+
+.license-input-wrapper {
+    margin-bottom: 15px;
+}
+
+.license-input {
+    width: 100%;
+    padding: 18px 20px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-family: 'SF Mono', 'Fira Code', 'Monaco', monospace;
+    letter-spacing: 2px;
+    text-align: center;
+    text-transform: uppercase;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.license-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(247, 215, 22, 0.2);
+}
+
+.license-input::placeholder {
+    color: var(--text-muted);
+    letter-spacing: 3px;
+}
+
+.license-error {
+    color: var(--error);
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: rgba(244, 67, 54, 0.1);
+    border-radius: 8px;
+}
+
+.license-error.hidden {
+    display: none;
+}
+
+.btn-activate {
+    width: 100%;
+    padding: 16px 32px;
+    border: none;
+    border-radius: 12px;
+    background: var(--primary);
+    color: var(--bg-dark);
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-activate:hover:not(:disabled) {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(247, 215, 22, 0.3);
+}
+
+.btn-activate:disabled {
+    background: var(--text-muted);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.license-divider {
+    display: flex;
+    align-items: center;
+    margin: 30px 0;
+}
+
+.license-divider::before,
+.license-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.license-divider span {
+    padding: 0 20px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.license-buy p {
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+}
+
+.btn-buy {
+    width: 100%;
+    padding: 16px 32px;
+    border: 2px solid var(--primary);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-buy:hover {
+    background: rgba(247, 215, 22, 0.1);
+    transform: translateY(-2px);
+}
+
+.license-note {
+    margin-top: 15px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}

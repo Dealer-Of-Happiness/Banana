@@ -1580,15 +1580,11 @@
                         <li>Future updates</li>
                     </ul>
                     <div class="mac-download-options">
-                        <button class="btn btn-animated price-btn" onclick="downloadApp('macos-arm64')">
-                            Download for Apple Silicon
+                        <button class="btn btn-animated price-btn" onclick="buyApp('macos')">
+                            Buy Now - $29.99
                         </button>
-                        <button class="btn btn-animated price-btn" onclick="downloadApp('macos-x64')" style="margin-top: 8px;">
-                            Download for Intel Mac
-                        </button>
-                        <p class="mac-help-text">Not sure? Click  > About This Mac</p>
+                        <p class="mac-help-text">Works on both Apple Silicon and Intel Macs</p>
                     </div>
-                    <p class="beta-note">Free beta - payment coming soon</p>
                 </div>
 
                 <!-- Windows -->
@@ -1604,10 +1600,9 @@
                         <li>Multi-language support</li>
                         <li>Future updates</li>
                     </ul>
-                    <button class="btn btn-animated price-btn" onclick="downloadApp('windows')">
-                        Download for Windows
+                    <button class="btn btn-animated price-btn" onclick="buyApp('windows')">
+                        Buy Now - $29.99
                     </button>
-                    <p class="beta-note">Free beta - payment coming soon</p>
                 </div>
             </div>
         </div>
@@ -1935,76 +1930,42 @@
             alert('Payment system coming soon! Contact marketing@dealerofhappiness.com for early access.');
         });
 
-        // Free download function (payment will be added later)
-        function downloadApp(platform) {
-            // GitHub releases URLs
-            const GITHUB_REPO = 'Dealer-Of-Happiness/Banana';
-            const downloadUrls = {
-                'macos-arm64': `https://github.com/${GITHUB_REPO}/releases/latest/download/AIGoodbye-macOS-arm64.dmg`,
-                'macos-x64': `https://github.com/${GITHUB_REPO}/releases/latest/download/AIGoodbye-macOS-x64.dmg`,
-                'windows': `https://github.com/${GITHUB_REPO}/releases/latest/download/AIGoodbye-Windows-Setup.exe`
-            };
+        // LemonSqueezy checkout configuration
+        // TODO: Replace these URLs after setting up your LemonSqueezy store
+        const LEMONSQUEEZY_CONFIG = {
+            // Your LemonSqueezy checkout URLs (update after creating products)
+            // Format: https://[store-name].lemonsqueezy.com/checkout/buy/[product-id]
+            checkoutUrls: {
+                'macos': 'https://aigoodbye.lemonsqueezy.com/checkout/buy/macos-desktop',
+                'windows': 'https://aigoodbye.lemonsqueezy.com/checkout/buy/windows-desktop'
+            },
+            // Download page URL (users will be redirected here after successful payment)
+            // LemonSqueezy will append the license key as a URL parameter
+            thankYouPage: 'https://aigoodbye.ai/thank-you.html'
+        };
 
-            const platformNames = {
-                'macos-arm64': 'macOS Apple Silicon',
-                'macos-x64': 'macOS Intel',
-                'windows': 'Windows'
-            };
+        // Buy function - redirects to LemonSqueezy checkout
+        function buyApp(platform) {
+            const checkoutUrl = LEMONSQUEEZY_CONFIG.checkoutUrls[platform];
 
-            const securityNotes = {
-                'macos-arm64': '\n\nNote for macOS: If you see a security warning, right-click the app and select "Open", then click "Open" again. See our FAQ for details.',
-                'macos-x64': '\n\nNote for macOS: If you see a security warning, right-click the app and select "Open", then click "Open" again. See our FAQ for details.',
-                'windows': ''
-            };
-
-            const url = downloadUrls[platform];
-
-            if (url) {
-                // Track download (optional analytics)
-                console.log(`Starting download for ${platform}`);
-
-                // Show download started message
+            if (checkoutUrl) {
+                // Show processing state
                 const btn = event.target;
                 const originalText = btn.textContent;
-                btn.textContent = 'Download Starting...';
+                btn.textContent = 'Redirecting...';
                 btn.disabled = true;
 
-                // Check if the release exists first
-                fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('No release available');
-                        }
-                        return response.json();
-                    })
-                    .then(release => {
-                        // Find the matching asset
-                        const fileName = url.split('/').pop();
-                        const asset = release.assets.find(a => a.name === fileName);
+                // Open LemonSqueezy checkout
+                // Note: LemonSqueezy handles payment, then emails license key and shows download links
+                window.location.href = checkoutUrl;
 
-                        if (asset) {
-                            // Trigger download
-                            window.location.href = asset.browser_download_url;
-
-                            // Show thank you message with platform-specific notes
-                            setTimeout(() => {
-                                alert(`Thank you for downloading AI Goodbye for ${platformNames[platform]}!\n\nYour download should start automatically. If it doesn't, please check your downloads folder or try again.\n\nThis is a free beta version. Payment will be required for the full release.${securityNotes[platform]}`);
-                            }, 500);
-                        } else {
-                            throw new Error('Asset not found');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Download error:', error);
-                        alert(`Download Not Yet Available\n\nThe ${platformNames[platform]} beta release is currently being prepared and will be available very soon.\n\nPlease check back in a few days or contact us at marketing@dealerofhappiness.com for updates.`);
-                    })
-                    .finally(() => {
-                        // Reset button after delay
-                        setTimeout(() => {
-                            btn.textContent = originalText;
-                            btn.disabled = false;
-                        }, 2000);
-                    });
+                // Reset button after a short delay (in case user comes back)
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }, 3000);
+            } else {
+                alert('Purchase option not available. Please contact support@aigoodbye.ai');
             }
         }
 

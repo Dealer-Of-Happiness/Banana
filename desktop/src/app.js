@@ -71,6 +71,17 @@ const APP_VERSION = '1.0.0';
 // Update check URL (hosted on aigoodbye.ai via GitHub Pages)
 const UPDATE_CHECK_URL = 'https://aigoodbye.ai/version.json';
 
+// License Configuration
+// TODO: Replace with your actual LemonSqueezy store URL after setup
+const LICENSE_CONFIG = {
+    // LemonSqueezy API endpoint for license validation
+    validateUrl: 'https://api.lemonsqueezy.com/v1/licenses/validate',
+    // Your checkout URL (update after creating product in LemonSqueezy)
+    checkoutUrl: 'https://aigoodbye.lemonsqueezy.com/checkout',
+    // How often to re-validate license (30 days in milliseconds)
+    revalidateIntervalMs: 30 * 24 * 60 * 60 * 1000
+};
+
 // Configuration
 const CONFIG = {
     // Timeout for Ollama startup (Windows needs 90s due to antivirus DLL scanning)
@@ -164,6 +175,7 @@ function updateHardwareRequirements() {
 let loadingScreen, modelSetupScreen, app, chatContainer, messageInput, sendButton;
 let attachButton, imageInput, imagePreviewContainer, newChatBtn;
 let chatModelSelect, modelIndicator, navItems, views;
+let licenseScreen; // License activation screen
 
 // State
 let downloadedModels = [];
@@ -186,6 +198,7 @@ let expandedFolders = new Set(); // Track which folders are expanded
 function initDOMElements() {
     loadingScreen = document.getElementById('loading-screen');
     modelSetupScreen = document.getElementById('model-setup-screen');
+    licenseScreen = document.getElementById('license-screen');
     app = document.getElementById('app');
     chatContainer = document.getElementById('chat-container');
     messageInput = document.getElementById('message-input');
@@ -200,11 +213,209 @@ function initDOMElements() {
     views = document.querySelectorAll('.view');
 }
 
+// ==================== License Validation ====================
+
+// Check if we have a valid stored license
+function hasValidLicense() {
+    const licenseData = JSON.parse(localStorage.getItem('aigoodbyeLicense') || 'null');
+    if (!licenseData || !licenseData.key || !licenseData.validatedAt) {
+        return false;
+    }
+
+    // Check if license needs revalidation (older than 30 days)
+    const daysSinceValidation = Date.now() - licenseData.validatedAt;
+    if (daysSinceValidation > LICENSE_CONFIG.revalidateIntervalMs) {
+        // License needs revalidation - will be done in background
+        revalidateLicenseInBackground(licenseData.key);
+    }
+
+    return licenseData.valid === true;
+}
+
+// Get stored license key
+function getStoredLicenseKey() {
+    const licenseData = JSON.parse(localStorage.getItem('aigoodbyeLicense') || 'null');
+    return licenseData?.key || null;
+}
+
+// Validate license key against LemonSqueezy API
+async function validateLicenseKey(licenseKey) {
+    try {
+        const response = await fetch(LICENSE_CONFIG.validateUrl, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                license_key: licenseKey
+            }),
+            signal: AbortSignal.timeout(15000)
+        });
+
+        const data = await response.json();
+
+        if (data.valid === true || data.license_key?.status === 'active') {
+            return { valid: true, data };
+        } else {
+            return { valid: false, error: data.error || 'Invalid license key' };
+        }
+    } catch (error) {
+        console.error('License validation error:', error);
+
+        // If network error and we have a previously validated license, allow it
+        const existingLicense = JSON.parse(localStorage.getItem('aigoodbyeLicense') || 'null');
+        if (existingLicense?.valid && existingLicense?.key === licenseKey) {
+            console.log('Network error but license was previously validated, allowing access');
+            return { valid: true, offline: true };
+        }
+
+        return { valid: false, error: 'Could not verify license. Please check your internet connection.' };
+    }
+}
+
+// Store validated license
+function storeLicense(licenseKey, valid) {
+    const licenseData = {
+        key: licenseKey,
+        valid: valid,
+        validatedAt: Date.now()
+    };
+    localStorage.setItem('aigoodbyeLicense', JSON.stringify(licenseData));
+}
+
+// Revalidate license in background (doesn't block the app)
+async function revalidateLicenseInBackground(licenseKey) {
+    try {
+        const result = await validateLicenseKey(licenseKey);
+        if (result.valid) {
+            storeLicense(licenseKey, true);
+            console.log('License revalidated successfully');
+        } else {
+            // License is no longer valid - show activation screen on next launch
+            console.warn('License revalidation failed:', result.error);
+            // Don't immediately revoke - let them keep using until next launch
+        }
+    } catch (error) {
+        console.log('Background revalidation skipped (offline)');
+    }
+}
+
+// Show license activation screen
+function showLicenseScreen() {
+    if (loadingScreen) loadingScreen.classList.add('hidden');
+    if (modelSetupScreen) modelSetupScreen.classList.add('hidden');
+    if (app) app.classList.add('hidden');
+    if (licenseScreen) licenseScreen.classList.remove('hidden');
+
+    setupLicenseScreen();
+}
+
+// Setup license screen event handlers
+function setupLicenseScreen() {
+    const licenseInput = document.getElementById('license-key-input');
+    const activateBtn = document.getElementById('activate-license-btn');
+    const buyBtn = document.getElementById('buy-license-btn');
+    const errorEl = document.getElementById('license-error');
+
+    if (!activateBtn) return;
+
+    // Activate button click
+    activateBtn.onclick = async () => {
+        const licenseKey = licenseInput.value.trim();
+
+        if (!licenseKey) {
+            showLicenseError('Please enter your license key');
+            return;
+        }
+
+        // Disable button and show loading state
+        activateBtn.disabled = true;
+        activateBtn.textContent = 'Validating...';
+        hideLicenseError();
+
+        const result = await validateLicenseKey(licenseKey);
+
+        if (result.valid) {
+            storeLicense(licenseKey, true);
+            activateBtn.textContent = 'Activated!';
+
+            // Proceed to app - initialize everything that was skipped
+            setTimeout(async () => {
+                licenseScreen.classList.add('hidden');
+                loadingScreen.classList.remove('hidden');
+
+                // Now set up the rest of the app
+                loadChatsAndFolders();
+                setupNavigation();
+                setupChat();
+                setupSettings();
+                setupModelSetup();
+                setupFileAttachment();
+                setupRetryButton();
+                setupChatFolderManagement();
+
+                // Start Ollama
+                await startupSequence();
+            }, 500);
+        } else {
+            activateBtn.disabled = false;
+            activateBtn.textContent = 'Activate';
+            showLicenseError(result.error || 'Invalid license key. Please check and try again.');
+        }
+    };
+
+    // Buy button click - open checkout in browser
+    if (buyBtn) {
+        buyBtn.onclick = () => {
+            const checkoutUrl = LICENSE_CONFIG.checkoutUrl;
+            if (window.__TAURI__ && window.__TAURI__.shell) {
+                window.__TAURI__.shell.open(checkoutUrl);
+            } else {
+                window.open(checkoutUrl, '_blank');
+            }
+        };
+    }
+
+    // Enter key to submit
+    if (licenseInput) {
+        licenseInput.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                activateBtn.click();
+            }
+        };
+    }
+}
+
+function showLicenseError(message) {
+    const errorEl = document.getElementById('license-error');
+    if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.classList.remove('hidden');
+    }
+}
+
+function hideLicenseError() {
+    const errorEl = document.getElementById('license-error');
+    if (errorEl) {
+        errorEl.classList.add('hidden');
+    }
+}
+
 async function init() {
     console.log('Initializing AI Goodbye Desktop...');
 
     // Initialize DOM references
     initDOMElements();
+
+    // Check for valid license first
+    if (!hasValidLicense()) {
+        console.log('No valid license found, showing activation screen');
+        showLicenseScreen();
+        return;
+    }
+
+    console.log('Valid license found, proceeding with startup');
 
     // Load saved data
     loadChatsAndFolders();

@@ -72,12 +72,11 @@ const APP_VERSION = '1.0.0';
 const UPDATE_CHECK_URL = 'https://aigoodbye.ai/version.json';
 
 // License Configuration
-// TODO: Replace with your actual LemonSqueezy store URL after setup
 const LICENSE_CONFIG = {
     // LemonSqueezy API endpoint for license validation
     validateUrl: 'https://api.lemonsqueezy.com/v1/licenses/validate',
-    // Your checkout URL (update after creating product in LemonSqueezy)
-    checkoutUrl: 'https://aigoodbye.lemonsqueezy.com/checkout',
+    // Checkout URL for purchasing a license
+    checkoutUrl: 'https://aigoodbye.lemonsqueezy.com/checkout/buy/ec549a3f-bbb5-4368-9750-f479f9316afc',
     // How often to re-validate license (30 days in milliseconds)
     revalidateIntervalMs: 30 * 24 * 60 * 60 * 1000
 };

@@ -15,7 +15,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://js.stripe.com/v3/"></script>
     <style>
         :root {
             --neon-blue: #00d4ff;
@@ -1125,129 +1124,6 @@
             color: var(--neon-blue);
         }
 
-        /* Payment Modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(8px);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-overlay.active {
-            display: flex;
-        }
-
-        .modal {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 24px;
-            padding: 40px;
-            max-width: 480px;
-            width: 90%;
-            position: relative;
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            font-size: 1.5rem;
-            cursor: pointer;
-        }
-
-        .modal-close:hover {
-            color: var(--text-primary);
-        }
-
-        .modal-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .modal-subtitle {
-            color: var(--text-secondary);
-            margin-bottom: 32px;
-        }
-
-        .modal-price {
-            text-align: center;
-            padding: 24px;
-            background: rgba(0, 212, 255, 0.1);
-            border-radius: 16px;
-            margin-bottom: 32px;
-        }
-
-        .modal-price-amount {
-            font-size: 2.5rem;
-            font-weight: 800;
-        }
-
-        .modal-price-label {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        #card-element {
-            background: var(--bg-dark);
-            padding: 16px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            margin-bottom: 24px;
-        }
-
-        #card-errors {
-            color: #ef4444;
-            font-size: 0.9rem;
-            margin-bottom: 16px;
-        }
-
-        .modal-btn {
-            width: 100%;
-        }
-
-        .modal-secure {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 16px;
-            color: var(--text-muted);
-            font-size: 0.85rem;
-        }
-
-        /* Success State */
-        .success-message {
-            text-align: center;
-            padding: 40px 0;
-        }
-
-        .success-icon {
-            font-size: 4rem;
-            margin-bottom: 20px;
-        }
-
-        .success-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 12px;
-        }
-
-        .success-text {
-            color: var(--text-secondary);
-            margin-bottom: 24px;
-        }
-
         /* Mobile Menu */
         .mobile-menu-btn {
             display: none;
@@ -1350,11 +1226,6 @@
 
         @keyframes spin {
             to { transform: rotate(360deg); }
-        }
-
-        /* Hide/Show based on payment */
-        .download-ready {
-            display: none;
         }
     </style>
 </head>
@@ -1777,40 +1648,6 @@
         </div>
     </footer>
 
-    <!-- Payment Modal -->
-    <div class="modal-overlay" id="payment-modal">
-        <div class="modal">
-            <button class="modal-close" onclick="closePaymentModal()">&times;</button>
-            <h2 class="modal-title">Purchase AI Goodbye</h2>
-            <p class="modal-subtitle" id="modal-platform">for macOS</p>
-
-            <div class="modal-price">
-                <div class="modal-price-amount">$9.99</div>
-                <div class="modal-price-label">One-time purchase</div>
-            </div>
-
-            <form id="payment-form">
-                <div id="card-element"></div>
-                <div id="card-errors" role="alert"></div>
-                <button type="submit" class="btn btn-primary modal-btn" id="submit-btn">
-                    Pay $9.99
-                </button>
-            </form>
-
-            <div class="modal-secure">
-                🔒 Secure payment powered by Stripe
-            </div>
-
-            <!-- Success State (hidden by default) -->
-            <div class="success-message" id="success-message" style="display: none;">
-                <div class="success-icon">✅</div>
-                <h3 class="success-title">Thank You!</h3>
-                <p class="success-text">Your purchase was successful. Check your email for the download link.</p>
-                <a href="#" class="btn btn-primary" id="download-link">Download Now</a>
-            </div>
-        </div>
-    </div>
-
     <script>
         // FAQ Accordion
         document.querySelectorAll('.faq-question').forEach(button => {
@@ -1828,110 +1665,7 @@
             });
         });
 
-        // Payment Modal
-        let currentPlatform = 'macos';
-
-        function openPaymentModal(platform) {
-            currentPlatform = platform;
-            const modal = document.getElementById('payment-modal');
-            const platformText = document.getElementById('modal-platform');
-
-            platformText.textContent = platform === 'macos' ? 'for macOS' : 'for Windows';
-            modal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closePaymentModal() {
-            const modal = document.getElementById('payment-modal');
-            modal.classList.remove('active');
-            document.body.style.overflow = '';
-        }
-
-        // Close modal on overlay click
-        document.getElementById('payment-modal').addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal-overlay')) {
-                closePaymentModal();
-            }
-        });
-
-        // Close modal on Escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closePaymentModal();
-            }
-        });
-
-        // Stripe Integration Placeholder
-        // NOTE: To enable payments, you need to:
-        // 1. Create a Stripe account at https://stripe.com
-        // 2. Get your publishable key from the Stripe Dashboard
-        // 3. Replace 'pk_test_YOUR_PUBLISHABLE_KEY' below with your actual key
-        // 4. Set up a backend server to create payment intents
-        // 5. Configure webhooks to handle successful payments and deliver download links
-
-        /*
-        // Uncomment and configure when ready to accept payments:
-
-        const stripe = Stripe('pk_test_YOUR_PUBLISHABLE_KEY');
-        const elements = stripe.elements();
-        const cardElement = elements.create('card', {
-            style: {
-                base: {
-                    color: '#ffffff',
-                    fontFamily: 'Inter, sans-serif',
-                    fontSize: '16px',
-                    '::placeholder': {
-                        color: '#6b6b7b'
-                    }
-                },
-                invalid: {
-                    color: '#ef4444'
-                }
-            }
-        });
-        cardElement.mount('#card-element');
-
-        const form = document.getElementById('payment-form');
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitBtn = document.getElementById('submit-btn');
-            submitBtn.classList.add('loading');
-            submitBtn.disabled = true;
-
-            // Create payment intent on your server
-            const response = await fetch('/create-payment-intent', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ platform: currentPlatform })
-            });
-            const { clientSecret } = await response.json();
-
-            // Confirm payment
-            const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-                payment_method: { card: cardElement }
-            });
-
-            if (error) {
-                document.getElementById('card-errors').textContent = error.message;
-                submitBtn.classList.remove('loading');
-                submitBtn.disabled = false;
-            } else if (paymentIntent.status === 'succeeded') {
-                // Show success message
-                document.getElementById('payment-form').style.display = 'none';
-                document.querySelector('.modal-price').style.display = 'none';
-                document.getElementById('success-message').style.display = 'block';
-            }
-        });
-        */
-
-        // Temporary: Show alert for demo purposes
-        document.getElementById('payment-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            alert('Payment system coming soon! Contact marketing@dealerofhappiness.com for early access.');
-        });
-
         // LemonSqueezy checkout configuration
-        // TODO: Replace these URLs after setting up your LemonSqueezy store
         const LEMONSQUEEZY_CONFIG = {
             checkoutUrls: {
                 'macos': 'https://aigoodbye.lemonsqueezy.com/checkout/buy/ec549a3f-bbb5-4368-9750-f479f9316afc',

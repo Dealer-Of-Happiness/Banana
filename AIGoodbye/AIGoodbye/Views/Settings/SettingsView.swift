@@ -14,6 +14,13 @@ struct SettingsView: View {
     @State private var showClearCacheAlert = false
     @State private var showExportOptions = false
 
+    /// App version string from bundle (e.g., "1.1.2")
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "\(version) (\(build))"
+    }
+
     var body: some View {
         Form {
             // AI Settings (Context Window)
@@ -144,7 +151,7 @@ struct SettingsView: View {
             HStack {
                 Text("Version")
                 Spacer()
-                Text("1.0.0")
+                Text(appVersion)
                     .foregroundStyle(.secondary)
             }
 

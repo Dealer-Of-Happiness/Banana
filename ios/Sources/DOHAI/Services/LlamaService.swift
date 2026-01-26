@@ -73,14 +73,21 @@ actor LlamaService {
         modelPathURL = modelPath
 
         // Load from local file with retry logic
-        print("[LlamaService] Loading model...")
+        // CRITICAL: Run LLM initialization on a detached task to avoid blocking
+        print("[LlamaService] Loading model on background thread...")
 
-        var lastError: Error?
         let maxRetries = 3
         let retryDelays: [UInt64] = [500_000_000, 1_000_000_000, 2_000_000_000] // 500ms, 1s, 2s
+        let pathForLoading = modelPath // Capture for use in detached task
 
         for attempt in 1...maxRetries {
-            if let llm = LLM(from: modelPath, template: .chatML()) {
+            // Run the heavy LLM initialization on a background thread
+            let loadedLLM: LLM? = await Task.detached(priority: .userInitiated) {
+                print("[LlamaService] Attempt \(attempt): Initializing LLM on background thread...")
+                return LLM(from: pathForLoading, template: .chatML())
+            }.value
+
+            if let llm = loadedLLM {
                 bot = llm
                 print("[LlamaService] Model loaded successfully on attempt \(attempt)")
                 return
@@ -89,8 +96,6 @@ actor LlamaService {
             if attempt < maxRetries {
                 print("[LlamaService] Model load attempt \(attempt) failed, retrying...")
                 try await Task.sleep(nanoseconds: retryDelays[attempt - 1])
-            } else {
-                lastError = LlamaError.modelLoadFailed("Model initialization failed after \(maxRetries) attempts")
             }
         }
 

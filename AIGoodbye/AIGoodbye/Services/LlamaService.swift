@@ -89,15 +89,22 @@ class LlamaService {
         try verifyFileReadable(at: url, model: model)
 
         // Load model with retry logic
-        // On fast devices, filesystem might not be fully synced after download
-        print("[LlamaService] Loading model...")
+        // CRITICAL: Run LLM initialization OFF the main thread to avoid blocking UI
+        // and triggering iOS watchdog timer (which kills apps blocking main thread >2-3 seconds)
+        print("[LlamaService] Loading model on background thread...")
 
-        var lastError: Error?
         let maxRetries = 3
         let retryDelays: [UInt64] = [500_000_000, 1_000_000_000, 2_000_000_000] // 500ms, 1s, 2s
 
         for attempt in 1...maxRetries {
-            if let llm = LLM(from: url, template: template, historyLimit: 30) {
+            // Run the heavy LLM initialization on a background thread
+            // This prevents blocking the main thread and avoids iOS watchdog termination
+            let loadedLLM: LLM? = await Task.detached(priority: .userInitiated) {
+                print("[LlamaService] Attempt \(attempt): Initializing LLM on background thread...")
+                return LLM(from: url, template: template, historyLimit: 30)
+            }.value
+
+            if let llm = loadedLLM {
                 bot = llm
                 modelURL = url
                 currentModelId = model.id
@@ -108,8 +115,6 @@ class LlamaService {
             if attempt < maxRetries {
                 print("[LlamaService] Model load attempt \(attempt) failed, retrying in \(retryDelays[attempt - 1] / 1_000_000)ms...")
                 try await Task.sleep(nanoseconds: retryDelays[attempt - 1])
-            } else {
-                lastError = LlamaError.modelLoadFailed("Model initialization failed after \(maxRetries) attempts")
             }
         }
 
@@ -249,12 +254,17 @@ class LlamaService {
         let template = templateForModel(model)
 
         // Load model with retry logic
-        var lastError: Error?
+        // CRITICAL: Run LLM initialization OFF the main thread
         let maxRetries = 3
         let retryDelays: [UInt64] = [500_000_000, 1_000_000_000, 2_000_000_000] // 500ms, 1s, 2s
 
         for attempt in 1...maxRetries {
-            if let llm = LLM(from: url, template: template, historyLimit: 30) {
+            // Run the heavy LLM initialization on a background thread
+            let loadedLLM: LLM? = await Task.detached(priority: .userInitiated) {
+                return LLM(from: url, template: template, historyLimit: 30)
+            }.value
+
+            if let llm = loadedLLM {
                 bot = llm
                 modelURL = url
                 currentModelId = model.id

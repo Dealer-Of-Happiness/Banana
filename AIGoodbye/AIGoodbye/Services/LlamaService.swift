@@ -57,14 +57,16 @@ class LlamaService {
         let manager = getModelManager()
         let url = manager.modelPath(for: model)
         let fileManager = FileManager.default
+        let modelSizeBytes = model.sizeBytes
+        let template = templateForModel(model)
 
-        // Check if model is downloaded and valid
+        // Quick check if download needed (minimal main thread impact)
         var needsDownload = !fileManager.fileExists(atPath: url.path)
 
         if !needsDownload {
             if let attributes = try? fileManager.attributesOfItem(atPath: url.path),
                let fileSize = attributes[.size] as? Int64 {
-                let minimumSize = model.sizeBytes / 2
+                let minimumSize = modelSizeBytes / 2
                 if fileSize < minimumSize {
                     print("[LlamaService] Model file too small (\(fileSize) bytes), redownloading...")
                     try? fileManager.removeItem(at: url)
@@ -79,69 +81,78 @@ class LlamaService {
             try await Task.sleep(nanoseconds: 500_000_000) // 500ms
         }
 
-        let template = templateForModel(model)
-
         guard fileManager.fileExists(atPath: url.path) else {
             throw LlamaError.modelNotFound
         }
 
-        // Verify file is readable before attempting to load
-        try verifyFileReadable(at: url, model: model)
+        print("[LlamaService] Loading model on background thread (non-blocking)...")
 
-        // Load model with retry logic
-        // CRITICAL: Run LLM initialization OFF the main thread to avoid blocking UI
-        // and triggering iOS watchdog timer (which kills apps blocking main thread >2-3 seconds)
-        print("[LlamaService] Loading model on background thread...")
+        // CRITICAL FIX: Use withCheckedThrowingContinuation for TRUE async suspension
+        // This allows the main thread to remain responsive while waiting for model load
+        // Unlike Task.detached().value which BLOCKS the calling thread waiting for result,
+        // this pattern properly SUSPENDS the async function, freeing the main thread
+        let loadedLLM = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<LLM, Error>) in
+            // Dispatch ALL heavy work to background queue
+            // Main thread is now FREE - not blocked waiting
+            DispatchQueue.global(qos: .userInitiated).async {
+                // 1. Verify file on background thread (was blocking main thread before!)
+                let verifyResult = Self.verifyFileOnBackgroundThread(at: url, modelSizeBytes: modelSizeBytes)
+                if case .failure(let error) = verifyResult {
+                    continuation.resume(throwing: error)
+                    return
+                }
 
-        let maxRetries = 3
-        let retryDelays: [UInt64] = [500_000_000, 1_000_000_000, 2_000_000_000] // 500ms, 1s, 2s
+                // 2. Initialize LLM with retries - all on background thread
+                let maxRetries = 3
+                let retryDelays: [TimeInterval] = [0.5, 1.0, 2.0]
 
-        for attempt in 1...maxRetries {
-            // Run the heavy LLM initialization on a background thread
-            // This prevents blocking the main thread and avoids iOS watchdog termination
-            let loadedLLM: LLM? = await Task.detached(priority: .userInitiated) {
-                print("[LlamaService] Attempt \(attempt): Initializing LLM on background thread...")
-                return LLM(from: url, template: template, historyLimit: 30)
-            }.value
+                for attempt in 1...maxRetries {
+                    print("[LlamaService] Attempt \(attempt): Initializing LLM on background thread...")
 
-            if let llm = loadedLLM {
-                bot = llm
-                modelURL = url
-                currentModelId = model.id
-                print("[LlamaService] Model loaded successfully on attempt \(attempt) with historyLimit: 30")
-                return
-            }
+                    if let llm = LLM(from: url, template: template, historyLimit: 30) {
+                        print("[LlamaService] Model loaded successfully on attempt \(attempt)")
+                        continuation.resume(returning: llm)
+                        return
+                    }
 
-            if attempt < maxRetries {
-                print("[LlamaService] Model load attempt \(attempt) failed, retrying in \(retryDelays[attempt - 1] / 1_000_000)ms...")
-                try await Task.sleep(nanoseconds: retryDelays[attempt - 1])
+                    if attempt < maxRetries {
+                        print("[LlamaService] Attempt \(attempt) failed, retrying in \(retryDelays[attempt - 1])s...")
+                        Thread.sleep(forTimeInterval: retryDelays[attempt - 1])
+                    }
+                }
+
+                // All retries failed - diagnose on background thread
+                let diagnosis = Self.diagnoseLoadFailureOnBackgroundThread(at: url, expectedSize: modelSizeBytes)
+                continuation.resume(throwing: LlamaError.modelLoadFailed(diagnosis))
             }
         }
 
-        // All retries failed - try to diagnose the issue
-        let diagnosis = diagnoseModelLoadFailure(at: url, model: model)
-        throw LlamaError.modelLoadFailed(diagnosis)
+        // Back on MainActor after continuation resumes - assign to instance
+        bot = loadedLLM
+        modelURL = url
+        currentModelId = model.id
+        print("[LlamaService] Model assigned and ready for use")
     }
 
-    /// Verify the model file is readable and has valid GGUF header
-    private func verifyFileReadable(at url: URL, model: AIModel) throws {
+    // MARK: - Background Thread Helpers (Static to avoid @MainActor isolation)
+
+    /// Verify file on background thread - static to avoid MainActor isolation
+    private static func verifyFileOnBackgroundThread(at url: URL, modelSizeBytes: Int64) -> Result<Void, Error> {
         let fileManager = FileManager.default
 
-        // Check file exists
         guard fileManager.fileExists(atPath: url.path) else {
-            throw LlamaError.modelNotFound
+            return .failure(LlamaError.modelNotFound)
         }
 
-        // Check file size
         guard let attributes = try? fileManager.attributesOfItem(atPath: url.path),
               let fileSize = attributes[.size] as? Int64 else {
-            throw LlamaError.modelLoadFailed("Cannot read model file attributes")
+            return .failure(LlamaError.modelLoadFailed("Cannot read model file attributes"))
         }
 
-        let minimumSize = model.sizeBytes / 2
+        let minimumSize = modelSizeBytes / 2
         if fileSize < minimumSize {
             try? fileManager.removeItem(at: url)
-            throw LlamaError.modelLoadFailed("Model file is incomplete (\(fileSize / 1_000_000) MB). Please download again.")
+            return .failure(LlamaError.modelLoadFailed("Model file is incomplete (\(fileSize / 1_000_000) MB). Please download again."))
         }
 
         // Verify GGUF magic header
@@ -151,67 +162,58 @@ class LlamaService {
 
             guard let headerData = try handle.read(upToCount: 4),
                   headerData.count == 4 else {
-                throw LlamaError.modelLoadFailed("Cannot read model file header")
+                return .failure(LlamaError.modelLoadFailed("Cannot read model file header"))
             }
 
             let magic = headerData.withUnsafeBytes { $0.load(as: UInt32.self) }
             if magic != 0x46554747 { // "GGUF"
                 try? fileManager.removeItem(at: url)
-                throw LlamaError.modelLoadFailed("Model file is corrupted (invalid format). Please download again.")
+                return .failure(LlamaError.modelLoadFailed("Model file is corrupted. Please download again."))
             }
-        } catch let error as LlamaError {
-            throw error
         } catch {
-            throw LlamaError.modelLoadFailed("Cannot verify model file: \(error.localizedDescription)")
+            return .failure(LlamaError.modelLoadFailed("Cannot verify model file: \(error.localizedDescription)"))
         }
 
         print("[LlamaService] File verification passed: \(fileSize / 1_000_000) MB, valid GGUF")
+        return .success(())
     }
 
-    /// Diagnose why model loading failed and provide helpful error message
-    private func diagnoseModelLoadFailure(at url: URL, model: AIModel) -> String {
+    /// Diagnose load failure on background thread - static to avoid MainActor isolation
+    private static func diagnoseLoadFailureOnBackgroundThread(at url: URL, expectedSize: Int64) -> String {
         let fileManager = FileManager.default
 
-        // Check if file exists
         guard fileManager.fileExists(atPath: url.path) else {
             return "Model file not found. Please download again."
         }
 
-        // Check file size
         if let attributes = try? fileManager.attributesOfItem(atPath: url.path),
            let fileSize = attributes[.size] as? Int64 {
-            let expectedSize = model.sizeBytes
             let percentComplete = Int((Double(fileSize) / Double(expectedSize)) * 100)
 
             if fileSize < expectedSize / 2 {
-                // File is too small - likely incomplete download
                 try? fileManager.removeItem(at: url)
                 return "Download incomplete (\(percentComplete)%). Please download again."
             }
 
-            // File size looks OK, might be corrupted
-            if fileSize > 0 {
-                // Check GGUF header
-                if let handle = try? FileHandle(forReadingFrom: url),
-                   let headerData = try? handle.read(upToCount: 4) {
-                    try? handle.close()
+            // Check GGUF header
+            if let handle = try? FileHandle(forReadingFrom: url),
+               let headerData = try? handle.read(upToCount: 4) {
+                try? handle.close()
 
-                    if headerData.count < 4 {
-                        try? fileManager.removeItem(at: url)
-                        return "Model file is corrupted. Please download again."
-                    }
+                if headerData.count < 4 {
+                    try? fileManager.removeItem(at: url)
+                    return "Model file is corrupted. Please download again."
+                }
 
-                    let magic = headerData.withUnsafeBytes { $0.load(as: UInt32.self) }
-                    if magic != 0x46554747 {
-                        try? fileManager.removeItem(at: url)
-                        return "Model file has invalid format. Please download again."
-                    }
+                let magic = headerData.withUnsafeBytes { $0.load(as: UInt32.self) }
+                if magic != 0x46554747 {
+                    try? fileManager.removeItem(at: url)
+                    return "Model file has invalid format. Please download again."
                 }
             }
         }
 
-        // File looks valid but still can't load - likely memory issue
-        return "Cannot load model. Try closing other apps and restarting."
+        return "Could not initialize AI model. Try restarting the app."
     }
 
     private func templateForModel(_ model: AIModel) -> Template {
@@ -243,44 +245,52 @@ class LlamaService {
         let manager = getModelManager()
         let url = manager.modelPath(for: model)
         let fileManager = FileManager.default
+        let modelSizeBytes = model.sizeBytes
+        let template = templateForModel(model)
 
         guard fileManager.fileExists(atPath: url.path) else {
             throw LlamaError.modelNotFound
         }
 
-        // Verify file is readable and valid
-        try verifyFileReadable(at: url, model: model)
+        print("[LlamaService] Loading specific model on background thread (non-blocking)...")
 
-        let template = templateForModel(model)
+        // Use withCheckedThrowingContinuation for TRUE async suspension
+        let loadedLLM = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<LLM, Error>) in
+            DispatchQueue.global(qos: .userInitiated).async {
+                // Verify file on background thread
+                let verifyResult = Self.verifyFileOnBackgroundThread(at: url, modelSizeBytes: modelSizeBytes)
+                if case .failure(let error) = verifyResult {
+                    continuation.resume(throwing: error)
+                    return
+                }
 
-        // Load model with retry logic
-        // CRITICAL: Run LLM initialization OFF the main thread
-        let maxRetries = 3
-        let retryDelays: [UInt64] = [500_000_000, 1_000_000_000, 2_000_000_000] // 500ms, 1s, 2s
+                // Initialize LLM with retries
+                let maxRetries = 3
+                let retryDelays: [TimeInterval] = [0.5, 1.0, 2.0]
 
-        for attempt in 1...maxRetries {
-            // Run the heavy LLM initialization on a background thread
-            let loadedLLM: LLM? = await Task.detached(priority: .userInitiated) {
-                return LLM(from: url, template: template, historyLimit: 30)
-            }.value
+                for attempt in 1...maxRetries {
+                    print("[LlamaService] Attempt \(attempt): Loading \(model.name)...")
 
-            if let llm = loadedLLM {
-                bot = llm
-                modelURL = url
-                currentModelId = model.id
-                print("[LlamaService] Model \(model.name) loaded successfully on attempt \(attempt)")
-                return
-            }
+                    if let llm = LLM(from: url, template: template, historyLimit: 30) {
+                        print("[LlamaService] Model \(model.name) loaded successfully on attempt \(attempt)")
+                        continuation.resume(returning: llm)
+                        return
+                    }
 
-            if attempt < maxRetries {
-                print("[LlamaService] Model load attempt \(attempt) failed, retrying...")
-                try await Task.sleep(nanoseconds: retryDelays[attempt - 1])
+                    if attempt < maxRetries {
+                        Thread.sleep(forTimeInterval: retryDelays[attempt - 1])
+                    }
+                }
+
+                let diagnosis = Self.diagnoseLoadFailureOnBackgroundThread(at: url, expectedSize: modelSizeBytes)
+                continuation.resume(throwing: LlamaError.modelLoadFailed(diagnosis))
             }
         }
 
-        // All retries failed
-        let diagnosis = diagnoseModelLoadFailure(at: url, model: model)
-        throw LlamaError.modelLoadFailed(diagnosis)
+        bot = loadedLLM
+        modelURL = url
+        currentModelId = model.id
+        print("[LlamaService] Model \(model.name) assigned and ready for use")
     }
 
     private func downloadModel(_ model: AIModel) async throws {

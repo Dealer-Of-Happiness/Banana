@@ -168,9 +168,6 @@ struct LoadingView: View {
     @State private var currentPhraseIndex = 0
     @State private var phraseOpacity: Double = 1.0
 
-    // Timer for rotating text
-    let timer = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
-
     var body: some View {
         VStack(spacing: 30) {
             Spacer()
@@ -229,22 +226,29 @@ struct LoadingView: View {
             }
             .padding(.horizontal, 40)
             .padding(.bottom, 30)
-            .onReceive(timer) { _ in
+        }
+        .padding()
+        // Use .task for timer - automatically cancelled when view disappears
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
+                guard !Task.isCancelled else { break }
+
                 // Fade out
                 withAnimation(.easeOut(duration: 0.4)) {
                     phraseOpacity = 0
                 }
 
-                // Change text and fade in after delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                    currentPhraseIndex = (currentPhraseIndex + 1) % taglinePhrases.count
-                    withAnimation(.easeIn(duration: 0.4)) {
-                        phraseOpacity = 1
-                    }
+                try? await Task.sleep(nanoseconds: 400_000_000) // 0.4 seconds
+                guard !Task.isCancelled else { break }
+
+                // Change text and fade in
+                currentPhraseIndex = (currentPhraseIndex + 1) % taglinePhrases.count
+                withAnimation(.easeIn(duration: 0.4)) {
+                    phraseOpacity = 1
                 }
             }
         }
-        .padding()
     }
 }
 

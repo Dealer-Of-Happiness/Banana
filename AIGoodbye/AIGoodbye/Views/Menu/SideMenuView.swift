@@ -26,6 +26,17 @@ struct SideMenuView: View {
     @State private var showFolderContents = false
     @State private var folderToView: Folder?
 
+    // Pre-compute folder chat counts once - O(n) instead of O(n * m)
+    private var folderChatCounts: [UUID: Int] {
+        var counts: [UUID: Int] = [:]
+        for conversation in appState.conversationManager.conversations {
+            if let folderId = conversation.folderId {
+                counts[folderId, default: 0] += 1
+            }
+        }
+        return counts
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
@@ -209,7 +220,7 @@ struct SideMenuView: View {
                     FolderRow(
                         folder: folder,
                         isDropTarget: targetedFolderId == folder.id,
-                        chatCount: appState.conversationManager.conversations.filter { $0.folderId == folder.id }.count,
+                        chatCount: folderChatCounts[folder.id, default: 0],
                         onTap: {
                             folderToView = folder
                             showFolderContents = true

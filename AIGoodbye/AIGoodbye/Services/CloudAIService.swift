@@ -210,7 +210,12 @@ actor CloudAIService {
                     return
                 }
 
-                let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:streamGenerateContent?key=\(apiKey)")!
+                // URL-encode the API key to handle special characters safely
+                guard let encodedKey = apiKey.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                      let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:streamGenerateContent?key=\(encodedKey)") else {
+                    continuation.finish(throwing: CloudAIError.requestFailed)
+                    return
+                }
 
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"

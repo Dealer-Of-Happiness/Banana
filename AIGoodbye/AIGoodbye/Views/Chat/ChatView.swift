@@ -291,7 +291,76 @@ class ChatViewModel: ObservableObject {
     }
 
     func regenerateResponse(for message: Message) {
-        // Find and regenerate
+        guard message.role == .assistant else { return }
+        guard let conversation = appState?.currentConversation else { return }
+
+        // Find the index of this message
+        guard let messageIndex = messages.firstIndex(where: { $0.id == message.id }) else { return }
+
+        // Find the preceding user message to regenerate from
+        var userMessageContent: String?
+        for i in stride(from: messageIndex - 1, through: 0, by: -1) {
+            if messages[i].role == .user {
+                userMessageContent = messages[i].content
+                break
+            }
+        }
+
+        guard let promptText = userMessageContent else { return }
+
+        // Remove the assistant message from SwiftData
+        appState?.conversationManager.deleteMessage(message)
+
+        // Remove from local messages array
+        messages.removeAll { $0.id == message.id }
+
+        // Rebuild LLM history without the deleted message
+        let historyForLLM = messages.map { ($0.role.rawValue, $0.content) }
+        appState?.llamaService.restoreHistory(historyForLLM)
+
+        // Generate new response
+        Task {
+            isGenerating = true
+
+            do {
+                guard let llamaService = appState?.llamaService else { return }
+
+                var responseText = ""
+                for try await chunk in llamaService.generate(prompt: promptText) {
+                    responseText = chunk
+                }
+
+                // Add new response to conversation
+                if !responseText.isEmpty {
+                    let assistantMessage = appState?.conversationManager.addMessage(
+                        to: conversation,
+                        role: .assistant,
+                        content: responseText
+                    )
+                    if let msg = assistantMessage {
+                        messages.append(msg)
+                    }
+                }
+
+                // Haptic feedback
+                if appState?.settings.hapticFeedbackEnabled ?? false {
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.success)
+                }
+
+            } catch {
+                let errorMessage = appState?.conversationManager.addMessage(
+                    to: conversation,
+                    role: .system,
+                    content: "Error regenerating: \(error.localizedDescription)"
+                )
+                if let msg = errorMessage {
+                    messages.append(msg)
+                }
+            }
+
+            isGenerating = false
+        }
     }
 
     func clearConversation() {

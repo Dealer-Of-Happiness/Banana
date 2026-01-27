@@ -25,6 +25,9 @@ struct SideMenuView: View {
     @State private var conversationToDelete: Conversation?
     @State private var showFolderContents = false
     @State private var folderToView: Folder?
+    @State private var showRenameFolderAlert = false
+    @State private var renameFolderName = ""
+    @State private var folderToRename: Folder?
 
     // Pre-compute folder chat counts once - O(n) instead of O(n * m)
     private var folderChatCounts: [UUID: Int] {
@@ -254,7 +257,9 @@ struct SideMenuView: View {
         }
         .confirmationDialog("Folder Options", isPresented: $showFolderOptions, presenting: selectedFolder) { folder in
             Button("Rename") {
-                // TODO: Handle rename with alert
+                folderToRename = folder
+                renameFolderName = folder.name
+                showRenameFolderAlert = true
             }
 
             Button("Delete", role: .destructive) {
@@ -262,6 +267,23 @@ struct SideMenuView: View {
             }
 
             Button("Cancel", role: .cancel) {}
+        }
+        .alert("Rename Folder", isPresented: $showRenameFolderAlert) {
+            TextField("Folder name", text: $renameFolderName)
+            Button("Cancel", role: .cancel) {
+                renameFolderName = ""
+                folderToRename = nil
+            }
+            Button("Rename") {
+                if let folder = folderToRename, !renameFolderName.isEmpty {
+                    appState.conversationManager.renameFolder(folder, to: renameFolderName)
+                    appState.objectWillChange.send()
+                }
+                renameFolderName = ""
+                folderToRename = nil
+            }
+        } message: {
+            Text("Enter a new name for this folder")
         }
     }
 

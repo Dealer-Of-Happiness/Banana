@@ -38,7 +38,8 @@ final class Conversation {
     }
 
     var lastMessage: Message? {
-        messages.sorted { $0.timestamp < $1.timestamp }.last
+        // Use max(by:) instead of sort().last - O(n) vs O(n log n)
+        messages.max(by: { $0.timestamp < $1.timestamp })
     }
 
     var previewText: String {

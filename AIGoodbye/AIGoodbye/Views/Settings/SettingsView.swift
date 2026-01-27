@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import UIKit
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
@@ -48,10 +49,20 @@ struct SettingsView: View {
         .confirmationDialog("Export Format", isPresented: $showExportOptions) {
             ForEach(ExportFormat.allCases, id: \.self) { format in
                 Button(format.displayName) {
-                    Task { await viewModel.exportConversations(format: format) }
+                    Task {
+                        await viewModel.exportConversations(
+                            format: format,
+                            conversations: appState.conversationManager.conversations
+                        )
+                    }
                 }
             }
             Button("Cancel", role: .cancel) {}
+        }
+        .sheet(isPresented: $viewModel.showShareSheet) {
+            if let url = viewModel.exportURL {
+                ShareSheet(items: [url])
+            }
         }
     }
 
@@ -186,14 +197,214 @@ class SettingsViewModel: ObservableObject {
     // AI Configuration
     @Published var temperature: Double = 0.7
     @Published var contextWindow: Double = 4096
+    @Published var exportURL: URL?
+    @Published var showShareSheet = false
 
     func loadSettings(from settings: SettingsManager) {
         temperature = settings.temperature
         contextWindow = Double(settings.contextWindow)
     }
 
-    func exportConversations(format: ExportFormat) async {
-        // Export conversations in selected format
+    func exportConversations(format: ExportFormat, conversations: [Conversation]) async {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .medium
+        dateFormatter.timeStyle = .short
+
+        let fileName = "AiGoodbye_Export_\(Date().formatted(date: .numeric, time: .omitted).replacingOccurrences(of: "/", with: "-"))"
+        let tempDir = FileManager.default.temporaryDirectory
+
+        switch format {
+        case .txt:
+            let content = generateTextExport(conversations: conversations, dateFormatter: dateFormatter)
+            let fileURL = tempDir.appendingPathComponent("\(fileName).txt")
+            try? content.write(to: fileURL, atomically: true, encoding: .utf8)
+            exportURL = fileURL
+            showShareSheet = true
+
+        case .json:
+            let content = generateJSONExport(conversations: conversations)
+            let fileURL = tempDir.appendingPathComponent("\(fileName).json")
+            try? content.write(to: fileURL, atomically: true, encoding: .utf8)
+            exportURL = fileURL
+            showShareSheet = true
+
+        case .pdf:
+            if let pdfData = generatePDFExport(conversations: conversations, dateFormatter: dateFormatter) {
+                let fileURL = tempDir.appendingPathComponent("\(fileName).pdf")
+                try? pdfData.write(to: fileURL)
+                exportURL = fileURL
+                showShareSheet = true
+            }
+        }
+    }
+
+    private func generateTextExport(conversations: [Conversation], dateFormatter: DateFormatter) -> String {
+        var text = "AiGoodbye Conversations Export\n"
+        text += "Exported on: \(dateFormatter.string(from: Date()))\n"
+        text += "Total conversations: \(conversations.count)\n"
+        text += String(repeating: "=", count: 50) + "\n\n"
+
+        for conversation in conversations {
+            text += "CONVERSATION: \(conversation.title)\n"
+            text += "Created: \(dateFormatter.string(from: conversation.createdAt))\n"
+            text += "Updated: \(dateFormatter.string(from: conversation.updatedAt))\n"
+            text += String(repeating: "-", count: 40) + "\n"
+
+            let sortedMessages = conversation.messages.sorted { $0.timestamp < $1.timestamp }
+            for message in sortedMessages {
+                let role = message.role.rawValue.uppercased()
+                let time = dateFormatter.string(from: message.timestamp)
+                text += "[\(role)] (\(time))\n"
+                text += "\(message.content)\n\n"
+            }
+
+            text += "\n" + String(repeating: "=", count: 50) + "\n\n"
+        }
+
+        return text
+    }
+
+    private func generateJSONExport(conversations: [Conversation]) -> String {
+        var exportData: [[String: Any]] = []
+
+        for conversation in conversations {
+            var convDict: [String: Any] = [
+                "id": conversation.id.uuidString,
+                "title": conversation.title,
+                "createdAt": ISO8601DateFormatter().string(from: conversation.createdAt),
+                "updatedAt": ISO8601DateFormatter().string(from: conversation.updatedAt)
+            ]
+
+            let sortedMessages = conversation.messages.sorted { $0.timestamp < $1.timestamp }
+            var messagesArray: [[String: Any]] = []
+            for message in sortedMessages {
+                messagesArray.append([
+                    "id": message.id.uuidString,
+                    "role": message.role.rawValue,
+                    "content": message.content,
+                    "timestamp": ISO8601DateFormatter().string(from: message.timestamp)
+                ])
+            }
+            convDict["messages"] = messagesArray
+
+            exportData.append(convDict)
+        }
+
+        let wrapper: [String: Any] = [
+            "exportDate": ISO8601DateFormatter().string(from: Date()),
+            "appVersion": Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
+            "totalConversations": conversations.count,
+            "conversations": exportData
+        ]
+
+        if let jsonData = try? JSONSerialization.data(withJSONObject: wrapper, options: [.prettyPrinted, .sortedKeys]),
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+            return jsonString
+        }
+
+        return "{}"
+    }
+
+    private func generatePDFExport(conversations: [Conversation], dateFormatter: DateFormatter) -> Data? {
+        let pageWidth: CGFloat = 612  // Letter size
+        let pageHeight: CGFloat = 792
+        let margin: CGFloat = 50
+        let contentWidth = pageWidth - (margin * 2)
+
+        let pdfRenderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight))
+
+        let data = pdfRenderer.pdfData { context in
+            let titleAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.boldSystemFont(ofSize: 24),
+                .foregroundColor: UIColor.black
+            ]
+            let headerAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.boldSystemFont(ofSize: 14),
+                .foregroundColor: UIColor.darkGray
+            ]
+            let roleAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.boldSystemFont(ofSize: 12),
+                .foregroundColor: UIColor.systemBlue
+            ]
+            let contentAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 11),
+                .foregroundColor: UIColor.black
+            ]
+            let metaAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.italicSystemFont(ofSize: 9),
+                .foregroundColor: UIColor.gray
+            ]
+
+            var yPosition: CGFloat = margin
+
+            func startNewPage() {
+                context.beginPage()
+                yPosition = margin
+            }
+
+            func checkPageBreak(neededHeight: CGFloat) {
+                if yPosition + neededHeight > pageHeight - margin {
+                    startNewPage()
+                }
+            }
+
+            // First page with title
+            startNewPage()
+
+            let title = "AiGoodbye Conversations"
+            title.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: titleAttributes)
+            yPosition += 35
+
+            let exportInfo = "Exported: \(dateFormatter.string(from: Date())) | \(conversations.count) conversations"
+            exportInfo.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: metaAttributes)
+            yPosition += 40
+
+            for conversation in conversations {
+                checkPageBreak(neededHeight: 100)
+
+                // Conversation title
+                let convTitle = conversation.title
+                convTitle.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: headerAttributes)
+                yPosition += 20
+
+                let convMeta = "Created: \(dateFormatter.string(from: conversation.createdAt))"
+                convMeta.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: metaAttributes)
+                yPosition += 25
+
+                let sortedMessages = conversation.messages.sorted { $0.timestamp < $1.timestamp }
+                for message in sortedMessages {
+                    let roleText = message.role.rawValue.uppercased()
+                    let textHeight = (message.content as NSString).boundingRect(
+                        with: CGSize(width: contentWidth - 20, height: .greatestFiniteMagnitude),
+                        options: [.usesLineFragmentOrigin, .usesFontLeading],
+                        attributes: contentAttributes,
+                        context: nil
+                    ).height
+
+                    checkPageBreak(neededHeight: textHeight + 30)
+
+                    roleText.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: roleAttributes)
+                    yPosition += 15
+
+                    let contentRect = CGRect(x: margin + 10, y: yPosition, width: contentWidth - 20, height: textHeight + 5)
+                    message.content.draw(in: contentRect, withAttributes: contentAttributes)
+                    yPosition += textHeight + 15
+                }
+
+                yPosition += 20
+
+                // Draw separator line
+                checkPageBreak(neededHeight: 10)
+                let linePath = UIBezierPath()
+                linePath.move(to: CGPoint(x: margin, y: yPosition))
+                linePath.addLine(to: CGPoint(x: pageWidth - margin, y: yPosition))
+                UIColor.lightGray.setStroke()
+                linePath.stroke()
+                yPosition += 20
+            }
+        }
+
+        return data
     }
 }
 
@@ -368,6 +579,18 @@ struct PrivacyPolicyView: View {
         .navigationTitle("Privacy Policy")
         .navigationBarTitleDisplayMode(.inline)
     }
+}
+
+// MARK: - Share Sheet
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {

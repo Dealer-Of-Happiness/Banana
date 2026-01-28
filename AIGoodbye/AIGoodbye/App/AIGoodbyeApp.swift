@@ -82,7 +82,7 @@ class AppState: ObservableObject {
 
     // Services
     let settings: SettingsManager
-    let llamaService: LlamaService
+    let mlxService: MLXService  // Vision-capable MLX service (replaces LlamaService)
     let speechService: SpeechService
     let documentService: DocumentService
     let imageService: ImageAnalysisService
@@ -91,11 +91,23 @@ class AppState: ObservableObject {
     let iCloudService: ICloudSyncService
     let conversationManager: ConversationManager
 
+    // Legacy service for backward compatibility
+    var llamaService: LlamaService { _llamaService }
+    private let _llamaService: LlamaService
+
     init() {
         self.settings = SettingsManager()
-        self.llamaService = LlamaService(
+
+        // Primary: MLX Service with vision capabilities
+        self.mlxService = MLXService(
             temperature: settings.temperature
         )
+
+        // Legacy: LlamaService for backward compatibility
+        self._llamaService = LlamaService(
+            temperature: settings.temperature
+        )
+
         self.speechService = SpeechService(settings: settings)
         self.documentService = DocumentService()
         self.imageService = ImageAnalysisService()
@@ -118,8 +130,8 @@ class AppState: ObservableObject {
         loadingMessage = "Checking for AI model..."
 
         do {
-            loadingMessage = "Loading offline AI Model..."
-            try await llamaService.loadModel()
+            loadingMessage = "Loading Qwen3 Vision AI..."
+            try await mlxService.loadModel()
 
             loadingMessage = "Initializing services..."
             await conversationManager.initialize()

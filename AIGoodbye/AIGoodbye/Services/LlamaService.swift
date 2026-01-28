@@ -102,26 +102,35 @@ class LlamaService {
                     return
                 }
 
-                // 2. Initialize LLM with retries - all on background thread
-                let maxRetries = 3
-                let retryDelays: [TimeInterval] = [0.5, 1.0, 2.0]
+                // 2. Try GPU first (gpuLayers = 99), then fallback to CPU (gpuLayers = 0)
+                // This handles devices like iPhone 17 with A19 chip where Metal may fail
+                let gpuConfigs: [(name: String, layers: Int32)] = [
+                    ("GPU", 99),   // Try full GPU acceleration first
+                    ("CPU", 0)     // Fallback to CPU-only if GPU fails
+                ]
 
-                for attempt in 1...maxRetries {
-                    print("[LlamaService] Attempt \(attempt): Initializing LLM on background thread...")
+                for config in gpuConfigs {
+                    print("[LlamaService] Trying \(config.name) mode (gpuLayers: \(config.layers))...")
 
-                    if let llm = LLM(from: url, template: template, historyLimit: 30) {
-                        print("[LlamaService] Model loaded successfully on attempt \(attempt)")
-                        continuation.resume(returning: llm)
-                        return
+                    // Try up to 2 attempts per configuration
+                    for attempt in 1...2 {
+                        print("[LlamaService] \(config.name) attempt \(attempt)...")
+
+                        if let llm = LLM(from: url, template: template, historyLimit: 30, gpuLayers: config.layers) {
+                            print("[LlamaService] Model loaded successfully with \(config.name) mode!")
+                            continuation.resume(returning: llm)
+                            return
+                        }
+
+                        if attempt < 2 {
+                            Thread.sleep(forTimeInterval: 0.5)
+                        }
                     }
 
-                    if attempt < maxRetries {
-                        print("[LlamaService] Attempt \(attempt) failed, retrying in \(retryDelays[attempt - 1])s...")
-                        Thread.sleep(forTimeInterval: retryDelays[attempt - 1])
-                    }
+                    print("[LlamaService] \(config.name) mode failed, trying next configuration...")
                 }
 
-                // All retries failed - diagnose on background thread
+                // All configurations failed - diagnose on background thread
                 let diagnosis = Self.diagnoseLoadFailureOnBackgroundThread(at: url, expectedSize: modelSizeBytes)
                 continuation.resume(throwing: LlamaError.modelLoadFailed(diagnosis))
             }
@@ -264,21 +273,25 @@ class LlamaService {
                     return
                 }
 
-                // Initialize LLM with retries
-                let maxRetries = 3
-                let retryDelays: [TimeInterval] = [0.5, 1.0, 2.0]
+                // Try GPU first, then fallback to CPU
+                let gpuConfigs: [(name: String, layers: Int32)] = [
+                    ("GPU", 99),
+                    ("CPU", 0)
+                ]
 
-                for attempt in 1...maxRetries {
-                    print("[LlamaService] Attempt \(attempt): Loading \(model.name)...")
+                for config in gpuConfigs {
+                    print("[LlamaService] Trying \(config.name) mode for \(model.name)...")
 
-                    if let llm = LLM(from: url, template: template, historyLimit: 30) {
-                        print("[LlamaService] Model \(model.name) loaded successfully on attempt \(attempt)")
-                        continuation.resume(returning: llm)
-                        return
-                    }
+                    for attempt in 1...2 {
+                        if let llm = LLM(from: url, template: template, historyLimit: 30, gpuLayers: config.layers) {
+                            print("[LlamaService] Model \(model.name) loaded successfully with \(config.name) mode!")
+                            continuation.resume(returning: llm)
+                            return
+                        }
 
-                    if attempt < maxRetries {
-                        Thread.sleep(forTimeInterval: retryDelays[attempt - 1])
+                        if attempt < 2 {
+                            Thread.sleep(forTimeInterval: 0.5)
+                        }
                     }
                 }
 

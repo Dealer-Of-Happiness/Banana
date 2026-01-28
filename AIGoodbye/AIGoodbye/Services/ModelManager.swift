@@ -75,24 +75,67 @@ class ModelManager: ObservableObject {
     // MARK: - Model Path
 
     func modelPath(for model: AIModel) -> URL {
-        modelsDirectory.appendingPathComponent(model.fileName)
+        // MLX models use a directory, GGUF models use a single file
+        if model.backend == .mlx {
+            return modelsDirectory.appendingPathComponent(model.fileName, isDirectory: true)
+        }
+        return modelsDirectory.appendingPathComponent(model.fileName)
     }
 
     func isModelDownloaded(_ model: AIModel) -> Bool {
         let path = modelPath(for: model)
+
+        if model.backend == .mlx {
+            // MLX models: Check if directory exists and has required files
+            return isMLXModelDownloaded(at: path, model: model)
+        }
+
+        // GGUF models: Check single file
         guard FileManager.default.fileExists(atPath: path.path) else {
             return false
         }
 
-        // Also check file size to detect incomplete downloads
         if let attributes = try? FileManager.default.attributesOfItem(atPath: path.path),
            let fileSize = attributes[.size] as? Int64 {
-            // File should be at least 50% of expected size
             let minimumSize = model.sizeBytes / 2
             return fileSize >= minimumSize
         }
 
         return false
+    }
+
+    private func isMLXModelDownloaded(at path: URL, model: AIModel) -> Bool {
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path.path, isDirectory: &isDirectory),
+              isDirectory.boolValue else {
+            return false
+        }
+
+        // Check for main model file
+        let modelFile = path.appendingPathComponent("model.safetensors")
+        guard FileManager.default.fileExists(atPath: modelFile.path) else {
+            return false
+        }
+
+        // Check model file size
+        if let attributes = try? FileManager.default.attributesOfItem(atPath: modelFile.path),
+           let fileSize = attributes[.size] as? Int64 {
+            let minimumSize = model.sizeBytes / 2
+            if fileSize < minimumSize {
+                return false
+            }
+        }
+
+        // Check for required config files
+        let requiredFiles = ["config.json", "tokenizer.json"]
+        for fileName in requiredFiles {
+            let filePath = path.appendingPathComponent(fileName)
+            if !FileManager.default.fileExists(atPath: filePath.path) {
+                return false
+            }
+        }
+
+        return true
     }
 
     // MARK: - Refresh States
@@ -122,6 +165,93 @@ class ModelManager: ObservableObject {
             return
         }
 
+        if model.backend == .mlx {
+            try await downloadMLXModel(model)
+        } else {
+            try await downloadGGUFModel(model)
+        }
+    }
+
+    // Download MLX model (multiple files to a directory)
+    private func downloadMLXModel(_ model: AIModel) async throws {
+        isDownloading = true
+        downloadingModelId = model.id
+        downloadProgress = 0
+        downloadedBytes = 0
+        downloadStates[model.id] = .downloading(progress: 0)
+        currentModel = model
+
+        UserDefaults.standard.set(model.id, forKey: "downloadingModelId")
+
+        let modelDir = modelPath(for: model)
+
+        // Create model directory
+        try? FileManager.default.removeItem(at: modelDir)
+        try FileManager.default.createDirectory(at: modelDir, withIntermediateDirectories: true)
+
+        // Calculate total size
+        var totalSize: Int64 = model.sizeBytes
+        if let additionalFiles = model.additionalFiles {
+            totalSize += additionalFiles.reduce(0) { $0 + $1.sizeBytes }
+        }
+        totalBytes = totalSize
+
+        // Build list of files to download
+        var filesToDownload: [(name: String, url: URL, size: Int64)] = [
+            ("model.safetensors", model.downloadURL, model.sizeBytes)
+        ]
+
+        if let additionalFiles = model.additionalFiles {
+            for file in additionalFiles {
+                filesToDownload.append((file.name, file.url, file.sizeBytes))
+            }
+        }
+
+        var downloadedSize: Int64 = 0
+
+        // Download each file
+        for (index, file) in filesToDownload.enumerated() {
+            let destinationPath = modelDir.appendingPathComponent(file.name)
+            print("[ModelManager] Downloading \(file.name) (\(index + 1)/\(filesToDownload.count))...")
+
+            do {
+                let (tempURL, _) = try await URLSession.shared.download(from: file.url)
+
+                // Move to destination
+                try? FileManager.default.removeItem(at: destinationPath)
+                try FileManager.default.moveItem(at: tempURL, to: destinationPath)
+
+                downloadedSize += file.size
+                downloadedBytes = downloadedSize
+                downloadProgress = Double(downloadedSize) / Double(totalSize)
+                downloadStates[model.id] = .downloading(progress: downloadProgress)
+
+                print("[ModelManager] Downloaded \(file.name) - Progress: \(Int(downloadProgress * 100))%")
+
+            } catch {
+                print("[ModelManager] Failed to download \(file.name): \(error)")
+                try? FileManager.default.removeItem(at: modelDir)
+                cleanupDownload()
+                throw ModelManagerError.downloadFailed("Failed to download \(file.name): \(error.localizedDescription)")
+            }
+        }
+
+        // Verify download
+        if isMLXModelDownloaded(at: modelDir, model: model) {
+            print("[ModelManager] MLX model download completed: \(model.name)")
+            downloadStates[model.id] = .downloaded
+            downloadProgress = 1.0
+        } else {
+            try? FileManager.default.removeItem(at: modelDir)
+            downloadStates[model.id] = .failed("Download verification failed")
+            throw ModelManagerError.downloadFailed("Model verification failed")
+        }
+
+        cleanupDownload()
+    }
+
+    // Download GGUF model (single file) - uses background session
+    private func downloadGGUFModel(_ model: AIModel) async throws {
         isDownloading = true
         downloadingModelId = model.id
         downloadProgress = 0
@@ -130,13 +260,11 @@ class ModelManager: ObservableObject {
         downloadStates[model.id] = .downloading(progress: 0)
         currentModel = model
 
-        // Save downloading state to survive app restarts
         UserDefaults.standard.set(model.id, forKey: "downloadingModelId")
 
         let destinationURL = modelPath(for: model)
         currentDestinationURL = destinationURL
 
-        // Delete any existing partial file
         try? FileManager.default.removeItem(at: destinationURL)
 
         return try await withCheckedThrowingContinuation { continuation in

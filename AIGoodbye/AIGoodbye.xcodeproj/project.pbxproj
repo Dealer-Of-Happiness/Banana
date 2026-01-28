@@ -8,6 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		6AFC2E132F0B5B73004CD5AA /* LLM in Frameworks */ = {isa = PBXBuildFile; productRef = 6AFC2E122F0B5B73004CD5AA /* LLM */; };
+		6AMLX001F0B5B73004CD5AA /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = 6AMLX000F0B5B73004CD5AA /* MLX */; };
+		6AMLX003F0B5B73004CD5AA /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 6AMLX002F0B5B73004CD5AA /* MLXLLM */; };
+		6AMLX005F0B5B73004CD5AA /* MLXVLM in Frameworks */ = {isa = PBXBuildFile; productRef = 6AMLX004F0B5B73004CD5AA /* MLXVLM */; };
+		6AMLX007F0B5B73004CD5AA /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 6AMLX006F0B5B73004CD5AA /* MLXLMCommon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +61,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				6AFC2E132F0B5B73004CD5AA /* LLM in Frameworks */,
+				6AMLX001F0B5B73004CD5AA /* MLX in Frameworks */,
+				6AMLX003F0B5B73004CD5AA /* MLXLLM in Frameworks */,
+				6AMLX005F0B5B73004CD5AA /* MLXVLM in Frameworks */,
+				6AMLX007F0B5B73004CD5AA /* MLXLMCommon in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -126,6 +134,10 @@
 			name = AIGoodbye;
 			packageProductDependencies = (
 				6AFC2E122F0B5B73004CD5AA /* LLM */,
+				6AMLX000F0B5B73004CD5AA /* MLX */,
+				6AMLX002F0B5B73004CD5AA /* MLXLLM */,
+				6AMLX004F0B5B73004CD5AA /* MLXVLM */,
+				6AMLX006F0B5B73004CD5AA /* MLXLMCommon */,
 			);
 			productName = AIGoodbye;
 			productReference = 6A1A4E3D2F085D0200E51DBF /* AIGoodbye.app */;
@@ -211,6 +223,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				6AFC2E112F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "LLM" */,
+				6AMLX010F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6A1A4E3E2F085D0200E51DBF /* Products */;
@@ -416,7 +429,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -429,7 +442,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbye;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -449,7 +462,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -462,7 +475,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbye;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -480,11 +493,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbyeTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -502,11 +515,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbyeTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -523,10 +536,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbyeUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -543,10 +556,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbyeUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -609,6 +622,14 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		6AMLX010F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.21.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -616,6 +637,26 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6AFC2E112F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "LLM" */;
 			productName = LLM;
+		};
+		6AMLX000F0B5B73004CD5AA /* MLX */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6AMLX010F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift" */;
+			productName = MLX;
+		};
+		6AMLX002F0B5B73004CD5AA /* MLXLLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6AMLX010F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift" */;
+			productName = MLXLLM;
+		};
+		6AMLX004F0B5B73004CD5AA /* MLXVLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6AMLX010F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift" */;
+			productName = MLXVLM;
+		};
+		6AMLX006F0B5B73004CD5AA /* MLXLMCommon */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6AMLX010F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift" */;
+			productName = MLXLMCommon;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

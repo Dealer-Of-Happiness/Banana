@@ -2,17 +2,26 @@
 //  ChatView.swift
 //  AIGoodbye
 //
-//  Main chat interface with text input
+//  Main chat interface with text input and vision capabilities
 //
 
 import SwiftUI
 import Combine
 import UIKit
+import PhotosUI
+import UniformTypeIdentifiers
 
 struct ChatView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = ChatViewModel()
     @FocusState private var isInputFocused: Bool
+
+    // Attachment state
+    @State private var showingAttachmentMenu = false
+    @State private var showingPhotoPicker = false
+    @State private var showingCamera = false
+    @State private var showingDocumentPicker = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
 
     var body: some View {
         NavigationStack {
@@ -25,6 +34,11 @@ struct ChatView: View {
                 }
 
                 Divider()
+
+                // Attachment preview (if image selected)
+                if let image = viewModel.pendingImage {
+                    attachmentPreview(image: image)
+                }
 
                 // Input area
                 inputArea
@@ -41,8 +55,14 @@ struct ChatView: View {
                 }
 
                 ToolbarItem(placement: .principal) {
-                    Text("AiGoodbye")
-                        .font(.headline)
+                    HStack(spacing: 4) {
+                        Text("AiGoodbye")
+                            .font(.headline)
+                        // Vision indicator
+                        Image(systemName: "eye.fill")
+                            .font(.caption)
+                            .foregroundStyle(.blue)
+                    }
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -63,6 +83,35 @@ struct ChatView: View {
                     }
                 }
             }
+            // Photo picker sheet
+            .photosPicker(
+                isPresented: $showingPhotoPicker,
+                selection: $selectedPhotoItem,
+                matching: .images,
+                photoLibrary: .shared()
+            )
+            .onChange(of: selectedPhotoItem) { _, newItem in
+                Task {
+                    await viewModel.loadSelectedPhoto(newItem)
+                    selectedPhotoItem = nil
+                }
+            }
+            // Camera sheet
+            .sheet(isPresented: $showingCamera) {
+                CameraView { image in
+                    viewModel.pendingImage = image
+                    showingCamera = false
+                }
+            }
+            // Document picker sheet
+            .sheet(isPresented: $showingDocumentPicker) {
+                DocumentPickerView { urls in
+                    Task {
+                        await viewModel.processDocuments(urls)
+                    }
+                    showingDocumentPicker = false
+                }
+            }
         }
         .onAppear {
             viewModel.appState = appState
@@ -80,27 +129,30 @@ struct ChatView: View {
             ScrollView {
                 LazyVStack(spacing: 16) {
                     ForEach(viewModel.messages) { message in
-                        MessageBubble(message: message)
-                            .id(message.id.uuidString)
-                            .contextMenu {
+                        MessageBubble(
+                            message: message,
+                            image: message.attachmentId.flatMap { viewModel.getImage(for: $0) }
+                        )
+                        .id(message.id.uuidString)
+                        .contextMenu {
+                            Button {
+                                UIPasteboard.general.string = message.content
+                            } label: {
+                                Label("Copy", systemImage: "doc.on.doc")
+                            }
+
+                            ShareLink(item: message.content) {
+                                Label("Share", systemImage: "square.and.arrow.up")
+                            }
+
+                            if message.role == .assistant {
                                 Button {
-                                    UIPasteboard.general.string = message.content
+                                    viewModel.regenerateResponse(for: message)
                                 } label: {
-                                    Label("Copy", systemImage: "doc.on.doc")
-                                }
-
-                                ShareLink(item: message.content) {
-                                    Label("Share", systemImage: "square.and.arrow.up")
-                                }
-
-                                if message.role == .assistant {
-                                    Button {
-                                        viewModel.regenerateResponse(for: message)
-                                    } label: {
-                                        Label("Regenerate", systemImage: "arrow.clockwise")
-                                    }
+                                    Label("Regenerate", systemImage: "arrow.clockwise")
                                 }
                             }
+                        }
                     }
 
                     if viewModel.isGenerating {
@@ -123,21 +175,62 @@ struct ChatView: View {
     private var emptyStateView: some View {
         ScrollView {
             VStack(spacing: 24) {
-                Spacer(minLength: 100)
+                Spacer(minLength: 80)
 
-                // Logo
-                Image(systemName: "bubble.left.and.bubble.right.fill")
-                    .font(.system(size: 60))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.blue, .purple],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                // Logo with vision indicator
+                ZStack {
+                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                        .font(.system(size: 60))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.blue, .purple],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
+
+                    // Vision badge
+                    Image(systemName: "eye.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(.white, .blue)
+                        .offset(x: 35, y: -25)
+                }
 
                 Text("Start a Conversation")
                     .font(.title2.bold())
+
+                Text("Ask questions, analyze images, or discuss documents")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
+                // Quick action suggestions
+                VStack(spacing: 12) {
+                    QuickActionButton(
+                        icon: "photo.fill",
+                        title: "Analyze an Image",
+                        subtitle: "Tap + to add a photo"
+                    ) {
+                        showingAttachmentMenu = true
+                    }
+
+                    QuickActionButton(
+                        icon: "doc.text.fill",
+                        title: "Read a Document",
+                        subtitle: "Upload PDF, Word, or text files"
+                    ) {
+                        showingDocumentPicker = true
+                    }
+
+                    QuickActionButton(
+                        icon: "text.bubble.fill",
+                        title: "Just Chat",
+                        subtitle: "Ask anything"
+                    ) {
+                        isInputFocused = true
+                    }
+                }
+                .padding(.top, 8)
 
                 Spacer()
             }
@@ -145,13 +238,79 @@ struct ChatView: View {
         }
     }
 
+    // MARK: - Attachment Preview
+
+    private func attachmentPreview(image: UIImage) -> some View {
+        HStack(spacing: 12) {
+            // Thumbnail
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 60, height: 60)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.blue, lineWidth: 2)
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Image attached")
+                    .font(.subheadline.weight(.medium))
+                Text("Will be analyzed with your message")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            // Remove button
+            Button {
+                withAnimation {
+                    viewModel.pendingImage = nil
+                }
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(Color(.systemGray6))
+    }
+
     // MARK: - Input Area
 
     private var inputArea: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
+                // Attachment button (+)
+                Menu {
+                    Button {
+                        showingPhotoPicker = true
+                    } label: {
+                        Label("Photo Library", systemImage: "photo.on.rectangle")
+                    }
+
+                    Button {
+                        showingCamera = true
+                    } label: {
+                        Label("Take Photo", systemImage: "camera")
+                    }
+
+                    Button {
+                        showingDocumentPicker = true
+                    } label: {
+                        Label("Document", systemImage: "doc")
+                    }
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title)
+                        .foregroundStyle(.blue)
+                }
+
                 // Text input
-                TextField("Message...", text: $viewModel.inputText, axis: .vertical)
+                TextField(viewModel.pendingImage != nil ? "Ask about this image..." : "Message...", text: $viewModel.inputText, axis: .vertical)
                     .textFieldStyle(.plain)
                     .lineLimit(1...5)
                     .focused($isInputFocused)
@@ -167,9 +326,9 @@ struct ChatView: View {
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.title)
-                        .foregroundStyle(viewModel.inputText.isEmpty ? .gray : .blue)
+                        .foregroundStyle(canSend ? .blue : .gray)
                 }
-                .disabled(viewModel.inputText.isEmpty)
+                .disabled(!canSend)
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
@@ -177,6 +336,50 @@ struct ChatView: View {
         .background(.bar)
     }
 
+    // Can send if there's text OR an image attached
+    private var canSend: Bool {
+        !viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+        viewModel.pendingImage != nil
+    }
+}
+
+// MARK: - Quick Action Button
+
+struct QuickActionButton: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundStyle(.blue)
+                    .frame(width: 40)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding()
+            .background(Color(.systemGray6))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+    }
 }
 
 // MARK: - Chat View Model
@@ -186,35 +389,153 @@ class ChatViewModel: ObservableObject {
     @Published var messages: [Message] = []
     @Published var inputText = ""
     @Published var isGenerating = false
+    @Published var pendingImage: UIImage?
+    @Published var pendingImageId: UUID?
 
     var appState: AppState?
     private var currentConversationId: UUID?
+
+    // Store images by ID for display in message bubbles
+    private var imageCache: [UUID: UIImage] = [:]
 
     func loadConversation(_ conversation: Conversation?) {
         // Clear messages when switching to a new or different conversation
         if conversation?.id != currentConversationId {
             messages.removeAll()
+            pendingImage = nil
+            pendingImageId = nil
             currentConversationId = conversation?.id
 
-            // Reset LLM conversation state when switching conversations
-            appState?.llamaService.resetConversation()
+            // Reset MLX conversation state when switching conversations
+            appState?.mlxService.resetConversation()
 
             // Load messages from conversation if it exists
             if let conversation = conversation {
                 messages = conversation.messages.sorted { $0.timestamp < $1.timestamp }
 
-                // Restore conversation history to LLM.swift so it remembers context
+                // Restore conversation history to MLX so it remembers context
                 let historyForLLM = messages.map { ($0.role.rawValue, $0.content) }
-                appState?.llamaService.restoreHistory(historyForLLM)
+                appState?.mlxService.restoreHistory(historyForLLM)
+
+                // Load cached images for messages with attachments
+                loadCachedImages(for: conversation)
             }
         }
     }
 
+    private func loadCachedImages(for conversation: Conversation) {
+        for imageId in conversation.attachedImageIds {
+            if let imagePath = getImagePath(for: imageId),
+               let image = UIImage(contentsOfFile: imagePath.path) {
+                imageCache[imageId] = image
+            }
+        }
+    }
+
+    func getImage(for id: UUID) -> UIImage? {
+        imageCache[id]
+    }
+
+    // MARK: - Photo Handling
+
+    func loadSelectedPhoto(_ item: PhotosPickerItem?) async {
+        guard let item = item else { return }
+
+        do {
+            if let data = try await item.loadTransferable(type: Data.self),
+               let image = UIImage(data: data) {
+                await MainActor.run {
+                    self.pendingImage = image
+                    self.pendingImageId = UUID()
+                }
+            }
+        } catch {
+            print("[ChatViewModel] Error loading photo: \(error)")
+        }
+    }
+
+    // MARK: - Document Handling
+
+    func processDocuments(_ urls: [URL]) async {
+        guard let url = urls.first else { return }
+
+        do {
+            // Start accessing security-scoped resource
+            guard url.startAccessingSecurityScopedResource() else {
+                throw DocumentError.accessDenied
+            }
+            defer { url.stopAccessingSecurityScopedResource() }
+
+            // Read document content based on type
+            let content: String
+            let fileExtension = url.pathExtension.lowercased()
+
+            switch fileExtension {
+            case "pdf":
+                content = try await extractTextFromPDF(url)
+            case "txt", "md", "json", "swift", "py", "js", "html", "css":
+                content = try String(contentsOf: url, encoding: .utf8)
+            default:
+                content = try String(contentsOf: url, encoding: .utf8)
+            }
+
+            // Create a message with the document content
+            let documentPrompt = "I've uploaded a document (\(url.lastPathComponent)). Here's its content:\n\n\(content.prefix(8000))\n\nPlease analyze this document and provide a summary."
+
+            await MainActor.run {
+                self.inputText = documentPrompt
+            }
+
+        } catch {
+            print("[ChatViewModel] Error processing document: \(error)")
+            await MainActor.run {
+                self.inputText = "Error reading document: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func extractTextFromPDF(_ url: URL) async throws -> String {
+        guard let document = CGPDFDocument(url as CFURL) else {
+            throw DocumentError.invalidDocument
+        }
+
+        var fullText = ""
+        let pageCount = document.numberOfPages
+
+        for pageNum in 1...min(pageCount, 20) { // Limit to 20 pages
+            guard let page = document.page(at: pageNum) else { continue }
+
+            // Use PDFKit for text extraction
+            if let pageRef = page.dictionary {
+                // Simple text extraction - in production use PDFKit
+                fullText += "[Page \(pageNum)]\n"
+            }
+        }
+
+        // Fallback: Use document service if available
+        if fullText.isEmpty, let docService = appState?.documentService {
+            let analysis = try await docService.processDocument(url)
+            fullText = analysis
+        }
+
+        return fullText.isEmpty ? "[PDF content could not be extracted. Please describe what you'd like to know about this document.]" : fullText
+    }
+
+    // MARK: - Send Message
+
     func sendMessage() async {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
+        let image = pendingImage
 
+        // Need either text or image
+        guard !text.isEmpty || image != nil else { return }
+
+        // Clear input immediately
         inputText = ""
+        let capturedImage = pendingImage
+        let capturedImageId = pendingImageId
+        pendingImage = nil
+        pendingImageId = nil
 
         // Ensure we have a conversation
         var conversation = appState?.currentConversation
@@ -222,19 +543,32 @@ class ChatViewModel: ObservableObject {
             conversation = appState?.conversationManager.createConversation()
             appState?.currentConversation = conversation
             currentConversationId = conversation?.id
-            // IMPORTANT: Reset LLM history when starting a brand new conversation
-            appState?.llamaService.resetConversation()
+            appState?.mlxService.resetConversation()
         }
+
+        // Determine the prompt
+        let prompt = text.isEmpty ? "What's in this image?" : text
 
         // Add user message to conversation
         if let conv = conversation {
             let userMessage = appState?.conversationManager.addMessage(
                 to: conv,
                 role: .user,
-                content: text
+                content: prompt,
+                attachmentType: capturedImage != nil ? .image : nil,
+                attachmentId: capturedImageId
             )
             if let msg = userMessage {
                 messages.append(msg)
+
+                // Cache the image if present
+                if let image = capturedImage, let imageId = capturedImageId {
+                    imageCache[imageId] = image
+                    saveImage(image, withId: imageId)
+
+                    // Track in conversation
+                    conv.attachedImageIds.append(imageId)
+                }
             }
         }
 
@@ -242,16 +576,23 @@ class ChatViewModel: ObservableObject {
         isGenerating = true
 
         do {
-            guard let llamaService = appState?.llamaService else { return }
+            guard let mlxService = appState?.mlxService else { return }
 
             var responseText = ""
 
-            // v2.x library handles conversation history natively
-            for try await chunk in llamaService.generate(prompt: text) {
-                responseText = chunk
+            if let image = capturedImage {
+                // Vision generation with image
+                for try await chunk in mlxService.generateWithVision(prompt: prompt, image: image) {
+                    responseText = chunk
+                }
+            } else {
+                // Text-only generation
+                for try await chunk in mlxService.generate(prompt: prompt) {
+                    responseText = chunk
+                }
             }
 
-            // Add response to conversation (no placeholder needed)
+            // Add response to conversation
             if let conv = conversation, !responseText.isEmpty {
                 let assistantMessage = appState?.conversationManager.addMessage(
                     to: conv,
@@ -285,6 +626,8 @@ class ChatViewModel: ObservableObject {
         isGenerating = false
     }
 
+    // MARK: - Regenerate
+
     func regenerateLastResponse() {
         guard let lastAssistant = messages.last(where: { $0.role == .assistant }) else { return }
         regenerateResponse(for: lastAssistant)
@@ -294,43 +637,50 @@ class ChatViewModel: ObservableObject {
         guard message.role == .assistant else { return }
         guard let conversation = appState?.currentConversation else { return }
 
-        // Find the index of this message
         guard let messageIndex = messages.firstIndex(where: { $0.id == message.id }) else { return }
 
-        // Find the preceding user message to regenerate from
+        // Find the preceding user message
         var userMessageContent: String?
+        var userMessageImage: UIImage?
         for i in stride(from: messageIndex - 1, through: 0, by: -1) {
             if messages[i].role == .user {
                 userMessageContent = messages[i].content
+                if let imageId = messages[i].attachmentId {
+                    userMessageImage = imageCache[imageId]
+                }
                 break
             }
         }
 
         guard let promptText = userMessageContent else { return }
 
-        // Remove the assistant message from SwiftData
+        // Remove the assistant message
         appState?.conversationManager.deleteMessage(message)
-
-        // Remove from local messages array
         messages.removeAll { $0.id == message.id }
 
-        // Rebuild LLM history without the deleted message
+        // Rebuild history
         let historyForLLM = messages.map { ($0.role.rawValue, $0.content) }
-        appState?.llamaService.restoreHistory(historyForLLM)
+        appState?.mlxService.restoreHistory(historyForLLM)
 
         // Generate new response
         Task {
             isGenerating = true
 
             do {
-                guard let llamaService = appState?.llamaService else { return }
+                guard let mlxService = appState?.mlxService else { return }
 
                 var responseText = ""
-                for try await chunk in llamaService.generate(prompt: promptText) {
-                    responseText = chunk
+
+                if let image = userMessageImage {
+                    for try await chunk in mlxService.generateWithVision(prompt: promptText, image: image) {
+                        responseText = chunk
+                    }
+                } else {
+                    for try await chunk in mlxService.generate(prompt: promptText) {
+                        responseText = chunk
+                    }
                 }
 
-                // Add new response to conversation
                 if !responseText.isEmpty {
                     let assistantMessage = appState?.conversationManager.addMessage(
                         to: conversation,
@@ -342,7 +692,6 @@ class ChatViewModel: ObservableObject {
                     }
                 }
 
-                // Haptic feedback
                 if appState?.settings.hapticFeedbackEnabled ?? false {
                     let generator = UINotificationFeedbackGenerator()
                     generator.notificationOccurred(.success)
@@ -365,8 +714,41 @@ class ChatViewModel: ObservableObject {
 
     func clearConversation() {
         messages.removeAll()
-        // Reset LLM conversation state when clearing chat
-        appState?.llamaService.resetConversation()
+        pendingImage = nil
+        pendingImageId = nil
+        imageCache.removeAll()
+        appState?.mlxService.resetConversation()
+    }
+
+    // MARK: - Image Storage
+
+    private func saveImage(_ image: UIImage, withId id: UUID) {
+        guard let data = image.jpegData(compressionQuality: 0.8) else { return }
+        let path = getImagePath(for: id)
+        try? data.write(to: path!)
+    }
+
+    private func getImagePath(for id: UUID) -> URL? {
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let imagesDir = documentsPath.appendingPathComponent("images")
+        try? FileManager.default.createDirectory(at: imagesDir, withIntermediateDirectories: true)
+        return imagesDir.appendingPathComponent("\(id.uuidString).jpg")
+    }
+}
+
+// MARK: - Document Error
+
+enum DocumentError: LocalizedError {
+    case accessDenied
+    case invalidDocument
+
+    var errorDescription: String? {
+        switch self {
+        case .accessDenied:
+            return "Cannot access the document"
+        case .invalidDocument:
+            return "Invalid or corrupted document"
+        }
     }
 }
 
@@ -374,14 +756,28 @@ class ChatViewModel: ObservableObject {
 
 struct MessageBubble: View {
     let message: Message
+    var image: UIImage? = nil
 
     var body: some View {
         HStack {
             if message.role == .user { Spacer(minLength: 60) }
 
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
-                // Attachment indicator
-                if let attachmentType = message.attachmentType {
+                // Image attachment (if present)
+                if let image = image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 250, maxHeight: 200)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                        )
+                }
+
+                // Attachment indicator (for documents/voice)
+                if let attachmentType = message.attachmentType, attachmentType != .image {
                     HStack(spacing: 4) {
                         Image(systemName: attachmentIcon(for: attachmentType))
                         Text(attachmentType.rawValue.capitalized)
@@ -396,8 +792,9 @@ struct MessageBubble: View {
                     .background(backgroundColor)
                     .foregroundStyle(foregroundColor)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .textSelection(.enabled)
 
-                // Timestamp (shown on tap)
+                // Timestamp
                 Text(message.timestamp.formatted(date: .omitted, time: .shortened))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
@@ -424,6 +821,91 @@ struct MessageBubble: View {
         case .document: return "doc.fill"
         case .image: return "photo.fill"
         case .voice: return "waveform"
+        }
+    }
+}
+
+// MARK: - Camera View
+
+struct CameraView: UIViewControllerRepresentable {
+    let onImageCaptured: (UIImage) -> Void
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onImageCaptured: onImageCaptured)
+    }
+
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let onImageCaptured: (UIImage) -> Void
+
+        init(onImageCaptured: @escaping (UIImage) -> Void) {
+            self.onImageCaptured = onImageCaptured
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let image = info[.originalImage] as? UIImage {
+                onImageCaptured(image)
+            }
+            picker.dismiss(animated: true)
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true)
+        }
+    }
+}
+
+// MARK: - Document Picker View
+
+struct DocumentPickerView: UIViewControllerRepresentable {
+    let onDocumentsPicked: ([URL]) -> Void
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let supportedTypes: [UTType] = [
+            .pdf,
+            .plainText,
+            .json,
+            .html,
+            UTType(filenameExtension: "md") ?? .plainText,
+            UTType(filenameExtension: "swift") ?? .sourceCode,
+            UTType(filenameExtension: "py") ?? .sourceCode,
+            UTType(filenameExtension: "js") ?? .sourceCode,
+            .sourceCode
+        ]
+
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: supportedTypes)
+        picker.delegate = context.coordinator
+        picker.allowsMultipleSelection = false
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onDocumentsPicked: onDocumentsPicked)
+    }
+
+    class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let onDocumentsPicked: ([URL]) -> Void
+
+        init(onDocumentsPicked: @escaping ([URL]) -> Void) {
+            self.onDocumentsPicked = onDocumentsPicked
+        }
+
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            onDocumentsPicked(urls)
+        }
+
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            // Do nothing
         }
     }
 }

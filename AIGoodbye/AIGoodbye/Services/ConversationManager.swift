@@ -98,15 +98,30 @@ class ConversationManager: ObservableObject {
 
     // MARK: - Message CRUD
 
-    func addMessage(to conversation: Conversation, role: MessageRole, content: String, isVoice: Bool = false) -> Message {
-        let message = Message(role: role, content: content, isVoiceMessage: isVoice)
+    func addMessage(
+        to conversation: Conversation,
+        role: MessageRole,
+        content: String,
+        isVoice: Bool = false,
+        attachmentType: AttachmentType? = nil,
+        attachmentId: UUID? = nil
+    ) -> Message {
+        let message = Message(
+            role: role,
+            content: content,
+            isVoiceMessage: isVoice,
+            attachmentType: attachmentType,
+            attachmentId: attachmentId
+        )
         message.conversation = conversation
         conversation.messages.append(message)
         conversation.updatedAt = Date()
 
         // Auto-update title from first user message
         if role == .user && conversation.messages.count == 1 {
-            conversation.updateTitle(from: content)
+            // Don't include "[Image attached]" prefix in title
+            let titleContent = content.replacingOccurrences(of: "[Image attached] ", with: "")
+            conversation.updateTitle(from: titleContent)
         }
 
         try? modelContext?.save()

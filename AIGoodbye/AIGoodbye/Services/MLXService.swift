@@ -29,6 +29,9 @@ class MLXService: ObservableObject {
     private var conversationHistory: [[String: String]] = []
     private let historyLimit: Int = 30
 
+    // Published state for ObservableObject conformance
+    @Published var isLoading: Bool = false
+
     // System prompt
     private let systemPrompt = """
     You are AiGoodbye, a helpful AI assistant created by Dealer Of Happiness. \
@@ -94,29 +97,23 @@ class MLXService: ObservableObject {
 
         print("[MLXService] Loading MLX VLM model from: \(modelPath.path)")
 
-        do {
-            // Create model configuration for local path
-            let configuration = ModelConfiguration(
-                id: model.id,
-                defaultPrompt: "You are a helpful assistant."
-            )
+        // Create model configuration for local path
+        let configuration = ModelConfiguration(
+            id: model.id,
+            defaultPrompt: "You are a helpful assistant."
+        )
 
-            // Load VLM model using VLMModelFactory
-            modelContainer = try await VLMModelFactory.shared.loadContainer(
-                configuration: configuration,
-                hub: HubApi(downloadBase: modelPath)
-            ) { progress in
-                print("[MLXService] Loading progress: \(Int(progress.fractionCompleted * 100))%")
-            }
-
-            modelDirectory = modelPath
-            currentModelId = model.id
-            print("[MLXService] VLM Model loaded successfully: \(model.name)")
-
-        } catch {
-            print("[MLXService] Failed to load MLX model: \(error)")
-            throw MLXError.modelLoadFailed(error.localizedDescription)
+        // Load VLM model using VLMModelFactory
+        modelContainer = try await VLMModelFactory.shared.loadContainer(
+            hub: HubApi(downloadBase: modelPath),
+            configuration: configuration
+        ) { progress in
+            print("[MLXService] Loading progress: \(Int(progress.fractionCompleted * 100))%")
         }
+
+        modelDirectory = modelPath
+        currentModelId = model.id
+        print("[MLXService] VLM Model loaded successfully: \(model.name)")
     }
 
     /// Load a specific model by ID
@@ -135,13 +132,11 @@ class MLXService: ObservableObject {
         MLXService.downloadedBytes = 0
         MLXService.totalBytes = model.sizeBytes
 
-        do {
-            try await manager.downloadModel(model)
+        defer {
             MLXService.isDownloading = false
-        } catch {
-            MLXService.isDownloading = false
-            throw error
         }
+
+        try await manager.downloadModel(model)
     }
 
     func unloadModel() {
@@ -332,9 +327,9 @@ class MLXService: ObservableObject {
 
     private func generateWithContainer(container: ModelContainer, prompt: String, image: UIImage?) async throws -> String {
         let generateParameters = GenerateParameters(
+            maxTokens: maxTokens,
             temperature: temperature,
-            topP: 0.9,
-            maxTokens: maxTokens
+            topP: 0.9
         )
 
         var output = ""

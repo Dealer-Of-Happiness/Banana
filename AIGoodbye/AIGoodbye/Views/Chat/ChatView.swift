@@ -736,22 +736,6 @@ class ChatViewModel: ObservableObject {
     }
 }
 
-// MARK: - Document Error
-
-enum DocumentError: LocalizedError {
-    case accessDenied
-    case invalidDocument
-
-    var errorDescription: String? {
-        switch self {
-        case .accessDenied:
-            return "Cannot access the document"
-        case .invalidDocument:
-            return "Invalid or corrupted document"
-        }
-    }
-}
-
 // MARK: - Message Bubble
 
 struct MessageBubble: View {

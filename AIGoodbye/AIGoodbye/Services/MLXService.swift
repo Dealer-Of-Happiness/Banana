@@ -106,8 +106,8 @@ class MLXService: ObservableObject {
 
         // Load VLM model using VLMModelFactory
         modelContainer = try await VLMModelFactory.shared.loadContainer(
-            hub: HubApi(downloadBase: modelPath),
-            configuration: configuration
+            configuration: configuration,
+            hub: HubApi(downloadBase: modelPath)
         ) { progress in
             print("[MLXService] Loading progress: \(Int(progress.fractionCompleted * 100))%")
         }
@@ -328,8 +328,8 @@ class MLXService: ObservableObject {
 
     private func generateWithContainer(container: ModelContainer, prompt: String, image: UIImage?) async throws -> String {
         let generateParameters = GenerateParameters(
-            maxTokens: maxTokens,
             temperature: temperature,
+            maxTokens: maxTokens,
             topP: 0.9
         )
 

@@ -20,7 +20,6 @@ class MLXService: ObservableObject {
     // Model container for VLM
     private var modelContainer: ModelContainer?
     private var currentModelId: String?
-    private var modelDirectory: URL?
 
     // Configuration
     private let temperature: Float
@@ -45,6 +44,7 @@ class MLXService: ObservableObject {
     static var downloadedBytes: Int64 = 0
     static var totalBytes: Int64 = 0
     static var isDownloading: Bool = false
+    static var downloadProgress: Double = 0
 
     init(temperature: Double = 0.7, maxTokens: Int = 2048) {
         self.temperature = Float(temperature)
@@ -83,36 +83,28 @@ class MLXService: ObservableObject {
             throw MLXError.unsupportedBackend("Model requires MLX backend but uses \(model.backend)")
         }
 
-        let manager = getModelManager()
-        let modelPath = manager.modelPath(for: model)
-
-        // Check if model needs download
-        if !manager.isModelDownloaded(model) {
-            try await downloadModel(model)
-            try await Task.sleep(nanoseconds: 500_000_000) // 500ms for filesystem sync
+        // Get the HuggingFace model ID for MLX models
+        guard let hfModelId = model.huggingFaceId else {
+            throw MLXError.modelLoadFailed("No HuggingFace model ID configured for \(model.name)")
         }
 
-        guard FileManager.default.fileExists(atPath: modelPath.path) else {
-            throw MLXError.modelNotFound
-        }
+        print("[MLXService] Loading MLX VLM model: \(hfModelId)")
 
-        print("[MLXService] Loading MLX VLM model from: \(modelPath.path)")
+        // Create model configuration with HuggingFace model ID
+        // The VLMModelFactory will automatically download if needed
+        let configuration = ModelConfiguration(id: hfModelId)
 
-        // Create model configuration for local path
-        let configuration = ModelConfiguration(
-            id: model.id,
-            defaultPrompt: "You are a helpful assistant."
-        )
-
-        // Load VLM model using VLMModelFactory
+        // Load VLM model using VLMModelFactory - it handles download automatically
         modelContainer = try await VLMModelFactory.shared.loadContainer(
-            hub: HubApi(downloadBase: modelPath),
             configuration: configuration
         ) { progress in
+            Task { @MainActor in
+                MLXService.downloadProgress = progress.fractionCompleted
+                MLXService.isDownloading = !progress.isFinished
+            }
             print("[MLXService] Loading progress: \(Int(progress.fractionCompleted * 100))%")
         }
 
-        modelDirectory = modelPath
         currentModelId = model.id
         print("[MLXService] VLM Model loaded successfully: \(model.name)")
     }
@@ -126,24 +118,9 @@ class MLXService: ObservableObject {
         try await loadModelInternal(model)
     }
 
-    private func downloadModel(_ model: AIModel) async throws {
-        let manager = getModelManager()
-
-        MLXService.isDownloading = true
-        MLXService.downloadedBytes = 0
-        MLXService.totalBytes = model.sizeBytes
-
-        defer {
-            MLXService.isDownloading = false
-        }
-
-        try await manager.downloadModel(model)
-    }
-
     func unloadModel() {
         modelContainer = nil
         currentModelId = nil
-        modelDirectory = nil
         conversationHistory.removeAll()
     }
 
@@ -333,8 +310,6 @@ class MLXService: ObservableObject {
             topP: 0.9
         )
 
-        var output = ""
-
         // Create user input
         let userInput: UserInput
         if let image = image, let cgImage = image.cgImage {
@@ -349,17 +324,21 @@ class MLXService: ObservableObject {
         }
 
         // Perform generation
-        output = try await container.perform { context in
+        let output = try await container.perform { context in
             let input = try await context.processor.prepare(input: userInput)
 
+            // Generate returns an AsyncSequence - collect all tokens
             var generatedText = ""
-            generatedText = try MLXLMCommon.generate(
+            let tokenStream = try MLXLMCommon.generate(
                 input: input,
                 parameters: generateParameters,
                 context: context
-            ) { tokens in
-                // Token callback - could be used for streaming
-                return .more
+            )
+
+            for await part in tokenStream {
+                if let chunk = part.chunk {
+                    generatedText += chunk
+                }
             }
 
             return generatedText

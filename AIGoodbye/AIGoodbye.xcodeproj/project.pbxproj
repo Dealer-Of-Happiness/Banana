@@ -224,7 +224,7 @@
 			packageReferences = (
 				6AFC2E112F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "LLM" */,
 				6AMLX010F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift" */,
-				6AMLX020F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift-examples" */,
+				6AMLX020F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6A1A4E3E2F085D0200E51DBF /* Products */;
@@ -636,7 +636,7 @@
 			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 0.20.0;
+				minimumVersion = 2.21.2;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -654,17 +654,17 @@
 		};
 		6AMLX002F0B5B73004CD5AA /* MLXLLM */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 6AMLX020F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			package = 6AMLX020F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
 			productName = MLXLLM;
 		};
 		6AMLX004F0B5B73004CD5AA /* MLXVLM */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 6AMLX020F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			package = 6AMLX020F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
 			productName = MLXVLM;
 		};
 		6AMLX006F0B5B73004CD5AA /* MLXLMCommon */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 6AMLX020F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			package = 6AMLX020F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
 			productName = MLXLMCommon;
 		};
 /* End XCSwiftPackageProductDependency section */

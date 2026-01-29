@@ -631,12 +631,12 @@
 				minimumVersion = 0.21.0;
 			};
 		};
-		6AMLX020F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift-examples" */ = {
+		6AMLX020F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift-lm" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/ml-explore/mlx-swift-examples";
+			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
+				minimumVersion = 0.20.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

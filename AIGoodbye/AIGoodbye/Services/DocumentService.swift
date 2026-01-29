@@ -205,6 +205,7 @@ enum DocumentError: LocalizedError {
     case emptyDocument
     case failedToRead(String)
     case fileTooLarge(String)
+    case invalidDocument
 
     var errorDescription: String? {
         switch self {
@@ -218,6 +219,8 @@ enum DocumentError: LocalizedError {
             return "Failed to read: \(reason)"
         case .fileTooLarge(let size):
             return "File too large: \(size)"
+        case .invalidDocument:
+            return "Invalid or corrupted document"
         }
     }
 }

@@ -512,8 +512,8 @@ class ChatViewModel: ObservableObject {
 
         // Fallback: Use document service if available
         if fullText.isEmpty, let docService = appState?.documentService {
-            let analysis = try await docService.processDocument(url)
-            fullText = analysis
+            let analysis = try await docService.processDocument(at: url)
+            fullText = analysis.fullText
         }
 
         return fullText.isEmpty ? "[PDF content could not be extracted. Please describe what you'd like to know about this document.]" : fullText

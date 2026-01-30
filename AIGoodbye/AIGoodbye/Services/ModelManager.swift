@@ -16,7 +16,7 @@ class ModelManager: ObservableObject {
     static let backgroundSessionIdentifier = "com.aigoodbye.modeldownload"
 
     @Published var downloadStates: [String: ModelDownloadState] = [:]
-    @Published var currentModelId: String = "qwen-7b"
+    @Published var currentModelId: String = "qwen3-vl-4b"
     @Published var downloadProgress: Double = 0
     @Published var downloadedBytes: Int64 = 0
     @Published var totalBytes: Int64 = 0
@@ -43,6 +43,14 @@ class ModelManager: ObservableObject {
         // Load saved model preference
         if let savedModelId = UserDefaults.standard.string(forKey: "selectedModelId") {
             currentModelId = savedModelId
+        }
+
+        // Migration: Ensure we use MLX model (llamacpp models no longer supported as primary)
+        if let model = AIModel.model(withId: currentModelId), model.backend != .mlx {
+            // User had a llamacpp model selected, switch to default MLX model
+            currentModelId = AIModel.defaultModel.id
+            UserDefaults.standard.set(currentModelId, forKey: "selectedModelId")
+            print("[ModelManager] Migrated from llamacpp to MLX model: \(currentModelId)")
         }
 
         // Check for any in-progress download that was interrupted

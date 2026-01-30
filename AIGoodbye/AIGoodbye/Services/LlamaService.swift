@@ -102,33 +102,23 @@ class LlamaService {
                     return
                 }
 
-                // 2. Try GPU first (gpuLayers = 99), then fallback to CPU (gpuLayers = 0)
-                // This handles devices like iPhone 17 with A19 chip where Metal may fail
-                let gpuConfigs: [(name: String, layers: Int32)] = [
-                    ("GPU", 99),   // Try full GPU acceleration first
-                    ("CPU", 0)     // Fallback to CPU-only if GPU fails
-                ]
+                // 2. Try to load the model with default GPU settings
+                // The LLM library handles GPU/CPU fallback automatically
+                for attempt in 1...3 {
+                    print("[LlamaService] Loading attempt \(attempt)...")
 
-                for config in gpuConfigs {
-                    print("[LlamaService] Trying \(config.name) mode (gpuLayers: \(config.layers))...")
-
-                    // Try up to 2 attempts per configuration
-                    for attempt in 1...2 {
-                        print("[LlamaService] \(config.name) attempt \(attempt)...")
-
-                        if let llm = LLM(from: url, template: template, historyLimit: 30, gpuLayers: config.layers) {
-                            print("[LlamaService] Model loaded successfully with \(config.name) mode!")
-                            continuation.resume(returning: llm)
-                            return
-                        }
-
-                        if attempt < 2 {
-                            Thread.sleep(forTimeInterval: 0.5)
-                        }
+                    if let llm = LLM(from: url, template: template, historyLimit: 30) {
+                        print("[LlamaService] Model loaded successfully!")
+                        continuation.resume(returning: llm)
+                        return
                     }
 
-                    print("[LlamaService] \(config.name) mode failed, trying next configuration...")
+                    if attempt < 3 {
+                        Thread.sleep(forTimeInterval: 0.5)
+                    }
                 }
+
+                print("[LlamaService] All loading attempts failed")
 
                 // All configurations failed - diagnose on background thread
                 let diagnosis = Self.diagnoseLoadFailureOnBackgroundThread(at: url, expectedSize: modelSizeBytes)
@@ -241,6 +231,9 @@ class LlamaService {
             return .chatML(systemPrompt)
         case .alpaca:
             return .alpaca(systemPrompt)
+        case .qwen3vl:
+            // Qwen3-VL uses ChatML format
+            return .chatML(systemPrompt)
         }
     }
 
@@ -273,27 +266,22 @@ class LlamaService {
                     return
                 }
 
-                // Try GPU first, then fallback to CPU
-                let gpuConfigs: [(name: String, layers: Int32)] = [
-                    ("GPU", 99),
-                    ("CPU", 0)
-                ]
+                // Try to load the model with default settings
+                for attempt in 1...3 {
+                    print("[LlamaService] Loading \(model.name) attempt \(attempt)...")
 
-                for config in gpuConfigs {
-                    print("[LlamaService] Trying \(config.name) mode for \(model.name)...")
+                    if let llm = LLM(from: url, template: template, historyLimit: 30) {
+                        print("[LlamaService] Model \(model.name) loaded successfully!")
+                        continuation.resume(returning: llm)
+                        return
+                    }
 
-                    for attempt in 1...2 {
-                        if let llm = LLM(from: url, template: template, historyLimit: 30, gpuLayers: config.layers) {
-                            print("[LlamaService] Model \(model.name) loaded successfully with \(config.name) mode!")
-                            continuation.resume(returning: llm)
-                            return
-                        }
-
-                        if attempt < 2 {
-                            Thread.sleep(forTimeInterval: 0.5)
-                        }
+                    if attempt < 3 {
+                        Thread.sleep(forTimeInterval: 0.5)
                     }
                 }
+
+                print("[LlamaService] All loading attempts failed for \(model.name)")
 
                 let diagnosis = Self.diagnoseLoadFailureOnBackgroundThread(at: url, expectedSize: modelSizeBytes)
                 continuation.resume(throwing: LlamaError.modelLoadFailed(diagnosis))

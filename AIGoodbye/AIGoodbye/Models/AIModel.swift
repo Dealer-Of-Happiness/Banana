@@ -31,7 +31,10 @@ struct AIModel: Identifiable, Codable, Equatable {
     let backend: ModelBackend
     let supportsVision: Bool
 
-    // For MLX models that require multiple files
+    // HuggingFace model ID for MLX models (e.g., "mlx-community/Qwen3-VL-4B-Instruct-4bit")
+    let huggingFaceId: String?
+
+    // For MLX models that require multiple files (legacy - no longer needed for MLX)
     let additionalFiles: [ModelFile]?
 
     var isDownloaded: Bool {
@@ -105,39 +108,14 @@ extension AIModel {
         size: "2.8 GB",
         sizeBytes: 2_800_000_000,
         downloadURL: URL(string: "https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit/resolve/main/model.safetensors")!,
-        fileName: "qwen3-vl-4b",  // Directory name for MLX models
+        fileName: "qwen3-vl-4b",
         capabilities: [.chat, .vision, .coding, .reasoning, .multilingual, .imageAnalysis, .documentAnalysis],
         memoryRequired: "6 GB RAM",
         templateType: .qwen3vl,
         backend: .mlx,
         supportsVision: true,
-        additionalFiles: [
-            ModelFile(
-                name: "config.json",
-                url: URL(string: "https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit/resolve/main/config.json")!,
-                sizeBytes: 2_000
-            ),
-            ModelFile(
-                name: "tokenizer.json",
-                url: URL(string: "https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit/resolve/main/tokenizer.json")!,
-                sizeBytes: 7_000_000
-            ),
-            ModelFile(
-                name: "tokenizer_config.json",
-                url: URL(string: "https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit/resolve/main/tokenizer_config.json")!,
-                sizeBytes: 5_000
-            ),
-            ModelFile(
-                name: "special_tokens_map.json",
-                url: URL(string: "https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit/resolve/main/special_tokens_map.json")!,
-                sizeBytes: 1_000
-            ),
-            ModelFile(
-                name: "preprocessor_config.json",
-                url: URL(string: "https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit/resolve/main/preprocessor_config.json")!,
-                sizeBytes: 500
-            )
-        ]
+        huggingFaceId: "mlx-community/Qwen3-VL-4B-Instruct-4bit",
+        additionalFiles: nil
     )
 
     // Legacy Qwen2.5 7B (text-only, for fallback)
@@ -155,6 +133,7 @@ extension AIModel {
         templateType: .chatml,
         backend: .llamacpp,
         supportsVision: false,
+        huggingFaceId: nil,
         additionalFiles: nil
     )
 

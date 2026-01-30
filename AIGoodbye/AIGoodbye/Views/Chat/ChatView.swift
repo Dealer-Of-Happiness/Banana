@@ -10,6 +10,7 @@ import Combine
 import UIKit
 import PhotosUI
 import UniformTypeIdentifiers
+import PDFKit
 
 struct ChatView: View {
     @EnvironmentObject var appState: AppState
@@ -495,20 +496,17 @@ class ChatViewModel: ObservableObject {
     }
 
     private func extractTextFromPDF(_ url: URL) async throws -> String {
-        guard let document = CGPDFDocument(url as CFURL) else {
+        guard let document = PDFDocument(url: url) else {
             throw DocumentError.invalidDocument
         }
 
         var fullText = ""
-        let pageCount = document.numberOfPages
+        let pageCount = min(document.pageCount, 20) // Limit to 20 pages
 
-        for pageNum in 1...min(pageCount, 20) { // Limit to 20 pages
-            guard let page = document.page(at: pageNum) else { continue }
-
-            // Use PDFKit for text extraction
-            if let pageRef = page.dictionary {
-                // Simple text extraction - in production use PDFKit
-                fullText += "[Page \(pageNum)]\n"
+        for pageIndex in 0..<pageCount {
+            if let page = document.page(at: pageIndex),
+               let pageText = page.string {
+                fullText += "[Page \(pageIndex + 1)]\n\(pageText)\n\n"
             }
         }
 

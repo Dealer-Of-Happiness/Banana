@@ -42,7 +42,7 @@ class MLXService: ObservableObject {
     static var totalBytes: Int64 = 0
     static var isDownloading: Bool = false
 
-    init(temperature: Double = 0.7, maxTokens: Int = 512) {  // Reduced from 2048 to prevent memory issues
+    init(temperature: Double = 0.7, maxTokens: Int = 256) {  // Reduced from 2048 to 256 to prevent memory crashes
         self.temperature = Float(temperature)
         self.maxTokens = maxTokens
     }
@@ -153,6 +153,13 @@ class MLXService: ObservableObject {
 
     func isModelLoaded() -> Bool {
         modelContainer != nil && currentModelId != nil
+    }
+
+    /// Clear GPU cache to free memory before memory-intensive operations (e.g., camera)
+    func clearGPUCache() {
+        GPU.synchronize()
+        GPU.clearCache()
+        print("[MLXService] GPU cache cleared")
     }
 
     /// Reload the model with current settings
@@ -331,6 +338,9 @@ class MLXService: ObservableObject {
     // MARK: - Core Generation
 
     private func generateWithContainer(container: ModelContainer, prompt: String, image: UIImage?) async throws -> String {
+        // Clear GPU cache before generation to free up memory
+        GPU.clearCache()
+
         let generateParameters = GenerateParameters(
             temperature: temperature,
             topP: 0.9,
@@ -368,6 +378,10 @@ class MLXService: ObservableObject {
 
             return generatedText
         }
+
+        // Synchronize and clear cache after generation to release memory
+        GPU.synchronize()
+        GPU.clearCache()
 
         return output
     }

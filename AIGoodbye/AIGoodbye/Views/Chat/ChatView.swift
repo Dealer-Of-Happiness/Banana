@@ -10,6 +10,7 @@ import Combine
 import UIKit
 import PhotosUI
 import UniformTypeIdentifiers
+import MLX
 
 struct ChatView: View {
     @EnvironmentObject var appState: AppState
@@ -119,6 +120,19 @@ struct ChatView: View {
         }
         .onChange(of: appState.currentConversation) { _, newConversation in
             viewModel.loadConversation(newConversation)
+        }
+        // Clear GPU cache before opening camera/photo picker to prevent memory crash
+        .onChange(of: showingCamera) { _, isShowing in
+            if isShowing {
+                GPU.synchronize()
+                GPU.clearCache()
+            }
+        }
+        .onChange(of: showingPhotoPicker) { _, isShowing in
+            if isShowing {
+                GPU.synchronize()
+                GPU.clearCache()
+            }
         }
     }
 
@@ -739,22 +753,6 @@ class ChatViewModel: ObservableObject {
     }
 }
 
-// MARK: - Document Error
-
-enum DocumentError: LocalizedError {
-    case accessDenied
-    case invalidDocument
-
-    var errorDescription: String? {
-        switch self {
-        case .accessDenied:
-            return "Cannot access the document"
-        case .invalidDocument:
-            return "Invalid or corrupted document"
-        }
-    }
-}
-
 // MARK: - Message Bubble
 
 struct MessageBubble: View {
@@ -855,13 +853,35 @@ struct CameraView: UIViewControllerRepresentable {
 
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
             if let image = info[.originalImage] as? UIImage {
-                onImageCaptured(image)
+                // Resize image immediately to prevent memory issues (max 512px)
+                let resizedImage = resizeImageForMemory(image, maxDimension: 512)
+                onImageCaptured(resizedImage)
             }
             picker.dismiss(animated: true)
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             picker.dismiss(animated: true)
+        }
+
+        /// Resize image to prevent memory crashes when combined with loaded model
+        private func resizeImageForMemory(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+            let size = image.size
+
+            if size.width <= maxDimension && size.height <= maxDimension {
+                return image
+            }
+
+            let ratio = min(maxDimension / size.width, maxDimension / size.height)
+            let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
+
+            return autoreleasepool {
+                UIGraphicsBeginImageContextWithOptions(newSize, true, 1.0)
+                image.draw(in: CGRect(origin: .zero, size: newSize))
+                let resized = UIGraphicsGetImageFromCurrentImageContext()
+                UIGraphicsEndImageContext()
+                return resized ?? image
+            }
         }
     }
 }

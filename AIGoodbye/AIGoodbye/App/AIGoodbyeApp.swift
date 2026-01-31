@@ -130,7 +130,7 @@ class AppState: ObservableObject {
         loadingMessage = "Checking for AI model..."
 
         do {
-            loadingMessage = "Loading Qwen3 Vision AI..."
+            loadingMessage = "Loading Vision AI..."
             try await mlxService.loadModel()
 
             loadingMessage = "Initializing services..."

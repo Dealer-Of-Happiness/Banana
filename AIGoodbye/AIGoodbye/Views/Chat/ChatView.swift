@@ -444,8 +444,11 @@ class ChatViewModel: ObservableObject {
         do {
             if let data = try await item.loadTransferable(type: Data.self),
                let image = UIImage(data: data) {
+                // Resize image immediately to prevent memory issues
+                // Keep consistent with MLXService max dimension (512px)
+                let resizedImage = resizeImageForMemory(image, maxDimension: 512)
                 await MainActor.run {
-                    self.pendingImage = image
+                    self.pendingImage = resizedImage
                     self.pendingImageId = UUID()
                 }
             }
@@ -454,33 +457,60 @@ class ChatViewModel: ObservableObject {
         }
     }
 
+    /// Resize image to prevent memory crashes when combined with loaded model
+    private func resizeImageForMemory(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let size = image.size
+
+        if size.width <= maxDimension && size.height <= maxDimension {
+            return image
+        }
+
+        let ratio = min(maxDimension / size.width, maxDimension / size.height)
+        let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
+
+        return autoreleasepool {
+            UIGraphicsBeginImageContextWithOptions(newSize, true, 1.0)
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+            let resized = UIGraphicsGetImageFromCurrentImageContext()
+            UIGraphicsEndImageContext()
+            return resized ?? image
+        }
+    }
+
     // MARK: - Document Handling
 
     func processDocuments(_ urls: [URL]) async {
         guard let url = urls.first else { return }
+        guard let documentService = appState?.documentService else {
+            await MainActor.run {
+                self.inputText = "Error: Document service not available"
+            }
+            return
+        }
 
         do {
-            // Start accessing security-scoped resource
-            guard url.startAccessingSecurityScopedResource() else {
-                throw DocumentError.accessDenied
-            }
-            defer { url.stopAccessingSecurityScopedResource() }
+            // Use DocumentService for proper text extraction (handles PDF, DOCX, TXT, RTF)
+            let processedDoc = try await documentService.processDocument(at: url)
 
-            // Read document content based on type
-            let content: String
-            let fileExtension = url.pathExtension.lowercased()
-
-            switch fileExtension {
-            case "pdf":
-                content = try await extractTextFromPDF(url)
-            case "txt", "md", "json", "swift", "py", "js", "html", "css":
-                content = try String(contentsOf: url, encoding: .utf8)
-            default:
-                content = try String(contentsOf: url, encoding: .utf8)
+            // Limit content to prevent memory issues (max 6000 chars)
+            let contentLimit = 6000
+            let truncatedContent: String
+            if processedDoc.fullText.count > contentLimit {
+                truncatedContent = String(processedDoc.fullText.prefix(contentLimit)) + "\n\n[Content truncated for memory efficiency...]"
+            } else {
+                truncatedContent = processedDoc.fullText
             }
 
             // Create a message with the document content
-            let documentPrompt = "I've uploaded a document (\(url.lastPathComponent)). Here's its content:\n\n\(content.prefix(8000))\n\nPlease analyze this document and provide a summary."
+            let documentPrompt = """
+            I've uploaded a document: \(processedDoc.name)
+            Type: \(processedDoc.type.rawValue.uppercased())
+
+            Content:
+            \(truncatedContent)
+
+            Please analyze this document and provide a summary.
+            """
 
             await MainActor.run {
                 self.inputText = documentPrompt
@@ -492,33 +522,6 @@ class ChatViewModel: ObservableObject {
                 self.inputText = "Error reading document: \(error.localizedDescription)"
             }
         }
-    }
-
-    private func extractTextFromPDF(_ url: URL) async throws -> String {
-        guard let document = CGPDFDocument(url as CFURL) else {
-            throw DocumentError.invalidDocument
-        }
-
-        var fullText = ""
-        let pageCount = document.numberOfPages
-
-        for pageNum in 1...min(pageCount, 20) { // Limit to 20 pages
-            guard let page = document.page(at: pageNum) else { continue }
-
-            // Use PDFKit for text extraction
-            if let pageRef = page.dictionary {
-                // Simple text extraction - in production use PDFKit
-                fullText += "[Page \(pageNum)]\n"
-            }
-        }
-
-        // Fallback: Use document service if available
-        if fullText.isEmpty, let docService = appState?.documentService {
-            let analysis = try await docService.processDocument(url)
-            fullText = analysis
-        }
-
-        return fullText.isEmpty ? "[PDF content could not be extracted. Please describe what you'd like to know about this document.]" : fullText
     }
 
     // MARK: - Send Message

@@ -25,9 +25,9 @@ class MLXService: ObservableObject {
     private let temperature: Float
     private let maxTokens: Int
 
-    // Conversation history for multi-turn
+    // Conversation history for multi-turn (limited to reduce memory usage)
     private var conversationHistory: [[String: String]] = []
-    private let historyLimit: Int = 30
+    private let historyLimit: Int = 10  // Reduced from 30 to prevent memory issues
 
     // System prompt
     private let systemPrompt = """
@@ -42,7 +42,7 @@ class MLXService: ObservableObject {
     static var totalBytes: Int64 = 0
     static var isDownloading: Bool = false
 
-    init(temperature: Double = 0.7, maxTokens: Int = 2048) {
+    init(temperature: Double = 0.7, maxTokens: Int = 512) {  // Reduced from 2048 to prevent memory issues
         self.temperature = Float(temperature)
         self.maxTokens = maxTokens
     }
@@ -401,8 +401,9 @@ class MLXService: ObservableObject {
     }
 
     private func prepareImageForModel(_ image: UIImage) -> UIImage {
-        // Resize image if too large (max 1024px on longest side)
-        let maxDimension: CGFloat = 1024
+        // Resize image aggressively to prevent memory issues (max 512px on longest side)
+        // Reduced from 1024 to stay within iOS 3GB memory limit with model loaded
+        let maxDimension: CGFloat = 512
         let size = image.size
 
         if size.width <= maxDimension && size.height <= maxDimension {
@@ -412,12 +413,14 @@ class MLXService: ObservableObject {
         let ratio = min(maxDimension / size.width, maxDimension / size.height)
         let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
 
-        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
-        image.draw(in: CGRect(origin: .zero, size: newSize))
-        let resized = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-
-        return resized ?? image
+        // Use autoreleasepool to ensure immediate memory cleanup
+        return autoreleasepool {
+            UIGraphicsBeginImageContextWithOptions(newSize, true, 1.0)  // opaque=true saves memory
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+            let resized = UIGraphicsGetImageFromCurrentImageContext()
+            UIGraphicsEndImageContext()
+            return resized ?? image
+        }
     }
 
     private func addToHistory(role: String, content: String) {

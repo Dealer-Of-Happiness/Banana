@@ -9,9 +9,8 @@ import Foundation
 import PDFKit
 
 actor DocumentService {
-    private let chunkSize = 500
-    private let chunkOverlap = 50
-    static let maxFileSizeBytes: Int = 25 * 1024 * 1024 // 25 MB limit
+    private let chunkSize = AppConfig.Document.chunkSize
+    private let chunkOverlap = AppConfig.Document.chunkOverlap
 
     // MARK: - Process Document
 
@@ -24,9 +23,11 @@ actor DocumentService {
         // Check file size limit
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
         let fileSize = attributes[.size] as? Int ?? 0
-        guard fileSize <= Self.maxFileSizeBytes else {
+        let maxSize = AppConfig.Document.maxFileSizeBytes
+        guard fileSize <= maxSize else {
             let sizeMB = Double(fileSize) / (1024 * 1024)
-            throw DocumentError.fileTooLarge(String(format: "%.1f MB (max 25 MB)", sizeMB))
+            let maxMB = maxSize / (1024 * 1024)
+            throw DocumentError.fileTooLarge(String(format: "%.1f MB (max %d MB)", sizeMB, maxMB))
         }
 
         let fileName = url.lastPathComponent
@@ -104,9 +105,9 @@ actor DocumentService {
             }
         }
 
-        // If raw extraction fails, try reading as plain data
+        // If raw extraction fails, the file may be compressed
         // For full DOCX support, add a ZIP library like ZIPFoundation
-        throw DocumentError.failedToRead("DOCX support requires iOS 17+. Try converting to PDF or TXT.")
+        throw DocumentError.failedToRead("Could not extract text from this DOCX file. Try converting to PDF or TXT.")
     }
 
     // MARK: - RTF Extraction

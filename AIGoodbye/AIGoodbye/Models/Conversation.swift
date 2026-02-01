@@ -112,19 +112,16 @@ final class Folder {
     var name: String
     var createdAt: Date
     var isLocked: Bool
-    var password: String? // For demo - in production use Keychain
 
     init(
         id: UUID = UUID(),
         name: String,
-        isLocked: Bool = false,
-        password: String? = nil
+        isLocked: Bool = false
     ) {
         self.id = id
         self.name = name
         self.createdAt = Date()
         self.isLocked = isLocked
-        self.password = password
     }
 }
 

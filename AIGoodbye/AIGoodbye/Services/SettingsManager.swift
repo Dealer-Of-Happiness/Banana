@@ -20,9 +20,6 @@ class SettingsManager: ObservableObject {
         static let inputLanguage = "input_language"
         static let outputLanguage = "output_language"
         static let hapticFeedback = "haptic_feedback"
-        static let voiceInputMode = "voice_input_mode"
-        static let speechRate = "speech_rate"
-        static let iCloudSync = "icloud_sync"
     }
 
     // MARK: - AI Settings
@@ -45,24 +42,10 @@ class SettingsManager: ObservableObject {
         didSet { defaults.set(outputLanguage.rawValue, forKey: Keys.outputLanguage) }
     }
 
-    // MARK: - Voice Settings
+    // MARK: - Accessibility Settings
 
     @Published var hapticFeedbackEnabled: Bool {
         didSet { defaults.set(hapticFeedbackEnabled, forKey: Keys.hapticFeedback) }
-    }
-
-    @Published var voiceInputMode: VoiceInputMode {
-        didSet { defaults.set(voiceInputMode.rawValue, forKey: Keys.voiceInputMode) }
-    }
-
-    @Published var speechRate: Double {
-        didSet { defaults.set(speechRate, forKey: Keys.speechRate) }
-    }
-
-    // MARK: - Data Settings
-
-    @Published var iCloudSyncEnabled: Bool {
-        didSet { defaults.set(iCloudSyncEnabled, forKey: Keys.iCloudSync) }
     }
 
     // MARK: - Initialization
@@ -83,14 +66,6 @@ class SettingsManager: ObservableObject {
         self.hapticFeedbackEnabled = defaults.object(forKey: Keys.hapticFeedback) == nil
             ? true
             : defaults.bool(forKey: Keys.hapticFeedback)
-
-        self.voiceInputMode = VoiceInputMode(rawValue: defaults.string(forKey: Keys.voiceInputMode) ?? "") ?? .pushToTalk
-
-        self.speechRate = defaults.double(forKey: Keys.speechRate) != 0
-            ? defaults.double(forKey: Keys.speechRate)
-            : 1.0
-
-        self.iCloudSyncEnabled = defaults.bool(forKey: Keys.iCloudSync)
     }
 
     // MARK: - Reset
@@ -101,9 +76,6 @@ class SettingsManager: ObservableObject {
         inputLanguage = .english
         outputLanguage = .english
         hapticFeedbackEnabled = true
-        voiceInputMode = .pushToTalk
-        speechRate = 1.0
-        iCloudSyncEnabled = false
     }
 }
 

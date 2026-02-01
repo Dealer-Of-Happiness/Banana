@@ -109,11 +109,6 @@ class AppState: ObservableObject {
             loadingMessage = "Initializing services..."
             await conversationManager.initialize()
 
-            if settings.iCloudSyncEnabled {
-                loadingMessage = "Syncing with iCloud..."
-                try await iCloudService.sync()
-            }
-
             isModelLoaded = true
             isLoading = false
 

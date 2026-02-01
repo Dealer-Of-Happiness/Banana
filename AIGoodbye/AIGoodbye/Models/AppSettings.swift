@@ -33,61 +33,6 @@ enum SupportedLanguage: String, CaseIterable, Identifiable {
     var locale: Locale {
         Locale(identifier: rawValue)
     }
-
-    var speechRecognitionLocale: String {
-        switch self {
-        case .english: return "en-US"
-        case .spanish: return "es-ES"
-        case .french: return "fr-FR"
-        case .russian: return "ru-RU"
-        case .korean: return "ko-KR"
-        case .chinese: return "zh-CN"
-        }
-    }
-}
-
-// MARK: - Voice Input Mode
-
-enum VoiceInputMode: String, CaseIterable {
-    case pushToTalk = "push_to_talk"
-    case handsFree = "hands_free"
-
-    var displayName: String {
-        switch self {
-        case .pushToTalk: return "Push to Talk"
-        case .handsFree: return "Hands-free"
-        }
-    }
-}
-
-// MARK: - Knowledge Base Source
-
-enum KnowledgeBaseSource: String, CaseIterable, Identifiable {
-    case calendar
-    case reminders
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .calendar: return "Calendar"
-        case .reminders: return "Reminders"
-        }
-    }
-
-    var iconName: String {
-        switch self {
-        case .calendar: return "calendar"
-        case .reminders: return "checklist"
-        }
-    }
-
-    var description: String {
-        switch self {
-        case .calendar: return "Access your calendar events and schedule"
-        case .reminders: return "Manage your reminders"
-        }
-    }
 }
 
 // MARK: - Export Format

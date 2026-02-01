@@ -23,9 +23,6 @@ class SettingsManager: ObservableObject {
         static let voiceInputMode = "voice_input_mode"
         static let speechRate = "speech_rate"
         static let iCloudSync = "icloud_sync"
-        static let chatGPTEnabled = "chatgpt_enabled"
-        static let claudeEnabled = "claude_enabled"
-        static let googleEnabled = "google_enabled"
     }
 
     // MARK: - AI Settings
@@ -62,59 +59,10 @@ class SettingsManager: ObservableObject {
         didSet { defaults.set(speechRate, forKey: Keys.speechRate) }
     }
 
-    // MARK: - Cloud Settings
-
-    @Published var chatGPTEnabled: Bool {
-        didSet { defaults.set(chatGPTEnabled, forKey: Keys.chatGPTEnabled) }
-    }
-
-    @Published var claudeEnabled: Bool {
-        didSet { defaults.set(claudeEnabled, forKey: Keys.claudeEnabled) }
-    }
-
-    @Published var googleEnabled: Bool {
-        didSet { defaults.set(googleEnabled, forKey: Keys.googleEnabled) }
-    }
-
     // MARK: - Data Settings
 
     @Published var iCloudSyncEnabled: Bool {
         didSet { defaults.set(iCloudSyncEnabled, forKey: Keys.iCloudSync) }
-    }
-
-    // MARK: - Secure Storage (API Keys)
-
-    var chatGPTApiKey: String? {
-        get { KeychainHelper.load(key: "chatgpt_api_key") }
-        set {
-            if let value = newValue {
-                KeychainHelper.save(key: "chatgpt_api_key", value: value)
-            } else {
-                KeychainHelper.delete(key: "chatgpt_api_key")
-            }
-        }
-    }
-
-    var claudeApiKey: String? {
-        get { KeychainHelper.load(key: "claude_api_key") }
-        set {
-            if let value = newValue {
-                KeychainHelper.save(key: "claude_api_key", value: value)
-            } else {
-                KeychainHelper.delete(key: "claude_api_key")
-            }
-        }
-    }
-
-    var googleApiKey: String? {
-        get { KeychainHelper.load(key: "google_api_key") }
-        set {
-            if let value = newValue {
-                KeychainHelper.save(key: "google_api_key", value: value)
-            } else {
-                KeychainHelper.delete(key: "google_api_key")
-            }
-        }
     }
 
     // MARK: - Initialization
@@ -142,9 +90,6 @@ class SettingsManager: ObservableObject {
             ? defaults.double(forKey: Keys.speechRate)
             : 1.0
 
-        self.chatGPTEnabled = defaults.bool(forKey: Keys.chatGPTEnabled)
-        self.claudeEnabled = defaults.bool(forKey: Keys.claudeEnabled)
-        self.googleEnabled = defaults.bool(forKey: Keys.googleEnabled)
         self.iCloudSyncEnabled = defaults.bool(forKey: Keys.iCloudSync)
     }
 
@@ -158,15 +103,7 @@ class SettingsManager: ObservableObject {
         hapticFeedbackEnabled = true
         voiceInputMode = .pushToTalk
         speechRate = 1.0
-        chatGPTEnabled = false
-        claudeEnabled = false
-        googleEnabled = false
         iCloudSyncEnabled = false
-
-        // Clear API keys
-        chatGPTApiKey = nil
-        claudeApiKey = nil
-        googleApiKey = nil
     }
 }
 

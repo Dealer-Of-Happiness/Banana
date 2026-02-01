@@ -124,12 +124,12 @@ struct ChatView: View {
         // Clear GPU cache before opening camera/photo picker to prevent memory crash
         .onChange(of: showingCamera) { _, isShowing in
             if isShowing {
-                GPU.clearCache()
+                GPU.Memory.clearCache()
             }
         }
         .onChange(of: showingPhotoPicker) { _, isShowing in
             if isShowing {
-                GPU.clearCache()
+                GPU.Memory.clearCache()
             }
         }
         .alert("Error", isPresented: Binding(

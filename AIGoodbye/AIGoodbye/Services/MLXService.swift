@@ -8,6 +8,7 @@
 
 import Foundation
 import UIKit
+import Combine
 import MLX
 import MLXLLM
 import MLXLMCommon
@@ -109,8 +110,8 @@ class MLXService: ObservableObject {
 
             // Load VLM model using VLMModelFactory
             modelContainer = try await VLMModelFactory.shared.loadContainer(
-                configuration: configuration,
-                hub: HubApi(downloadBase: modelPath)
+                hub: HubApi(downloadBase: modelPath),
+                configuration: configuration
             ) { progress in
                 print("[MLXService] Loading progress: \(Int(progress.fractionCompleted * 100))%")
             }
@@ -368,11 +369,10 @@ class MLXService: ObservableObject {
         }
 
         // Perform generation
-        output = try await container.perform { context in
+        output = try await container.perform { (context) -> String in
             let input = try await context.processor.prepare(input: userInput)
 
-            var generatedText = ""
-            generatedText = try MLXLMCommon.generate(
+            let generatedText: String = try MLXLMCommon.generate(
                 input: input,
                 parameters: generateParameters,
                 context: context

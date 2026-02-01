@@ -41,6 +41,11 @@ struct ChatView: View {
                     attachmentPreview(image: image)
                 }
 
+                // Document attachment preview
+                if let docName = viewModel.pendingDocumentName {
+                    documentPreview(name: docName)
+                }
+
                 // Input area
                 inputArea
             }
@@ -280,6 +285,63 @@ struct ChatView: View {
         .background(Color(.systemGray6))
     }
 
+    // MARK: - Document Preview
+
+    private func documentPreview(name: String) -> some View {
+        HStack(spacing: 12) {
+            // Document icon
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.blue.opacity(0.1))
+                    .frame(width: 60, height: 60)
+
+                Image(systemName: documentIcon(for: name))
+                    .font(.title)
+                    .foregroundStyle(.blue)
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.blue, lineWidth: 2)
+            )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name)
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+                Text("Document attached")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            // Remove button
+            Button {
+                withAnimation {
+                    viewModel.clearPendingDocument()
+                }
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(Color(.systemGray6))
+    }
+
+    private func documentIcon(for filename: String) -> String {
+        let ext = (filename as NSString).pathExtension.lowercased()
+        switch ext {
+        case "pdf": return "doc.fill"
+        case "txt", "md": return "doc.text.fill"
+        case "json": return "curlybraces"
+        case "swift", "py", "js", "html", "css": return "chevron.left.forwardslash.chevron.right"
+        default: return "doc.fill"
+        }
+    }
+
     // MARK: - Input Area
 
     private var inputArea: some View {
@@ -337,10 +399,11 @@ struct ChatView: View {
         .background(.bar)
     }
 
-    // Can send if there's text OR an image attached
+    // Can send if there's text OR an image OR a document attached
     private var canSend: Bool {
         !viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-        viewModel.pendingImage != nil
+        viewModel.pendingImage != nil ||
+        viewModel.pendingDocumentName != nil
     }
 }
 
@@ -393,6 +456,10 @@ class ChatViewModel: ObservableObject {
     @Published var pendingImage: UIImage?
     @Published var pendingImageId: UUID?
 
+    // Pending document attachment (shows as attachment, not raw text)
+    @Published var pendingDocumentName: String?
+    @Published var pendingDocumentContent: String?
+
     var appState: AppState?
     private var currentConversationId: UUID?
 
@@ -405,6 +472,8 @@ class ChatViewModel: ObservableObject {
             messages.removeAll()
             pendingImage = nil
             pendingImageId = nil
+            pendingDocumentName = nil
+            pendingDocumentContent = nil
             currentConversationId = conversation?.id
 
             // Reset MLX conversation state when switching conversations
@@ -443,15 +512,48 @@ class ChatViewModel: ObservableObject {
         guard let item = item else { return }
 
         do {
-            if let data = try await item.loadTransferable(type: Data.self),
-               let image = UIImage(data: data) {
-                await MainActor.run {
-                    self.pendingImage = image
-                    self.pendingImageId = UUID()
+            // Try to load as Data first (most reliable for photos)
+            if let data = try await item.loadTransferable(type: Data.self) {
+                // Process image on background thread to avoid memory pressure
+                let processedImage = await Task.detached(priority: .userInitiated) {
+                    guard let image = UIImage(data: data) else { return nil as UIImage? }
+
+                    // Resize large images to avoid memory crashes
+                    let maxDimension: CGFloat = 1024
+                    let size = image.size
+
+                    if size.width <= maxDimension && size.height <= maxDimension {
+                        return image
+                    }
+
+                    // Calculate new size maintaining aspect ratio
+                    let ratio = min(maxDimension / size.width, maxDimension / size.height)
+                    let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
+
+                    // Use UIGraphicsImageRenderer for efficient resizing
+                    let renderer = UIGraphicsImageRenderer(size: newSize)
+                    let resized = renderer.image { _ in
+                        image.draw(in: CGRect(origin: .zero, size: newSize))
+                    }
+
+                    return resized
+                }.value
+
+                if let image = processedImage {
+                    await MainActor.run {
+                        self.pendingImage = image
+                        self.pendingImageId = UUID()
+                    }
+                } else {
+                    print("[ChatViewModel] Failed to process image data")
                 }
             }
         } catch {
-            print("[ChatViewModel] Error loading photo: \(error)")
+            print("[ChatViewModel] Error loading photo: \(error.localizedDescription)")
+            // Show user-friendly error
+            await MainActor.run {
+                // Could add an alert here if needed
+            }
         }
     }
 
@@ -480,19 +582,27 @@ class ChatViewModel: ObservableObject {
                 content = try String(contentsOf: url, encoding: .utf8)
             }
 
-            // Create a message with the document content
-            let documentPrompt = "I've uploaded a document (\(url.lastPathComponent)). Here's its content:\n\n\(content.prefix(8000))\n\nPlease analyze this document and provide a summary."
-
+            // Store as pending attachment (shows as attachment preview, not raw text)
             await MainActor.run {
-                self.inputText = documentPrompt
+                self.pendingDocumentName = url.lastPathComponent
+                // Limit content to prevent memory issues
+                self.pendingDocumentContent = String(content.prefix(8000))
             }
 
         } catch {
             print("[ChatViewModel] Error processing document: \(error)")
             await MainActor.run {
-                self.inputText = "Error reading document: \(error.localizedDescription)"
+                // Show error in a user-friendly way
+                self.pendingDocumentName = nil
+                self.pendingDocumentContent = nil
             }
         }
+    }
+
+    /// Clear pending document attachment
+    func clearPendingDocument() {
+        pendingDocumentName = nil
+        pendingDocumentContent = nil
     }
 
     private func extractTextFromPDF(_ url: URL) async throws -> String {
@@ -524,9 +634,11 @@ class ChatViewModel: ObservableObject {
     func sendMessage() async {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         let image = pendingImage
+        let documentName = pendingDocumentName
+        let documentContent = pendingDocumentContent
 
-        // Need either text or image
-        guard !text.isEmpty || image != nil else { return }
+        // Need either text, image, or document
+        guard !text.isEmpty || image != nil || documentName != nil else { return }
 
         // Clear input immediately
         inputText = ""
@@ -534,6 +646,8 @@ class ChatViewModel: ObservableObject {
         let capturedImageId = pendingImageId
         pendingImage = nil
         pendingImageId = nil
+        pendingDocumentName = nil
+        pendingDocumentContent = nil
 
         // Ensure we have a conversation
         var conversation = appState?.currentConversation
@@ -544,16 +658,31 @@ class ChatViewModel: ObservableObject {
             appState?.mlxService.resetConversation()
         }
 
-        // Determine the prompt
-        let prompt = text.isEmpty ? "What's in this image?" : text
+        // Build the prompt
+        var prompt: String
+        if let docName = documentName, let docContent = documentContent {
+            // Document attached - include content in prompt but show user a clean message
+            let userQuestion = text.isEmpty ? "Please analyze this document and provide a summary." : text
+            prompt = "I've uploaded a document (\(docName)). Here's its content:\n\n\(docContent)\n\n\(userQuestion)"
+        } else if text.isEmpty && image != nil {
+            prompt = "What's in this image?"
+        } else {
+            prompt = text
+        }
 
-        // Add user message to conversation
+        // For display, show clean message to user (not the full document content)
+        let displayMessage = documentName != nil
+            ? "[Document: \(documentName!)] \(text.isEmpty ? "Analyze this document" : text)"
+            : (text.isEmpty && image != nil ? "What's in this image?" : text)
+
+        // Add user message to conversation (show clean display message, not full document content)
         if let conv = conversation {
+            let attachmentType: AttachmentType? = capturedImage != nil ? .image : (documentName != nil ? .document : nil)
             let userMessage = appState?.conversationManager.addMessage(
                 to: conv,
                 role: .user,
-                content: prompt,
-                attachmentType: capturedImage != nil ? .image : nil,
+                content: displayMessage,
+                attachmentType: attachmentType,
                 attachmentId: capturedImageId
             )
             if let msg = userMessage {
@@ -714,6 +843,8 @@ class ChatViewModel: ObservableObject {
         messages.removeAll()
         pendingImage = nil
         pendingImageId = nil
+        pendingDocumentName = nil
+        pendingDocumentContent = nil
         imageCache.removeAll()
         appState?.mlxService.resetConversation()
     }

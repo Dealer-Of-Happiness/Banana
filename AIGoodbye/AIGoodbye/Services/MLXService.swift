@@ -90,19 +90,54 @@ class MLXService: ObservableObject {
 
         print("[MLXService] Loading MLX VLM model: \(hfModelId)")
 
-        // Create model configuration with HuggingFace model ID
-        // The VLMModelFactory will automatically download if needed
-        let configuration = ModelConfiguration(id: hfModelId)
+        // Use custom download service for reliable background downloads
+        let downloadService = ModelDownloadService.shared
 
-        // Load VLM model using VLMModelFactory - it handles download automatically
+        // Check if already downloaded, if not, download with our background service
+        if !downloadService.isModelDownloaded(huggingFaceId: hfModelId) {
+            print("[MLXService] Model not cached, downloading with background service...")
+            MLXService.isDownloading = true
+
+            // Create a task to update progress from download service
+            let progressTask = Task {
+                while !Task.isCancelled && downloadService.isDownloading {
+                    await MainActor.run {
+                        MLXService.downloadProgress = downloadService.downloadProgress
+                        MLXService.downloadedBytes = downloadService.downloadedBytes
+                        MLXService.totalBytes = downloadService.totalBytes
+                    }
+                    try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+                }
+            }
+
+            do {
+                _ = try await downloadService.downloadModel(huggingFaceId: hfModelId, modelId: model.id)
+                progressTask.cancel()
+                MLXService.isDownloading = false
+                print("[MLXService] Model downloaded successfully")
+            } catch {
+                progressTask.cancel()
+                MLXService.isDownloading = false
+                throw MLXError.downloadFailed(error.localizedDescription)
+            }
+        }
+
+        // Load from local cache directory
+        let localModelDir = downloadService.getModelCacheDirectory(for: hfModelId)
+
+        // Create model configuration pointing to local directory
+        let configuration = ModelConfiguration(directory: localModelDir)
+
+        print("[MLXService] Loading model from local cache: \(localModelDir.path)")
+
+        // Load VLM model from local directory
         modelContainer = try await VLMModelFactory.shared.loadContainer(
             configuration: configuration
         ) { progress in
             Task { @MainActor in
-                MLXService.downloadProgress = progress.fractionCompleted
-                MLXService.isDownloading = !progress.isFinished
+                // This is the model loading progress (not download)
+                print("[MLXService] Model loading progress: \(Int(progress.fractionCompleted * 100))%")
             }
-            print("[MLXService] Loading progress: \(Int(progress.fractionCompleted * 100))%")
         }
 
         currentModelId = model.id
@@ -350,6 +385,51 @@ class MLXService: ObservableObject {
     // MARK: - Private Helpers
 
     private func buildPrompt(userMessage: String, image: UIImage?) -> String {
+        let manager = getModelManager()
+        let templateType = manager.activeModel.templateType
+
+        switch templateType {
+        case .smolvlm:
+            return buildSmolVLMPrompt(userMessage: userMessage, image: image)
+        case .qwen3vl:
+            return buildQwenPrompt(userMessage: userMessage, image: image)
+        default:
+            return buildQwenPrompt(userMessage: userMessage, image: image)
+        }
+    }
+
+    /// Build prompt for SmolVLM2 models
+    private func buildSmolVLMPrompt(userMessage: String, image: UIImage?) -> String {
+        var prompt = ""
+
+        // SmolVLM2 uses simpler format - system message as first user turn
+        if conversationHistory.isEmpty {
+            // Add system context in first message
+            prompt += "<|im_start|>system\n\(systemPrompt)<|im_end|>\n"
+        }
+
+        // Add conversation history
+        for msg in conversationHistory.suffix(historyLimit * 2) {
+            if let role = msg["role"], let content = msg["content"] {
+                prompt += "<|im_start|>\(role)\n\(content)<|im_end|>\n"
+            }
+        }
+
+        // Add current user message (SmolVLM uses <image> token for images)
+        if image != nil {
+            prompt += "<|im_start|>user\n<image>\(userMessage)<|im_end|>\n"
+        } else {
+            prompt += "<|im_start|>user\n\(userMessage)<|im_end|>\n"
+        }
+
+        // Add assistant start
+        prompt += "<|im_start|>assistant\n"
+
+        return prompt
+    }
+
+    /// Build prompt for Qwen3-VL models
+    private func buildQwenPrompt(userMessage: String, image: UIImage?) -> String {
         var prompt = ""
 
         // Add system message

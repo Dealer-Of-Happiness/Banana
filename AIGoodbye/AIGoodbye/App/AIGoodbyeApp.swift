@@ -17,10 +17,20 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      handleEventsForBackgroundURLSession identifier: String,
                      completionHandler: @escaping () -> Void) {
-        // Check if this is our background download session
+        print("[AppDelegate] Handling background URL session: \(identifier)")
+
+        // Handle MLX model download service (new fast downloader)
+        if identifier == ModelDownloadService.backgroundSessionIdentifier {
+            print("[AppDelegate] Handling MLX model download session")
+            Task { @MainActor in
+                ModelDownloadService.shared.backgroundCompletionHandler = completionHandler
+            }
+            return
+        }
+
+        // Handle legacy GGUF model downloads
         if identifier == ModelManager.backgroundSessionIdentifier {
-            print("[AppDelegate] Handling background URL session events")
-            // Store the completion handler to call when all events are delivered
+            print("[AppDelegate] Handling GGUF model download session")
             Task { @MainActor in
                 ModelManager.shared.backgroundCompletionHandler = completionHandler
             }
@@ -130,7 +140,7 @@ class AppState: ObservableObject {
         loadingMessage = "Checking for AI model..."
 
         do {
-            loadingMessage = "Loading Qwen3 Vision AI..."
+            loadingMessage = "Loading Vision AI..."
             try await mlxService.loadModel()
 
             loadingMessage = "Initializing services..."
@@ -166,6 +176,7 @@ class AppState: ObservableObject {
 struct LoadingView: View {
     @ObservedObject var appState: AppState
     @ObservedObject var modelManager = ModelManager.shared
+    @ObservedObject var downloadService = ModelDownloadService.shared
 
     // Rotating tagline phrases
     private let taglinePhrases = [
@@ -179,6 +190,23 @@ struct LoadingView: View {
 
     @State private var currentPhraseIndex = 0
     @State private var phraseOpacity: Double = 1.0
+
+    // Combined download state (MLX or GGUF)
+    private var isAnyDownloading: Bool {
+        downloadService.isDownloading || modelManager.isDownloading
+    }
+
+    private var currentProgress: Double {
+        downloadService.isDownloading ? downloadService.downloadProgress : modelManager.downloadProgress
+    }
+
+    private var currentDownloadedBytes: String {
+        downloadService.isDownloading ? downloadService.formattedDownloadedBytes : modelManager.formattedDownloadedBytes
+    }
+
+    private var currentTotalBytes: String {
+        downloadService.isDownloading ? downloadService.formattedTotalBytes : modelManager.formattedTotalBytes
+    }
 
     var body: some View {
         VStack(spacing: 30) {
@@ -194,23 +222,30 @@ struct LoadingView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            // Show download progress from ModelManager
-            if modelManager.isDownloading {
+            // Show download progress
+            if isAnyDownloading {
                 VStack(spacing: 12) {
                     // Real progress bar
-                    ProgressView(value: modelManager.downloadProgress)
+                    ProgressView(value: currentProgress)
                         .progressViewStyle(.linear)
                         .frame(width: 250)
 
                     // Progress percentage
-                    Text("\(Int(modelManager.downloadProgress * 100))%")
+                    Text("\(Int(currentProgress * 100))%")
                         .font(.title2.monospacedDigit())
                         .fontWeight(.semibold)
 
                     // Downloaded size / Total size
-                    Text("\(modelManager.formattedDownloadedBytes) / \(modelManager.formattedTotalBytes)")
+                    Text("\(currentDownloadedBytes) / \(currentTotalBytes)")
                         .font(.subheadline.monospacedDigit())
                         .foregroundStyle(.secondary)
+
+                    // Download speed (from new service)
+                    if downloadService.isDownloading && !downloadService.downloadSpeed.isEmpty {
+                        Text(downloadService.downloadSpeed)
+                            .font(.subheadline.monospacedDigit())
+                            .foregroundStyle(.blue)
+                    }
 
                     // Status text
                     Text("Download continues in background - you can switch apps")

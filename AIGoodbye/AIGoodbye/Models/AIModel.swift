@@ -93,11 +93,51 @@ enum TemplateType: String, Codable {
     case chatml
     case alpaca
     case qwen3vl  // Qwen3-VL specific template
+    case smolvlm  // SmolVLM2 template format
 }
 
 // MARK: - Available Models
 
 extension AIModel {
+    // SmolVLM2 500M - Compact Vision-Language Model optimized for mobile
+    // Only 1 GB - fits perfectly on iPhone with 3GB memory limit
+    static let smolVLM2_500M = AIModel(
+        id: "smolvlm2-500m",
+        name: "SmolVLM2 500M",
+        shortDescription: "Fast & compact vision AI for mobile",
+        fullDescription: "SmolVLM2 500M - A highly efficient vision-language model designed specifically for mobile devices. Only 1 GB download, runs smoothly on iPhone. Understands images, screenshots, and documents with excellent performance.",
+        size: "1.0 GB",
+        sizeBytes: 1_020_000_000,
+        downloadURL: URL(string: "https://huggingface.co/mlx-community/SmolVLM2-500M-Video-Instruct-mlx/resolve/main/model.safetensors")!,
+        fileName: "smolvlm2-500m",
+        capabilities: [.chat, .vision, .fast, .imageAnalysis, .documentAnalysis],
+        memoryRequired: "2 GB RAM",
+        templateType: .smolvlm,
+        backend: .mlx,
+        supportsVision: true,
+        huggingFaceId: "mlx-community/SmolVLM2-500M-Video-Instruct-mlx",
+        additionalFiles: nil
+    )
+
+    // SmolVLM2 256M - Ultra-compact for older devices
+    static let smolVLM2_256M = AIModel(
+        id: "smolvlm2-256m",
+        name: "SmolVLM2 256M (Ultra-Light)",
+        shortDescription: "Ultra-compact vision AI",
+        fullDescription: "SmolVLM2 256M - The smallest vision-language model available. Only 513 MB, perfect for older iPhones or devices with limited memory. Good for basic image understanding.",
+        size: "513 MB",
+        sizeBytes: 513_000_000,
+        downloadURL: URL(string: "https://huggingface.co/mlx-community/SmolVLM2-256M-Video-Instruct-mlx/resolve/main/model.safetensors")!,
+        fileName: "smolvlm2-256m",
+        capabilities: [.chat, .vision, .fast, .imageAnalysis],
+        memoryRequired: "1 GB RAM",
+        templateType: .smolvlm,
+        backend: .mlx,
+        supportsVision: true,
+        huggingFaceId: "mlx-community/SmolVLM2-256M-Video-Instruct-mlx",
+        additionalFiles: nil
+    )
+
     // Qwen3-VL 4B - Vision-Language Model with MLX
     // 4-bit quantized for mobile deployment
     static let qwen3VL4B = AIModel(
@@ -137,11 +177,11 @@ extension AIModel {
         additionalFiles: nil
     )
 
-    // Primary model is now Qwen3-VL
-    static let allModels: [AIModel] = [qwen3VL4B, qwen7B]
+    // Available models - Qwen3-VL-4B is default, SmolVLM2 available for smaller memory devices
+    static let allModels: [AIModel] = [qwen3VL4B, smolVLM2_500M, smolVLM2_256M, qwen7B]
 
     static var defaultModel: AIModel {
-        qwen3VL4B  // Vision model is now default
+        qwen3VL4B  // Qwen3-VL-4B is default - most capable vision model
     }
 
     static func model(withId id: String) -> AIModel? {

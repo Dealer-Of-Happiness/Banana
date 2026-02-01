@@ -27,6 +27,9 @@ struct SettingsView: View {
             // AI Settings (Context Window)
             aiSettingsSection
 
+            // Language Settings
+            languageSettingsSection
+
             // Data & Privacy
             dataPrivacySection
 
@@ -134,6 +137,22 @@ struct SettingsView: View {
             return "24K: Recommended for iPhone 16 Pro with 8GB+ RAM. Supports ~60-70 message conversations."
         default:
             return "32K: Recommended for iPhone 16 Pro Max and future devices with 12GB+ RAM. Maximum conversation length."
+        }
+    }
+
+    // MARK: - Language Settings Section
+
+    private var languageSettingsSection: some View {
+        Section {
+            Picker("Response Language", selection: $appState.settings.outputLanguage) {
+                ForEach(SupportedLanguage.allCases) { language in
+                    Text(language.displayName).tag(language)
+                }
+            }
+        } header: {
+            Label("Language", systemImage: "globe")
+        } footer: {
+            Text("AiGoodbye will respond in the selected language. Powered by Qwen2-VL with support for 18+ languages.")
         }
     }
 

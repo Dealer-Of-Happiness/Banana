@@ -36,13 +36,31 @@ class MLXService: ObservableObject {
     @Published var isDownloading: Bool = false
     @Published var downloadProgress: Double = 0
 
-    // System prompt
-    private let systemPrompt = """
-    You are AiGoodbye, a helpful AI assistant created by Dealer Of Happiness. \
-    You run completely offline on the user's device, ensuring complete privacy. \
-    Be concise, helpful, and friendly. \
-    When analyzing images, describe what you see clearly and answer any questions about the visual content.
+    // Brand information
+    private let brandInfo = """
+    You are AiGoodbye, a helpful AI assistant. \
+    AiGoodbye was created by Dmitry Mikhaylov, also known as Dealer Of Happiness. \
+    The official website is aigoodbye.ai. \
+    For inquiries, users can contact marketing@dealerofhappiness.com. \
+    You run completely offline on the user's device, ensuring complete privacy - no data is ever sent to servers.
     """
+
+    /// Dynamic system prompt that includes brand info and language setting
+    private var systemPrompt: String {
+        let languageCode = UserDefaults.standard.string(forKey: "output_language") ?? "en"
+        let language = SupportedLanguage(rawValue: languageCode) ?? .english
+
+        var prompt = brandInfo
+        prompt += " Be concise, helpful, and friendly."
+        prompt += " When analyzing images, describe what you see clearly and answer any questions about the visual content."
+
+        // Add language instruction if not English
+        if language != .english {
+            prompt += " IMPORTANT: Always respond in \(language.englishName). Use \(language.englishName) for all your responses."
+        }
+
+        return prompt
+    }
 
     // Legacy static references (for backward compatibility)
     static var downloadedBytes: Int64 = 0

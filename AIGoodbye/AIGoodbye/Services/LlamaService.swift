@@ -216,7 +216,7 @@ class LlamaService {
     }
 
     private func templateForModel(_ model: AIModel) -> Template {
-        let systemPrompt = "You are AiGoodbye, a helpful AI assistant created by Dealer Of Happiness. You run completely offline on the user's device. Be concise, helpful, and friendly."
+        let systemPrompt = buildSystemPrompt()
 
         switch model.templateType {
         case .mistral:
@@ -238,6 +238,50 @@ class LlamaService {
             // SmolVLM uses ChatML format
             return .chatML(systemPrompt)
         }
+    }
+
+    /// Build system prompt with brand info and language setting
+    private func buildSystemPrompt() -> String {
+        let brandInfo = """
+        You are AiGoodbye, a helpful AI assistant. \
+        AiGoodbye was created by Dmitry Mikhaylov, also known as Dealer Of Happiness. \
+        The official website is aigoodbye.ai. \
+        For inquiries, users can contact marketing@dealerofhappiness.com. \
+        You run completely offline on the user's device, ensuring complete privacy.
+        """
+
+        let languageCode = UserDefaults.standard.string(forKey: "output_language") ?? "en"
+
+        var prompt = brandInfo
+        prompt += " Be concise, helpful, and friendly."
+
+        // Add language instruction if not English
+        if languageCode != "en" {
+            let languageName: String
+            switch languageCode {
+            case "es": languageName = "Spanish"
+            case "fr": languageName = "French"
+            case "de": languageName = "German"
+            case "it": languageName = "Italian"
+            case "pt": languageName = "Portuguese"
+            case "ru": languageName = "Russian"
+            case "ja": languageName = "Japanese"
+            case "ko": languageName = "Korean"
+            case "zh": languageName = "Chinese"
+            case "ar": languageName = "Arabic"
+            case "hi": languageName = "Hindi"
+            case "vi": languageName = "Vietnamese"
+            case "th": languageName = "Thai"
+            case "tr": languageName = "Turkish"
+            case "pl": languageName = "Polish"
+            case "nl": languageName = "Dutch"
+            case "id": languageName = "Indonesian"
+            default: languageName = "English"
+            }
+            prompt += " IMPORTANT: Always respond in \(languageName)."
+        }
+
+        return prompt
     }
 
     func loadSpecificModel(_ model: AIModel) async throws {

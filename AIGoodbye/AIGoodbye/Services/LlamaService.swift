@@ -234,6 +234,9 @@ class LlamaService {
         case .qwen3vl:
             // Qwen3-VL uses ChatML format
             return .chatML(systemPrompt)
+        case .smolvlm:
+            // SmolVLM uses ChatML format
+            return .chatML(systemPrompt)
         }
     }
 

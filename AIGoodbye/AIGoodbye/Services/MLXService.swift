@@ -2,8 +2,8 @@
 //  MLXService.swift
 //  AIGoodbye
 //
-//  MLX-based inference service for Qwen3-VL vision-language model
-//  Replaces LlamaService with Apple's MLX framework for better A-series chip support
+//  MLX-based inference service for vision-language models (SmolVLM, Qwen-VL)
+//  Uses Apple's MLX framework for efficient on-device inference
 //
 
 import Foundation
@@ -379,12 +379,11 @@ class MLXService: ObservableObject {
         switch templateType {
         case .smolvlm:
             return buildSmolVLMPrompt(userMessage: userMessage, image: image)
-        case .qwen3vl:
-            return buildQwenPrompt(userMessage: userMessage, image: image)
-        case .fastvlm:
-            return buildFastVLMPrompt(userMessage: userMessage, image: image)
+        case .qwenvl:
+            return buildQwenVLPrompt(userMessage: userMessage, image: image)
         default:
-            return buildQwenPrompt(userMessage: userMessage, image: image)
+            // Default to Qwen VL format for other MLX vision models
+            return buildQwenVLPrompt(userMessage: userMessage, image: image)
         }
     }
 
@@ -418,8 +417,9 @@ class MLXService: ObservableObject {
         return prompt
     }
 
-    /// Build prompt for Qwen3-VL models
-    private func buildQwenPrompt(userMessage: String, image: UIImage?) -> String {
+    /// Build prompt for Qwen VL models (Qwen2-VL, Qwen3-VL)
+    /// Uses ChatML format with <|vision_start|><|image_pad|><|vision_end|> for images
+    private func buildQwenVLPrompt(userMessage: String, image: UIImage?) -> String {
         var prompt = ""
 
         // Add system message
@@ -432,37 +432,9 @@ class MLXService: ObservableObject {
             }
         }
 
-        // Add current user message
+        // Add current user message with vision tokens if image present
         if image != nil {
             prompt += "<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>\(userMessage)<|im_end|>\n"
-        } else {
-            prompt += "<|im_start|>user\n\(userMessage)<|im_end|>\n"
-        }
-
-        // Add assistant start
-        prompt += "<|im_start|>assistant\n"
-
-        return prompt
-    }
-
-    /// Build prompt for Apple FastVLM (LLaVA-Qwen2 based)
-    private func buildFastVLMPrompt(userMessage: String, image: UIImage?) -> String {
-        var prompt = ""
-
-        // FastVLM uses ChatML format with <image> token for vision
-        // Add system message
-        prompt += "<|im_start|>system\n\(systemPrompt)<|im_end|>\n"
-
-        // Add conversation history
-        for msg in conversationHistory.suffix(historyLimit * 2) {
-            if let role = msg["role"], let content = msg["content"] {
-                prompt += "<|im_start|>\(role)\n\(content)<|im_end|>\n"
-            }
-        }
-
-        // Add current user message - FastVLM uses <image> token
-        if image != nil {
-            prompt += "<|im_start|>user\n<image>\n\(userMessage)<|im_end|>\n"
         } else {
             prompt += "<|im_start|>user\n\(userMessage)<|im_end|>\n"
         }

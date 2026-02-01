@@ -231,14 +231,11 @@ class LlamaService {
             return .chatML(systemPrompt)
         case .alpaca:
             return .alpaca(systemPrompt)
-        case .qwen3vl:
-            // Qwen3-VL uses ChatML format
+        case .qwenvl:
+            // Qwen VL models (Qwen2-VL, Qwen3-VL) use ChatML format
             return .chatML(systemPrompt)
         case .smolvlm:
             // SmolVLM uses ChatML format
-            return .chatML(systemPrompt)
-        case .fastvlm:
-            // FastVLM (LLaVA-Qwen2) uses ChatML format
             return .chatML(systemPrompt)
         }
     }

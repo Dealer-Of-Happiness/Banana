@@ -92,35 +92,13 @@ enum TemplateType: String, Codable {
     case phi
     case chatml
     case alpaca
-    case qwen3vl  // Qwen3-VL specific template
-    case smolvlm  // SmolVLM2 template format
-    case fastvlm  // Apple FastVLM (LLaVA-Qwen2 based)
+    case qwenvl    // Qwen VL models (Qwen2-VL, Qwen3-VL) - uses <|vision_start|><|image_pad|><|vision_end|>
+    case smolvlm   // SmolVLM2 template format
 }
 
 // MARK: - Available Models
 
 extension AIModel {
-    // Apple FastVLM 0.5B - Fastest Vision-Language Model for iPhone
-    // 85x faster time-to-first-token than comparable models
-    // Uses LLaVA-Qwen2 architecture optimized by Apple for on-device inference
-    static let fastVLM_05B = AIModel(
-        id: "fastvlm-0.5b",
-        name: "FastVLM 0.5B (Recommended)",
-        shortDescription: "Apple's fastest vision AI - 85x faster response",
-        fullDescription: "Apple FastVLM 0.5B - The fastest vision-language model for iPhone. Designed by Apple specifically for on-device inference with 85x faster time-to-first-token than comparable models. 1.3 GB download, excellent for real-time image analysis.",
-        size: "1.3 GB",
-        sizeBytes: 1_300_000_000,
-        downloadURL: URL(string: "https://huggingface.co/apple/FastVLM-0.5B-fp16/resolve/main/model.safetensors")!,
-        fileName: "fastvlm-0.5b",
-        capabilities: [.chat, .vision, .fast, .imageAnalysis, .documentAnalysis],
-        memoryRequired: "2 GB RAM",
-        templateType: .fastvlm,
-        backend: .mlx,
-        supportsVision: true,
-        huggingFaceId: "apple/FastVLM-0.5B-fp16",
-        additionalFiles: nil
-    )
-
     // SmolVLM2 500M - Compact Vision-Language Model optimized for mobile
     // Only 1 GB - fits perfectly on iPhone with 3GB memory limit
     static let smolVLM2_500M = AIModel(
@@ -160,6 +138,26 @@ extension AIModel {
         additionalFiles: nil
     )
 
+    // Qwen2-VL 2B - Multilingual Vision-Language Model
+    // 4-bit quantized - Good multilingual support, borderline memory for iPhone
+    static let qwen2VL2B = AIModel(
+        id: "qwen2-vl-2b",
+        name: "Qwen2 Vision 2B (Multilingual)",
+        shortDescription: "Multilingual vision AI - 29+ languages",
+        fullDescription: "Qwen2-VL 2B with 4-bit quantization. Excellent multilingual support including Chinese, Japanese, Korean, Arabic, and European languages. 1.25 GB download. May work on newer iPhones but memory is borderline.",
+        size: "1.25 GB",
+        sizeBytes: 1_250_000_000,
+        downloadURL: URL(string: "https://huggingface.co/mlx-community/Qwen2-VL-2B-Instruct-4bit/resolve/main/model.safetensors")!,
+        fileName: "qwen2-vl-2b",
+        capabilities: [.chat, .vision, .multilingual, .imageAnalysis, .documentAnalysis],
+        memoryRequired: "2.5-3 GB RAM",
+        templateType: .qwenvl,
+        backend: .mlx,
+        supportsVision: true,
+        huggingFaceId: "mlx-community/Qwen2-VL-2B-Instruct-4bit",
+        additionalFiles: nil
+    )
+
     // Qwen3-VL 4B - Vision-Language Model with MLX (iPad/Mac only - requires 6GB RAM)
     // 4-bit quantized - TOO LARGE for iPhone (3GB limit)
     static let qwen3VL4B = AIModel(
@@ -173,7 +171,7 @@ extension AIModel {
         fileName: "qwen3-vl-4b",
         capabilities: [.chat, .vision, .coding, .reasoning, .multilingual, .imageAnalysis, .documentAnalysis],
         memoryRequired: "6 GB RAM (iPad/Mac only)",
-        templateType: .qwen3vl,
+        templateType: .qwenvl,
         backend: .mlx,
         supportsVision: true,
         huggingFaceId: "mlx-community/Qwen3-VL-4B-Instruct-4bit",
@@ -200,8 +198,8 @@ extension AIModel {
     )
 
     // Available models - SmolVLM2-500M is default (works on all devices including iPhone)
-    // Note: FastVLM requires custom CoreML integration not yet supported by mlx-swift-lm
-    static let allModels: [AIModel] = [smolVLM2_500M, smolVLM2_256M, qwen3VL4B, qwen7B]
+    // Order: Safe iPhone models first, then larger/riskier models
+    static let allModels: [AIModel] = [smolVLM2_500M, qwen2VL2B, smolVLM2_256M, qwen3VL4B, qwen7B]
 
     static var defaultModel: AIModel {
         smolVLM2_500M  // SmolVLM2-500M is default - works on iPhone (1GB, fits in 3GB limit)

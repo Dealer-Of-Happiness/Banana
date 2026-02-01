@@ -10,17 +10,16 @@ import UIKit
 
 /// Centralized configuration struct for app-wide constants
 /// Eliminates hardcoded values scattered throughout the codebase
-/// All properties are nonisolated(unsafe) to allow access from any actor context
 enum AppConfig {
 
     // MARK: - Image Processing
 
     enum Image {
         /// Maximum dimension for image resizing (width or height)
-        nonisolated(unsafe) static let maxDimension: CGFloat = 512
+        static let maxDimension: CGFloat = 512
 
         /// JPEG compression quality for processed images
-        nonisolated(unsafe) static let compressionQuality: CGFloat = 0.8
+        static let compressionQuality: CGFloat = 0.8
 
         /// Resize image to prevent memory crashes when combined with loaded model
         @MainActor
@@ -47,42 +46,42 @@ enum AppConfig {
 
     enum Memory {
         /// GPU cache limit in bytes (20MB default)
-        nonisolated(unsafe) static let gpuCacheLimit: Int = 20 * 1024 * 1024
+        static let gpuCacheLimit: Int = 20 * 1024 * 1024
 
         /// Maximum conversation history entries to keep in memory
-        nonisolated(unsafe) static let historyLimit: Int = 10
+        static let historyLimit: Int = 10
 
         /// Maximum tokens for AI response generation
-        nonisolated(unsafe) static let maxTokens: Int = 256
+        static let maxTokens: Int = 256
     }
 
     // MARK: - Document Processing
 
     enum Document {
         /// Maximum file size for document processing (25MB)
-        nonisolated(unsafe) static let maxFileSizeBytes: Int = 25 * 1024 * 1024
+        static let maxFileSizeBytes: Int = 25 * 1024 * 1024
 
         /// Chunk size for text processing
-        nonisolated(unsafe) static let chunkSize: Int = 500
+        static let chunkSize: Int = 500
 
         /// Overlap between chunks for context continuity
-        nonisolated(unsafe) static let chunkOverlap: Int = 50
+        static let chunkOverlap: Int = 50
 
         /// Content limit for document truncation in chat
-        nonisolated(unsafe) static let contentLimit: Int = 6000
+        static let contentLimit: Int = 6000
     }
 
     // MARK: - Model Parameters
 
     enum Model {
         /// Default temperature for AI generation
-        nonisolated(unsafe) static let defaultTemperature: Float = 0.7
+        static let defaultTemperature: Float = 0.7
 
         /// Top-p sampling parameter
-        nonisolated(unsafe) static let topP: Float = 0.9
+        static let topP: Float = 0.9
 
         /// Download buffer size for streaming downloads (1MB)
-        nonisolated(unsafe) static let downloadBufferSize: Int = 1024 * 1024
+        static let downloadBufferSize: Int = 1024 * 1024
     }
 
     // MARK: - Contact Information

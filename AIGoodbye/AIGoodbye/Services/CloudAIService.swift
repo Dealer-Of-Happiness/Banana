@@ -281,6 +281,7 @@ enum CloudAIError: LocalizedError {
     case missingApiKey
     case requestFailed
     case invalidResponse
+    case invalidConfiguration
 
     var errorDescription: String? {
         switch self {
@@ -290,6 +291,8 @@ enum CloudAIError: LocalizedError {
             return "Request failed"
         case .invalidResponse:
             return "Invalid response"
+        case .invalidConfiguration:
+            return "Invalid configuration"
         }
     }
 }

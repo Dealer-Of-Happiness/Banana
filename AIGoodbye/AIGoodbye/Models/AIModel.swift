@@ -105,7 +105,7 @@ extension AIModel {
         size: "2.8 GB",
         sizeBytes: 2_800_000_000,
         downloadURL: URL(string: "https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit/resolve/main/model.safetensors")!,
-        fileName: "qwen3-vl-4b",  // Directory name for MLX models
+        fileName: "mlx-community/Qwen3-VL-4B-Instruct-4bit",  // Match HuggingFace repo path for HubApi
         capabilities: [.chat, .vision, .coding, .reasoning, .multilingual, .imageAnalysis, .documentAnalysis],
         memoryRequired: "6 GB RAM",
         templateType: .qwen3vl,

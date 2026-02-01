@@ -103,14 +103,21 @@ class MLXService: ObservableObject {
 
         do {
             // Create model configuration for local path
+            // Use the full HuggingFace model ID for proper path resolution
             let configuration = ModelConfiguration(
-                id: model.id,
+                id: "mlx-community/Qwen3-VL-4B-Instruct-4bit",
                 defaultPrompt: "You are a helpful assistant."
             )
 
+            // HubApi expects downloadBase to be the root where models/{id} structure exists
+            // Our structure: Documents/models/qwen3-vl-4b/
+            // HubApi looks for: downloadBase/models/{id}/config.json
+            // So downloadBase should be Documents (parent of models directory)
+            let documentsDir = modelPath.deletingLastPathComponent().deletingLastPathComponent()
+
             // Load VLM model using VLMModelFactory
             modelContainer = try await VLMModelFactory.shared.loadContainer(
-                hub: HubApi(downloadBase: modelPath),
+                hub: HubApi(downloadBase: documentsDir),
                 configuration: configuration
             ) { progress in
                 print("[MLXService] Loading progress: \(Int(progress.fractionCompleted * 100))%")

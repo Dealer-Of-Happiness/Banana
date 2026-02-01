@@ -91,20 +91,11 @@ class AppState: ObservableObject {
     let iCloudService: ICloudSyncService
     let conversationManager: ConversationManager
 
-    // Legacy service for backward compatibility
-    var llamaService: LlamaService { _llamaService }
-    private let _llamaService: LlamaService
-
     init() {
         self.settings = SettingsManager()
 
         // Primary: MLX Service with vision capabilities
         self.mlxService = MLXService(
-            temperature: settings.temperature
-        )
-
-        // Legacy: LlamaService for backward compatibility
-        self._llamaService = LlamaService(
             temperature: settings.temperature
         )
 

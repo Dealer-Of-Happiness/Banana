@@ -243,49 +243,53 @@ extension ModelDownloadService: URLSessionDownloadDelegate {
     }
 
     nonisolated func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        // Get the destination URL
-        let destPath = UserDefaults.standard.string(forKey: "download_dest_\(downloadTask.taskIdentifier)")
+        // CRITICAL: The file at `location` is deleted IMMEDIATELY after this method returns!
+        // We MUST move it synchronously before any async work.
 
+        let taskIdentifier = downloadTask.taskIdentifier
+        let destPath = UserDefaults.standard.string(forKey: "download_dest_\(taskIdentifier)")
+
+        guard let destPath = destPath else {
+            print("[ModelDownload] No destination path found for task \(taskIdentifier)")
+            return
+        }
+
+        let destURL = URL(fileURLWithPath: destPath)
+        var moveError: Error?
+
+        // Do all file operations SYNCHRONOUSLY before this method returns
+        do {
+            // Create parent directory if it doesn't exist
+            let parentDir = destURL.deletingLastPathComponent()
+            try FileManager.default.createDirectory(at: parentDir, withIntermediateDirectories: true)
+
+            // Remove existing file if any
+            try? FileManager.default.removeItem(at: destURL)
+
+            // Move downloaded file to destination - MUST happen before method returns!
+            try FileManager.default.moveItem(at: location, to: destURL)
+
+            print("[ModelDownload] Successfully saved: \(destURL.lastPathComponent)")
+        } catch {
+            print("[ModelDownload] Error moving file: \(error)")
+            moveError = error
+        }
+
+        // Cleanup UserDefaults
+        UserDefaults.standard.removeObject(forKey: "download_dest_\(taskIdentifier)")
+
+        // Now we can dispatch to MainActor to update state
         Task { @MainActor in
-            guard let destPath = destPath else {
-                print("[ModelDownload] No destination path found for task")
-                return
-            }
-
-            let destURL = URL(fileURLWithPath: destPath)
-
-            do {
-                // Create parent directory if it doesn't exist
-                let parentDir = destURL.deletingLastPathComponent()
-                try FileManager.default.createDirectory(at: parentDir, withIntermediateDirectories: true)
-
-                // Remove existing file if any
-                try? FileManager.default.removeItem(at: destURL)
-
-                // Move downloaded file to destination
-                try FileManager.default.moveItem(at: location, to: destURL)
-
-                // Find and resume continuation
-                for (taskId, task) in self.downloadTasks where task.taskIdentifier == downloadTask.taskIdentifier {
-                    if let continuation = self.downloadContinuations.removeValue(forKey: taskId) {
+            for (taskId, task) in self.downloadTasks where task.taskIdentifier == taskIdentifier {
+                if let continuation = self.downloadContinuations.removeValue(forKey: taskId) {
+                    if let error = moveError {
+                        continuation.resume(throwing: error)
+                    } else {
                         continuation.resume(returning: destURL)
                     }
-                    self.downloadTasks.removeValue(forKey: taskId)
-                    break
                 }
-
-                // Cleanup
-                UserDefaults.standard.removeObject(forKey: "download_dest_\(downloadTask.taskIdentifier)")
-
-            } catch {
-                print("[ModelDownload] Error moving file: \(error)")
-                for (taskId, task) in self.downloadTasks where task.taskIdentifier == downloadTask.taskIdentifier {
-                    if let continuation = self.downloadContinuations.removeValue(forKey: taskId) {
-                        continuation.resume(throwing: error)
-                    }
-                    self.downloadTasks.removeValue(forKey: taskId)
-                    break
-                }
+                self.downloadTasks.removeValue(forKey: taskId)
+                break
             }
         }
     }

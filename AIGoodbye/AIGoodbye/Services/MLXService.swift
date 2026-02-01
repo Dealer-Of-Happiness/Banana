@@ -444,9 +444,10 @@ class MLXService: ObservableObject {
     /// Uses ChatML format with <|vision_start|><|image_pad|><|vision_end|> for images
     private func buildQwenVLPrompt(userMessage: String, image: UIImage?) -> String {
         var prompt = ""
+        let language = settingsManager.outputLanguage
 
         // Debug: Log the language setting
-        print("[MLXService] Building prompt with language: \(settingsManager.outputLanguage.englishName)")
+        print("[MLXService] Building prompt with language: \(language.englishName)")
 
         // Add system message
         prompt += "<|im_start|>system\n\(systemPrompt)<|im_end|>\n"
@@ -458,11 +459,17 @@ class MLXService: ObservableObject {
             }
         }
 
+        // Build user message with language reminder for non-English
+        var finalUserMessage = userMessage
+        if language != .english {
+            finalUserMessage = "[Respond in \(language.englishName)] \(userMessage)"
+        }
+
         // Add current user message with vision tokens if image present
         if image != nil {
-            prompt += "<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>\(userMessage)<|im_end|>\n"
+            prompt += "<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>\(finalUserMessage)<|im_end|>\n"
         } else {
-            prompt += "<|im_start|>user\n\(userMessage)<|im_end|>\n"
+            prompt += "<|im_start|>user\n\(finalUserMessage)<|im_end|>\n"
         }
 
         // Add assistant start

@@ -80,7 +80,11 @@ actor CloudAIService {
                     return
                 }
 
-                var request = URLRequest(url: URL(string: "https://api.openai.com/v1/chat/completions")!)
+                guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
+                    continuation.finish(throwing: CloudAIError.invalidConfiguration)
+                    return
+                }
+                var request = URLRequest(url: url)
                 request.httpMethod = "POST"
                 request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
                 request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -143,7 +147,11 @@ actor CloudAIService {
                     return
                 }
 
-                var request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
+                guard let url = URL(string: "https://api.anthropic.com/v1/messages") else {
+                    continuation.finish(throwing: CloudAIError.invalidConfiguration)
+                    return
+                }
+                var request = URLRequest(url: url)
                 request.httpMethod = "POST"
                 request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
                 request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")

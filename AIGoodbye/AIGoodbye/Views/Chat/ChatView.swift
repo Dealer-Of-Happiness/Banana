@@ -418,6 +418,9 @@ class ChatViewModel: ObservableObject {
             pendingImageId = nil
             currentConversationId = conversation?.id
 
+            // Clear image cache to prevent memory accumulation
+            imageCache.removeAll()
+
             // Reset MLX conversation state when switching conversations
             appState?.mlxService.resetConversation()
 
@@ -433,6 +436,11 @@ class ChatViewModel: ObservableObject {
                 loadCachedImages(for: conversation)
             }
         }
+    }
+
+    /// Remove an image from the cache when it's deleted
+    func removeImageFromCache(_ imageId: UUID) {
+        imageCache.removeValue(forKey: imageId)
     }
 
     private func loadCachedImages(for conversation: Conversation) {
@@ -457,8 +465,7 @@ class ChatViewModel: ObservableObject {
             if let data = try await item.loadTransferable(type: Data.self),
                let image = UIImage(data: data) {
                 // Resize image immediately to prevent memory issues
-                // Keep consistent with MLXService max dimension (512px)
-                let resizedImage = resizeImageForMemory(image, maxDimension: 512)
+                let resizedImage = resizeImageForMemory(image, maxDimension: AppConfig.Image.maxDimension)
                 await MainActor.run {
                     self.pendingImage = resizedImage
                     self.pendingImageId = UUID()
@@ -851,8 +858,8 @@ struct CameraView: UIViewControllerRepresentable {
 
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
             if let image = info[.originalImage] as? UIImage {
-                // Resize image immediately to prevent memory issues (max 512px)
-                let resizedImage = resizeImageForMemory(image, maxDimension: 512)
+                // Resize image immediately to prevent memory issues
+                let resizedImage = resizeImageForMemory(image, maxDimension: AppConfig.Image.maxDimension)
                 onImageCaptured(resizedImage)
             }
             picker.dismiss(animated: true)

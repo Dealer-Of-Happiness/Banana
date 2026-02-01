@@ -38,7 +38,9 @@ actor KnowledgeBaseService {
     func getUpcomingEvents(days: Int = 7) async throws -> [CalendarEvent] {
         let calendars = eventStore.calendars(for: .event)
         let startDate = Date()
-        let endDate = Calendar.current.date(byAdding: .day, value: days, to: startDate)!
+        guard let endDate = Calendar.current.date(byAdding: .day, value: days, to: startDate) else {
+            return []
+        }
 
         let predicate = eventStore.predicateForEvents(
             withStart: startDate,

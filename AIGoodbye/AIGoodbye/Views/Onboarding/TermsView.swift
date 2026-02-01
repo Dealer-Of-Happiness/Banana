@@ -221,8 +221,10 @@ struct TermsView: View {
 
                 Text("If you have any questions about these Terms, please contact us at:")
 
-                Link("marketing@dealerofhappiness.com", destination: URL(string: "mailto:marketing@dealerofhappiness.com")!)
-                    .foregroundStyle(.blue)
+                if let emailURL = AppConfig.Contact.supportEmailURL {
+                    Link(AppConfig.Contact.supportEmail, destination: emailURL)
+                        .foregroundStyle(.blue)
+                }
             }
         }
         .font(.body)

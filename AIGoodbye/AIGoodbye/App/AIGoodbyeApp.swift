@@ -82,12 +82,9 @@ class AppState: ObservableObject {
 
     // Services
     let settings: SettingsManager
-    let mlxService: MLXService  // Vision-capable MLX service (replaces LlamaService)
+    let mlxService: MLXService  // Vision-capable MLX service
     let speechService: SpeechService
     let documentService: DocumentService
-    let imageService: ImageAnalysisService
-    let knowledgeBaseService: KnowledgeBaseService
-    let cloudAIService: CloudAIService
     let iCloudService: ICloudSyncService
     let conversationManager: ConversationManager
 
@@ -101,17 +98,6 @@ class AppState: ObservableObject {
 
         self.speechService = SpeechService(settings: settings)
         self.documentService = DocumentService()
-        self.imageService = ImageAnalysisService()
-        self.knowledgeBaseService = KnowledgeBaseService()
-        self.cloudAIService = CloudAIService(
-            chatGPTEnabled: settings.chatGPTEnabled,
-            chatGPTApiKey: settings.chatGPTApiKey,
-            claudeEnabled: settings.claudeEnabled,
-            claudeApiKey: settings.claudeApiKey,
-            googleEnabled: settings.googleEnabled,
-            googleApiKey: settings.googleApiKey,
-            temperature: settings.temperature
-        )
         self.iCloudService = ICloudSyncService(settings: settings)
         self.conversationManager = ConversationManager()
     }

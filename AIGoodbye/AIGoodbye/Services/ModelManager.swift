@@ -225,7 +225,7 @@ class ModelManager: ObservableObject {
                 // Use bytes streaming API for progress reporting
                 let (asyncBytes, response) = try await URLSession.shared.bytes(from: file.url)
 
-                let expectedSize = response.expectedContentLength > 0 ? response.expectedContentLength : file.size
+                let _ = response.expectedContentLength // Content length used for streaming validation
 
                 // Create file handle for writing
                 FileManager.default.createFile(atPath: destinationPath.path, contents: nil)

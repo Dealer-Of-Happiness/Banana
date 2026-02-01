@@ -49,9 +49,8 @@ class MLXService: ObservableObject {
 
         // Set GPU cache limit to prevent memory accumulation during inference
         // This is critical for iOS devices with limited memory (3GB limit)
-        // 20MB cache limit is recommended by official MLX examples
-        GPU.set(cacheLimit: 20 * 1024 * 1024)
-        print("[MLXService] GPU cache limit set to 20MB")
+        GPU.set(cacheLimit: AppConfig.Memory.gpuCacheLimit)
+        print("[MLXService] GPU cache limit set to \(AppConfig.Memory.gpuCacheLimit / 1024 / 1024)MB")
     }
 
     // MARK: - Model Management
@@ -444,9 +443,9 @@ class MLXService: ObservableObject {
     }
 
     private func prepareImageForModel(_ image: UIImage) -> UIImage {
-        // Resize image aggressively to prevent memory issues (max 512px on longest side)
+        // Resize image aggressively to prevent memory issues
         // Reduced from 1024 to stay within iOS 3GB memory limit with model loaded
-        let maxDimension: CGFloat = 512
+        let maxDimension: CGFloat = AppConfig.Image.maxDimension
         let size = image.size
 
         if size.width <= maxDimension && size.height <= maxDimension {

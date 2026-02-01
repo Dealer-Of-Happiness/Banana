@@ -56,7 +56,7 @@ class MLXService: ObservableObject {
 
         // Set GPU cache limit to prevent memory accumulation during inference
         // This is critical for iOS devices with limited memory (3GB limit)
-        GPU.set(cacheLimit: Self.gpuCacheLimitBytes)
+        GPU.Memory.cacheLimit = Self.gpuCacheLimitBytes
         print("[MLXService] GPU cache limit set to \(Self.gpuCacheLimitBytes / 1024 / 1024)MB")
     }
 
@@ -177,7 +177,7 @@ class MLXService: ObservableObject {
 
     /// Clear GPU cache to free memory before memory-intensive operations (e.g., camera)
     func clearGPUCache() {
-        GPU.clearCache()
+        GPU.Memory.clearCache()
         print("[MLXService] GPU cache cleared")
     }
 
@@ -358,7 +358,7 @@ class MLXService: ObservableObject {
 
     private func generateWithContainer(container: ModelContainer, prompt: String, image: UIImage?) async throws -> String {
         // Clear GPU cache before generation to free up memory
-        GPU.clearCache()
+        GPU.Memory.clearCache()
 
         let generateParameters = GenerateParameters(
             maxTokens: maxTokens,
@@ -387,7 +387,7 @@ class MLXService: ObservableObject {
         )
 
         // Clear cache after generation to release memory
-        GPU.clearCache()
+        GPU.Memory.clearCache()
 
         return output
     }

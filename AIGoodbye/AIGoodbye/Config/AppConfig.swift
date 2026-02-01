@@ -23,7 +23,7 @@ enum AppConfig {
 
         /// Resize image to prevent memory crashes when combined with loaded model
         @MainActor
-        static func resizeForMemory(_ image: UIImage, maxDimension: CGFloat = Image.maxDimension) -> UIImage {
+        static func resizeForMemory(_ image: UIImage, maxDimension: CGFloat = 512) -> UIImage {
             let size = image.size
 
             if size.width <= maxDimension && size.height <= maxDimension {

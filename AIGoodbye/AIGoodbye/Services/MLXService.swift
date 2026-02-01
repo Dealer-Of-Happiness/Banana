@@ -90,54 +90,19 @@ class MLXService: ObservableObject {
 
         print("[MLXService] Loading MLX VLM model: \(hfModelId)")
 
-        // Use custom download service for reliable background downloads
-        let downloadService = ModelDownloadService.shared
+        // Create model configuration with HuggingFace model ID
+        // VLMModelFactory handles download automatically using the Hub library
+        let configuration = ModelConfiguration(id: hfModelId)
 
-        // Check if already downloaded, if not, download with our background service
-        if !downloadService.isModelDownloaded(huggingFaceId: hfModelId) {
-            print("[MLXService] Model not cached, downloading with background service...")
-            MLXService.isDownloading = true
-
-            // Create a task to update progress from download service
-            let progressTask = Task {
-                while !Task.isCancelled && downloadService.isDownloading {
-                    await MainActor.run {
-                        MLXService.downloadProgress = downloadService.downloadProgress
-                        MLXService.downloadedBytes = downloadService.downloadedBytes
-                        MLXService.totalBytes = downloadService.totalBytes
-                    }
-                    try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
-                }
-            }
-
-            do {
-                _ = try await downloadService.downloadModel(huggingFaceId: hfModelId, modelId: model.id)
-                progressTask.cancel()
-                MLXService.isDownloading = false
-                print("[MLXService] Model downloaded successfully")
-            } catch {
-                progressTask.cancel()
-                MLXService.isDownloading = false
-                throw MLXError.downloadFailed(error.localizedDescription)
-            }
-        }
-
-        // Load from local cache directory
-        let localModelDir = downloadService.getModelCacheDirectory(for: hfModelId)
-
-        // Create model configuration pointing to local directory
-        let configuration = ModelConfiguration(directory: localModelDir)
-
-        print("[MLXService] Loading model from local cache: \(localModelDir.path)")
-
-        // Load VLM model from local directory
+        // Load VLM model - it will download if needed
         modelContainer = try await VLMModelFactory.shared.loadContainer(
             configuration: configuration
         ) { progress in
             Task { @MainActor in
-                // This is the model loading progress (not download)
-                print("[MLXService] Model loading progress: \(Int(progress.fractionCompleted * 100))%")
+                MLXService.downloadProgress = progress.fractionCompleted
+                MLXService.isDownloading = !progress.isFinished
             }
+            print("[MLXService] Loading progress: \(Int(progress.fractionCompleted * 100))%")
         }
 
         currentModelId = model.id

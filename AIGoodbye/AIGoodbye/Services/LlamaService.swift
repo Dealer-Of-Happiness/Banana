@@ -237,6 +237,9 @@ class LlamaService {
         case .smolvlm:
             // SmolVLM uses ChatML format
             return .chatML(systemPrompt)
+        case .fastvlm:
+            // FastVLM (LLaVA-Qwen2) uses ChatML format
+            return .chatML(systemPrompt)
         }
     }
 

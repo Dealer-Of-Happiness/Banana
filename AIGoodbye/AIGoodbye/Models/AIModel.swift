@@ -94,11 +94,33 @@ enum TemplateType: String, Codable {
     case alpaca
     case qwen3vl  // Qwen3-VL specific template
     case smolvlm  // SmolVLM2 template format
+    case fastvlm  // Apple FastVLM (LLaVA-Qwen2 based)
 }
 
 // MARK: - Available Models
 
 extension AIModel {
+    // Apple FastVLM 0.5B - Fastest Vision-Language Model for iPhone
+    // 85x faster time-to-first-token than comparable models
+    // Uses LLaVA-Qwen2 architecture optimized by Apple for on-device inference
+    static let fastVLM_05B = AIModel(
+        id: "fastvlm-0.5b",
+        name: "FastVLM 0.5B (Recommended)",
+        shortDescription: "Apple's fastest vision AI - 85x faster response",
+        fullDescription: "Apple FastVLM 0.5B - The fastest vision-language model for iPhone. Designed by Apple specifically for on-device inference with 85x faster time-to-first-token than comparable models. 1.3 GB download, excellent for real-time image analysis.",
+        size: "1.3 GB",
+        sizeBytes: 1_300_000_000,
+        downloadURL: URL(string: "https://huggingface.co/apple/FastVLM-0.5B-fp16/resolve/main/model.safetensors")!,
+        fileName: "fastvlm-0.5b",
+        capabilities: [.chat, .vision, .fast, .imageAnalysis, .documentAnalysis],
+        memoryRequired: "2 GB RAM",
+        templateType: .fastvlm,
+        backend: .mlx,
+        supportsVision: true,
+        huggingFaceId: "apple/FastVLM-0.5B-fp16",
+        additionalFiles: nil
+    )
+
     // SmolVLM2 500M - Compact Vision-Language Model optimized for mobile
     // Only 1 GB - fits perfectly on iPhone with 3GB memory limit
     static let smolVLM2_500M = AIModel(
@@ -177,11 +199,11 @@ extension AIModel {
         additionalFiles: nil
     )
 
-    // Available models - SmolVLM2-500M is default (works on all devices including iPhone)
-    static let allModels: [AIModel] = [smolVLM2_500M, smolVLM2_256M, qwen3VL4B, qwen7B]
+    // Available models - FastVLM 0.5B is default (fastest, works on all devices including iPhone)
+    static let allModels: [AIModel] = [fastVLM_05B, smolVLM2_500M, smolVLM2_256M, qwen3VL4B, qwen7B]
 
     static var defaultModel: AIModel {
-        smolVLM2_500M  // SmolVLM2-500M is default - works on iPhone (1GB, fits in 3GB limit)
+        fastVLM_05B  // FastVLM 0.5B is default - Apple's fastest model, works on iPhone
     }
 
     static func model(withId id: String) -> AIModel? {

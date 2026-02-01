@@ -381,6 +381,8 @@ class MLXService: ObservableObject {
             return buildSmolVLMPrompt(userMessage: userMessage, image: image)
         case .qwen3vl:
             return buildQwenPrompt(userMessage: userMessage, image: image)
+        case .fastvlm:
+            return buildFastVLMPrompt(userMessage: userMessage, image: image)
         default:
             return buildQwenPrompt(userMessage: userMessage, image: image)
         }
@@ -443,6 +445,34 @@ class MLXService: ObservableObject {
         return prompt
     }
 
+    /// Build prompt for Apple FastVLM (LLaVA-Qwen2 based)
+    private func buildFastVLMPrompt(userMessage: String, image: UIImage?) -> String {
+        var prompt = ""
+
+        // FastVLM uses ChatML format with <image> token for vision
+        // Add system message
+        prompt += "<|im_start|>system\n\(systemPrompt)<|im_end|>\n"
+
+        // Add conversation history
+        for msg in conversationHistory.suffix(historyLimit * 2) {
+            if let role = msg["role"], let content = msg["content"] {
+                prompt += "<|im_start|>\(role)\n\(content)<|im_end|>\n"
+            }
+        }
+
+        // Add current user message - FastVLM uses <image> token
+        if image != nil {
+            prompt += "<|im_start|>user\n<image>\n\(userMessage)<|im_end|>\n"
+        } else {
+            prompt += "<|im_start|>user\n\(userMessage)<|im_end|>\n"
+        }
+
+        // Add assistant start
+        prompt += "<|im_start|>assistant\n"
+
+        return prompt
+    }
+
     private func prepareImageForModel(_ image: UIImage) -> UIImage {
         // Resize image if too large (max 1024px on longest side)
         let maxDimension: CGFloat = 1024
@@ -494,6 +524,7 @@ class MLXService: ObservableObject {
             "<|endoftext|>", "<|end|>",
             "<|vision_start|>", "<|vision_end|>",
             "<|vision_pad|>", "<|image_pad|>",
+            "<image>", "</image>",
             "<|", "|>",
             "[INST]", "[/INST]",
             "<<SYS>>", "<</SYS>>",

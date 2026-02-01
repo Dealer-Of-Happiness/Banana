@@ -16,7 +16,7 @@ class ModelManager: ObservableObject {
     static let backgroundSessionIdentifier = "com.aigoodbye.modeldownload"
 
     @Published var downloadStates: [String: ModelDownloadState] = [:]
-    @Published var currentModelId: String = "smolvlm2-500m"
+    @Published var currentModelId: String = "fastvlm-0.5b"
     @Published var downloadProgress: Double = 0
     @Published var downloadedBytes: Int64 = 0
     @Published var totalBytes: Int64 = 0
@@ -45,14 +45,25 @@ class ModelManager: ObservableObject {
             currentModelId = savedModelId
         }
 
-        // Migration: Switch to SmolVLM2-500M if user had a model that doesn't work on iPhone
-        // - llamacpp models are no longer supported as primary
+        // Migration: Switch to FastVLM 0.5B if user had a model that doesn't work well
         // - qwen3-vl-4b requires 6GB RAM and crashes on iPhone (3GB limit)
+        // - llamacpp models are no longer supported as primary
+        // - smolvlm2-500m users can benefit from faster FastVLM
         let modelsRequiringMigration = ["qwen-7b", "qwen3-vl-4b"]
         if modelsRequiringMigration.contains(currentModelId) {
-            currentModelId = AIModel.defaultModel.id  // SmolVLM2-500M
+            currentModelId = AIModel.defaultModel.id  // FastVLM 0.5B
             UserDefaults.standard.set(currentModelId, forKey: "selectedModelId")
             print("[ModelManager] Migrated to iPhone-compatible model: \(currentModelId)")
+        }
+
+        // Optional: Migrate SmolVLM2-500M users to FastVLM 0.5B for better performance
+        // Only migrate on first launch after update (check migration flag)
+        let fastvlmMigrationKey = "migratedToFastVLM_v1"
+        if currentModelId == "smolvlm2-500m" && !UserDefaults.standard.bool(forKey: fastvlmMigrationKey) {
+            currentModelId = "fastvlm-0.5b"
+            UserDefaults.standard.set(currentModelId, forKey: "selectedModelId")
+            UserDefaults.standard.set(true, forKey: fastvlmMigrationKey)
+            print("[ModelManager] Migrated from SmolVLM2 to FastVLM 0.5B for better performance")
         }
 
         // Check for any in-progress download that was interrupted

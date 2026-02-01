@@ -141,10 +141,15 @@ class ModelDownloadService: NSObject, ObservableObject {
 
     /// Cancel current download
     func cancelDownload() {
+        // Capture modelId before closure to avoid actor isolation issues
+        let modelIdToSave = currentModelId
+
         for (_, task) in downloadTasks {
             task.cancel { [weak self] resumeData in
-                if let data = resumeData, let modelId = self?.currentModelId {
-                    self?.saveResumeData(data, for: modelId)
+                if let data = resumeData, let modelId = modelIdToSave {
+                    Task { @MainActor in
+                        self?.saveResumeData(data, for: modelId)
+                    }
                 }
             }
         }

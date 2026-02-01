@@ -135,8 +135,8 @@ class LlamaService {
 
     // MARK: - Background Thread Helpers (Static to avoid @MainActor isolation)
 
-    /// Verify file on background thread - static to avoid MainActor isolation
-    private static func verifyFileOnBackgroundThread(at url: URL, modelSizeBytes: Int64) -> Result<Void, Error> {
+    /// Verify file on background thread - nonisolated to allow calling from DispatchQueue
+    nonisolated private static func verifyFileOnBackgroundThread(at url: URL, modelSizeBytes: Int64) -> Result<Void, Error> {
         let fileManager = FileManager.default
 
         guard fileManager.fileExists(atPath: url.path) else {
@@ -177,8 +177,8 @@ class LlamaService {
         return .success(())
     }
 
-    /// Diagnose load failure on background thread - static to avoid MainActor isolation
-    private static func diagnoseLoadFailureOnBackgroundThread(at url: URL, expectedSize: Int64) -> String {
+    /// Diagnose load failure on background thread - nonisolated to allow calling from DispatchQueue
+    nonisolated private static func diagnoseLoadFailureOnBackgroundThread(at url: URL, expectedSize: Int64) -> String {
         let fileManager = FileManager.default
 
         guard fileManager.fileExists(atPath: url.path) else {

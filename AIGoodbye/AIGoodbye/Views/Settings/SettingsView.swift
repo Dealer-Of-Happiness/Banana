@@ -102,7 +102,8 @@ struct SettingsView: View {
                     if abs(oldValue - newValue) >= 1024 {
                         Task {
                             do {
-                                try await appState.llamaService.reloadModel()
+                                // Use MLXService for Qwen2-VL model (MLX backend)
+                                try await appState.mlxService.reloadModel()
                             } catch {
                                 print("[Settings] Failed to reload model: \(error)")
                             }

@@ -9,8 +9,10 @@ import Foundation
 import PDFKit
 
 actor DocumentService {
-    private let chunkSize = AppConfig.Document.chunkSize
-    private let chunkOverlap = AppConfig.Document.chunkOverlap
+    // Document processing constants (inlined to avoid actor isolation warnings)
+    private let chunkSize = 500
+    private let chunkOverlap = 50
+    private let maxFileSizeBytes = 25 * 1024 * 1024  // 25 MB
 
     // MARK: - Process Document
 
@@ -23,10 +25,9 @@ actor DocumentService {
         // Check file size limit
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
         let fileSize = attributes[.size] as? Int ?? 0
-        let maxSize = AppConfig.Document.maxFileSizeBytes
-        guard fileSize <= maxSize else {
+        guard fileSize <= maxFileSizeBytes else {
             let sizeMB = Double(fileSize) / (1024 * 1024)
-            let maxMB = maxSize / (1024 * 1024)
+            let maxMB = maxFileSizeBytes / (1024 * 1024)
             throw DocumentError.fileTooLarge(String(format: "%.1f MB (max %d MB)", sizeMB, maxMB))
         }
 

@@ -28,7 +28,7 @@ class MLXService: ObservableObject {
 
     // Conversation history for multi-turn (limited to reduce memory usage)
     private var conversationHistory: [[String: String]] = []
-    private let historyLimit = AppConfig.Memory.historyLimit
+    private let historyLimit = 10  // Keep limited history to prevent memory issues
 
     // System prompt
     private let systemPrompt = """
@@ -43,14 +43,21 @@ class MLXService: ObservableObject {
     static var totalBytes: Int64 = 0
     static var isDownloading: Bool = false
 
-    init(temperature: Double = Double(AppConfig.Model.defaultTemperature), maxTokens: Int = AppConfig.Memory.maxTokens) {
+    // Constants (inlined to avoid actor isolation warnings in Swift 6)
+    private static let defaultTemp: Float = 0.7
+    private static let defaultMaxTokens: Int = 256
+    private static let gpuCacheLimitBytes: Int = 20 * 1024 * 1024  // 20 MB
+    private static let topP: Float = 0.9
+    private static let imageMaxDimension: CGFloat = 512
+
+    init(temperature: Double = Double(defaultTemp), maxTokens: Int = defaultMaxTokens) {
         self.temperature = Float(temperature)
         self.maxTokens = maxTokens
 
         // Set GPU cache limit to prevent memory accumulation during inference
         // This is critical for iOS devices with limited memory (3GB limit)
-        GPU.set(cacheLimit: AppConfig.Memory.gpuCacheLimit)
-        print("[MLXService] GPU cache limit set to \(AppConfig.Memory.gpuCacheLimit / 1024 / 1024)MB")
+        GPU.set(cacheLimit: Self.gpuCacheLimitBytes)
+        print("[MLXService] GPU cache limit set to \(Self.gpuCacheLimitBytes / 1024 / 1024)MB")
     }
 
     // MARK: - Model Management
@@ -356,7 +363,7 @@ class MLXService: ObservableObject {
         let generateParameters = GenerateParameters(
             maxTokens: maxTokens,
             temperature: temperature,
-            topP: AppConfig.Model.topP
+            topP: Self.topP
         )
 
         // Create user input
@@ -445,7 +452,7 @@ class MLXService: ObservableObject {
     private func prepareImageForModel(_ image: UIImage) -> UIImage {
         // Resize image aggressively to prevent memory issues
         // Reduced from 1024 to stay within iOS 3GB memory limit with model loaded
-        let maxDimension: CGFloat = AppConfig.Image.maxDimension
+        let maxDimension: CGFloat = Self.imageMaxDimension
         let size = image.size
 
         if size.width <= maxDimension && size.height <= maxDimension {

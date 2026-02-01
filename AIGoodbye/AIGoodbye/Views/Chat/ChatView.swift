@@ -429,7 +429,7 @@ class ChatViewModel: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 self?.handleMemoryWarning()
             }
         }

@@ -144,10 +144,13 @@ struct SettingsView: View {
 
     private var languageSettingsSection: some View {
         Section {
-            Picker("Response Language", selection: $appState.settings.outputLanguage) {
+            Picker("Response Language", selection: $viewModel.outputLanguage) {
                 ForEach(SupportedLanguage.allCases) { language in
                     Text(language.displayName).tag(language)
                 }
+            }
+            .onChange(of: viewModel.outputLanguage) { _, newValue in
+                appState.settings.outputLanguage = newValue
             }
         } header: {
             Label("Language", systemImage: "globe")
@@ -216,12 +219,14 @@ class SettingsViewModel: ObservableObject {
     // AI Configuration
     @Published var temperature: Double = 0.7
     @Published var contextWindow: Double = 4096
+    @Published var outputLanguage: SupportedLanguage = .english
     @Published var exportURL: URL?
     @Published var showShareSheet = false
 
     func loadSettings(from settings: SettingsManager) {
         temperature = settings.temperature
         contextWindow = Double(settings.contextWindow)
+        outputLanguage = settings.outputLanguage
     }
 
     func exportConversations(format: ExportFormat, conversations: [Conversation]) async {

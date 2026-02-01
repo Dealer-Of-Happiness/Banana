@@ -387,7 +387,7 @@ class MLXService: ObservableObject {
         let result: String = try await container.perform { context in
             let input = try await context.processor.prepare(input: userInput)
             var output = ""
-            for try await item in MLXLMCommon.generate(
+            for try await item in try MLXLMCommon.generate(
                 input: input,
                 parameters: parameters,
                 context: context

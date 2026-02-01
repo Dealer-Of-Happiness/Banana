@@ -255,6 +255,10 @@ extension ModelDownloadService: URLSessionDownloadDelegate {
             let destURL = URL(fileURLWithPath: destPath)
 
             do {
+                // Create parent directory if it doesn't exist
+                let parentDir = destURL.deletingLastPathComponent()
+                try FileManager.default.createDirectory(at: parentDir, withIntermediateDirectories: true)
+
                 // Remove existing file if any
                 try? FileManager.default.removeItem(at: destURL)
 

@@ -138,19 +138,19 @@ extension AIModel {
         additionalFiles: nil
     )
 
-    // Qwen3-VL 4B - Vision-Language Model with MLX
-    // 4-bit quantized for mobile deployment
+    // Qwen3-VL 4B - Vision-Language Model with MLX (iPad/Mac only - requires 6GB RAM)
+    // 4-bit quantized - TOO LARGE for iPhone (3GB limit)
     static let qwen3VL4B = AIModel(
         id: "qwen3-vl-4b",
-        name: "Qwen3 Vision 4B",
-        shortDescription: "Powerful vision + text AI assistant",
-        fullDescription: "Qwen3-VL 4B with 4-bit quantization. Understands images, documents, screenshots, and text. Perfect for analyzing photos, reading documents, and intelligent conversations.",
+        name: "Qwen3 Vision 4B (iPad/Mac)",
+        shortDescription: "Most powerful vision AI (requires 6GB RAM)",
+        fullDescription: "Qwen3-VL 4B with 4-bit quantization. Most capable model but requires 6 GB RAM - only works on iPad Pro or Mac. Will crash on iPhone due to memory limits.",
         size: "2.8 GB",
         sizeBytes: 2_800_000_000,
         downloadURL: URL(string: "https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit/resolve/main/model.safetensors")!,
         fileName: "qwen3-vl-4b",
         capabilities: [.chat, .vision, .coding, .reasoning, .multilingual, .imageAnalysis, .documentAnalysis],
-        memoryRequired: "6 GB RAM",
+        memoryRequired: "6 GB RAM (iPad/Mac only)",
         templateType: .qwen3vl,
         backend: .mlx,
         supportsVision: true,
@@ -177,11 +177,11 @@ extension AIModel {
         additionalFiles: nil
     )
 
-    // Available models - Qwen3-VL-4B is default, SmolVLM2 available for smaller memory devices
-    static let allModels: [AIModel] = [qwen3VL4B, smolVLM2_500M, smolVLM2_256M, qwen7B]
+    // Available models - SmolVLM2-500M is default (works on all devices including iPhone)
+    static let allModels: [AIModel] = [smolVLM2_500M, smolVLM2_256M, qwen3VL4B, qwen7B]
 
     static var defaultModel: AIModel {
-        qwen3VL4B  // Qwen3-VL-4B is default - most capable vision model
+        smolVLM2_500M  // SmolVLM2-500M is default - works on iPhone (1GB, fits in 3GB limit)
     }
 
     static func model(withId id: String) -> AIModel? {

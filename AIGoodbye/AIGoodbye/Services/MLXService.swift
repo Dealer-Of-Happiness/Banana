@@ -163,7 +163,6 @@ class MLXService: ObservableObject {
 
     /// Clear GPU cache to free memory before memory-intensive operations (e.g., camera)
     func clearGPUCache() {
-        GPU.synchronize()
         GPU.clearCache()
         print("[MLXService] GPU cache cleared")
     }
@@ -348,9 +347,9 @@ class MLXService: ObservableObject {
         GPU.clearCache()
 
         let generateParameters = GenerateParameters(
+            maxTokens: maxTokens,
             temperature: temperature,
-            topP: 0.9,
-            maxTokens: maxTokens
+            topP: 0.9
         )
 
         var output = ""
@@ -385,8 +384,7 @@ class MLXService: ObservableObject {
             return generatedText
         }
 
-        // Synchronize and clear cache after generation to release memory
-        GPU.synchronize()
+        // Clear cache after generation to release memory
         GPU.clearCache()
 
         return output

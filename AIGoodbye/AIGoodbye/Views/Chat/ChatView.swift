@@ -132,6 +132,16 @@ struct ChatView: View {
                 GPU.clearCache()
             }
         }
+        .alert("Error", isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("OK") {
+                viewModel.errorMessage = nil
+            }
+        } message: {
+            Text(viewModel.errorMessage ?? "An error occurred")
+        }
     }
 
     // MARK: - Messages Scroll View
@@ -403,12 +413,41 @@ class ChatViewModel: ObservableObject {
     @Published var isGenerating = false
     @Published var pendingImage: UIImage?
     @Published var pendingImageId: UUID?
+    @Published var errorMessage: String?
 
     var appState: AppState?
     private var currentConversationId: UUID?
 
     // Store images by ID for display in message bubbles
     private var imageCache: [UUID: UIImage] = [:]
+    private var memoryWarningObserver: NSObjectProtocol?
+
+    init() {
+        // Listen for memory warnings to clear image cache
+        memoryWarningObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didReceiveMemoryWarningNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.handleMemoryWarning()
+            }
+        }
+    }
+
+    deinit {
+        if let observer = memoryWarningObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+
+    private func handleMemoryWarning() {
+        // Clear image cache to free memory
+        let clearedCount = imageCache.count
+        imageCache.removeAll()
+        pendingImage = nil
+        print("[ChatViewModel] Memory warning: Cleared \(clearedCount) cached images")
+    }
 
     func loadConversation(_ conversation: Conversation?) {
         // Clear messages when switching to a new or different conversation
@@ -577,7 +616,11 @@ class ChatViewModel: ObservableObject {
         isGenerating = true
 
         do {
-            guard let mlxService = appState?.mlxService else { return }
+            guard let mlxService = appState?.mlxService else {
+                errorMessage = "AI service not available. Please restart the app."
+                isGenerating = false
+                return
+            }
 
             var responseText = ""
 
@@ -636,7 +679,10 @@ class ChatViewModel: ObservableObject {
 
     func regenerateResponse(for message: Message) {
         guard message.role == .assistant else { return }
-        guard let conversation = appState?.currentConversation else { return }
+        guard let conversation = appState?.currentConversation else {
+            errorMessage = "No active conversation. Please start a new chat."
+            return
+        }
 
         guard let messageIndex = messages.firstIndex(where: { $0.id == message.id }) else { return }
 
@@ -668,7 +714,11 @@ class ChatViewModel: ObservableObject {
             isGenerating = true
 
             do {
-                guard let mlxService = appState?.mlxService else { return }
+                guard let mlxService = appState?.mlxService else {
+                    errorMessage = "AI service not available. Please restart the app."
+                    isGenerating = false
+                    return
+                }
 
                 var responseText = ""
 

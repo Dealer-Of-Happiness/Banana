@@ -64,6 +64,16 @@ struct SettingsView: View {
                 ShareSheet(items: [url])
             }
         }
+        .alert("Export Error", isPresented: Binding(
+            get: { viewModel.exportError != nil },
+            set: { if !$0 { viewModel.exportError = nil } }
+        )) {
+            Button("OK") {
+                viewModel.exportError = nil
+            }
+        } message: {
+            Text(viewModel.exportError ?? "An error occurred during export")
+        }
     }
 
     // MARK: - AI Settings Section
@@ -201,6 +211,7 @@ class SettingsViewModel: ObservableObject {
     @Published var contextWindow: Double = 4096
     @Published var exportURL: URL?
     @Published var showShareSheet = false
+    @Published var exportError: String?
 
     func loadSettings(from settings: SettingsManager) {
         temperature = settings.temperature
@@ -215,28 +226,34 @@ class SettingsViewModel: ObservableObject {
         let fileName = "AiGoodbye_Export_\(Date().formatted(date: .numeric, time: .omitted).replacingOccurrences(of: "/", with: "-"))"
         let tempDir = FileManager.default.temporaryDirectory
 
-        switch format {
-        case .txt:
-            let content = generateTextExport(conversations: conversations, dateFormatter: dateFormatter)
-            let fileURL = tempDir.appendingPathComponent("\(fileName).txt")
-            try? content.write(to: fileURL, atomically: true, encoding: .utf8)
-            exportURL = fileURL
-            showShareSheet = true
-
-        case .json:
-            let content = generateJSONExport(conversations: conversations)
-            let fileURL = tempDir.appendingPathComponent("\(fileName).json")
-            try? content.write(to: fileURL, atomically: true, encoding: .utf8)
-            exportURL = fileURL
-            showShareSheet = true
-
-        case .pdf:
-            if let pdfData = generatePDFExport(conversations: conversations, dateFormatter: dateFormatter) {
-                let fileURL = tempDir.appendingPathComponent("\(fileName).pdf")
-                try? pdfData.write(to: fileURL)
+        do {
+            switch format {
+            case .txt:
+                let content = generateTextExport(conversations: conversations, dateFormatter: dateFormatter)
+                let fileURL = tempDir.appendingPathComponent("\(fileName).txt")
+                try content.write(to: fileURL, atomically: true, encoding: .utf8)
                 exportURL = fileURL
                 showShareSheet = true
+
+            case .json:
+                let content = generateJSONExport(conversations: conversations)
+                let fileURL = tempDir.appendingPathComponent("\(fileName).json")
+                try content.write(to: fileURL, atomically: true, encoding: .utf8)
+                exportURL = fileURL
+                showShareSheet = true
+
+            case .pdf:
+                if let pdfData = generatePDFExport(conversations: conversations, dateFormatter: dateFormatter) {
+                    let fileURL = tempDir.appendingPathComponent("\(fileName).pdf")
+                    try pdfData.write(to: fileURL)
+                    exportURL = fileURL
+                    showShareSheet = true
+                } else {
+                    exportError = "Failed to generate PDF. Please try another format."
+                }
             }
+        } catch {
+            exportError = "Export failed: \(error.localizedDescription)"
         }
     }
 

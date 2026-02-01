@@ -23,6 +23,7 @@ struct ChatView: View {
     @State private var showingCamera = false
     @State private var showingDocumentPicker = false
     @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var showingCameraUnavailableAlert = false
 
     var body: some View {
         NavigationStack {
@@ -117,6 +118,12 @@ struct ChatView: View {
                     }
                     showingDocumentPicker = false
                 }
+            }
+            // Camera unavailable alert
+            .alert("Camera Unavailable", isPresented: $showingCameraUnavailableAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Camera is not available on this device. Please use Photo Library instead.")
             }
         }
         .onAppear {
@@ -356,7 +363,11 @@ struct ChatView: View {
                     }
 
                     Button {
-                        showingCamera = true
+                        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                            showingCamera = true
+                        } else {
+                            showingCameraUnavailableAlert = true
+                        }
                     } label: {
                         Label("Take Photo", systemImage: "camera")
                     }
@@ -585,8 +596,9 @@ class ChatViewModel: ObservableObject {
             // Store as pending attachment (shows as attachment preview, not raw text)
             await MainActor.run {
                 self.pendingDocumentName = url.lastPathComponent
-                // Limit content to prevent memory issues
-                self.pendingDocumentContent = String(content.prefix(8000))
+                // Limit content to prevent memory issues - 4000 chars max
+                // This prevents memory crashes when asking follow-up questions
+                self.pendingDocumentContent = String(content.prefix(4000))
             }
 
         } catch {

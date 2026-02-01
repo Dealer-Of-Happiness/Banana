@@ -176,7 +176,6 @@ class AppState: ObservableObject {
 struct LoadingView: View {
     @ObservedObject var appState: AppState
     @ObservedObject var modelManager = ModelManager.shared
-    @ObservedObject var downloadService = ModelDownloadService.shared
 
     // Rotating tagline phrases
     private let taglinePhrases = [
@@ -191,21 +190,16 @@ struct LoadingView: View {
     @State private var currentPhraseIndex = 0
     @State private var phraseOpacity: Double = 1.0
 
-    // Combined download state (MLX or GGUF)
+    // Download state from MLXService (primary) or ModelManager (fallback for GGUF)
     private var isAnyDownloading: Bool {
-        downloadService.isDownloading || modelManager.isDownloading
+        appState.mlxService.isDownloading || modelManager.isDownloading
     }
 
     private var currentProgress: Double {
-        downloadService.isDownloading ? downloadService.downloadProgress : modelManager.downloadProgress
-    }
-
-    private var currentDownloadedBytes: String {
-        downloadService.isDownloading ? downloadService.formattedDownloadedBytes : modelManager.formattedDownloadedBytes
-    }
-
-    private var currentTotalBytes: String {
-        downloadService.isDownloading ? downloadService.formattedTotalBytes : modelManager.formattedTotalBytes
+        if appState.mlxService.isDownloading {
+            return appState.mlxService.downloadProgress
+        }
+        return modelManager.downloadProgress
     }
 
     var body: some View {
@@ -225,7 +219,7 @@ struct LoadingView: View {
             // Show download progress
             if isAnyDownloading {
                 VStack(spacing: 12) {
-                    // Real progress bar
+                    // Progress bar
                     ProgressView(value: currentProgress)
                         .progressViewStyle(.linear)
                         .frame(width: 250)
@@ -235,23 +229,10 @@ struct LoadingView: View {
                         .font(.title2.monospacedDigit())
                         .fontWeight(.semibold)
 
-                    // Downloaded size / Total size
-                    Text("\(currentDownloadedBytes) / \(currentTotalBytes)")
-                        .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(.secondary)
-
-                    // Download speed (from new service)
-                    if downloadService.isDownloading && !downloadService.downloadSpeed.isEmpty {
-                        Text(downloadService.downloadSpeed)
-                            .font(.subheadline.monospacedDigit())
-                            .foregroundStyle(.blue)
-                    }
-
                     // Status text
-                    Text("Download continues in background - you can switch apps")
-                        .font(.caption)
+                    Text("Downloading model...")
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
                 }
             } else {
                 ProgressView()

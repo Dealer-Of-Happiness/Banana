@@ -32,6 +32,10 @@ class MLXService: ObservableObject {
     // Published state for ObservableObject conformance
     @Published var isLoading: Bool = false
 
+    // Download state - @Published for SwiftUI observation
+    @Published var isDownloading: Bool = false
+    @Published var downloadProgress: Double = 0
+
     // System prompt
     private let systemPrompt = """
     You are AiGoodbye, a helpful AI assistant created by Dealer Of Happiness. \
@@ -40,11 +44,9 @@ class MLXService: ObservableObject {
     When analyzing images, describe what you see clearly and answer any questions about the visual content.
     """
 
-    // Download state - observable from outside
+    // Legacy static references (for backward compatibility)
     static var downloadedBytes: Int64 = 0
     static var totalBytes: Int64 = 0
-    static var isDownloading: Bool = false
-    static var downloadProgress: Double = 0
 
     init(temperature: Double = 0.7, maxTokens: Int = 2048) {
         self.temperature = Float(temperature)
@@ -94,16 +96,25 @@ class MLXService: ObservableObject {
         // VLMModelFactory handles download automatically using the Hub library
         let configuration = ModelConfiguration(id: hfModelId)
 
+        // Mark as downloading
+        self.isDownloading = true
+        self.downloadProgress = 0
+
         // Load VLM model - it will download if needed
         modelContainer = try await VLMModelFactory.shared.loadContainer(
             configuration: configuration
-        ) { progress in
+        ) { [weak self] progress in
             Task { @MainActor in
-                MLXService.downloadProgress = progress.fractionCompleted
-                MLXService.isDownloading = !progress.isFinished
+                self?.downloadProgress = progress.fractionCompleted
+                if progress.isFinished {
+                    self?.isDownloading = false
+                }
             }
             print("[MLXService] Loading progress: \(Int(progress.fractionCompleted * 100))%")
         }
+
+        // Ensure download state is cleared
+        self.isDownloading = false
 
         currentModelId = model.id
         print("[MLXService] VLM Model loaded successfully: \(model.name)")
@@ -153,12 +164,24 @@ class MLXService: ObservableObject {
     func restoreHistory(_ messages: [(role: String, content: String)]) {
         conversationHistory.removeAll()
 
+        // Limit content size to prevent memory issues
+        let maxContentLength = 2000
+
         for message in messages {
             let role = message.0.lowercased()
             if role == "user" || role == "assistant" {
+                // Truncate long content (e.g., from document analysis)
+                let content = message.1
+                let truncatedContent: String
+                if content.count > maxContentLength {
+                    truncatedContent = String(content.prefix(maxContentLength)) + "\n[Content truncated]"
+                } else {
+                    truncatedContent = content
+                }
+
                 conversationHistory.append([
                     "role": role,
-                    "content": message.1
+                    "content": truncatedContent
                 ])
             }
         }
@@ -441,9 +464,19 @@ class MLXService: ObservableObject {
     }
 
     private func addToHistory(role: String, content: String) {
+        // Limit content size to prevent memory issues with large documents
+        // Truncate content if it's too long (e.g., from document analysis)
+        let maxContentLength = 2000
+        let truncatedContent: String
+        if content.count > maxContentLength {
+            truncatedContent = String(content.prefix(maxContentLength)) + "\n[Content truncated for memory efficiency]"
+        } else {
+            truncatedContent = content
+        }
+
         conversationHistory.append([
             "role": role,
-            "content": content
+            "content": truncatedContent
         ])
 
         // Trim old history

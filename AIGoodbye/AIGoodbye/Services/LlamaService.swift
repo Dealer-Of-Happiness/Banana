@@ -240,48 +240,17 @@ class LlamaService {
         }
     }
 
-    /// Build system prompt with brand info and language setting
+    /// Build system prompt with brand info
     private func buildSystemPrompt() -> String {
-        let brandInfo = """
+        return """
         You are AiGoodbye, a helpful AI assistant. \
         AiGoodbye was created by Dmitry Mikhaylov, also known as Dealer Of Happiness. \
         The official website is aigoodbye.ai. \
         For inquiries, users can contact marketing@dealerofhappiness.com. \
-        You run completely offline on the user's device, ensuring complete privacy.
+        You run completely offline on the user's device, ensuring complete privacy. \
+        Be concise, helpful, and friendly. \
+        Always respond in the same language the user writes to you.
         """
-
-        let languageCode = UserDefaults.standard.string(forKey: "output_language") ?? "en"
-
-        var prompt = brandInfo
-        prompt += " Be concise, helpful, and friendly."
-
-        // Add language instruction if not English
-        if languageCode != "en" {
-            let languageName: String
-            switch languageCode {
-            case "es": languageName = "Spanish"
-            case "fr": languageName = "French"
-            case "de": languageName = "German"
-            case "it": languageName = "Italian"
-            case "pt": languageName = "Portuguese"
-            case "ru": languageName = "Russian"
-            case "ja": languageName = "Japanese"
-            case "ko": languageName = "Korean"
-            case "zh": languageName = "Chinese"
-            case "ar": languageName = "Arabic"
-            case "hi": languageName = "Hindi"
-            case "vi": languageName = "Vietnamese"
-            case "th": languageName = "Thai"
-            case "tr": languageName = "Turkish"
-            case "pl": languageName = "Polish"
-            case "nl": languageName = "Dutch"
-            case "id": languageName = "Indonesian"
-            default: languageName = "English"
-            }
-            prompt += " IMPORTANT: Always respond in \(languageName)."
-        }
-
-        return prompt
     }
 
     func loadSpecificModel(_ model: AIModel) async throws {

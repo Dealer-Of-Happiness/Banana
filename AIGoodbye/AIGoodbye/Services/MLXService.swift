@@ -25,9 +25,6 @@ class MLXService: ObservableObject {
     private let temperature: Float
     private let maxTokens: Int
 
-    // Settings reference for language preference
-    private let settingsManager: SettingsManager
-
     // Conversation history for multi-turn
     private var conversationHistory: [[String: String]] = []
     private let historyLimit: Int = 30
@@ -39,39 +36,23 @@ class MLXService: ObservableObject {
     @Published var isDownloading: Bool = false
     @Published var downloadProgress: Double = 0
 
-    // Brand information
-    private let brandInfo = """
+    // System prompt with brand information
+    private let systemPrompt = """
     You are AiGoodbye, a helpful AI assistant. \
     AiGoodbye was created by Dmitry Mikhaylov, also known as Dealer Of Happiness. \
     The official website is aigoodbye.ai. \
     For inquiries, users can contact marketing@dealerofhappiness.com. \
-    You run completely offline on the user's device, ensuring complete privacy - no data is ever sent to servers.
+    You run completely offline on the user's device, ensuring complete privacy - no data is ever sent to servers. \
+    Be concise, helpful, and friendly. \
+    When analyzing images, describe what you see clearly and answer any questions about the visual content. \
+    Always respond in the same language the user writes to you.
     """
-
-    /// Dynamic system prompt that includes brand info and language setting
-    private var systemPrompt: String {
-        let language = settingsManager.outputLanguage
-
-        var prompt = ""
-
-        // Put language instruction FIRST for non-English languages
-        if language != .english {
-            prompt += "You MUST respond ONLY in \(language.englishName). This is mandatory - never use English. "
-        }
-
-        prompt += brandInfo
-        prompt += " Be concise, helpful, and friendly."
-        prompt += " When analyzing images, describe what you see clearly and answer any questions about the visual content."
-
-        return prompt
-    }
 
     // Legacy static references (for backward compatibility)
     static var downloadedBytes: Int64 = 0
     static var totalBytes: Int64 = 0
 
-    init(settingsManager: SettingsManager, temperature: Double = 0.7, maxTokens: Int = 2048) {
-        self.settingsManager = settingsManager
+    init(temperature: Double = 0.7, maxTokens: Int = 2048) {
         self.temperature = Float(temperature)
         self.maxTokens = maxTokens
     }
@@ -444,10 +425,6 @@ class MLXService: ObservableObject {
     /// Uses ChatML format with <|vision_start|><|image_pad|><|vision_end|> for images
     private func buildQwenVLPrompt(userMessage: String, image: UIImage?) -> String {
         var prompt = ""
-        let language = settingsManager.outputLanguage
-
-        // Debug: Log the language setting
-        print("[MLXService] Building prompt with language: \(language.englishName)")
 
         // Add system message
         prompt += "<|im_start|>system\n\(systemPrompt)<|im_end|>\n"
@@ -459,17 +436,11 @@ class MLXService: ObservableObject {
             }
         }
 
-        // Build user message with language reminder for non-English
-        var finalUserMessage = userMessage
-        if language != .english {
-            finalUserMessage = "[Respond in \(language.englishName)] \(userMessage)"
-        }
-
         // Add current user message with vision tokens if image present
         if image != nil {
-            prompt += "<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>\(finalUserMessage)<|im_end|>\n"
+            prompt += "<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>\(userMessage)<|im_end|>\n"
         } else {
-            prompt += "<|im_start|>user\n\(finalUserMessage)<|im_end|>\n"
+            prompt += "<|im_start|>user\n\(userMessage)<|im_end|>\n"
         }
 
         // Add assistant start

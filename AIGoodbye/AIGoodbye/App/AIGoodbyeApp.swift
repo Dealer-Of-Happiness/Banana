@@ -110,7 +110,6 @@ class AppState: ObservableObject {
 
         // Primary: MLX Service with vision capabilities
         self.mlxService = MLXService(
-            settingsManager: settings,
             temperature: settings.temperature
         )
 

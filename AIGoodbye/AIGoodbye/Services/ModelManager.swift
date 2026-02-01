@@ -214,23 +214,54 @@ class ModelManager: ObservableObject {
             }
         }
 
-        var downloadedSize: Int64 = 0
+        var completedFilesSize: Int64 = 0
 
-        // Download each file
+        // Download each file with progress tracking
         for (index, file) in filesToDownload.enumerated() {
             let destinationPath = modelDir.appendingPathComponent(file.name)
             print("[ModelManager] Downloading \(file.name) (\(index + 1)/\(filesToDownload.count))...")
 
             do {
-                let (tempURL, _) = try await URLSession.shared.download(from: file.url)
+                // Use bytes streaming API for progress reporting
+                let (asyncBytes, response) = try await URLSession.shared.bytes(from: file.url)
 
-                // Move to destination
-                try? FileManager.default.removeItem(at: destinationPath)
-                try FileManager.default.moveItem(at: tempURL, to: destinationPath)
+                let expectedSize = response.expectedContentLength > 0 ? response.expectedContentLength : file.size
 
-                downloadedSize += file.size
-                downloadedBytes = downloadedSize
-                downloadProgress = Double(downloadedSize) / Double(totalSize)
+                // Create file handle for writing
+                FileManager.default.createFile(atPath: destinationPath.path, contents: nil)
+                let fileHandle = try FileHandle(forWritingTo: destinationPath)
+
+                var currentFileBytes: Int64 = 0
+                var buffer = Data()
+                let bufferSize = 1024 * 1024 // 1MB buffer
+
+                for try await byte in asyncBytes {
+                    buffer.append(byte)
+
+                    // Write in chunks and update progress
+                    if buffer.count >= bufferSize {
+                        try fileHandle.write(contentsOf: buffer)
+                        currentFileBytes += Int64(buffer.count)
+                        buffer.removeAll(keepingCapacity: true)
+
+                        // Update progress
+                        downloadedBytes = completedFilesSize + currentFileBytes
+                        downloadProgress = Double(downloadedBytes) / Double(totalSize)
+                        downloadStates[model.id] = .downloading(progress: downloadProgress)
+                    }
+                }
+
+                // Write remaining buffer
+                if !buffer.isEmpty {
+                    try fileHandle.write(contentsOf: buffer)
+                    currentFileBytes += Int64(buffer.count)
+                }
+
+                try fileHandle.close()
+
+                completedFilesSize += currentFileBytes
+                downloadedBytes = completedFilesSize
+                downloadProgress = Double(downloadedBytes) / Double(totalSize)
                 downloadStates[model.id] = .downloading(progress: downloadProgress)
 
                 print("[ModelManager] Downloaded \(file.name) - Progress: \(Int(downloadProgress * 100))%")

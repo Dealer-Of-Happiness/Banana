@@ -369,20 +369,18 @@ class MLXService: ObservableObject {
         }
 
         // Perform generation
-        output = try await container.perform { (context) -> String in
+        let result: String = try await container.perform { context in
             let input = try await context.processor.prepare(input: userInput)
 
-            let generatedText: String = try MLXLMCommon.generate(
+            return try MLXLMCommon.generate(
                 input: input,
                 parameters: generateParameters,
                 context: context
-            ) { tokens in
-                // Token callback - could be used for streaming
-                return .more
+            ) { _ in
+                .more
             }
-
-            return generatedText
         }
+        output = result
 
         // Clear cache after generation to release memory
         GPU.clearCache()

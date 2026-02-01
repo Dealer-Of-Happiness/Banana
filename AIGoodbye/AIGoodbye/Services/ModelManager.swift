@@ -16,7 +16,7 @@ class ModelManager: ObservableObject {
     static let backgroundSessionIdentifier = "com.aigoodbye.modeldownload"
 
     @Published var downloadStates: [String: ModelDownloadState] = [:]
-    @Published var currentModelId: String = "qwen-7b"
+    @Published var currentModelId: String = "qwen3-vl-4b"  // Default to MLX vision model
     @Published var downloadProgress: Double = 0
     @Published var downloadedBytes: Int64 = 0
     @Published var totalBytes: Int64 = 0
@@ -42,7 +42,14 @@ class ModelManager: ObservableObject {
 
         // Load saved model preference
         if let savedModelId = UserDefaults.standard.string(forKey: "selectedModelId") {
-            currentModelId = savedModelId
+            // Migrate from legacy llamacpp model to MLX model
+            if savedModelId == "qwen-7b" {
+                // Old llamacpp model no longer supported, switch to MLX
+                currentModelId = "qwen3-vl-4b"
+                UserDefaults.standard.set("qwen3-vl-4b", forKey: "selectedModelId")
+            } else {
+                currentModelId = savedModelId
+            }
         }
 
         // Check for any in-progress download that was interrupted

@@ -353,8 +353,6 @@ class MLXService: ObservableObject {
             topP: 0.9
         )
 
-        var output = ""
-
         // Create user input
         let userInput: UserInput
         if let image = image, let cgImage = image.cgImage {
@@ -368,24 +366,33 @@ class MLXService: ObservableObject {
             userInput = UserInput(prompt: .text(prompt))
         }
 
-        // Perform generation
-        let result: String = try await container.perform { context in
-            let input = try await context.processor.prepare(input: userInput)
-
-            return try MLXLMCommon.generate(
-                input: input,
-                parameters: generateParameters,
-                context: context
-            ) { _ in
-                .more
-            }
-        }
-        output = result
+        // Perform generation using helper to avoid type inference issues
+        let output = try await performGeneration(
+            container: container,
+            userInput: userInput,
+            parameters: generateParameters
+        )
 
         // Clear cache after generation to release memory
         GPU.clearCache()
 
         return output
+    }
+
+    private func performGeneration(
+        container: ModelContainer,
+        userInput: UserInput,
+        parameters: GenerateParameters
+    ) async throws -> String {
+        try await container.perform { context in
+            let input = try await context.processor.prepare(input: userInput)
+            let text: String = try MLXLMCommon.generate(
+                input: input,
+                parameters: parameters,
+                context: context
+            ) { _ in .more }
+            return text
+        }
     }
 
     // MARK: - Private Helpers

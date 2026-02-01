@@ -52,14 +52,16 @@ class MLXService: ObservableObject {
     private var systemPrompt: String {
         let language = settingsManager.outputLanguage
 
-        var prompt = brandInfo
+        var prompt = ""
+
+        // Put language instruction FIRST for non-English languages
+        if language != .english {
+            prompt += "You MUST respond ONLY in \(language.englishName). This is mandatory - never use English. "
+        }
+
+        prompt += brandInfo
         prompt += " Be concise, helpful, and friendly."
         prompt += " When analyzing images, describe what you see clearly and answer any questions about the visual content."
-
-        // Add language instruction if not English
-        if language != .english {
-            prompt += " IMPORTANT: Always respond in \(language.englishName). Use \(language.englishName) for all your responses."
-        }
 
         return prompt
     }
@@ -442,6 +444,9 @@ class MLXService: ObservableObject {
     /// Uses ChatML format with <|vision_start|><|image_pad|><|vision_end|> for images
     private func buildQwenVLPrompt(userMessage: String, image: UIImage?) -> String {
         var prompt = ""
+
+        // Debug: Log the language setting
+        print("[MLXService] Building prompt with language: \(settingsManager.outputLanguage.englishName)")
 
         // Add system message
         prompt += "<|im_start|>system\n\(systemPrompt)<|im_end|>\n"

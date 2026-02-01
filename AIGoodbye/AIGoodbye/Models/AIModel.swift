@@ -199,11 +199,12 @@ extension AIModel {
         additionalFiles: nil
     )
 
-    // Available models - FastVLM 0.5B is default (fastest, works on all devices including iPhone)
-    static let allModels: [AIModel] = [fastVLM_05B, smolVLM2_500M, smolVLM2_256M, qwen3VL4B, qwen7B]
+    // Available models - SmolVLM2-500M is default (works on all devices including iPhone)
+    // Note: FastVLM requires custom CoreML integration not yet supported by mlx-swift-lm
+    static let allModels: [AIModel] = [smolVLM2_500M, smolVLM2_256M, qwen3VL4B, qwen7B]
 
     static var defaultModel: AIModel {
-        fastVLM_05B  // FastVLM 0.5B is default - Apple's fastest model, works on iPhone
+        smolVLM2_500M  // SmolVLM2-500M is default - works on iPhone (1GB, fits in 3GB limit)
     }
 
     static func model(withId id: String) -> AIModel? {

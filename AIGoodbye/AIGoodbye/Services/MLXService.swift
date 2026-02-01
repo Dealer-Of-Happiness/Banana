@@ -386,14 +386,24 @@ class MLXService: ObservableObject {
     ) async throws -> String {
         let result: String = try await container.perform { context in
             let input = try await context.processor.prepare(input: userInput)
-            let completionInfo = try MLXLMCommon.generate(
+            var output = ""
+            for try await item in MLXLMCommon.generate(
                 input: input,
                 parameters: parameters,
                 context: context
-            ) { (_: Int) -> GenerateDisposition in
-                return GenerateDisposition.more
+            ) {
+                switch item {
+                case .chunk(let text):
+                    output += text
+                case .info:
+                    break
+                case .toolCall:
+                    break
+                @unknown default:
+                    break
+                }
             }
-            return completionInfo.output
+            return output
         }
         return result
     }

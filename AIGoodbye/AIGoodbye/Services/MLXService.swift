@@ -28,7 +28,7 @@ class MLXService: ObservableObject {
 
     // Conversation history for multi-turn (limited to reduce memory usage)
     private var conversationHistory: [[String: String]] = []
-    private let historyLimit: Int = 10  // Reduced from 30 to prevent memory issues
+    private let historyLimit = AppConfig.Memory.historyLimit
 
     // System prompt
     private let systemPrompt = """
@@ -43,7 +43,7 @@ class MLXService: ObservableObject {
     static var totalBytes: Int64 = 0
     static var isDownloading: Bool = false
 
-    init(temperature: Double = 0.7, maxTokens: Int = 256) {  // Reduced from 2048 to 256 to prevent memory crashes
+    init(temperature: Double = Double(AppConfig.Model.defaultTemperature), maxTokens: Int = AppConfig.Memory.maxTokens) {
         self.temperature = Float(temperature)
         self.maxTokens = maxTokens
 
@@ -356,7 +356,7 @@ class MLXService: ObservableObject {
         let generateParameters = GenerateParameters(
             maxTokens: maxTokens,
             temperature: temperature,
-            topP: 0.9
+            topP: AppConfig.Model.topP
         )
 
         // Create user input

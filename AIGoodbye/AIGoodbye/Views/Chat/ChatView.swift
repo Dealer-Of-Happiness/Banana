@@ -491,11 +491,10 @@ class ChatViewModel: ObservableObject {
             // Use DocumentService for proper text extraction (handles PDF, DOCX, TXT, RTF)
             let processedDoc = try await documentService.processDocument(at: url)
 
-            // Limit content to prevent memory issues (max 6000 chars)
-            let contentLimit = 6000
+            // Limit content to prevent memory issues
             let truncatedContent: String
-            if processedDoc.fullText.count > contentLimit {
-                truncatedContent = String(processedDoc.fullText.prefix(contentLimit)) + "\n\n[Content truncated for memory efficiency...]"
+            if processedDoc.fullText.count > AppConfig.Document.contentLimit {
+                truncatedContent = String(processedDoc.fullText.prefix(AppConfig.Document.contentLimit)) + "\n\n[Content truncated for memory efficiency...]"
             } else {
                 truncatedContent = processedDoc.fullText
             }

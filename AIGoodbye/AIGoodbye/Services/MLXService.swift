@@ -25,6 +25,9 @@ class MLXService: ObservableObject {
     private let temperature: Float
     private let maxTokens: Int
 
+    // Settings reference for language preference
+    private let settingsManager: SettingsManager
+
     // Conversation history for multi-turn
     private var conversationHistory: [[String: String]] = []
     private let historyLimit: Int = 30
@@ -47,8 +50,7 @@ class MLXService: ObservableObject {
 
     /// Dynamic system prompt that includes brand info and language setting
     private var systemPrompt: String {
-        let languageCode = UserDefaults.standard.string(forKey: "output_language") ?? "en"
-        let language = SupportedLanguage(rawValue: languageCode) ?? .english
+        let language = settingsManager.outputLanguage
 
         var prompt = brandInfo
         prompt += " Be concise, helpful, and friendly."
@@ -66,7 +68,8 @@ class MLXService: ObservableObject {
     static var downloadedBytes: Int64 = 0
     static var totalBytes: Int64 = 0
 
-    init(temperature: Double = 0.7, maxTokens: Int = 2048) {
+    init(settingsManager: SettingsManager, temperature: Double = 0.7, maxTokens: Int = 2048) {
+        self.settingsManager = settingsManager
         self.temperature = Float(temperature)
         self.maxTokens = maxTokens
     }

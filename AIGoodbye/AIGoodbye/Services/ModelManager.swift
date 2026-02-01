@@ -16,7 +16,7 @@ class ModelManager: ObservableObject {
     static let backgroundSessionIdentifier = "com.aigoodbye.modeldownload"
 
     @Published var downloadStates: [String: ModelDownloadState] = [:]
-    @Published var currentModelId: String = "smolvlm2-500m"
+    @Published var currentModelId: String = "qwen2-vl-2b"
     @Published var downloadProgress: Double = 0
     @Published var downloadedBytes: Int64 = 0
     @Published var totalBytes: Int64 = 0
@@ -45,15 +45,11 @@ class ModelManager: ObservableObject {
             currentModelId = savedModelId
         }
 
-        // Migration: Switch to SmolVLM2-500M if user had a model that doesn't work on iPhone
-        // - qwen3-vl-4b requires 6GB RAM and crashes on iPhone (3GB limit)
-        // - llamacpp models are no longer supported as primary
-        // - fastvlm-0.5b is not supported by mlx-swift-lm (requires custom CoreML integration)
-        let modelsRequiringMigration = ["qwen-7b", "qwen3-vl-4b", "fastvlm-0.5b"]
-        if modelsRequiringMigration.contains(currentModelId) {
-            currentModelId = AIModel.defaultModel.id  // SmolVLM2-500M
+        // Migration: Switch to Qwen2-VL-2B (the only available model now)
+        if currentModelId != "qwen2-vl-2b" {
+            currentModelId = "qwen2-vl-2b"
             UserDefaults.standard.set(currentModelId, forKey: "selectedModelId")
-            print("[ModelManager] Migrated to iPhone-compatible model: \(currentModelId)")
+            print("[ModelManager] Migrated to Qwen2-VL-2B model")
         }
 
         // Check for any in-progress download that was interrupted

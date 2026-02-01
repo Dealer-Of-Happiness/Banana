@@ -16,6 +16,20 @@ class ConversationManager: ObservableObject {
 
     @Published var conversations: [Conversation] = []
     @Published var folders: [Folder] = []
+    @Published var lastSaveError: String?
+
+    // MARK: - Private Helpers
+
+    /// Safely save the model context with error logging
+    private func saveContext(operation: String = "save") {
+        do {
+            try modelContext?.save()
+        } catch {
+            let errorMessage = "[ConversationManager] Failed to \(operation): \(error.localizedDescription)"
+            print(errorMessage)
+            lastSaveError = errorMessage
+        }
+    }
 
     // MARK: - Initialization
 
@@ -72,7 +86,7 @@ class ConversationManager: ObservableObject {
         let conversation = Conversation(title: title, folderId: folderId)
 
         modelContext?.insert(conversation)
-        try? modelContext?.save()
+        saveContext()
 
         conversations.insert(conversation, at: 0)
         return conversation
@@ -80,12 +94,12 @@ class ConversationManager: ObservableObject {
 
     func updateConversation(_ conversation: Conversation) {
         conversation.updatedAt = Date()
-        try? modelContext?.save()
+        saveContext()
     }
 
     func deleteConversation(_ conversation: Conversation) {
         modelContext?.delete(conversation)
-        try? modelContext?.save()
+        saveContext()
         conversations.removeAll { $0.id == conversation.id }
     }
 
@@ -124,13 +138,13 @@ class ConversationManager: ObservableObject {
             conversation.updateTitle(from: titleContent)
         }
 
-        try? modelContext?.save()
+        saveContext()
         return message
     }
 
     func deleteMessage(_ message: Message) {
         modelContext?.delete(message)
-        try? modelContext?.save()
+        saveContext()
     }
 
     // MARK: - Folder CRUD
@@ -138,14 +152,14 @@ class ConversationManager: ObservableObject {
     func createFolder(name: String) -> Folder {
         let folder = Folder(name: name)
         modelContext?.insert(folder)
-        try? modelContext?.save()
+        saveContext()
         folders.append(folder)
         return folder
     }
 
     func renameFolder(_ folder: Folder, to name: String) {
         folder.name = name
-        try? modelContext?.save()
+        saveContext()
     }
 
     func deleteFolder(_ folder: Folder, deleteContents: Bool = false) {
@@ -163,14 +177,14 @@ class ConversationManager: ObservableObject {
         }
 
         modelContext?.delete(folder)
-        try? modelContext?.save()
+        saveContext()
         folders.removeAll { $0.id == folder.id }
     }
 
     func moveConversation(_ conversation: Conversation, to folder: Folder?) {
         conversation.folderId = folder?.id
         conversation.updatedAt = Date()
-        try? modelContext?.save()
+        saveContext()
     }
 
     // MARK: - Folder Locking
@@ -179,7 +193,7 @@ class ConversationManager: ObservableObject {
         folder.isLocked = true
         // Store password hash in Keychain
         KeychainHelper.save(key: "folder_\(folder.id.uuidString)", value: password)
-        try? modelContext?.save()
+        saveContext()
     }
 
     func unlockFolder(_ folder: Folder, password: String) -> Bool {
@@ -191,7 +205,7 @@ class ConversationManager: ObservableObject {
         if unlockFolder(folder, password: password) {
             folder.isLocked = false
             KeychainHelper.delete(key: "folder_\(folder.id.uuidString)")
-            try? modelContext?.save()
+            saveContext()
             return true
         }
         return false
@@ -218,7 +232,7 @@ class ConversationManager: ObservableObject {
             modelContext?.delete(folder)
         }
 
-        try? modelContext?.save()
+        saveContext()
 
         conversations.removeAll()
         folders.removeAll()

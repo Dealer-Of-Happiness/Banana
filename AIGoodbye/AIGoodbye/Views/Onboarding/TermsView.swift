@@ -124,26 +124,23 @@ struct TermsView: View {
                     .fontWeight(.medium)
 
                 bulletPoints([
-                    "When using local models, all processing occurs on your device with no data sent to external servers",
-                    "When using cloud models, your conversations and prompts are sent to external servers",
+                    "All AI processing occurs entirely on your device - no data is sent to external servers",
+                    "Your conversations, images, and documents never leave your device",
                     "You are responsible for the security of your device and any data you input into the app",
                     "You are responsible for ensuring you have the right to use any content you input into the app",
-                    "You are responsible for any consequences of sharing AI-generated content with third parties",
-                    "You acknowledge that using cloud models involves transmitting your data to third parties"
+                    "You are responsible for any consequences of sharing AI-generated content with third parties"
                 ])
 
-                sectionTitle("Third-Party Services")
+                sectionTitle("On-Device Processing")
 
-                Text("Regarding third-party services:")
+                Text("Regarding on-device AI:")
                     .fontWeight(.medium)
 
                 bulletPoints([
-                    "The integration allows you to access third-party AI models through their APIs",
-                    "Your use of third-party services is subject to their terms of service and privacy policy",
-                    "AiGoodbye is not responsible for the practices, policies, or content of third-party providers",
-                    "You are responsible for reviewing and accepting the terms of any third-party services you access through our app",
-                    "AiGoodbye makes no warranties regarding the availability, reliability, or performance of third-party services",
-                    "Your API keys and account management are your responsibility"
+                    "AiGoodbye runs AI models locally on your device using Apple's MLX framework",
+                    "No internet connection is required for AI features after the initial model download",
+                    "Your privacy is protected as all processing happens on-device",
+                    "Model performance depends on your device's capabilities"
                 ])
             }
 

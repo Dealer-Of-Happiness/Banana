@@ -465,7 +465,7 @@ class ChatViewModel: ObservableObject {
             if let data = try await item.loadTransferable(type: Data.self),
                let image = UIImage(data: data) {
                 // Resize image immediately to prevent memory issues
-                let resizedImage = resizeImageForMemory(image, maxDimension: AppConfig.Image.maxDimension)
+                let resizedImage = AppConfig.Image.resizeForMemory(image)
                 await MainActor.run {
                     self.pendingImage = resizedImage
                     self.pendingImageId = UUID()
@@ -473,26 +473,6 @@ class ChatViewModel: ObservableObject {
             }
         } catch {
             print("[ChatViewModel] Error loading photo: \(error)")
-        }
-    }
-
-    /// Resize image to prevent memory crashes when combined with loaded model
-    private func resizeImageForMemory(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
-        let size = image.size
-
-        if size.width <= maxDimension && size.height <= maxDimension {
-            return image
-        }
-
-        let ratio = min(maxDimension / size.width, maxDimension / size.height)
-        let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
-
-        return autoreleasepool {
-            UIGraphicsBeginImageContextWithOptions(newSize, true, 1.0)
-            image.draw(in: CGRect(origin: .zero, size: newSize))
-            let resized = UIGraphicsGetImageFromCurrentImageContext()
-            UIGraphicsEndImageContext()
-            return resized ?? image
         }
     }
 
@@ -745,9 +725,9 @@ class ChatViewModel: ObservableObject {
     // MARK: - Image Storage
 
     private func saveImage(_ image: UIImage, withId id: UUID) {
-        guard let data = image.jpegData(compressionQuality: 0.8) else { return }
-        let path = getImagePath(for: id)
-        try? data.write(to: path!)
+        guard let data = image.jpegData(compressionQuality: AppConfig.Image.compressionQuality),
+              let path = getImagePath(for: id) else { return }
+        try? data.write(to: path)
     }
 
     private func getImagePath(for id: UUID) -> URL? {
@@ -859,7 +839,7 @@ struct CameraView: UIViewControllerRepresentable {
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
             if let image = info[.originalImage] as? UIImage {
                 // Resize image immediately to prevent memory issues
-                let resizedImage = resizeImageForMemory(image, maxDimension: AppConfig.Image.maxDimension)
+                let resizedImage = AppConfig.Image.resizeForMemory(image)
                 onImageCaptured(resizedImage)
             }
             picker.dismiss(animated: true)
@@ -867,26 +847,6 @@ struct CameraView: UIViewControllerRepresentable {
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             picker.dismiss(animated: true)
-        }
-
-        /// Resize image to prevent memory crashes when combined with loaded model
-        private func resizeImageForMemory(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
-            let size = image.size
-
-            if size.width <= maxDimension && size.height <= maxDimension {
-                return image
-            }
-
-            let ratio = min(maxDimension / size.width, maxDimension / size.height)
-            let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
-
-            return autoreleasepool {
-                UIGraphicsBeginImageContextWithOptions(newSize, true, 1.0)
-                image.draw(in: CGRect(origin: .zero, size: newSize))
-                let resized = UIGraphicsGetImageFromCurrentImageContext()
-                UIGraphicsEndImageContext()
-                return resized ?? image
-            }
         }
     }
 }

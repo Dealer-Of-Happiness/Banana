@@ -83,9 +83,7 @@ class AppState: ObservableObject {
     // Services
     let settings: SettingsManager
     let mlxService: MLXService  // Vision-capable MLX service
-    let speechService: SpeechService
     let documentService: DocumentService
-    let iCloudService: ICloudSyncService
     let conversationManager: ConversationManager
 
     init() {
@@ -96,9 +94,7 @@ class AppState: ObservableObject {
             temperature: settings.temperature
         )
 
-        self.speechService = SpeechService(settings: settings)
         self.documentService = DocumentService()
-        self.iCloudService = ICloudSyncService(settings: settings)
         self.conversationManager = ConversationManager()
     }
 

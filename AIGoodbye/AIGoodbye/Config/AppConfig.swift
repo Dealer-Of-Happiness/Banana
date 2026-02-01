@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 
 /// Centralized configuration struct for app-wide constants
 /// Eliminates hardcoded values scattered throughout the codebase
@@ -19,6 +20,25 @@ enum AppConfig {
 
         /// JPEG compression quality for processed images
         static let compressionQuality: CGFloat = 0.8
+
+        /// Resize image to prevent memory crashes when combined with loaded model
+        static func resizeForMemory(_ image: UIImage, maxDimension: CGFloat = Image.maxDimension) -> UIImage {
+            let size = image.size
+
+            if size.width <= maxDimension && size.height <= maxDimension {
+                return image
+            }
+
+            let ratio = min(maxDimension / size.width, maxDimension / size.height)
+            let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
+
+            return autoreleasepool {
+                let renderer = UIGraphicsImageRenderer(size: newSize)
+                return renderer.image { _ in
+                    image.draw(in: CGRect(origin: .zero, size: newSize))
+                }
+            }
+        }
     }
 
     // MARK: - Memory Management

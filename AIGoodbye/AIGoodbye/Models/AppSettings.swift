@@ -60,32 +60,6 @@ enum VoiceInputMode: String, CaseIterable {
     }
 }
 
-// MARK: - Cloud AI Provider
-
-enum CloudAIProvider: String, CaseIterable, Identifiable {
-    case chatGPT = "openai"
-    case claude = "anthropic"
-    case google = "google"
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .chatGPT: return "ChatGPT"
-        case .claude: return "Claude"
-        case .google: return "Google AI"
-        }
-    }
-
-    var iconName: String {
-        switch self {
-        case .chatGPT: return "bubble.left.fill"
-        case .claude: return "sparkles"
-        case .google: return "g.circle.fill"
-        }
-    }
-}
-
 // MARK: - Knowledge Base Source
 
 enum KnowledgeBaseSource: String, CaseIterable, Identifiable {

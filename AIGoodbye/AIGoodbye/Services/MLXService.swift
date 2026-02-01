@@ -384,15 +384,17 @@ class MLXService: ObservableObject {
         userInput: UserInput,
         parameters: GenerateParameters
     ) async throws -> String {
-        try await container.perform { context in
+        let result: String = try await container.perform { context in
             let input = try await context.processor.prepare(input: userInput)
-            let text: String = try MLXLMCommon.generate(
+            return try MLXLMCommon.generate(
                 input: input,
                 parameters: parameters,
                 context: context
-            ) { _ in .more }
-            return text
+            ) { (_: Int) -> GenerateDisposition in
+                return GenerateDisposition.more
+            }
         }
+        return result
     }
 
     // MARK: - Private Helpers

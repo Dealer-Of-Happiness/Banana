@@ -55,6 +55,10 @@ class MLXService: ObservableObject {
     init(temperature: Double = 0.7, maxTokens: Int = 2048) {
         self.temperature = Float(temperature)
         self.maxTokens = maxTokens
+
+        // Cap MLX GPU cache to prevent memory accumulation during inference
+        // (recommended by official MLX examples for iOS memory constraints)
+        GPU.set(cacheLimit: 20 * 1024 * 1024)
     }
 
     // MARK: - Model Management

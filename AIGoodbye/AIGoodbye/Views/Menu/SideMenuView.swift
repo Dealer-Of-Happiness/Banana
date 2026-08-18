@@ -14,8 +14,6 @@ struct SideMenuView: View {
     @EnvironmentObject var appState: AppState
     @State private var showNewFolderAlert = false
     @State private var newFolderName = ""
-    @State private var selectedFolder: Folder?
-    @State private var showFolderOptions = false
     @State private var showSettings = false
     @State private var draggedConversation: Conversation?
     @State private var targetedFolderId: UUID?
@@ -164,7 +162,10 @@ struct SideMenuView: View {
                 Image(systemName: "xmark")
                     .font(.title3)
                     .foregroundStyle(.secondary)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Close menu")
         }
         .padding()
     }
@@ -228,9 +229,13 @@ struct SideMenuView: View {
                             folderToView = folder
                             showFolderContents = true
                         },
-                        onLongPress: {
-                            selectedFolder = folder
-                            showFolderOptions = true
+                        onRename: {
+                            folderToRename = folder
+                            renameFolderName = folder.name
+                            showRenameFolderAlert = true
+                        },
+                        onDelete: {
+                            appState.conversationManager.deleteFolder(folder, deleteContents: false)
                         }
                     )
                     .dropDestination(for: String.self) { items, _ in
@@ -254,19 +259,6 @@ struct SideMenuView: View {
                     }
                 }
             }
-        }
-        .confirmationDialog("Folder Options", isPresented: $showFolderOptions, presenting: selectedFolder) { folder in
-            Button("Rename") {
-                folderToRename = folder
-                renameFolderName = folder.name
-                showRenameFolderAlert = true
-            }
-
-            Button("Delete", role: .destructive) {
-                appState.conversationManager.deleteFolder(folder, deleteContents: false)
-            }
-
-            Button("Cancel", role: .cancel) {}
         }
         .alert("Rename Folder", isPresented: $showRenameFolderAlert) {
             TextField("Folder name", text: $renameFolderName)
@@ -419,7 +411,8 @@ struct FolderRow: View {
     var isDropTarget: Bool = false
     var chatCount: Int = 0
     let onTap: () -> Void
-    let onLongPress: () -> Void
+    let onRename: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
         Button {
@@ -462,12 +455,19 @@ struct FolderRow: View {
             )
             .animation(.easeInOut(duration: 0.15), value: isDropTarget)
         }
-        .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.5)
-                .onEnded { _ in
-                    onLongPress()
-                }
-        )
+        .contextMenu {
+            Button {
+                onRename()
+            } label: {
+                Label("Rename", systemImage: "pencil")
+            }
+
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
 }
 

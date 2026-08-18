@@ -91,15 +91,15 @@ struct MarkdownText: View {
 
             // Headers become bold lines.
             if let range = trimmed.range(of: #"^#{1,4}\s+"#, options: .regularExpression) {
-                return "**" + trimmed[range.upperBound...] + "**"
+                return "**" + String(trimmed[range.upperBound...]) + "**"
             }
             // Bullets: "- item" or "* item" become "• item".
             if let range = trimmed.range(of: #"^[-*]\s+"#, options: .regularExpression) {
-                return "•  " + trimmed[range.upperBound...]
+                return "•  " + String(trimmed[range.upperBound...])
             }
-            // Keep numbered lists as-is; just normalize spacing.
-            if let range = trimmed.range(of: #"^\d{1,3}\.\s+"#, options: .regularExpression) {
-                return trimmed[..<range.upperBound] + trimmed[range.upperBound...]
+            // Numbered lists pass through unchanged.
+            if trimmed.range(of: #"^\d{1,3}\.\s+"#, options: .regularExpression) != nil {
+                return trimmed
             }
             return line
         }

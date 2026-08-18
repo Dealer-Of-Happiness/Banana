@@ -1,0 +1,1505 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%1$@ - %2$@" : {},
+    "%@ can't run on this engine." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "%@ kann auf dieser Engine nicht ausgeführt werden." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ no puede ejecutarse en este motor." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "%@ ne peut pas s'exécuter sur ce moteur." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "%@ non può essere eseguito su questo motore." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@はこのエンジンでは実行できません。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "%@ não pode ser executado neste mecanismo." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "%@ не может работать на этом движке." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@ 无法在此引擎上运行。" } }
+    } },
+    "%@ needs to be downloaded first." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "%@ muss zuerst geladen werden." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Primero es necesario descargar %@." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "%@ doit d'abord être téléchargé." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "%@ deve prima essere scaricato." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "まず%@をダウンロードする必要があります。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "É preciso baixar %@ primeiro." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сначала необходимо скачать %@." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "需要先下载 %@。" } }
+    } },
+    "%lld" : {},
+    "32K" : {},
+    "4K" : {},
+    "AI Behavior" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "KI-Verhalten" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Comportamiento de la IA" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Comportement de l'IA" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Comportamento dell'IA" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "AIの動作" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Comportamento da IA" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Поведение ИИ" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "AI 行为" } }
+    } },
+    "AI Model" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "KI-Modell" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Modelo de IA" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Modèle d'IA" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Modello IA" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "AIモデル" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Modelo de IA" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Модель ИИ" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "AI 模型" } }
+    } },
+    "AI Models" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "KI-Modelle" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Modelos de IA" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Modèles d'IA" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Modelli IA" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "AIモデル" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Modelos de IA" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Модели ИИ" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "AI 模型" } }
+    } },
+    "AIGoodbye" : {},
+    "AIGoodbye uses the camera to take photos for image analysis" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "AIGoodbye verwendet die Kamera, um Fotos für die Bildanalyse aufzunehmen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "AIGoodbye usa la cámara para tomar fotos y analizar imágenes" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "AIGoodbye utilise l'appareil photo pour prendre des photos à analyser" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "AIGoodbye usa la fotocamera per scattare foto da analizzare" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "AIGoodbyeは画像分析のためにカメラで写真を撮影します" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "O AIGoodbye usa a câmera para tirar fotos para análise de imagens" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "AIGoodbye использует камеру, чтобы делать фото для анализа изображений" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "AIGoodbye 使用相机拍摄照片以进行图像分析" } }
+    } },
+    "AIGoodbye uses your photo library to select images for analysis" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "AIGoodbye verwendet Ihre Fotomediathek, um Bilder für die Analyse auszuwählen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "AIGoodbye usa tu fototeca para seleccionar imágenes y analizarlas" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "AIGoodbye utilise votre photothèque pour sélectionner des images à analyser" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "AIGoodbye usa la tua libreria foto per selezionare immagini da analizzare" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "AIGoodbyeは分析する画像を選択するためにフォトライブラリを使用します" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "O AIGoodbye usa sua fototeca para selecionar imagens para análise" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "AIGoodbye использует вашу медиатеку для выбора изображений для анализа" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "AIGoodbye 使用您的照片图库来选择要分析的图像" } }
+    } },
+    "About & Legal" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Über & Rechtliches" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Acerca de y avisos legales" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "À propos et mentions légales" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Informazioni e note legali" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "アプリ情報と法的事項" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Sobre e informações legais" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "О приложении и правовая информация" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关于与法律信息" } }
+    } },
+    "Accepts the terms and opens the app" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Akzeptiert die Bedingungen und öffnet die App" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Acepta los términos y abre la app" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Accepte les conditions et ouvre l'app" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Accetta i termini e apre l'app" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "利用条件に同意してAppを開きます" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Aceita os termos e abre o app" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Принимает условия и открывает приложение" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "接受条款并打开应用" } }
+    } },
+    "Add a photo and ask about it" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Fügen Sie ein Foto hinzu und stellen Sie Fragen dazu" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Añade una foto y pregunta sobre ella" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ajoutez une photo et posez des questions à son sujet" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Aggiungi una foto e fai domande su di essa" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "写真を追加して質問しましょう" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Adicione uma foto e pergunte sobre ela" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Добавьте фото и задайте вопрос о нём" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "添加照片并提问" } }
+    } },
+    "Add photo or document" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Foto oder Dokument hinzufügen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Añadir foto o documento" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ajouter une photo ou un document" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Aggiungi foto o documento" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "写真または書類を追加" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Adicionar foto ou documento" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Добавить фото или документ" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "添加照片或文稿" } }
+    } },
+    "Agree and Continue" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Zustimmen und fortfahren" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Aceptar y continuar" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Accepter et continuer" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Accetta e continua" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "同意して続ける" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Concordar e continuar" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Принять и продолжить" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "同意并继续" } }
+    } },
+    "AiGoodbye" : {},
+    "All AI runs on your device" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Die gesamte KI läuft auf Ihrem Gerät" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Toda la IA se ejecuta en tu dispositivo" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Toute l'IA fonctionne sur votre appareil" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Tutta l'IA funziona sul tuo dispositivo" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべてのAIはデバイス上で動作します" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Toda a IA roda no seu dispositivo" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Весь ИИ работает на вашем устройстве" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "所有 AI 都在您的设备上运行" } }
+    } },
+    "All messages in this conversation will be deleted. This can't be undone." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Alle Nachrichten in dieser Unterhaltung werden gelöscht. Dies kann nicht widerrufen werden." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Se eliminarán todos los mensajes de esta conversación. Esta acción no se puede deshacer." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tous les messages de cette conversation seront supprimés. Cette action est irréversible." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Tutti i messaggi di questa conversazione verranno eliminati. Questa azione non può essere annullata." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "この会話のすべてのメッセージが削除されます。この操作は取り消せません。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Todas as mensagens desta conversa serão apagadas. Isso não pode ser desfeito." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Все сообщения в этой беседе будут удалены. Это действие нельзя отменить." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "此对话中的所有消息都将被删除。此操作无法撤销。" } }
+    } },
+    "Analyze an Image" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Bild analysieren" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Analizar una imagen" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Analyser une image" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Analizza un'immagine" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "画像を分析" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Analisar uma imagem" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Анализ изображения" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "分析图像" } }
+    } },
+    "Analyze this document" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Dieses Dokument analysieren" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Analizar este documento" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Analyser ce document" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Analizza questo documento" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "この書類を分析" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Analisar este documento" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Проанализировать этот документ" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "分析此文稿" } }
+    } },
+    "Analyzing images needs the %1$@ vision model (%2$@). It downloads once and then works offline." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Für die Bildanalyse wird das Vision-Modell %1$@ (%2$@) benötigt. Es wird einmal geladen und funktioniert danach offline." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Para analizar imágenes se necesita el modelo de visión %1$@ (%2$@). Se descarga una sola vez y luego funciona sin conexión." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "L'analyse d'images nécessite le modèle de vision %1$@ (%2$@). Il se télécharge une seule fois, puis fonctionne hors ligne." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Per analizzare le immagini serve il modello di visione %1$@ (%2$@). Si scarica una sola volta e poi funziona offline." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "画像の分析には%1$@ビジョンモデル（%2$@）が必要です。一度ダウンロードすれば、その後はオフラインで動作します。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "A análise de imagens precisa do modelo de visão %1$@ (%2$@). Ele é baixado uma vez e depois funciona offline." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Для анализа изображений нужна модель компьютерного зрения %1$@ (%2$@). Она скачивается один раз и затем работает офлайн." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "分析图像需要 %1$@ 视觉模型（%2$@）。只需下载一次，之后即可离线使用。" } }
+    } },
+    "Analyzing images needs the %@ vision model." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Für die Bildanalyse wird das Vision-Modell %@ benötigt." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Para analizar imágenes se necesita el modelo de visión %@." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "L'analyse d'images nécessite le modèle de vision %@." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Per analizzare le immagini serve il modello di visione %@." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "画像の分析には%@ビジョンモデルが必要です。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "A análise de imagens precisa do modelo de visão %@." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Для анализа изображений нужна модель компьютерного зрения %@." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "分析图像需要 %@ 视觉模型。" } }
+    } },
+    "Apple Intelligence" : {},
+    "Apple Intelligence declined this request. Try rephrasing, or switch to a downloaded model in Settings." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence hat diese Anfrage abgelehnt. Formulieren Sie sie um oder wechseln Sie in den Einstellungen zu einem geladenen Modell." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence rechazó esta solicitud. Prueba a reformularla o cambia a un modelo descargado en Ajustes." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence a refusé cette demande. Reformulez-la ou passez à un modèle téléchargé dans Réglages." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence ha rifiutato questa richiesta. Prova a riformularla o passa a un modello scaricato in Impostazioni." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligenceがこのリクエストを拒否しました。言い換えるか、設定でダウンロード済みのモデルに切り替えてください。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "A Apple Intelligence recusou esta solicitação. Tente reformular ou mude para um modelo baixado nos Ajustes." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence отклонил этот запрос. Переформулируйте его или переключитесь на скачанную модель в Настройках." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence 拒绝了此请求。请尝试换种说法，或在设置中切换到已下载的模型。" } }
+    } },
+    "Apple Intelligence is not available on this device." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence ist auf diesem Gerät nicht verfügbar." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence no está disponible en este dispositivo." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence n'est pas disponible sur cet appareil." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence non è disponibile su questo dispositivo." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "このデバイスではApple Intelligenceを利用できません。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "A Apple Intelligence não está disponível neste dispositivo." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence недоступен на этом устройстве." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence 在此设备上不可用。" } }
+    } },
+    "Apple Intelligence is not available right now." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence ist momentan nicht verfügbar." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence no está disponible en este momento." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence n'est pas disponible pour le moment." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence non è disponibile al momento." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligenceは現在利用できません。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "A Apple Intelligence não está disponível no momento." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence сейчас недоступен." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence 目前不可用。" } }
+    } },
+    "Apple Intelligence is not available." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence ist nicht verfügbar." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence no está disponible." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence n'est pas disponible." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence non è disponibile." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligenceは利用できません。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "A Apple Intelligence não está disponível." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence недоступен." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence 不可用。" } }
+    } },
+    "Apple Intelligence is still preparing on this device. Try again in a few minutes." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence wird auf diesem Gerät noch vorbereitet. Versuchen Sie es in ein paar Minuten erneut." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence aún se está preparando en este dispositivo. Inténtalo de nuevo en unos minutos." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence est encore en cours de préparation sur cet appareil. Réessayez dans quelques minutes." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence è ancora in preparazione su questo dispositivo. Riprova tra qualche minuto." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligenceはこのデバイスでまだ準備中です。数分後にもう一度お試しください。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "A Apple Intelligence ainda está sendo preparada neste dispositivo. Tente novamente em alguns minutos." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence ещё готовится к работе на этом устройстве. Повторите попытку через несколько минут." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence 仍在此设备上准备中。请几分钟后再试。" } }
+    } },
+    "Apple Intelligence is turned off. Enable it in Settings to use the built-in model." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence ist deaktiviert. Aktivieren Sie es in den Einstellungen, um das integrierte Modell zu verwenden." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence está desactivado. Actívalo en Ajustes para usar el modelo integrado." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence est désactivé. Activez-le dans Réglages pour utiliser le modèle intégré." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence è disattivato. Attivalo in Impostazioni per usare il modello integrato." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligenceがオフになっています。内蔵モデルを使うには設定でオンにしてください。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "A Apple Intelligence está desativada. Ative-a nos Ajustes para usar o modelo integrado." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence выключен. Включите его в Настройках, чтобы использовать встроенную модель." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence 已关闭。请在设置中开启以使用内置模型。" } }
+    } },
+    "Apple Intelligence isn't ready. Choose a downloaded model in Settings." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence ist nicht bereit. Wählen Sie in den Einstellungen ein geladenes Modell." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence no está listo. Elige un modelo descargado en Ajustes." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence n'est pas prêt. Choisissez un modèle téléchargé dans Réglages." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence non è pronto. Scegli un modello scaricato in Impostazioni." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligenceの準備ができていません。設定でダウンロード済みのモデルを選択してください。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "A Apple Intelligence não está pronta. Escolha um modelo baixado nos Ajustes." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence не готов. Выберите скачанную модель в Настройках." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence 尚未就绪。请在设置中选择已下载的模型。" } }
+    } },
+    "Apple Intelligence, unavailable. %@" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence, nicht verfügbar. %@" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence, no disponible. %@" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence, indisponible. %@" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence, non disponibile. %@" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence、利用不可。%@" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence, indisponível. %@" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence, недоступен. %@" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence，不可用。%@" } }
+    } },
+    "Ask about this image..." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Frage zu diesem Bild stellen ..." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Pregunta sobre esta imagen..." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Posez une question sur cette image..." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Fai una domanda su questa immagine..." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "この画像について質問…" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Pergunte sobre esta imagem..." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Спросите об этом изображении..." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "询问此图像…" } }
+    } },
+    "Ask anything" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Fragen Sie alles" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Pregunta lo que quieras" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Posez n'importe quelle question" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Chiedi qualsiasi cosa" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "何でも質問できます" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Pergunte qualquer coisa" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Спросите о чём угодно" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "提出任何问题" } }
+    } },
+    "Ask questions, analyze images, or discuss documents. Everything stays on your iPhone." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Stellen Sie Fragen, analysieren Sie Bilder oder besprechen Sie Dokumente. Alles bleibt auf Ihrem iPhone." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Haz preguntas, analiza imágenes o comenta documentos. Todo se queda en tu iPhone." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Posez des questions, analysez des images ou discutez de documents. Tout reste sur votre iPhone." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Fai domande, analizza immagini o discuti di documenti. Tutto resta sul tuo iPhone." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "質問、画像の分析、書類の相談ができます。すべてはあなたのiPhoneの中だけで行われます。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Faça perguntas, analise imagens ou converse sobre documentos. Tudo fica no seu iPhone." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Задавайте вопросы, анализируйте изображения и обсуждайте документы. Всё остаётся на вашем iPhone." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "提出问题、分析图像或讨论文稿。一切都保留在您的 iPhone 上。" } }
+    } },
+    "Assistant is responding: %@" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Der Assistent antwortet: %@" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "El asistente está respondiendo: %@" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "L'assistant répond : %@" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "L'assistente sta rispondendo: %@" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "アシスタントが応答しています：%@" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "O assistente está respondendo: %@" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Ассистент отвечает: %@" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "助手正在回复：%@" } }
+    } },
+    "Assistant is thinking" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Der Assistent denkt nach" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "El asistente está pensando" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "L'assistant réfléchit" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "L'assistente sta pensando" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "アシスタントが考えています" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "O assistente está pensando" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Ассистент думает" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "助手正在思考" } }
+    } },
+    "Assistant said: %@" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Der Assistent sagte: %@" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "El asistente dijo: %@" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "L'assistant a dit : %@" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "L'assistente ha detto: %@" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "アシスタントの発言：%@" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "O assistente disse: %@" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Ассистент сказал: %@" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "助手说：%@" } }
+    } },
+    "Attached image" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Angehängtes Bild" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Imagen adjunta" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Image jointe" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Immagine allegata" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付された画像" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Imagem anexada" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Прикреплённое изображение" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "附加的图像" } }
+    } },
+    "Built In" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Integriert" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Integrado" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Intégré" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Integrato" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "内蔵" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Integrado" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Встроенная" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "内置" } }
+    } },
+    "By continuing you agree to use AiGoodbye at your own discretion." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Indem Sie fortfahren, erklären Sie sich damit einverstanden, AiGoodbye nach eigenem Ermessen zu verwenden." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Al continuar, aceptas usar AiGoodbye bajo tu propio criterio." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "En continuant, vous acceptez d'utiliser AiGoodbye à votre propre discrétion." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Continuando, accetti di usare AiGoodbye a tua discrezione." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "続行すると、ご自身の判断でAiGoodbyeを使用することに同意したことになります。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Ao continuar, você concorda em usar o AiGoodbye a seu próprio critério." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Продолжая, вы соглашаетесь использовать AiGoodbye на своё усмотрение." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "继续即表示您同意自行斟酌使用 AiGoodbye。" } }
+    } },
+    "Camera Unavailable" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Kamera nicht verfügbar" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Cámara no disponible" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Appareil photo indisponible" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Fotocamera non disponibile" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "カメラを利用できません" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Câmera indisponível" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Камера недоступна" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "相机不可用" } }
+    } },
+    "Camera is not available on this device. Please use Photo Library instead." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Die Kamera ist auf diesem Gerät nicht verfügbar. Verwenden Sie stattdessen die Fotomediathek." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "La cámara no está disponible en este dispositivo. Usa la fototeca en su lugar." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "L'appareil photo n'est pas disponible sur cet appareil. Utilisez plutôt la photothèque." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "La fotocamera non è disponibile su questo dispositivo. Usa invece la libreria foto." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "このデバイスではカメラを利用できません。代わりにフォトライブラリを使用してください。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "A câmera não está disponível neste dispositivo. Use a fototeca." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Камера недоступна на этом устройстве. Используйте медиатеку." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "此设备上的相机不可用。请改用照片图库。" } }
+    } },
+    "Cancel" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Abbrechen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Cancelar" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Annuler" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Annulla" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "キャンセル" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Cancelar" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Отменить" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消" } }
+    } },
+    "Chat options" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Chat-Optionen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Opciones del chat" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Options de la conversation" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Opzioni della chat" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "チャットオプション" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Opções da conversa" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Параметры чата" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "聊天选项" } }
+    } },
+    "Choose AI Model" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "KI-Modell auswählen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Elegir modelo de IA" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Choisir le modèle d'IA" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Scegli modello IA" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "AIモデルを選択" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Escolher modelo de IA" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Выбрать модель ИИ" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "选择 AI 模型" } }
+    } },
+    "Choose Model" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Modell auswählen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Elegir modelo" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Choisir un modèle" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Scegli modello" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "モデルを選択" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Escolher modelo" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Выбрать модель" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "选择模型" } }
+    } },
+    "Clear All Conversations" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Alle Unterhaltungen löschen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Borrar todas las conversaciones" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Effacer toutes les conversations" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Cancella tutte le conversazioni" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべての会話を消去" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Apagar todas as conversas" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Очистить все беседы" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "清除所有对话" } }
+    } },
+    "Clear Chat" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Chat leeren" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Borrar chat" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Effacer la conversation" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Svuota chat" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "チャットを消去" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Limpar conversa" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Очистить чат" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "清空聊天" } }
+    } },
+    "Clear this chat?" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Diesen Chat leeren?" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Borrar este chat?" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Effacer cette conversation ?" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Svuotare questa chat?" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "このチャットを消去しますか？" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Limpar esta conversa?" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Очистить этот чат?" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "清空此聊天？" } }
+    } },
+    "Close menu" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Menü schließen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Cerrar menú" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Fermer le menu" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Chiudi menu" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "メニューを閉じる" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Fechar menu" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Закрыть меню" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关闭菜单" } }
+    } },
+    "Conversation Memory" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Gesprächsgedächtnis" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Memoria de la conversación" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Mémoire de conversation" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Memoria della conversazione" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "会話メモリ" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Memória da conversa" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Память беседы" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "对话记忆" } }
+    } },
+    "Conversations menu" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Unterhaltungsmenü" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Menú de conversaciones" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Menu des conversations" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Menu delle conversazioni" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "会話メニュー" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Menu de conversas" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Меню бесед" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "对话菜单" } }
+    } },
+    "Copy" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Kopieren" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Copiar" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Copia" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "コピー" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Copiar" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Скопировать" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "拷贝" } }
+    } },
+    "Copy code" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Code kopieren" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Copiar código" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier le code" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Copia codice" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "コードをコピー" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Copiar código" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Скопировать код" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "拷贝代码" } }
+    } },
+    "Couldn't Add Attachment" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Anhang konnte nicht hinzugefügt werden" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo añadir el adjunto" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible d'ajouter la pièce jointe" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Impossibile aggiungere l'allegato" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付ファイルを追加できませんでした" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Não foi possível adicionar o anexo" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Не удалось добавить вложение" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法添加附件" } }
+    } },
+    "Couldn't generate a response: %@" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Es konnte keine Antwort generiert werden: %@" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo generar una respuesta: %@" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible de générer une réponse : %@" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Impossibile generare una risposta: %@" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "応答を生成できませんでした：%@" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Não foi possível gerar uma resposta: %@" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Не удалось сгенерировать ответ: %@" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法生成回复：%@" } }
+    } },
+    "Couldn't load the model: %@" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Modell konnte nicht geladen werden: %@" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo cargar el modelo: %@" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible de charger le modèle : %@" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Impossibile caricare il modello: %@" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "モデルを読み込めませんでした：%@" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Não foi possível carregar o modelo: %@" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Не удалось загрузить модель: %@" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法载入模型：%@" } }
+    } },
+    "Couldn't load the photo: %@" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Foto konnte nicht geladen werden: %@" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo cargar la foto: %@" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible de charger la photo : %@" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Impossibile caricare la foto: %@" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "写真を読み込めませんでした：%@" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Não foi possível carregar a foto: %@" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Не удалось загрузить фото: %@" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法载入照片：%@" } }
+    } },
+    "Couldn't read %1$@: %2$@" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "%1$@ konnte nicht gelesen werden: %2$@" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo leer %1$@: %2$@" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible de lire %1$@ : %2$@" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Impossibile leggere %1$@: %2$@" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "%1$@を読み取れませんでした：%2$@" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Não foi possível ler %1$@: %2$@" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Не удалось прочитать %1$@: %2$@" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法读取 %1$@：%2$@" } }
+    } },
+    "Create" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Erstellen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Crear" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Créer" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Crea" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "作成" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Criar" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Создать" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "创建" } }
+    } },
+    "Creativity" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Kreativität" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Creatividad" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Créativité" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Creatività" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "創造性" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Criatividade" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Креативность" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "创造力" } }
+    } },
+    "Current AI model: %1$@. %2$@" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Aktuelles KI-Modell: %1$@. %2$@" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Modelo de IA actual: %1$@. %2$@" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Modèle d'IA actuel : %1$@. %2$@" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Modello IA attuale: %1$@. %2$@" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在のAIモデル：%1$@。%2$@" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Modelo de IA atual: %1$@. %2$@" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Текущая модель ИИ: %1$@. %2$@" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前 AI 模型：%1$@。%2$@" } }
+    } },
+    "Current chat: %1$@. Model: %2$@. Tap to change model." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Aktueller Chat: %1$@. Modell: %2$@. Zum Wechseln des Modells tippen." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Chat actual: %1$@. Modelo: %2$@. Toca para cambiar de modelo." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Conversation actuelle : %1$@. Modèle : %2$@. Touchez pour changer de modèle." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Chat attuale: %1$@. Modello: %2$@. Tocca per cambiare modello." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在のチャット：%1$@。モデル：%2$@。タップしてモデルを変更します。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Conversa atual: %1$@. Modelo: %2$@. Toque para mudar de modelo." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Текущий чат: %1$@. Модель: %2$@. Нажмите, чтобы сменить модель." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前聊天：%1$@。模型：%2$@。轻点以更换模型。" } }
+    } },
+    "Data" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Daten" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Datos" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Données" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Dati" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "データ" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Dados" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Данные" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "数据" } }
+    } },
+    "Delete" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Löschen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Elimina" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "削除" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Apagar" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Удалить" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除" } }
+    } },
+    "Delete %@" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "%@ löschen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar %@" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer %@" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Elimina %@" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@を削除" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Apagar %@" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Удалить %@" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除 %@" } }
+    } },
+    "Delete All" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Alle löschen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar todo" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tout supprimer" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Elimina tutto" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべて削除" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Apagar tudo" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Удалить все" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "全部删除" } }
+    } },
+    "Delete Conversation?" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Unterhaltung löschen?" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Eliminar la conversación?" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer la conversation ?" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Eliminare la conversazione?" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "会話を削除しますか？" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Apagar conversa?" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Удалить беседу?" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除对话？" } }
+    } },
+    "Delete all conversations?" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Alle Unterhaltungen löschen?" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Eliminar todas las conversaciones?" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer toutes les conversations ?" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Eliminare tutte le conversazioni?" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべての会話を削除しますか？" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Apagar todas as conversas?" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Удалить все беседы?" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除所有对话？" } }
+    } },
+    "Deleting a model frees space immediately. It will be downloaded again the next time you use it." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Das Löschen eines Modells gibt sofort Speicherplatz frei. Es wird beim nächsten Gebrauch erneut geladen." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar un modelo libera espacio de inmediato. Se volverá a descargar la próxima vez que lo uses." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer un modèle libère immédiatement de l'espace. Il sera téléchargé à nouveau lors de sa prochaine utilisation." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Eliminare un modello libera subito spazio. Verrà scaricato di nuovo al prossimo utilizzo." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "モデルを削除するとすぐに空き容量が増えます。次回使用時に再度ダウンロードされます。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Apagar um modelo libera espaço imediatamente. Ele será baixado de novo na próxima vez que você usá-lo." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Удаление модели сразу освобождает место. Она будет скачана снова при следующем использовании." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除模型会立即释放空间。下次使用时将重新下载。" } }
+    } },
+    "Dismiss error" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Fehler schließen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Descartar error" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ignorer l'erreur" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Ignora errore" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "エラーを閉じる" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Ignorar erro" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Скрыть ошибку" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关闭错误提示" } }
+    } },
+    "Document" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Dokument" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Documento" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Document" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Documento" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "書類" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Documento" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Документ" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "文稿" } }
+    } },
+    "Document attached" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Dokument angehängt" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Documento adjunto" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Document joint" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Documento allegato" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "書類が添付されました" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Documento anexado" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Документ прикреплён" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已附加文稿" } }
+    } },
+    "Done" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Fertig" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Fine" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "完了" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Готово" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "完成" } }
+    } },
+    "Download" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Laden" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Descargar" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Télécharger" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Scarica" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "ダウンロード" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Baixar" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Скачать" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "下载" } }
+    } },
+    "Download %@?" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "%@ laden?" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Descargar %@?" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Télécharger %@ ?" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Scaricare %@?" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@をダウンロードしますか？" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Baixar %@?" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Скачать %@?" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "下载 %@？" } }
+    } },
+    "Downloadable" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Herunterladbar" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Descargable" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Téléchargeable" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Scaricabile" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "ダウンロード可能" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Disponível para download" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Доступно для скачивания" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "可下载" } }
+    } },
+    "Downloadable Models" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Herunterladbare Modelle" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Modelos descargables" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Modèles téléchargeables" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Modelli scaricabili" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "ダウンロード可能なモデル" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Modelos para download" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Скачиваемые модели" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "可下载的模型" } }
+    } },
+    "Downloading %1$@ · %2$lld%%" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "%1$@ wird geladen · %2$lld%%" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Descargando %1$@ · %2$lld%%" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Téléchargement de %1$@ · %2$lld%%" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Download di %1$@ · %2$lld%%" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "%1$@をダウンロード中 · %2$lld%%" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Baixando %1$@ · %2$lld%%" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Скачивание %1$@ · %2$lld%%" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在下载 %1$@ · %2$lld%%" } }
+    } },
+    "Downloads on first use" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Wird bei der ersten Verwendung geladen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Se descarga al usarlo por primera vez" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Se télécharge à la première utilisation" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Si scarica al primo utilizzo" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "初回使用時にダウンロード" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Baixado no primeiro uso" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Скачивается при первом использовании" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "首次使用时下载" } }
+    } },
+    "Drag chats here or use the context menu to move them" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Ziehen Sie Chats hierher oder verwenden Sie das Kontextmenü, um sie zu verschieben" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Arrastra chats aquí o usa el menú contextual para moverlos" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Faites glisser des conversations ici ou utilisez le menu contextuel pour les déplacer" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Trascina qui le chat o usa il menu contestuale per spostarle" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "チャットをここにドラッグするか、コンテキストメニューで移動します" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Arraste conversas para cá ou use o menu de contexto para movê-las" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Перетащите чаты сюда или используйте контекстное меню, чтобы переместить их" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "将聊天拖到此处，或使用上下文菜单移动" } }
+    } },
+    "Drop here" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Hier ablegen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Suelta aquí" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Déposez ici" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Rilascia qui" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "ここにドロップ" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Solte aqui" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Отпустите здесь" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "拖放到此处" } }
+    } },
+    "Enter a new name for this folder" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Geben Sie einen neuen Namen für diesen Ordner ein" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Escribe un nuevo nombre para esta carpeta" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Saisissez un nouveau nom pour ce dossier" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Inserisci un nuovo nome per questa cartella" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "このフォルダの新しい名前を入力してください" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Digite um novo nome para esta pasta" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Введите новое название папки" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "输入此文件夹的新名称" } }
+    } },
+    "Feedback" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Feedback" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Comentarios" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Commentaires" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Feedback" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "フィードバック" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Feedback" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Обратная связь" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "反馈" } }
+    } },
+    "Folder name" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Ordnername" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Nombre de la carpeta" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Nom du dossier" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Nome della cartella" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "フォルダ名" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Nome da pasta" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Название папки" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "文件夹名称" } }
+    } },
+    "Folders" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Ordner" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Carpetas" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Dossiers" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Cartelle" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "フォルダ" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Pastas" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Папки" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "文件夹" } }
+    } },
+    "Haptic Feedback" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Haptisches Feedback" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Respuesta háptica" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Retour haptique" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Feedback aptico" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "触覚フィードバック" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Resposta tátil" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Тактильный отклик" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "触感反馈" } }
+    } },
+    "How much of the conversation the AI re-reads. Higher remembers more but uses more memory and can be slower on older iPhones." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Wie viel der Unterhaltung die KI erneut liest. Höher bedeutet mehr Erinnerung, verbraucht aber mehr Speicher und kann auf älteren iPhones langsamer sein." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Cuánto de la conversación relee la IA. Un valor más alto recuerda más, pero usa más memoria y puede ser más lento en iPhones antiguos." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Quelle part de la conversation l'IA relit. Plus la valeur est élevée, plus elle se souvient, mais cela utilise plus de mémoire et peut être plus lent sur les iPhone plus anciens." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Quanta parte della conversazione l'IA rilegge. Un valore più alto ricorda di più, ma usa più memoria e può essere più lento sugli iPhone meno recenti." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "AIが会話をどこまで読み返すかの設定です。大きいほど多くを記憶しますが、メモリ使用量が増え、古いiPhoneでは動作が遅くなることがあります。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Quanto da conversa a IA relê. Valores maiores lembram mais, mas usam mais memória e podem ser mais lentos em iPhones antigos." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Какую часть беседы ИИ перечитывает. Больше — помнит больше, но использует больше памяти и может работать медленнее на старых iPhone." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "AI 重新读取多少对话内容。数值越高记住的越多，但会占用更多内存，在较旧的 iPhone 上可能更慢。" } }
+    } },
+    "Image attached" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Bild angehängt" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Imagen adjunta" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Image jointe" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Immagine allegata" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "画像が添付されました" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Imagem anexada" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Изображение прикреплено" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已附加图像" } }
+    } },
+    "Just Chat" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Einfach chatten" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Solo chatear" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Simplement discuter" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Solo chat" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "気軽にチャット" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Só conversar" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Просто чат" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "随便聊聊" } }
+    } },
+    "Lower = more precise, higher = more creative." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Niedriger = präziser, höher = kreativer." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Más bajo = más preciso; más alto = más creativo." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Plus bas = plus précis, plus haut = plus créatif." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Più basso = più preciso, più alto = più creativo." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "低いほど正確に、高いほど創造的になります。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Mais baixo = mais preciso; mais alto = mais criativo." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Ниже — точнее, выше — креативнее." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "数值越低越精确，越高越有创造力。" } }
+    } },
+    "Manage Storage" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Speicher verwalten" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Gestionar almacenamiento" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Gérer le stockage" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Gestisci spazio" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "ストレージを管理" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Gerenciar armazenamento" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Управление хранилищем" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "管理储存空间" } }
+    } },
+    "Managed by iOS - uses no app storage" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Von iOS verwaltet – belegt keinen App-Speicher" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Gestionado por iOS: no usa almacenamiento de la app" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Géré par iOS – n'utilise pas le stockage de l'app" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Gestito da iOS: non usa spazio dell'app" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "iOSが管理 - アプリのストレージを使用しません" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Gerenciado pelo iOS – não usa armazenamento do app" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Управляется iOS — не использует хранилище приложения" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "由 iOS 管理 - 不占用应用储存空间" } }
+    } },
+    "Message..." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Nachricht ..." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Mensaje..." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Message..." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Messaggio..." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "メッセージ…" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Mensagem..." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сообщение..." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "消息…" } }
+    } },
+    "Models download once and then work fully offline. You can delete them anytime in Settings." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Modelle werden einmal geladen und funktionieren danach vollständig offline. Sie können sie jederzeit in den Einstellungen löschen." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Los modelos se descargan una sola vez y luego funcionan totalmente sin conexión. Puedes eliminarlos cuando quieras en Ajustes." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les modèles se téléchargent une seule fois, puis fonctionnent entièrement hors ligne. Vous pouvez les supprimer à tout moment dans Réglages." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "I modelli si scaricano una sola volta e poi funzionano completamente offline. Puoi eliminarli in qualsiasi momento in Impostazioni." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "モデルは一度ダウンロードすれば、その後は完全にオフラインで動作します。設定でいつでも削除できます。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Os modelos são baixados uma vez e depois funcionam totalmente offline. Você pode apagá-los a qualquer momento nos Ajustes." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Модели скачиваются один раз и затем работают полностью офлайн. Их можно удалить в любой момент в Настройках." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "模型只需下载一次，之后即可完全离线使用。您可以随时在设置中删除。" } }
+    } },
+    "Move to Folder" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "In Ordner bewegen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Mover a carpeta" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Déplacer vers un dossier" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Sposta in cartella" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "フォルダに移動" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Mover para pasta" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Переместить в папку" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "移到文件夹" } }
+    } },
+    "New Chat" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Neuer Chat" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Nuevo chat" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Nouvelle conversation" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Nuova chat" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "新規チャット" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Nova conversa" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Новый чат" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "新建聊天" } }
+    } },
+    "New Folder" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Neuer Ordner" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Nueva carpeta" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Nouveau dossier" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Nuova cartella" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "新規フォルダ" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Nova pasta" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Новая папка" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "新建文件夹" } }
+    } },
+    "No chats yet" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Noch keine Chats" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Aún no hay chats" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune conversation pour l'instant" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Ancora nessuna chat" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "まだチャットがありません" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Nenhuma conversa ainda" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Пока нет чатов" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "还没有聊天" } }
+    } },
+    "No data collection, no tracking" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Keine Datenerfassung, kein Tracking" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin recopilación de datos ni rastreo" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune collecte de données, aucun suivi" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Nessuna raccolta di dati, nessun tracciamento" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "データ収集も追跡もありません" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Sem coleta de dados, sem rastreamento" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Без сбора данных и отслеживания" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "不收集数据，不跟踪" } }
+    } },
+    "No folders yet" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Noch keine Ordner" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Aún no hay carpetas" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun dossier pour l'instant" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Ancora nessuna cartella" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "まだフォルダがありません" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Nenhuma pasta ainda" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Пока нет папок" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "还没有文件夹" } }
+    } },
+    "No folders yet. Create a folder first." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Noch keine Ordner. Erstellen Sie zuerst einen Ordner." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Aún no hay carpetas. Crea una carpeta primero." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun dossier pour l'instant. Créez d'abord un dossier." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Ancora nessuna cartella. Prima crea una cartella." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "まだフォルダがありません。先にフォルダを作成してください。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Nenhuma pasta ainda. Crie uma pasta primeiro." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Пока нет папок. Сначала создайте папку." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "还没有文件夹。请先创建一个文件夹。" } }
+    } },
+    "No internet connection. The model download needs internet once; chatting works fully offline afterward." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Keine Internetverbindung. Das Laden des Modells benötigt einmalig Internet; danach funktioniert das Chatten vollständig offline." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin conexión a internet. La descarga del modelo necesita internet una sola vez; después, el chat funciona totalmente sin conexión." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pas de connexion internet. Le téléchargement du modèle nécessite internet une seule fois ; ensuite, la discussion fonctionne entièrement hors ligne." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Nessuna connessione a internet. Il download del modello richiede internet una sola volta; dopo, la chat funziona completamente offline." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "インターネットに接続されていません。モデルのダウンロードには一度だけインターネットが必要です。その後のチャットは完全にオフラインで動作します。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Sem conexão com a internet. O download do modelo precisa de internet uma vez; depois disso, o chat funciona totalmente offline." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Нет подключения к интернету. Для скачивания модели интернет нужен один раз; после этого чат работает полностью офлайн." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无互联网连接。下载模型只需联网一次，之后聊天完全离线进行。" } }
+    } },
+    "No readable text was found in %@." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "In %@ wurde kein lesbarer Text gefunden." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se encontró texto legible en %@." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun texte lisible n'a été trouvé dans %@." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Nessun testo leggibile trovato in %@." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@に読み取れるテキストが見つかりませんでした。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Nenhum texto legível foi encontrado em %@." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "В %@ не найден читаемый текст." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在 %@ 中未找到可读取的文本。" } }
+    } },
+    "Not Now" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Jetzt nicht" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Ahora no" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Plus tard" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Non ora" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "今はしない" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Agora não" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Не сейчас" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "以后再说" } }
+    } },
+    "Not downloaded" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Nicht geladen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No descargado" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Non téléchargé" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Non scaricato" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "未ダウンロード" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Não baixado" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Не скачана" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "未下载" } }
+    } },
+    "OK" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "好" } }
+    } },
+    "One-time download of %@" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Einmaliger Download von %@" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Descarga única de %@" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Téléchargement unique de %@" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Download unico di %@" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@を一度だけダウンロード" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Download único de %@" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Однократное скачивание %@" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "一次性下载 %@" } }
+    } },
+    "Opens the model picker" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Öffnet die Modellauswahl" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Abre el selector de modelos" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ouvre le sélecteur de modèle" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Apre il selettore del modello" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "モデル選択画面を開きます" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Abre o seletor de modelos" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Открывает выбор модели" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开模型选择器" } }
+    } },
+    "Photo Library" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Fotomediathek" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Fototeca" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Photothèque" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Libreria foto" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "フォトライブラリ" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Fototeca" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Медиатека" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "照片图库" } }
+    } },
+    "Please analyze this document and provide a summary." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Bitte analysiere dieses Dokument und erstelle eine Zusammenfassung." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Analiza este documento y haz un resumen." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Analyse ce document et fais-en un résumé." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Analizza questo documento e fai un riassunto." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "この書類を分析して要約してください。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Analise este documento e faça um resumo." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Проанализируй этот документ и сделай краткое резюме." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请分析此文稿并提供摘要。" } }
+    } },
+    "Preparing %@..." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "%@ wird vorbereitet ..." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Preparando %@..." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Préparation de %@..." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Preparazione di %@..." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@を準備中…" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Preparando %@..." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Подготовка %@..." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在准备 %@…" } }
+    } },
+    "Privacy" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Datenschutz" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Privacidad" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Confidentialité" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Privacy" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "プライバシー" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Privacidade" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Конфиденциальность" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "隐私" } }
+    } },
+    "Read a Document" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Dokument lesen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Leer un documento" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Lire un document" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Leggi un documento" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "書類を読む" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Ler um documento" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Чтение документа" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "阅读文稿" } }
+    } },
+    "Recent Chats" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Letzte Chats" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Chats recientes" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Conversations récentes" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Chat recenti" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "最近のチャット" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Conversas recentes" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Недавние чаты" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "最近聊天" } }
+    } },
+    "Recommended" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Empfohlen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Recomendado" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Recommandé" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Consigliato" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "おすすめ" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Recomendado" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Рекомендуется" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "推荐" } }
+    } },
+    "Regenerate" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Neu generieren" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Regenerar" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Régénérer" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Rigenera" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "再生成" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Gerar novamente" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сгенерировать заново" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "重新生成" } }
+    } },
+    "Remove attached document" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Angehängtes Dokument entfernen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Quitar documento adjunto" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer le document joint" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Rimuovi documento allegato" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付書類を削除" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Remover documento anexado" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Удалить прикреплённый документ" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "移除附加的文稿" } }
+    } },
+    "Remove attached image" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Angehängtes Bild entfernen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Quitar imagen adjunta" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer l'image jointe" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Rimuovi immagine allegata" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付画像を削除" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Remover imagem anexada" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Удалить прикреплённое изображение" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "移除附加的图像" } }
+    } },
+    "Remove from Folder" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Aus Ordner entfernen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Quitar de la carpeta" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Retirer du dossier" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Rimuovi dalla cartella" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "フォルダから削除" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Remover da pasta" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Убрать из папки" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "从文件夹中移除" } }
+    } },
+    "Rename" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Umbenennen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Cambiar nombre" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Renommer" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Rinomina" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "名称変更" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Renomear" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Переименовать" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "重命名" } }
+    } },
+    "Rename Folder" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Ordner umbenennen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Cambiar nombre de la carpeta" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Renommer le dossier" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Rinomina cartella" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "フォルダの名称変更" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Renomear pasta" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Переименовать папку" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "重命名文件夹" } }
+    } },
+    "Reset" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Zurücksetzen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Restablecer" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Réinitialiser" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Ripristina" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "リセット" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Redefinir" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сбросить" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "还原" } }
+    } },
+    "Reset Settings" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Einstellungen zurücksetzen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Restablecer ajustes" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Réinitialiser les réglages" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Ripristina impostazioni" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "設定をリセット" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Redefinir ajustes" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сбросить настройки" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "还原设置" } }
+    } },
+    "Reset all settings?" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Alle Einstellungen zurücksetzen?" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Restablecer todos los ajustes?" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Réinitialiser tous les réglages ?" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Ripristinare tutte le impostazioni?" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべての設定をリセットしますか？" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Redefinir todos os ajustes?" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сбросить все настройки?" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "还原所有设置？" } }
+    } },
+    "Restores every setting to its default value. Your conversations are not affected." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Setzt alle Einstellungen auf ihre Standardwerte zurück. Ihre Unterhaltungen sind davon nicht betroffen." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Restablece todos los ajustes a sus valores predeterminados. Tus conversaciones no se ven afectadas." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rétablit la valeur par défaut de chaque réglage. Vos conversations ne sont pas affectées." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Riporta ogni impostazione al valore predefinito. Le tue conversazioni non vengono toccate." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべての設定をデフォルト値に戻します。会話には影響しません。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Restaura todos os ajustes para os valores padrão. Suas conversas não são afetadas." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Возвращает все настройки к значениям по умолчанию. Ваши беседы не затрагиваются." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "将所有设置恢复为默认值。您的对话不受影响。" } }
+    } },
+    "Send message" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Nachricht senden" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Enviar mensaje" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Envoyer le message" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Invia messaggio" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "メッセージを送信" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Enviar mensagem" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Отправить сообщение" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "发送消息" } }
+    } },
+    "Settings" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Einstellungen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Ajustes" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Réglages" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Impostazioni" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "設定" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Ajustes" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Настройки" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "设置" } }
+    } },
+    "Share" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Teilen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Compartir" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Partager" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Condividi" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "共有" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Compartilhar" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Поделиться" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "分享" } }
+    } },
+    "Start a Conversation" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Beginnen Sie eine Unterhaltung" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Inicia una conversación" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Commencez une conversation" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Inizia una conversazione" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "会話を始めましょう" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Comece uma conversa" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Начните беседу" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "开始对话" } }
+    } },
+    "Stop generating" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Generierung stoppen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Detener generación" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Arrêter la génération" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Interrompi generazione" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "生成を停止" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Parar de gerar" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Остановить генерацию" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "停止生成" } }
+    } },
+    "Storage" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Speicher" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Almacenamiento" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Stockage" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Archiviazione" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "ストレージ" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Armazenamento" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Хранилище" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "储存空间" } }
+    } },
+    "Take Photo" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Foto aufnehmen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Hacer foto" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Prendre une photo" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Scatta foto" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "写真を撮る" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Tirar foto" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Снять фото" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "拍照" } }
+    } },
+    "The AI automatically replies in the language you write in." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Die KI antwortet automatisch in der Sprache, in der Sie schreiben." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "La IA responde automáticamente en el idioma en que escribes." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "L'IA répond automatiquement dans la langue dans laquelle vous écrivez." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "L'IA risponde automaticamente nella lingua in cui scrivi." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "AIはあなたが書いた言語で自動的に返信します。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "A IA responde automaticamente no idioma em que você escreve." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "ИИ автоматически отвечает на том языке, на котором вы пишете." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "AI 会自动使用您所用的语言回复。" } }
+    } },
+    "The AI model isn't ready yet. Download or select a model in Settings." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Das KI-Modell ist noch nicht bereit. Laden oder wählen Sie ein Modell in den Einstellungen." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "El modelo de IA aún no está listo. Descarga o selecciona un modelo en Ajustes." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Le modèle d'IA n'est pas encore prêt. Téléchargez ou sélectionnez un modèle dans Réglages." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Il modello IA non è ancora pronto. Scarica o seleziona un modello in Impostazioni." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "AIモデルの準備がまだできていません。設定でモデルをダウンロードまたは選択してください。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "O modelo de IA ainda não está pronto. Baixe ou selecione um modelo nos Ajustes." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Модель ИИ ещё не готова. Скачайте или выберите модель в Настройках." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "AI 模型尚未就绪。请在设置中下载或选择模型。" } }
+    } },
+    "The connection timed out. Please try again." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Zeitüberschreitung bei der Verbindung. Bitte versuchen Sie es erneut." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Se agotó el tiempo de conexión. Inténtalo de nuevo." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "La connexion a expiré. Veuillez réessayer." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Connessione scaduta. Riprova." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "接続がタイムアウトしました。もう一度お試しください。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "A conexão expirou. Tente novamente." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Время ожидания подключения истекло. Повторите попытку." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "连接超时。请重试。" } }
+    } },
+    "This conversation is too long for Apple Intelligence. Start a new chat or switch to a downloaded model." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Diese Unterhaltung ist zu lang für Apple Intelligence. Beginnen Sie einen neuen Chat oder wechseln Sie zu einem geladenen Modell." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Esta conversación es demasiado larga para Apple Intelligence. Inicia un nuevo chat o cambia a un modelo descargado." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Cette conversation est trop longue pour Apple Intelligence. Commencez une nouvelle conversation ou passez à un modèle téléchargé." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Questa conversazione è troppo lunga per Apple Intelligence. Inizia una nuova chat o passa a un modello scaricato." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "この会話はApple Intelligenceには長すぎます。新しいチャットを始めるか、ダウンロード済みのモデルに切り替えてください。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Esta conversa é longa demais para a Apple Intelligence. Comece uma nova conversa ou mude para um modelo baixado." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Эта беседа слишком длинная для Apple Intelligence. Начните новый чат или переключитесь на скачанную модель." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "此对话对 Apple Intelligence 来说太长了。请开始新聊天或切换到已下载的模型。" } }
+    } },
+    "This conversation will be permanently deleted." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Diese Unterhaltung wird dauerhaft gelöscht." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Esta conversación se eliminará permanentemente." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Cette conversation sera définitivement supprimée." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Questa conversazione verrà eliminata definitivamente." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "この会話は完全に削除されます。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Esta conversa será apagada permanentemente." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Эта беседа будет удалена без возможности восстановления." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "此对话将被永久删除。" } }
+    } },
+    "This device doesn't support Apple Intelligence." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Dieses Gerät unterstützt Apple Intelligence nicht." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Este dispositivo no es compatible con Apple Intelligence." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Cet appareil ne prend pas en charge Apple Intelligence." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Questo dispositivo non supporta Apple Intelligence." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "このデバイスはApple Intelligenceに対応していません。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Este dispositivo não é compatível com a Apple Intelligence." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Это устройство не поддерживает Apple Intelligence." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "此设备不支持 Apple Intelligence。" } }
+    } },
+    "This folder is empty" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Dieser Ordner ist leer" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Esta carpeta está vacía" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ce dossier est vide" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Questa cartella è vuota" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "このフォルダは空です" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Esta pasta está vazia" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Эта папка пуста" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "此文件夹为空" } }
+    } },
+    "This permanently deletes all your chats and folders. This cannot be undone." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Dadurch werden alle Ihre Chats und Ordner dauerhaft gelöscht. Dies kann nicht widerrufen werden." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Esto elimina permanentemente todos tus chats y carpetas. Esta acción no se puede deshacer." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Cela supprime définitivement toutes vos conversations et tous vos dossiers. Cette action est irréversible." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Questa azione elimina definitivamente tutte le tue chat e cartelle. Non può essere annullata." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべてのチャットとフォルダが完全に削除されます。この操作は取り消せません。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Isso apaga permanentemente todas as suas conversas e pastas. Não é possível desfazer." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Это навсегда удалит все ваши чаты и папки. Это действие нельзя отменить." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这将永久删除您的所有聊天和文件夹。此操作无法撤销。" } }
+    } },
+    "This photo couldn't be loaded. Try a different one." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Dieses Foto konnte nicht geladen werden. Versuchen Sie ein anderes." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo cargar esta foto. Prueba con otra." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Cette photo n'a pas pu être chargée. Essayez-en une autre." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Impossibile caricare questa foto. Provane un'altra." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "この写真を読み込めませんでした。別の写真をお試しください。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Não foi possível carregar esta foto. Tente outra." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Не удалось загрузить это фото. Попробуйте другое." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法载入此照片。请试试其他照片。" } }
+    } },
+    "This photo couldn't be read. Try a different one." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Dieses Foto konnte nicht gelesen werden. Versuchen Sie ein anderes." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo leer esta foto. Prueba con otra." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Cette photo n'a pas pu être lue. Essayez-en une autre." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Impossibile leggere questa foto. Provane un'altra." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "この写真を読み取れませんでした。別の写真をお試しください。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Não foi possível ler esta foto. Tente outra." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Не удалось прочитать это фото. Попробуйте другое." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法读取此照片。请试试其他照片。" } }
+    } },
+    "To chat privately on this device, %1$@ (%2$@) needs to be downloaded once. After that, everything works offline." : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Um auf diesem Gerät privat zu chatten, muss %1$@ (%2$@) einmal geladen werden. Danach funktioniert alles offline." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Para chatear de forma privada en este dispositivo, es necesario descargar %1$@ (%2$@) una sola vez. Después, todo funciona sin conexión." } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pour discuter en privé sur cet appareil, %1$@ (%2$@) doit être téléchargé une seule fois. Ensuite, tout fonctionne hors ligne." } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Per chattare in privato su questo dispositivo, %1$@ (%2$@) deve essere scaricato una sola volta. Dopo, tutto funziona offline." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "このデバイスでプライベートにチャットするには、%1$@（%2$@）を一度ダウンロードする必要があります。その後はすべてオフラインで動作します。" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Para conversar com privacidade neste dispositivo, é preciso baixar %1$@ (%2$@) uma vez. Depois disso, tudo funciona offline." } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Чтобы общаться приватно на этом устройстве, нужно один раз скачать %1$@ (%2$@). После этого всё работает офлайн." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "要在此设备上私密聊天，需要下载一次 %1$@（%2$@）。之后一切都可离线使用。" } }
+    } },
+    "Total Space Used" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Insgesamt belegter Speicher" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Espacio total usado" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Espace total utilisé" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Spazio totale utilizzato" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "使用容量の合計" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Espaço total usado" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Всего использовано" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已用空间总计" } }
+    } },
+    "Try Again" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Erneut versuchen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Reintentar" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Réessayer" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Riprova" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "再試行" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Tentar novamente" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Повторить" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "重试" } }
+    } },
+    "Upload PDF or text files" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "PDF- oder Textdateien hochladen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Sube archivos PDF o de texto" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Importez des fichiers PDF ou texte" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Carica file PDF o di testo" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "PDFやテキストファイルをアップロード" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Envie arquivos PDF ou de texto" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Загружайте PDF или текстовые файлы" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "上传 PDF 或文本文件" } }
+    } },
+    "Version %@" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Version %@" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Versión %@" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Version %@" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Versione %@" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "バージョン %@" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Versão %@" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Версия %@" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "版本 %@" } }
+    } },
+    "What's in this image?" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Was ist auf diesem Bild?" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Qué hay en esta imagen?" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Que contient cette image ?" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Cosa c'è in questa immagine?" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "この画像には何が写っていますか？" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "O que há nesta imagem?" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Что на этом изображении?" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这张图片里有什么？" } }
+    } },
+    "Wi-Fi recommended" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Wi-Fi empfohlen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Se recomienda Wi-Fi" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Wi-Fi recommandé" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Wi-Fi consigliato" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "Wi-Fi推奨" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Wi-Fi recomendado" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Рекомендуется Wi-Fi" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "建议使用 Wi-Fi" } }
+    } },
+    "Will be analyzed with your message" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Wird zusammen mit Ihrer Nachricht analysiert" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Se analizará junto con tu mensaje" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Sera analysé avec votre message" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Verrà analizzato insieme al tuo messaggio" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "メッセージと一緒に分析されます" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Será analisado com a sua mensagem" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Будет проанализировано вместе с вашим сообщением" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "将与您的消息一起分析" } }
+    } },
+    "Works fully offline afterward" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Funktioniert danach vollständig offline" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Después funciona totalmente sin conexión" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Fonctionne ensuite entièrement hors ligne" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Dopo funziona completamente offline" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "その後は完全にオフラインで動作" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Depois funciona totalmente offline" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "После этого работает полностью офлайн" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "之后完全离线运行" } }
+    } },
+    "You can delete it anytime in Settings" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Sie können es jederzeit in den Einstellungen löschen" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Puedes eliminarlo cuando quieras en Ajustes" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Vous pouvez le supprimer à tout moment dans Réglages" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Puoi eliminarlo in qualsiasi momento in Impostazioni" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "設定でいつでも削除できます" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Você pode apagá-lo a qualquer momento nos Ajustes" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Можно удалить в любой момент в Настройках" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "您可以随时在设置中删除" } }
+    } },
+    "You said: %@" : { "localizations" : {
+      "de" : { "stringUnit" : { "state" : "translated", "value" : "Sie sagten: %@" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Dijiste: %@" } },
+      "fr" : { "stringUnit" : { "state" : "translated", "value" : "Vous avez dit : %@" } },
+      "it" : { "stringUnit" : { "state" : "translated", "value" : "Hai detto: %@" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "あなたの発言：%@" } },
+      "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Você disse: %@" } },
+      "ru" : { "stringUnit" : { "state" : "translated", "value" : "Вы сказали: %@" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "您说：%@" } }
+    } },
+    "aigoodbye.ai" : {},
+    "marketing@dealerofhappiness.com" : {}
+  },
+  "version" : "1.0"
+}

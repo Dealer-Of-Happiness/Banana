@@ -2,553 +2,281 @@
 //  MLXService.swift
 //  AIGoodbye
 //
-//  MLX-based inference service for vision-language models (SmolVLM, Qwen-VL)
-//  Uses Apple's MLX framework for efficient on-device inference
+//  On-device inference for downloaded models via Apple MLX.
+//
+//  v3.0: rebuilt around the library's ChatSession:
+//  - real token streaming (text appears as it is generated)
+//  - generation cancels when the caller stops listening (Stop button)
+//  - the model's own chat template is applied by the library (no manual
+//    prompt strings, no template token cleanup)
+//  - the key-value cache is reused across turns, so each message no longer
+//    re-processes the whole conversation (big win on older devices)
+//  - the Context Window setting genuinely limits how much history is loaded
 //
 
 import Foundation
 import UIKit
 import Combine
 import MLX
-import MLXLLM
 import MLXLMCommon
 import MLXVLM
-import Hub
 
 @MainActor
-class MLXService: ObservableObject {
-    // Model container for VLM
-    private var modelContainer: ModelContainer?
-    private var currentModelId: String?
+final class MLXService: ObservableObject {
 
-    // Configuration
-    private let temperature: Float
-    private let maxTokens: Int
+    // MARK: - Published state
 
-    // Conversation history for multi-turn
-    private var conversationHistory: [[String: String]] = []
-    private let historyLimit: Int = 30
-
-    // Published state for ObservableObject conformance
-    @Published var isLoading: Bool = false
-
-    // Download state - @Published for SwiftUI observation
     @Published var isDownloading: Bool = false
     @Published var downloadProgress: Double = 0
+    @Published var isPreparingModel: Bool = false
+    @Published var loadedModelId: String?
 
-    // System prompt with brand information
-    private let systemPrompt = """
-    You are AiGoodbye, a helpful AI assistant. \
-    AiGoodbye was created by Dmitry Mikhaylov, also known as Dealer Of Happiness. \
-    The official website is aigoodbye.ai. \
-    For inquiries, users can contact marketing@dealerofhappiness.com. \
-    You run completely offline on the user's device, ensuring complete privacy - no data is ever sent to servers. \
-    Be concise, helpful, and friendly. \
-    When analyzing images, describe what you see clearly and answer any questions about the visual content. \
+    // MARK: - Private state
+
+    private var modelContainer: ModelContainer?
+    private var session: ChatSession?
+    private var sessionModelId: String?
+
+    private let settings: SettingsManager
+
+    /// Brand and behavior instructions sent to every model.
+    static let systemPrompt = """
+    You are AiGoodbye, a helpful AI assistant created by Dmitry Mikhaylov (Dealer Of Happiness). \
+    Official website: aigoodbye.ai. Contact: marketing@dealerofhappiness.com. \
+    You run completely offline on the user's device; no data ever leaves the phone. \
+    Be concise, helpful, and friendly. Use Markdown formatting (bold, lists, code blocks) when it makes answers clearer. \
+    When analyzing images, describe what you see clearly and answer questions about the visual content. \
     Always respond in the same language the user writes to you.
     """
 
-    // Legacy static references (for backward compatibility)
-    static var downloadedBytes: Int64 = 0
-    static var totalBytes: Int64 = 0
+    init(settings: SettingsManager) {
+        self.settings = settings
 
-    init(temperature: Double = 0.7, maxTokens: Int = 2048) {
-        self.temperature = Float(temperature)
-        self.maxTokens = maxTokens
-
-        // Cap MLX GPU cache to prevent memory accumulation during inference
-        // (recommended by official MLX examples for iOS memory constraints)
+        // Cap the MLX GPU cache to prevent memory accumulation during inference.
+        // 20 MB follows the official mlx-swift-examples guidance for iOS.
         GPU.set(cacheLimit: 20 * 1024 * 1024)
     }
 
-    // MARK: - Model Management
+    // MARK: - Model loading
 
-    private func getModelManager() -> ModelManager {
-        ModelManager.shared
+    /// Load (and download if needed) the given model. Safe to call repeatedly.
+    func loadModel(_ model: AIModel) async throws {
+        guard model.backend == .mlx, let hfId = model.huggingFaceId else {
+            throw MLXError.unsupportedBackend(model.name)
+        }
+
+        if modelContainer != nil && loadedModelId == model.id { return }
+
+        // Switching models: free the previous one first.
+        unload()
+
+        let wasDownloaded = ModelManager.shared.isModelDownloaded(model)
+        if !wasDownloaded {
+            isDownloading = true
+            downloadProgress = 0
+        } else {
+            isPreparingModel = true
+        }
+        defer {
+            isDownloading = false
+            isPreparingModel = false
+        }
+
+        let configuration = ModelConfiguration(id: hfId)
+        do {
+            modelContainer = try await VLMModelFactory.shared.loadContainer(
+                configuration: configuration
+            ) { [weak self] progress in
+                Task { @MainActor in
+                    guard let self else { return }
+                    self.downloadProgress = progress.fractionCompleted
+                    if progress.isFinished { self.isDownloading = false }
+                }
+            }
+        } catch {
+            throw MLXError.modelLoadFailed(friendlyMessage(for: error))
+        }
+
+        loadedModelId = model.id
+        ModelManager.shared.noteModelInstalled(model)
     }
 
-    /// Load the active model
-    func loadModel() async throws {
-        let manager = getModelManager()
-        let model = manager.activeModel
+    func unload() {
+        session = nil
+        sessionModelId = nil
+        modelContainer = nil
+        loadedModelId = nil
+    }
 
-        // If already loaded with same model, skip
-        if modelContainer != nil && currentModelId == model.id {
-            print("[MLXService] Model already loaded, reusing existing instance")
+    /// Drop only the chat session; the loaded model stays in memory.
+    func dropSession() {
+        session = nil
+        sessionModelId = nil
+    }
+
+    var isModelLoaded: Bool { modelContainer != nil }
+
+    // MARK: - Conversation session
+
+    /// Start (or restart) the chat session for a conversation.
+    ///
+    /// Call when: a conversation is opened or switched, history is edited
+    /// (regenerate, clear), or the model / context setting changes.
+    /// Do NOT call between normal turns; keeping the session alive is what
+    /// enables cache reuse.
+    func startSession(model: AIModel, history: [(role: String, content: String)]) {
+        guard let container = modelContainer, loadedModelId == model.id else {
+            session = nil
+            sessionModelId = nil
             return
         }
 
-        // Unload previous model if switching
-        if currentModelId != nil && currentModelId != model.id {
-            print("[MLXService] Switching models, unloading previous")
-            modelContainer = nil
-        }
-        currentModelId = nil
-
-        try await loadModelInternal(model)
-    }
-
-    private func loadModelInternal(_ model: AIModel) async throws {
-        guard model.backend == .mlx else {
-            throw MLXError.unsupportedBackend("Model requires MLX backend but uses \(model.backend)")
-        }
-
-        // Get the HuggingFace model ID for MLX models
-        guard let hfModelId = model.huggingFaceId else {
-            throw MLXError.modelLoadFailed("No HuggingFace model ID configured for \(model.name)")
-        }
-
-        print("[MLXService] Loading MLX VLM model: \(hfModelId)")
-
-        // Create model configuration with HuggingFace model ID
-        // VLMModelFactory handles download automatically using the Hub library
-        let configuration = ModelConfiguration(id: hfModelId)
-
-        // Mark as downloading
-        self.isDownloading = true
-        self.downloadProgress = 0
-
-        // Load VLM model - it will download if needed
-        modelContainer = try await VLMModelFactory.shared.loadContainer(
-            configuration: configuration
-        ) { [weak self] progress in
-            Task { @MainActor in
-                self?.downloadProgress = progress.fractionCompleted
-                if progress.isFinished {
-                    self?.isDownloading = false
-                }
-            }
-            print("[MLXService] Loading progress: \(Int(progress.fractionCompleted * 100))%")
-        }
-
-        // Ensure download state is cleared
-        self.isDownloading = false
-
-        currentModelId = model.id
-        print("[MLXService] VLM Model loaded successfully: \(model.name)")
-    }
-
-    /// Load a specific model by ID
-    func loadSpecificModel(_ model: AIModel) async throws {
-        if currentModelId != model.id {
-            modelContainer = nil
-            currentModelId = nil
-        }
-        try await loadModelInternal(model)
-    }
-
-    func unloadModel() {
-        modelContainer = nil
-        currentModelId = nil
-        conversationHistory.removeAll()
-    }
-
-    func isModelLoaded() -> Bool {
-        modelContainer != nil && currentModelId != nil
-    }
-
-    /// Reload the model with current settings
-    func reloadModel() async throws {
-        guard let modelId = currentModelId,
-              let model = AIModel.model(withId: modelId) else {
-            throw MLXError.modelNotLoaded
-        }
-
-        print("[MLXService] Reloading model with new settings...")
-        modelContainer = nil
-        try await loadModelInternal(model)
-        print("[MLXService] Model reloaded successfully")
-    }
-
-    // MARK: - Conversation History
-
-    /// Reset conversation - clears internal conversation history
-    func resetConversation() {
-        print("[MLXService] resetConversation called - clearing history")
-        conversationHistory.removeAll()
-    }
-
-    /// Restore history from saved conversation
-    func restoreHistory(_ messages: [(role: String, content: String)]) {
-        conversationHistory.removeAll()
-
-        // Limit content size to prevent memory issues
-        let maxContentLength = 2000
-
-        for message in messages {
-            let role = message.0.lowercased()
-            if role == "user" || role == "assistant" {
-                // Truncate long content (e.g., from document analysis)
-                let content = message.1
-                let truncatedContent: String
-                if content.count > maxContentLength {
-                    truncatedContent = String(content.prefix(maxContentLength)) + "\n[Content truncated]"
-                } else {
-                    truncatedContent = content
-                }
-
-                conversationHistory.append([
-                    "role": role,
-                    "content": truncatedContent
-                ])
-            }
-        }
-
-        // Trim to history limit
-        if conversationHistory.count > historyLimit * 2 {
-            conversationHistory = Array(conversationHistory.suffix(historyLimit * 2))
-        }
-
-        print("[MLXService] restoreHistory: restored \(conversationHistory.count) messages")
-    }
-
-    /// Force reset
-    func forceReset() async throws {
-        print("[MLXService] Force reset initiated...")
-        modelContainer = nil
-        currentModelId = nil
-        conversationHistory.removeAll()
-
-        try? await Task.sleep(nanoseconds: 500_000_000)
-        try await loadModel()
-        print("[MLXService] Force reset completed successfully")
-    }
-
-    // MARK: - Text Generation (no image)
-
-    /// Generate response for text-only input
-    func generate(prompt: String, conversationHistory existingHistory: [(role: String, content: String)] = []) -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream { continuation in
-            Task { @MainActor in
-                do {
-                    if self.modelContainer == nil {
-                        print("[MLXService] Model not loaded, loading...")
-                        try await self.loadModel()
-                    }
-
-                    guard let container = self.modelContainer else {
-                        throw MLXError.modelNotLoaded
-                    }
-
-                    // Build the full prompt with history
-                    let fullPrompt = self.buildPrompt(userMessage: prompt, image: nil)
-
-                    print("[MLXService] Generating text response...")
-                    print("[MLXService] History count: \(self.conversationHistory.count)")
-
-                    // Generate response using MLX
-                    let response = try await self.generateWithContainer(
-                        container: container,
-                        prompt: fullPrompt,
-                        image: nil
-                    )
-
-                    // Add to history
-                    self.addToHistory(role: "user", content: prompt)
-                    self.addToHistory(role: "assistant", content: response)
-
-                    let cleanedResponse = self.cleanResponse(response)
-
-                    if cleanedResponse.isEmpty {
-                        continuation.yield("I couldn't generate a response. Please try again.")
-                    } else {
-                        continuation.yield(cleanedResponse)
-                    }
-                    continuation.finish()
-
-                } catch {
-                    print("[MLXService] Generate error: \(error)")
-                    continuation.yield("Error: \(error.localizedDescription)")
-                    continuation.finish()
-                }
-            }
-        }
-    }
-
-    // MARK: - Vision Generation (with image)
-
-    /// Generate response for image + text input
-    func generateWithVision(prompt: String, image: UIImage) -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream { continuation in
-            Task { @MainActor in
-                do {
-                    if self.modelContainer == nil {
-                        print("[MLXService] Model not loaded, loading...")
-                        try await self.loadModel()
-                    }
-
-                    guard let container = self.modelContainer else {
-                        throw MLXError.modelNotLoaded
-                    }
-
-                    // Prepare image
-                    let processedImage = self.prepareImageForModel(image)
-
-                    // Build prompt
-                    let fullPrompt = self.buildPrompt(userMessage: prompt, image: processedImage)
-
-                    print("[MLXService] Generating vision response...")
-                    print("[MLXService] Image size: \(processedImage.size)")
-
-                    // Generate response with vision
-                    let response = try await self.generateWithContainer(
-                        container: container,
-                        prompt: fullPrompt,
-                        image: processedImage
-                    )
-
-                    // Add to history (text only - images not stored in history)
-                    self.addToHistory(role: "user", content: "[Image attached] \(prompt)")
-                    self.addToHistory(role: "assistant", content: response)
-
-                    let cleanedResponse = self.cleanResponse(response)
-
-                    if cleanedResponse.isEmpty {
-                        continuation.yield("I couldn't analyze the image. Please try again.")
-                    } else {
-                        continuation.yield(cleanedResponse)
-                    }
-                    continuation.finish()
-
-                } catch {
-                    print("[MLXService] Vision generate error: \(error)")
-                    continuation.yield("Error analyzing image: \(error.localizedDescription)")
-                    continuation.finish()
-                }
-            }
-        }
-    }
-
-    /// Analyze an image with a specific prompt
-    func analyzeImage(_ imageData: Data, prompt: String) async throws -> String {
-        guard let image = UIImage(data: imageData) else {
-            throw MLXError.invalidImage
-        }
-
-        var result = ""
-        for try await chunk in generateWithVision(prompt: prompt, image: image) {
-            result = chunk
-        }
-        return result
-    }
-
-    // MARK: - Core Generation
-
-    private func generateWithContainer(container: ModelContainer, prompt: String, image: UIImage?) async throws -> String {
-        let generateParameters = GenerateParameters(
-            maxTokens: maxTokens,
-            temperature: temperature,
+        let parameters = GenerateParameters(
+            maxTokens: 1200,
+            temperature: Float(settings.temperature),
             topP: 0.9
         )
 
-        // Create user input
-        let userInput: UserInput
-        if let image = image, let cgImage = image.cgImage {
-            // Vision input with image
-            userInput = UserInput(
-                prompt: .text(prompt),
-                images: [.ciImage(CIImage(cgImage: cgImage))]
-            )
-        } else {
-            // Text-only input
-            userInput = UserInput(prompt: .text(prompt))
+        let edge = model.imageProcessingEdge
+        let processing = UserInput.Processing(
+            resize: CGSize(width: edge, height: edge)
+        )
+
+        let trimmed = Self.trimHistory(history, tokenBudget: settings.contextWindow)
+        let chatHistory: [Chat.Message] = trimmed.compactMap { entry in
+            switch entry.role.lowercased() {
+            case "user": return .user(entry.content)
+            case "assistant": return .assistant(entry.content)
+            default: return nil
+            }
         }
 
-        // Perform generation
-        let output = try await container.perform { context in
-            let input = try await context.processor.prepare(input: userInput)
-
-            // Generate returns an AsyncSequence - collect all tokens
-            var generatedText = ""
-            let tokenStream = try MLXLMCommon.generate(
-                input: input,
-                parameters: generateParameters,
-                context: context
+        if chatHistory.isEmpty {
+            session = ChatSession(
+                container,
+                instructions: Self.systemPrompt,
+                generateParameters: parameters,
+                processing: processing
             )
+        } else {
+            session = ChatSession(
+                container,
+                instructions: Self.systemPrompt,
+                history: chatHistory,
+                generateParameters: parameters,
+                processing: processing
+            )
+        }
+        sessionModelId = model.id
+    }
 
-            for await part in tokenStream {
-                if let chunk = part.chunk {
-                    generatedText += chunk
+    /// Whether a live session exists for the given model.
+    func hasSession(for model: AIModel) -> Bool {
+        session != nil && sessionModelId == model.id
+    }
+
+    // MARK: - Generation
+
+    /// Stream a response. Yields the FULL response text so far with each event
+    /// (snapshot semantics). Ending iteration early cancels generation.
+    func respondStream(prompt: String, image: UIImage?) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            guard let session = self.session else {
+                continuation.finish(throwing: MLXError.modelNotLoaded)
+                return
+            }
+
+            let userImage: UserInput.Image?
+            if let image, let cgImage = image.cgImage {
+                userImage = .ciImage(CIImage(cgImage: cgImage))
+            } else {
+                userImage = nil
+            }
+
+            let task = Task {
+                var accumulated = ""
+                do {
+                    let stream = session.streamResponse(to: prompt, image: userImage)
+                    for try await chunk in stream {
+                        if Task.isCancelled { break }
+                        accumulated += chunk
+                        continuation.yield(accumulated)
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: MLXError.generationFailed(self.friendlyMessage(for: error)))
                 }
             }
 
-            return generatedText
-        }
-
-        return output
-    }
-
-    // MARK: - Private Helpers
-
-    private func buildPrompt(userMessage: String, image: UIImage?) -> String {
-        let manager = getModelManager()
-        let templateType = manager.activeModel.templateType
-
-        switch templateType {
-        case .smolvlm:
-            return buildSmolVLMPrompt(userMessage: userMessage, image: image)
-        case .qwenvl:
-            return buildQwenVLPrompt(userMessage: userMessage, image: image)
-        default:
-            // Default to Qwen VL format for other MLX vision models
-            return buildQwenVLPrompt(userMessage: userMessage, image: image)
-        }
-    }
-
-    /// Build prompt for SmolVLM2 models
-    private func buildSmolVLMPrompt(userMessage: String, image: UIImage?) -> String {
-        var prompt = ""
-
-        // SmolVLM2 uses simpler format - system message as first user turn
-        if conversationHistory.isEmpty {
-            // Add system context in first message
-            prompt += "<|im_start|>system\n\(systemPrompt)<|im_end|>\n"
-        }
-
-        // Add conversation history
-        for msg in conversationHistory.suffix(historyLimit * 2) {
-            if let role = msg["role"], let content = msg["content"] {
-                prompt += "<|im_start|>\(role)\n\(content)<|im_end|>\n"
+            continuation.onTermination = { _ in
+                task.cancel()
             }
         }
-
-        // Add current user message (SmolVLM uses <image> token for images)
-        if image != nil {
-            prompt += "<|im_start|>user\n<image>\(userMessage)<|im_end|>\n"
-        } else {
-            prompt += "<|im_start|>user\n\(userMessage)<|im_end|>\n"
-        }
-
-        // Add assistant start
-        prompt += "<|im_start|>assistant\n"
-
-        return prompt
     }
 
-    /// Build prompt for Qwen VL models (Qwen2-VL, Qwen3-VL)
-    /// Uses ChatML format with <|vision_start|><|image_pad|><|vision_end|> for images
-    private func buildQwenVLPrompt(userMessage: String, image: UIImage?) -> String {
-        var prompt = ""
+    // MARK: - History trimming
 
-        // Add system message
-        prompt += "<|im_start|>system\n\(systemPrompt)<|im_end|>\n"
+    /// Keep the most recent messages that fit within the token budget.
+    /// Tokens are approximated as characters / 3.5 (safe for mixed languages).
+    nonisolated static func trimHistory(
+        _ history: [(role: String, content: String)],
+        tokenBudget: Int
+    ) -> [(role: String, content: String)] {
+        // Reserve room for the system prompt, the next question, and the answer.
+        let reserve = 1800
+        let charBudget = max(2000, Int(Double(tokenBudget) * 3.5) - reserve)
 
-        // Add conversation history
-        for msg in conversationHistory.suffix(historyLimit * 2) {
-            if let role = msg["role"], let content = msg["content"] {
-                prompt += "<|im_start|>\(role)\n\(content)<|im_end|>\n"
+        var result: [(role: String, content: String)] = []
+        var used = 0
+        for entry in history.reversed() {
+            // Individual messages are capped so one huge document cannot
+            // consume the entire window.
+            let content = entry.content.count > 4000
+                ? String(entry.content.prefix(4000)) + "\n[Truncated]"
+                : entry.content
+            let cost = content.count
+            if used + cost > charBudget { break }
+            result.append((entry.role, content))
+            used += cost
+        }
+        return result.reversed()
+    }
+
+    // MARK: - Errors
+
+    private func friendlyMessage(for error: Error) -> String {
+        let ns = error as NSError
+        if ns.domain == NSURLErrorDomain {
+            switch ns.code {
+            case NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost:
+                return String(localized: "No internet connection. The model download needs internet once; chatting works fully offline afterward.")
+            case NSURLErrorTimedOut:
+                return String(localized: "The connection timed out. Please try again.")
+            default: break
             }
         }
-
-        // Add current user message with vision tokens if image present
-        if image != nil {
-            prompt += "<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>\(userMessage)<|im_end|>\n"
-        } else {
-            prompt += "<|im_start|>user\n\(userMessage)<|im_end|>\n"
-        }
-
-        // Add assistant start
-        prompt += "<|im_start|>assistant\n"
-
-        return prompt
-    }
-
-    private func prepareImageForModel(_ image: UIImage) -> UIImage {
-        // Resize image if too large (max 1024px on longest side)
-        let maxDimension: CGFloat = 1024
-        let size = image.size
-
-        if size.width <= maxDimension && size.height <= maxDimension {
-            return image
-        }
-
-        let ratio = min(maxDimension / size.width, maxDimension / size.height)
-        let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
-
-        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
-        image.draw(in: CGRect(origin: .zero, size: newSize))
-        let resized = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-
-        return resized ?? image
-    }
-
-    private func addToHistory(role: String, content: String) {
-        // Limit content size to prevent memory issues with large documents
-        // Truncate content if it's too long (e.g., from document analysis)
-        let maxContentLength = 2000
-        let truncatedContent: String
-        if content.count > maxContentLength {
-            truncatedContent = String(content.prefix(maxContentLength)) + "\n[Content truncated for memory efficiency]"
-        } else {
-            truncatedContent = content
-        }
-
-        conversationHistory.append([
-            "role": role,
-            "content": truncatedContent
-        ])
-
-        // Trim old history
-        if conversationHistory.count > historyLimit * 2 {
-            conversationHistory = Array(conversationHistory.suffix(historyLimit * 2))
-        }
-    }
-
-    private func cleanResponse(_ response: String) -> String {
-        var cleaned = response
-
-        // Remove common artifacts
-        let patternsToRemove = [
-            "<|im_end|>", "<|im_start|>",
-            "<|endoftext|>", "<|end|>",
-            "<|vision_start|>", "<|vision_end|>",
-            "<|vision_pad|>", "<|image_pad|>",
-            "<image>", "</image>",
-            "<|", "|>",
-            "[INST]", "[/INST]",
-            "<<SYS>>", "<</SYS>>",
-            "assistant\n"
-        ]
-
-        for pattern in patternsToRemove {
-            cleaned = cleaned.replacingOccurrences(of: pattern, with: "")
-        }
-
-        return cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+        return error.localizedDescription
     }
 }
 
 // MARK: - Errors
 
 enum MLXError: LocalizedError {
-    case modelNotFound
     case modelNotLoaded
-    case downloadFailed(String)
-    case generationFailed(String)
     case modelLoadFailed(String)
+    case generationFailed(String)
     case unsupportedBackend(String)
-    case invalidImage
-    case visionNotSupported
 
     var errorDescription: String? {
         switch self {
-        case .modelNotFound:
-            return "AI model not found. Please download it first."
         case .modelNotLoaded:
-            return "AI model is not loaded."
-        case .downloadFailed(let reason):
-            return "Failed to download model: \(reason)"
-        case .generationFailed(let reason):
-            return "Failed to generate response: \(reason)"
+            return String(localized: "The AI model isn't ready yet. Download or select a model in Settings.")
         case .modelLoadFailed(let reason):
-            return "Failed to load model: \(reason)"
-        case .unsupportedBackend(let reason):
-            return "Unsupported model backend: \(reason)"
-        case .invalidImage:
-            return "Invalid or corrupted image."
-        case .visionNotSupported:
-            return "This model does not support image analysis."
+            return String(localized: "Couldn't load the model: \(reason)")
+        case .generationFailed(let reason):
+            return String(localized: "Couldn't generate a response: \(reason)")
+        case .unsupportedBackend(let name):
+            return String(localized: "\(name) can't run on this engine.")
         }
     }
 }

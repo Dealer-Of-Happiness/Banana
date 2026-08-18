@@ -2,224 +2,203 @@
 //  ModelSelectionView.swift
 //  AIGoodbye
 //
-//  Model selection dropdown for new chats
+//  Sheet for choosing the AI engine: built-in Apple Intelligence or a
+//  downloadable on-device model.
 //
 
 import SwiftUI
 
 struct ModelSelectionView: View {
-    @StateObject private var modelManager = ModelManager.shared
-    @Binding var isPresented: Bool
-    @Binding var selectedModelId: String?
-    let onStartChat: () -> Void
+    @EnvironmentObject var appState: AppState
+    @ObservedObject private var modelManager = ModelManager.shared
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Header
-                VStack(spacing: 8) {
-                    Image(systemName: "cpu")
-                        .font(.system(size: 40))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.blue, .purple],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-
-                    Text("Select AI Model")
-                        .font(.title2.bold())
-
-                    Text("Choose a model for this conversation")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.top, 20)
-                .padding(.bottom, 16)
-
-                // Model List
-                ScrollView {
-                    VStack(spacing: 12) {
-                        ForEach(downloadedModels) { model in
-                            ModelSelectionRow(
-                                model: model,
-                                isSelected: selectedModelId == model.id || (selectedModelId == nil && model.id == modelManager.currentModelId)
-                            ) {
-                                selectedModelId = model.id
-                            }
-                        }
-
-                        if downloadedModels.isEmpty {
-                            VStack(spacing: 16) {
-                                Image(systemName: "exclamationmark.triangle")
-                                    .font(.largeTitle)
-                                    .foregroundStyle(.orange)
-
-                                Text("No Models Downloaded")
-                                    .font(.headline)
-
-                                Text("Go to Settings > AI Models to download a model first.")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .padding(.vertical, 40)
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-
-                // Start Chat Button
-                Button {
-                    let modelId = selectedModelId ?? modelManager.currentModelId
-                    if let model = AIModel.model(withId: modelId) {
-                        modelManager.selectModel(model)
-                    }
-                    onStartChat()
-                    isPresented = false
-                } label: {
-                    HStack {
-                        Image(systemName: "bubble.left.fill")
-                        Text("Start Chat")
-                    }
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(downloadedModels.isEmpty)
-                .padding()
+            List {
+                builtInSection
+                downloadableSection
             }
+            .navigationTitle("Choose AI Model")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        isPresented = false
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
                     }
+                    .accessibilityLabel("Done")
                 }
             }
         }
-        .presentationDetents([.medium, .large])
     }
 
-    private var downloadedModels: [AIModel] {
-        AIModel.allModels.filter { modelManager.isModelDownloaded($0) }
+    // MARK: - Sections
+
+    private var builtInSection: some View {
+        Section {
+            if appState.engine.appleIntelligence.isAvailable {
+                modelRow(for: AIModel.appleIntelligence)
+            } else {
+                unavailableRow
+            }
+        } header: {
+            Text("Built In")
+        }
+    }
+
+    private var downloadableSection: some View {
+        Section {
+            ForEach(downloadableChoices) { model in
+                modelRow(for: model)
+            }
+        } header: {
+            Text("Downloadable")
+        } footer: {
+            Text("Models download once and then work fully offline. You can delete them anytime in Settings.")
+        }
+    }
+
+    /// Picker choices minus the built-in entry, which has its own section.
+    private var downloadableChoices: [AIModel] {
+        appState.engine.availableChoices.filter { $0.backend != .appleIntelligence }
+    }
+
+    // MARK: - Rows
+
+    private func modelRow(for model: AIModel) -> some View {
+        let isSelected = appState.engine.selectedModel.id == model.id
+        return Button {
+            appState.engine.select(model)
+            dismiss()
+        } label: {
+            ModelChoiceRow(model: model, isSelected: isSelected)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityLabel(for: model, isSelected: isSelected))
+    }
+
+    /// Shown when Apple Intelligence is not usable on this device. Not tappable.
+    private var unavailableRow: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "exclamationmark.circle")
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Apple Intelligence")
+                    .font(.headline)
+                Text(unavailabilityReason)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Apple Intelligence, unavailable. \(unavailabilityReason)")
+    }
+
+    private var unavailabilityReason: String {
+        if case .unavailable(let reason) = appState.engine.appleIntelligence.availability {
+            return reason
+        }
+        return ""
+    }
+
+    // MARK: - Accessibility
+
+    private func accessibilityLabel(for model: AIModel, isSelected: Bool) -> String {
+        var parts: [String] = [model.name, model.shortDescription, model.size, model.memoryRequired]
+        if model.id == AIModel.recommendedDownloadModel.id {
+            parts.append("Recommended")
+        }
+        if isSelected {
+            parts.append("Currently selected")
+        }
+        if model.backend == .mlx {
+            parts.append(model.isDownloaded ? "Downloaded" : "Not downloaded, downloads on first use")
+        }
+        return parts.joined(separator: ", ")
     }
 }
 
-// MARK: - Model Selection Row
+// MARK: - Model Choice Row
 
-struct ModelSelectionRow: View {
+private struct ModelChoiceRow: View {
     let model: AIModel
     let isSelected: Bool
-    let onSelect: () -> Void
+
+    private var isRecommended: Bool {
+        model.id == AIModel.recommendedDownloadModel.id
+    }
 
     var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 12) {
-                // Selection indicator
-                ZStack {
-                    Circle()
-                        .stroke(isSelected ? Color.blue : Color(.systemGray4), lineWidth: 2)
-                        .frame(width: 24, height: 24)
+        HStack(alignment: .center, spacing: 12) {
+            // Selection indicator on the leading edge. Kept in the layout even
+            // when hidden so all rows align.
+            Image(systemName: "checkmark")
+                .font(.body.bold())
+                .foregroundStyle(.blue)
+                .opacity(isSelected ? 1 : 0)
+                .accessibilityHidden(true)
 
-                    if isSelected {
-                        Circle()
-                            .fill(Color.blue)
-                            .frame(width: 14, height: 14)
-                    }
-                }
-
-                // Model info
-                VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
                     Text(model.name)
                         .font(.headline)
-                        .foregroundStyle(.primary)
 
-                    Text(model.shortDescription)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    // Capabilities
-                    HStack(spacing: 4) {
-                        ForEach(model.capabilities.prefix(3), id: \.self) { capability in
-                            HStack(spacing: 2) {
-                                Image(systemName: capability.icon)
-                                Text(capability.rawValue)
-                            }
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        }
+                    if isRecommended {
+                        Text("Recommended")
+                            .font(.caption2.bold())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Capsule().fill(Color.blue))
                     }
                 }
 
-                Spacer()
-
-                // Size badge
-                Text(model.size)
+                Text(model.shortDescription)
                     .font(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color(.systemGray5))
-                    .clipShape(Capsule())
-            }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color.blue.opacity(0.1) : Color(.systemGray6))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-}
+                    .foregroundStyle(.secondary)
 
-// MARK: - Quick Model Picker (for inline use)
-
-struct QuickModelPicker: View {
-    @StateObject private var modelManager = ModelManager.shared
-    @State private var showModelSelection = false
-
-    var body: some View {
-        Button {
-            showModelSelection = true
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "cpu")
-                    .font(.caption)
-
-                if let model = AIModel.model(withId: modelManager.currentModelId) {
-                    Text(model.name)
-                        .font(.caption)
-                }
-
-                Image(systemName: "chevron.down")
+                Text("\(model.size) - \(model.memoryRequired)")
                     .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 6) {
+                    ForEach(model.capabilities, id: \.self) { capability in
+                        Image(systemName: capability.icon)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityHidden(true)
+
+                if model.backend == .mlx && !model.isDownloaded {
+                    HStack(spacing: 4) {
+                        Text("Not downloaded")
+                            .foregroundStyle(.orange)
+                        Text("Downloads on first use")
+                            .foregroundStyle(.secondary)
+                    }
+                    .font(.caption)
+                }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Color(.systemGray5))
-            .clipShape(Capsule())
+
+            Spacer(minLength: 0)
+
+            if model.isDownloaded {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .accessibilityHidden(true)
+            }
         }
-        .buttonStyle(.plain)
-        .sheet(isPresented: $showModelSelection) {
-            ModelSelectionView(
-                isPresented: $showModelSelection,
-                selectedModelId: .constant(nil),
-                onStartChat: {}
-            )
-        }
+        .padding(.vertical, 4)
     }
 }
 
 #Preview {
-    ModelSelectionView(
-        isPresented: .constant(true),
-        selectedModelId: .constant(nil),
-        onStartChat: {}
-    )
+    ModelSelectionView()
+        .environmentObject(AppState())
 }

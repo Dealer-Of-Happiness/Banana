@@ -2,7 +2,8 @@
 //  MainView.swift
 //  AIGoodbye
 //
-//  Main container view with side menu and chat
+//  Main container view with side menu and chat.
+//  v3.0: the menu now follows your finger during edge swipes.
 //
 
 import SwiftUI
@@ -14,29 +15,37 @@ struct MainView: View {
 
     private let menuWidth: CGFloat = 300
 
+    /// How far the menu is currently revealed, combining state and live drag.
+    private var revealAmount: CGFloat {
+        let base: CGFloat = appState.showSideMenu ? menuWidth : 0
+        return min(max(base + dragOffset, 0), menuWidth)
+    }
+
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
                 // Main Content
                 ChatView()
                     .frame(width: geometry.size.width)
-                    .offset(x: appState.showSideMenu ? menuWidth : 0)
+                    .offset(x: revealAmount)
                     .disabled(appState.showSideMenu)
 
-                // Dimmed overlay when menu is open
-                if appState.showSideMenu {
-                    Color.black.opacity(0.3)
+                // Dimmed overlay when menu is open (or being dragged open)
+                if revealAmount > 0 {
+                    Color.black.opacity(0.3 * (revealAmount / menuWidth))
                         .ignoresSafeArea()
-                        .offset(x: menuWidth)
+                        .offset(x: revealAmount)
                         .onTapGesture {
                             appState.toggleSideMenu()
                         }
+                        .accessibilityLabel(Text("Close menu"))
+                        .accessibilityAddTraits(.isButton)
                 }
 
                 // Side Menu
                 SideMenuView()
                     .frame(width: menuWidth)
-                    .offset(x: appState.showSideMenu ? 0 : -menuWidth)
+                    .offset(x: revealAmount - menuWidth)
             }
             .gesture(
                 DragGesture()

@@ -104,14 +104,16 @@ class ConversationManager: ObservableObject {
         content: String,
         isVoice: Bool = false,
         attachmentType: AttachmentType? = nil,
-        attachmentId: UUID? = nil
+        attachmentId: UUID? = nil,
+        hiddenContext: String? = nil
     ) -> Message {
         let message = Message(
             role: role,
             content: content,
             isVoiceMessage: isVoice,
             attachmentType: attachmentType,
-            attachmentId: attachmentId
+            attachmentId: attachmentId,
+            hiddenContext: hiddenContext
         )
         message.conversation = conversation
         conversation.messages.append(message)

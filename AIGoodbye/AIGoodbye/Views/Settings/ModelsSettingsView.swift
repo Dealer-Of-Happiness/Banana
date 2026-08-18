@@ -2,253 +2,153 @@
 //  ModelsSettingsView.swift
 //  AIGoodbye
 //
-//  Settings view for managing AI models
+//  Storage management for downloaded AI models: see what is on disk,
+//  how much space it uses, and delete models to free space.
 //
 
 import SwiftUI
 
 struct ModelsSettingsView: View {
-    @StateObject private var modelManager = ModelManager.shared
+    @ObservedObject var modelManager = ModelManager.shared
+    @EnvironmentObject var appState: AppState
+
     @State private var showDeleteConfirmation = false
     @State private var modelToDelete: AIModel?
 
     var body: some View {
         List {
-            // Current Model Section
-            Section {
-                if let currentModel = AIModel.model(withId: modelManager.currentModelId) {
-                    CurrentModelRow(model: currentModel)
-                }
-            } header: {
-                Label("Active Model", systemImage: "cpu")
-            }
-
-            // Available Models Section
-            Section {
-                ForEach(AIModel.allModels) { model in
-                    ModelRow(
-                        model: model,
-                        state: modelManager.downloadStates[model.id] ?? .notDownloaded,
-                        isSelected: model.id == modelManager.currentModelId,
-                        onDownload: { downloadModel(model) },
-                        onSelect: { selectModel(model) },
-                        onDelete: {
-                            modelToDelete = model
-                            showDeleteConfirmation = true
-                        }
-                    )
-                }
-            } header: {
-                Label("Available Models", systemImage: "square.stack.3d.up")
-            } footer: {
-                Text("Models are stored locally on your device. Total: \(modelManager.formattedTotalSize)")
-            }
+            storageSection
+            modelsSection
+            builtInSection
         }
         .navigationTitle("AI Models")
-        .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog(
-            "Delete Model",
+            deleteDialogTitle,
             isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            if let model = modelToDelete {
-                Button("Delete \(model.name)", role: .destructive) {
-                    deleteModel(model)
-                }
+            titleVisibility: .visible,
+            presenting: modelToDelete
+        ) { model in
+            Button("Delete", role: .destructive) {
+                modelManager.deleteModel(model)
+                modelToDelete = nil
             }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            if let model = modelToDelete {
-                Text("This will delete \(model.name) (\(model.size)) from your device. You can download it again later.")
+            .accessibilityLabel("Delete \(model.name)")
+
+            Button("Cancel", role: .cancel) {
+                modelToDelete = nil
             }
+            .accessibilityLabel("Cancel")
+        } message: { model in
+            Text(deleteDialogMessage(for: model))
         }
     }
 
-    private func downloadModel(_ model: AIModel) {
-        Task {
-            try? await modelManager.downloadModel(model)
-        }
-    }
+    // MARK: - Sections
 
-    private func selectModel(_ model: AIModel) {
-        modelManager.selectModel(model)
-    }
-
-    private func deleteModel(_ model: AIModel) {
-        try? modelManager.deleteModel(model)
-        modelToDelete = nil
-    }
-}
-
-// MARK: - Current Model Row
-
-struct CurrentModelRow: View {
-    let model: AIModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+    private var storageSection: some View {
+        Section {
             HStack {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                Text(model.name)
-                    .font(.headline)
-            }
-
-            Text(model.shortDescription)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            // Capabilities
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(model.capabilities, id: \.self) { capability in
-                        CapabilityBadge(capability: capability)
-                    }
-                }
-            }
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-// MARK: - Model Row
-
-struct ModelRow: View {
-    let model: AIModel
-    let state: ModelDownloadState
-    let isSelected: Bool
-    let onDownload: () -> Void
-    let onSelect: () -> Void
-    let onDelete: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack {
-                        Text(model.name)
-                            .font(.headline)
-                        if isSelected {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                                .font(.caption)
-                        }
-                    }
-                    Text(model.size + " • " + model.memoryRequired)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
+                Label("Total Space Used", systemImage: "internaldrive")
                 Spacer()
-
-                // Action Button
-                actionButton
+                Text(modelManager.formattedTotalSize)
+                    .foregroundStyle(.secondary)
             }
+            .accessibilityElement(children: .combine)
+        } header: {
+            Text("Storage")
+        }
+    }
 
-            // Description
-            Text(model.shortDescription)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            // Capabilities
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(model.capabilities, id: \.self) { capability in
-                        CapabilityBadge(capability: capability)
-                    }
-                }
+    private var modelsSection: some View {
+        Section {
+            ForEach(AIModel.allModels) { model in
+                modelRow(for: model)
             }
+        } header: {
+            Text("Downloadable Models")
+        } footer: {
+            Text("Deleting a model frees space immediately. It will be downloaded again the next time you use it.")
+        }
+    }
 
-            // Download Progress
-            if case .downloading(let progress) = state {
-                ProgressView(value: progress)
-                    .progressViewStyle(.linear)
-                Text("\(Int(progress * 100))% downloaded")
+    private var builtInSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Apple Intelligence")
+                    .font(.headline)
+                Text("Managed by iOS - uses no app storage")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-        }
-        .padding(.vertical, 4)
-        .contextMenu {
-            if case .downloaded = state {
-                Button {
-                    onSelect()
-                } label: {
-                    Label("Use This Model", systemImage: "checkmark.circle")
-                }
-
-                Button(role: .destructive) {
-                    onDelete()
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-            }
+            .padding(.vertical, 2)
+            .accessibilityElement(children: .combine)
+        } header: {
+            Text("Built In")
         }
     }
 
-    @ViewBuilder
-    private var actionButton: some View {
-        switch state {
-        case .notDownloaded:
-            Button {
-                onDownload()
-            } label: {
-                Image(systemName: "arrow.down.circle")
-                    .font(.title2)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.blue)
+    // MARK: - Rows
 
-        case .downloading:
-            ProgressView()
-                .progressViewStyle(.circular)
+    private func modelRow(for model: AIModel) -> some View {
+        let isDownloaded = modelManager.isModelDownloaded(model)
+        return HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(model.name)
+                    .font(.headline)
 
-        case .downloaded:
-            if isSelected {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(.green)
-            } else {
-                Button {
-                    onSelect()
-                } label: {
-                    Text("Use")
-                        .font(.subheadline.bold())
+                Text(model.shortDescription)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if isDownloaded {
+                    Text(onDiskSize(for: model))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Not downloaded")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
             }
+            .accessibilityElement(children: .combine)
 
-        case .failed:
-            VStack {
-                Image(systemName: "exclamationmark.circle")
-                    .foregroundStyle(.red)
-                Button("Retry") {
-                    onDownload()
+            Spacer(minLength: 8)
+
+            if isDownloaded {
+                Button("Delete", role: .destructive) {
+                    modelToDelete = model
+                    showDeleteConfirmation = true
                 }
-                .font(.caption)
+                .buttonStyle(.borderless)
+                .frame(minHeight: 44)
+                .accessibilityLabel("Delete \(model.name)")
             }
         }
+        .padding(.vertical, 2)
     }
-}
 
-// MARK: - Capability Badge
+    // MARK: - Helpers
 
-struct CapabilityBadge: View {
-    let capability: ModelCapability
+    private func onDiskSize(for model: AIModel) -> String {
+        ByteCountFormatter.string(
+            fromByteCount: modelManager.downloadedSizeBytes(for: model),
+            countStyle: .file
+        )
+    }
 
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: capability.icon)
-                .font(.caption2)
-            Text(capability.rawValue)
-                .font(.caption2)
+    private var deleteDialogTitle: String {
+        if let model = modelToDelete {
+            return "Delete \(model.name)?"
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color(.systemGray5))
-        .clipShape(Capsule())
+        return "Delete Model?"
+    }
+
+    private func deleteDialogMessage(for model: AIModel) -> String {
+        let size = onDiskSize(for: model)
+        if appState.engine.selectedModel.id == model.id {
+            return "This frees \(size) right away. \(model.name) is your current model, so it will be re-downloaded the next time you use it."
+        }
+        return "This frees \(size) right away. You can download \(model.name) again anytime."
     }
 }
 
@@ -256,4 +156,5 @@ struct CapabilityBadge: View {
     NavigationStack {
         ModelsSettingsView()
     }
+    .environmentObject(AppState())
 }

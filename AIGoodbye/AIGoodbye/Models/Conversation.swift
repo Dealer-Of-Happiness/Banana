@@ -68,7 +68,15 @@ final class Message {
     var attachmentType: AttachmentType?
     var attachmentId: UUID?
 
+    /// Full prompt sent to the model when it differs from the displayed text
+    /// (e.g. document questions show "[Document: name]" but send the extracted
+    /// text). Optional and additive, so existing chats migrate automatically.
+    var hiddenContext: String?
+
     var conversation: Conversation?
+
+    /// What the AI should see for this message.
+    var modelFacingContent: String { hiddenContext ?? content }
 
     init(
         id: UUID = UUID(),
@@ -76,7 +84,8 @@ final class Message {
         content: String,
         isVoiceMessage: Bool = false,
         attachmentType: AttachmentType? = nil,
-        attachmentId: UUID? = nil
+        attachmentId: UUID? = nil,
+        hiddenContext: String? = nil
     ) {
         self.id = id
         self.role = role
@@ -85,6 +94,7 @@ final class Message {
         self.isVoiceMessage = isVoiceMessage
         self.attachmentType = attachmentType
         self.attachmentId = attachmentId
+        self.hiddenContext = hiddenContext
     }
 }
 

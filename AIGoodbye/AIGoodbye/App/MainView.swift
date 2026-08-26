@@ -47,23 +47,36 @@ struct MainView: View {
                     .frame(width: menuWidth)
                     .offset(x: revealAmount - menuWidth)
             }
-            .gesture(
-                DragGesture()
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 15)
                     .onChanged { value in
-                        if !appState.showSideMenu && value.translation.width > 0 {
-                            dragOffset = min(value.translation.width, menuWidth)
-                        } else if appState.showSideMenu && value.translation.width < 0 {
+                        // Only react to clearly horizontal drags, and only open
+                        // from the left edge, so chat scrolling stays untouched.
+                        let horizontal = abs(value.translation.width) > abs(value.translation.height) * 1.5
+                        guard horizontal else { return }
+
+                        if !appState.showSideMenu {
+                            guard value.startLocation.x < 60 else { return }
+                            if value.translation.width > 0 {
+                                dragOffset = min(value.translation.width, menuWidth)
+                            }
+                        } else if value.translation.width < 0 {
                             dragOffset = max(value.translation.width, -menuWidth)
                         }
                     }
                     .onEnded { value in
+                        let horizontal = abs(value.translation.width) > abs(value.translation.height) * 1.5
                         withAnimation(.spring(response: 0.3)) {
+                            defer { dragOffset = 0 }
+                            guard horizontal else { return }
+
                             if !appState.showSideMenu {
-                                appState.showSideMenu = value.translation.width > menuWidth / 2
+                                if value.startLocation.x < 60 {
+                                    appState.showSideMenu = value.translation.width > menuWidth / 2
+                                }
                             } else {
                                 appState.showSideMenu = value.translation.width > -menuWidth / 2
                             }
-                            dragOffset = 0
                         }
                     }
             )

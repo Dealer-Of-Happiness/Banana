@@ -147,12 +147,20 @@ final class ChatEngine: ObservableObject {
     /// Prepare the backend for a conversation (loads model if needed, builds
     /// the session with history). Call on conversation open/switch/edit.
     func startConversation(model: AIModel, history: [(role: String, content: String)]) async throws {
+        #if targetEnvironment(simulator)
+        // Simulator: MLX cannot run; the echo engine needs no setup.
+        if model.backend == .appleIntelligence {
+            appleIntelligence.startSession(history: history)
+        }
+        return
+        #else
         if model.backend == .appleIntelligence {
             appleIntelligence.startSession(history: history)
         } else {
             try await mlx.loadModel(model)
             mlx.startSession(model: model, history: history)
         }
+        #endif
     }
 
     /// Whether a live session exists (avoids rebuilding between turns).
@@ -164,11 +172,57 @@ final class ChatEngine: ObservableObject {
 
     /// Stream a response from the given routed model. Snapshot semantics.
     func respondStream(model: AIModel, prompt: String, image: UIImage?) -> AsyncThrowingStream<String, Error> {
+        #if targetEnvironment(simulator)
+        // Simulator: MLX cannot execute; stream a canned response so the full
+        // chat experience (streaming, Stop, Markdown) can be exercised in
+        // previews and UI tests. Compiled out of device builds entirely.
+        if model.backend != .appleIntelligence || !appleIntelligence.isAvailable {
+            return Self.simulatorEchoStream(prompt: prompt, hasImage: image != nil)
+        }
+        return appleIntelligence.respondStream(prompt: prompt)
+        #else
         if model.backend == .appleIntelligence {
             return appleIntelligence.respondStream(prompt: prompt)
         }
         return mlx.respondStream(prompt: prompt, image: image)
+        #endif
     }
+
+    #if targetEnvironment(simulator)
+    /// Canned streaming response used only in the iOS Simulator.
+    nonisolated static func simulatorEchoStream(prompt: String, hasImage: Bool) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                let reply = """
+                **Simulator test mode.** MLX models need a real device, so this is a canned reply.
+
+                You said: *\(prompt.prefix(120))*\(hasImage ? "\n\nAn image was attached." : "")
+
+                Things this reply exercises:
+                - Live **streaming** with the Stop button
+                - Markdown: **bold**, *italic*, `inline code`
+                - Lists and code blocks
+
+                ```swift
+                let app = "AiGoodbye"
+                print("Hello from \\(app) 3.0")
+                ```
+
+                On a real iPhone this text comes from the on-device model.
+                """
+                var shown = ""
+                for word in reply.split(separator: " ", omittingEmptySubsequences: false) {
+                    if Task.isCancelled { break }
+                    shown += (shown.isEmpty ? "" : " ") + word
+                    continuation.yield(shown)
+                    try? await Task.sleep(nanoseconds: 40_000_000)
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+    #endif
 
     /// Drop all live sessions (e.g. after clearing a chat or changing settings).
     func resetSessions() {

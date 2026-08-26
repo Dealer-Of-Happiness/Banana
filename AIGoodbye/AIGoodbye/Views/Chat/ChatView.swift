@@ -876,19 +876,6 @@ class ChatViewModel: ObservableObject {
 
     private func perform(_ request: PendingRequest) async {
         guard let appState else { return }
-        lastRequest = request
-
-        // Route to a backend; may require download consent.
-        let routedModel: AIModel
-        do {
-            routedModel = try appState.engine.route(hasImage: request.image != nil)
-        } catch let error as ChatEngine.RouteError {
-            handleRouteError(error)
-            return
-        } catch {
-            errorBanner = ErrorBanner(message: error.localizedDescription, canRetry: true)
-            return
-        }
 
         // Ensure a conversation exists.
         var conversation = appState.currentConversation
@@ -898,7 +885,8 @@ class ChatViewModel: ObservableObject {
             currentConversationId = conversation?.id
         }
 
-        // Persist and show the user message.
+        // Persist and show the user message FIRST, so it is never lost when
+        // routing needs user action (e.g. download consent).
         if request.persistUserMessage, let conv = conversation {
             let userMessage = appState.conversationManager.addMessage(
                 to: conv,
@@ -917,6 +905,30 @@ class ChatViewModel: ObservableObject {
             }
         }
 
+        // Remember the request for retry/consent flows. The user message is
+        // persisted by now, so any re-run must not persist it again.
+        lastRequest = PendingRequest(
+            prompt: request.prompt,
+            displayMessage: request.displayMessage,
+            hiddenContext: request.hiddenContext,
+            image: request.image,
+            imageId: request.imageId,
+            attachmentType: request.attachmentType,
+            persistUserMessage: false
+        )
+
+        // Route to a backend; may require download consent.
+        let routedModel: AIModel
+        do {
+            routedModel = try appState.engine.route(hasImage: request.image != nil)
+        } catch let error as ChatEngine.RouteError {
+            handleRouteError(error)
+            return
+        } catch {
+            errorBanner = ErrorBanner(message: error.localizedDescription, canRetry: true)
+            return
+        }
+
         isGenerating = true
         streamingText = nil
 
@@ -926,13 +938,17 @@ class ChatViewModel: ObservableObject {
 
             do {
                 // Build the session once per conversation; reuse it between turns.
-                // History excludes the user turn we just persisted (the session
-                // receives it via streamResponse).
+                // History must end after an assistant turn: trailing user turns
+                // are pending questions (including the one being asked now) and
+                // are delivered via streamResponse instead.
                 if !appState.engine.hasSession(for: routedModel) {
-                    let history = historyForModel.dropLast(request.persistUserMessage ? 1 : 0)
+                    var history = historyForModel
+                    while history.last?.role == MessageRole.user.rawValue {
+                        history.removeLast()
+                    }
                     try await appState.engine.startConversation(
                         model: routedModel,
-                        history: Array(history)
+                        history: history
                     )
                 }
 
@@ -1245,6 +1261,7 @@ struct ModelDownloadConsentSheet: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal)
 
             VStack(alignment: .leading, spacing: 8) {

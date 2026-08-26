@@ -52,9 +52,12 @@ final class MLXService: ObservableObject {
     init(settings: SettingsManager) {
         self.settings = settings
 
+        #if !targetEnvironment(simulator)
         // Cap the MLX GPU cache to prevent memory accumulation during inference.
         // 20 MB follows the official mlx-swift-examples guidance for iOS.
+        // (Never touch MLX's Metal device in the simulator; it aborts.)
         GPU.set(cacheLimit: 20 * 1024 * 1024)
+        #endif
     }
 
     // MARK: - Model loading

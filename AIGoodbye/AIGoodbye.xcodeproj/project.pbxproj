@@ -458,6 +458,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 3.0.0;
+				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = "-Wl,-U,_MTLIOErrorDomain -Wl,-U,_MTLTensorDomain";
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbye;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -497,6 +498,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 3.0.0;
+				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = "-Wl,-U,_MTLIOErrorDomain -Wl,-U,_MTLTensorDomain";
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbye;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

@@ -82,11 +82,13 @@ final class ChatEngine: ObservableObject {
     }
 
     /// Models shown in pickers: built-in first (when available), then current
-    /// models, then legacy ones the user already has on disk.
+    /// models that fit this device's RAM, then legacy ones already on disk.
     var availableChoices: [AIModel] {
         var choices: [AIModel] = []
         if appleIntelligence.isAvailable { choices.append(.appleIntelligence) }
-        choices.append(contentsOf: AIModel.allModels.filter { !$0.isLegacy || $0.isDownloaded })
+        choices.append(contentsOf: AIModel.allModels.filter { model in
+            model.fitsThisDevice() && (!model.isLegacy || model.isDownloaded)
+        })
         return choices
     }
 

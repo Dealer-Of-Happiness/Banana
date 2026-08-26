@@ -80,12 +80,12 @@ extension AIModel {
     static let qwen3VL2B = AIModel(
         id: "qwen3-vl-2b",
         name: "Qwen3 Vision 2B",
-        shortDescription: "Best quality - vision, 30+ languages",
-        fullDescription: "Qwen3-VL 2B (4-bit). The strongest small vision model available: sharper image understanding, better reasoning, and wide language coverage. Recommended for iPhone 14 Pro and newer.",
+        shortDescription: String(localized: "Best quality - vision, 30+ languages"),
+        fullDescription: String(localized: "Qwen3-VL 2B (4-bit). The strongest small vision model available: sharper image understanding, better reasoning, and wide language coverage. Recommended for iPhone 14 Pro and newer."),
         size: "1.8 GB",
         sizeBytes: 1_780_000_000,
         capabilities: [.chat, .vision, .multilingual, .documentAnalysis],
-        memoryRequired: "3 GB RAM while active",
+        memoryRequired: String(localized: "3 GB RAM while active"),
         backend: .mlx,
         supportsVision: true,
         huggingFaceId: "mlx-community/Qwen3-VL-2B-Instruct-4bit",
@@ -94,16 +94,35 @@ extension AIModel {
         isLegacy: false
     )
 
+    /// Qwen3-VL 8B "Pro": the most powerful model we offer. Only for phones
+    /// with 12 GB of RAM (iPhone 17 Pro / Pro Max class); hidden elsewhere.
+    static let qwen3VL8BPro = AIModel(
+        id: "qwen3-vl-8b",
+        name: "Qwen3 Vision 8B Pro",
+        shortDescription: String(localized: "Maximum intelligence - for Pro phones"),
+        fullDescription: String(localized: "Qwen3-VL 8B (4-bit). Our most powerful model: noticeably deeper reasoning, richer answers, and the sharpest image understanding. Requires a phone with 12 GB of RAM, like iPhone 17 Pro Max. Responses are slower than the 2B model."),
+        size: "5.8 GB",
+        sizeBytes: 5_760_000_000,
+        capabilities: [.chat, .vision, .multilingual, .documentAnalysis],
+        memoryRequired: String(localized: "About 7 GB RAM while active"),
+        backend: .mlx,
+        supportsVision: true,
+        huggingFaceId: "mlx-community/Qwen3-VL-8B-Instruct-4bit",
+        minRecommendedRAMGB: 12,
+        imageProcessingEdge: 768,
+        isLegacy: false
+    )
+
     /// SmolVLM2 500M: compact vision model for devices with 4 GB of RAM.
     static let smolVLM2 = AIModel(
         id: "smolvlm2-500m",
         name: "Smol Vision 500M",
-        shortDescription: "Light and fast - great for older iPhones",
-        fullDescription: "SmolVLM2 500M. A compact vision model that runs comfortably on older devices (iPhone 11-13). Faster responses and lower memory use, with simpler answers than the larger models.",
+        shortDescription: String(localized: "Light and fast - great for older iPhones"),
+        fullDescription: String(localized: "SmolVLM2 500M. A compact vision model that runs comfortably on older devices (iPhone 11-13). Faster responses and lower memory use, with simpler answers than the larger models."),
         size: "1.0 GB",
         sizeBytes: 1_020_000_000,
         capabilities: [.chat, .vision, .fast],
-        memoryRequired: "1.5 GB RAM while active",
+        memoryRequired: String(localized: "1.5 GB RAM while active"),
         backend: .mlx,
         supportsVision: true,
         huggingFaceId: "mlx-community/SmolVLM2-500M-Video-Instruct-mlx",
@@ -116,12 +135,12 @@ extension AIModel {
     static let qwen2VL2B = AIModel(
         id: "qwen2-vl-2b",
         name: "Qwen2 Vision 2B",
-        shortDescription: "Previous generation vision model",
-        fullDescription: "Qwen2-VL 2B (4-bit). The previous default model. Still works well; Qwen3 Vision 2B gives better answers at the same size.",
+        shortDescription: String(localized: "Previous generation vision model"),
+        fullDescription: String(localized: "Qwen2-VL 2B (4-bit). The previous default model. Still works well; Qwen3 Vision 2B gives better answers at the same size."),
         size: "1.25 GB",
         sizeBytes: 1_250_000_000,
         capabilities: [.chat, .vision, .multilingual],
-        memoryRequired: "2.5 GB RAM while active",
+        memoryRequired: String(localized: "2.5 GB RAM while active"),
         backend: .mlx,
         supportsVision: true,
         huggingFaceId: "mlx-community/Qwen2-VL-2B-Instruct-4bit",
@@ -135,12 +154,12 @@ extension AIModel {
     static let appleIntelligence = AIModel(
         id: "apple-intelligence",
         name: "Apple Intelligence",
-        shortDescription: "Built into your iPhone - instant, no download",
-        fullDescription: "Apple's on-device model, built into iOS. Starts instantly with no download and handles everyday questions well. Image analysis uses a downloaded vision model.",
-        size: "Built in",
+        shortDescription: String(localized: "Built into your iPhone - instant, no download"),
+        fullDescription: String(localized: "Apple's on-device model, built into iOS. Starts instantly with no download and handles everyday questions well. Image analysis uses a downloaded vision model."),
+        size: String(localized: "Built in"),
         sizeBytes: 0,
         capabilities: [.chat, .fast, .multilingual],
-        memoryRequired: "Managed by iOS",
+        memoryRequired: String(localized: "Managed by iOS"),
         backend: .appleIntelligence,
         supportsVision: false,
         huggingFaceId: nil,
@@ -150,7 +169,15 @@ extension AIModel {
     )
 
     /// All downloadable models (legacy ones included; pickers decide visibility).
-    static let allModels: [AIModel] = [qwen3VL2B, smolVLM2, qwen2VL2B]
+    static let allModels: [AIModel] = [qwen3VL8BPro, qwen3VL2B, smolVLM2, qwen2VL2B]
+
+    /// True when this device can offer the model. RAM figures up to 6 GB are
+    /// soft recommendations (every supported iPhone may still choose those
+    /// models); larger figures are hard requirements that hide the model on
+    /// lesser devices to prevent out-of-memory crashes.
+    func fitsThisDevice() -> Bool {
+        minRecommendedRAMGB <= max(DeviceCapability.physicalMemoryGB, 6)
+    }
 
     static func model(withId id: String) -> AIModel? {
         if id == appleIntelligence.id { return appleIntelligence }

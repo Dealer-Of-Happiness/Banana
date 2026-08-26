@@ -24,7 +24,7 @@ final class AppleIntelligenceService: ObservableObject {
     }
 
     @Published private(set) var availability: Availability = .unavailable(
-        String(localized: "Apple Intelligence is not available on this device.")
+        L10n.text("Apple Intelligence is not available on this device.")
     )
 
     #if canImport(FoundationModels)
@@ -43,7 +43,7 @@ final class AppleIntelligenceService: ObservableObject {
         case .unavailable(let reason):
             availability = .unavailable(Self.describe(reason))
         @unknown default:
-            availability = .unavailable(String(localized: "Apple Intelligence is not available."))
+            availability = .unavailable(L10n.text("Apple Intelligence is not available."))
         }
         #endif
     }
@@ -54,11 +54,11 @@ final class AppleIntelligenceService: ObservableObject {
 
     /// Start (or restart) a session, optionally seeding condensed history so the
     /// model remembers earlier turns of a reopened conversation.
-    func startSession(history: [(role: String, content: String)]) {
+    func startSession(history: [(role: String, content: String)], instructions baseInstructions: String) {
         #if canImport(FoundationModels)
         guard isAvailable else { return }
 
-        var instructions = MLXService.systemPrompt
+        var instructions = baseInstructions
         let trimmed = MLXService.trimHistory(history, tokenBudget: 2500)
         if !trimmed.isEmpty {
             let transcript = trimmed
@@ -128,13 +128,13 @@ final class AppleIntelligenceService: ObservableObject {
     private static func describe(_ reason: SystemLanguageModel.Availability.UnavailableReason) -> String {
         switch reason {
         case .deviceNotEligible:
-            return String(localized: "This device doesn't support Apple Intelligence.")
+            return L10n.text("This device doesn't support Apple Intelligence.")
         case .appleIntelligenceNotEnabled:
-            return String(localized: "Apple Intelligence is turned off. Enable it in Settings to use the built-in model.")
+            return L10n.text("Apple Intelligence is turned off. Enable it in Settings to use the built-in model.")
         case .modelNotReady:
-            return String(localized: "Apple Intelligence is still preparing on this device. Try again in a few minutes.")
+            return L10n.text("Apple Intelligence is still preparing on this device. Try again in a few minutes.")
         @unknown default:
-            return String(localized: "Apple Intelligence is not available right now.")
+            return L10n.text("Apple Intelligence is not available right now.")
         }
     }
 
@@ -142,9 +142,9 @@ final class AppleIntelligenceService: ObservableObject {
         if let generationError = error as? LanguageModelSession.GenerationError {
             switch generationError {
             case .guardrailViolation:
-                return String(localized: "Apple Intelligence declined this request. Try rephrasing, or switch to a downloaded model in Settings.")
+                return L10n.text("Apple Intelligence declined this request. Try rephrasing, or switch to a downloaded model in Settings.")
             case .exceededContextWindowSize:
-                return String(localized: "This conversation is too long for Apple Intelligence. Start a new chat or switch to a downloaded model.")
+                return L10n.text("This conversation is too long for Apple Intelligence. Start a new chat or switch to a downloaded model.")
             default:
                 return error.localizedDescription
             }
@@ -161,7 +161,7 @@ enum AppleIntelligenceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notReady:
-            return String(localized: "Apple Intelligence isn't ready. Choose a downloaded model in Settings.")
+            return L10n.text("Apple Intelligence isn't ready. Choose a downloaded model in Settings.")
         case .generation(let message):
             return message
         }

@@ -32,9 +32,9 @@ final class ChatEngine: ObservableObject {
         var errorDescription: String? {
             switch self {
             case .needsDownloadConsent(let model):
-                return String(localized: "\(model.name) needs to be downloaded first.")
+                return L10n.text("\(model.name) needs to be downloaded first.")
             case .visionNeedsDownloadedModel(let model):
-                return String(localized: "Analyzing images needs the \(model.name) vision model.")
+                return L10n.text("Analyzing images needs the \(model.name) vision model.")
             case .nothingAvailable(let reason):
                 return reason
             }
@@ -146,18 +146,23 @@ final class ChatEngine: ObservableObject {
 
     // MARK: - Session lifecycle
 
+    /// System instructions for the currently selected app language.
+    var currentInstructions: String {
+        MLXService.systemPrompt(for: settings.appLanguage)
+    }
+
     /// Prepare the backend for a conversation (loads model if needed, builds
     /// the session with history). Call on conversation open/switch/edit.
     func startConversation(model: AIModel, history: [(role: String, content: String)]) async throws {
         #if targetEnvironment(simulator)
         // Simulator: MLX cannot run; the echo engine needs no setup.
         if model.backend == .appleIntelligence {
-            appleIntelligence.startSession(history: history)
+            appleIntelligence.startSession(history: history, instructions: currentInstructions)
         }
         return
         #else
         if model.backend == .appleIntelligence {
-            appleIntelligence.startSession(history: history)
+            appleIntelligence.startSession(history: history, instructions: currentInstructions)
         } else {
             try await mlx.loadModel(model)
             mlx.startSession(model: model, history: history)
@@ -229,7 +234,13 @@ final class ChatEngine: ObservableObject {
     /// Drop all live sessions (e.g. after clearing a chat or changing settings).
     func resetSessions() {
         mlx.dropSession()
-        appleIntelligence.startSession(history: [])
+        appleIntelligence.startSession(history: [], instructions: currentInstructions)
+
+        // Refresh the stored model copy so localized descriptions follow
+        // the current app language.
+        if let fresh = AIModel.model(withId: selectedModel.id) {
+            selectedModel = fresh
+        }
     }
 
     // MARK: - Status for UI

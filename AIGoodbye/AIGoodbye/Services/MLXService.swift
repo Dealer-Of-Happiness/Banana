@@ -40,14 +40,18 @@ final class MLXService: ObservableObject {
     private let settings: SettingsManager
 
     /// Brand and behavior instructions sent to every model.
-    static let systemPrompt = """
+    static let basePrompt = """
     You are AiGoodbye, a helpful AI assistant created by Dmitry Mikhaylov (Dealer Of Happiness). \
     Official website: aigoodbye.ai. Contact: marketing@dealerofhappiness.com. \
     You run completely offline on the user's device; no data ever leaves the phone. \
     Be concise, helpful, and friendly. Use Markdown formatting (bold, lists, code blocks) when it makes answers clearer. \
-    When analyzing images, describe what you see clearly and answer questions about the visual content. \
-    Always respond in the same language the user writes to you.
+    When analyzing images, describe what you see clearly and answer questions about the visual content.
     """
+
+    /// Full system prompt including the response-language rule.
+    static func systemPrompt(for language: AppLanguage) -> String {
+        basePrompt + " " + language.modelInstruction
+    }
 
     init(settings: SettingsManager) {
         self.settings = settings
@@ -154,17 +158,18 @@ final class MLXService: ObservableObject {
             }
         }
 
+        let instructions = Self.systemPrompt(for: settings.appLanguage)
         if chatHistory.isEmpty {
             session = ChatSession(
                 container,
-                instructions: Self.systemPrompt,
+                instructions: instructions,
                 generateParameters: parameters,
                 processing: processing
             )
         } else {
             session = ChatSession(
                 container,
-                instructions: Self.systemPrompt,
+                instructions: instructions,
                 history: chatHistory,
                 generateParameters: parameters,
                 processing: processing
@@ -252,9 +257,9 @@ final class MLXService: ObservableObject {
         if ns.domain == NSURLErrorDomain {
             switch ns.code {
             case NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost:
-                return String(localized: "No internet connection. The model download needs internet once; chatting works fully offline afterward.")
+                return L10n.text("No internet connection. The model download needs internet once; chatting works fully offline afterward.")
             case NSURLErrorTimedOut:
-                return String(localized: "The connection timed out. Please try again.")
+                return L10n.text("The connection timed out. Please try again.")
             default: break
             }
         }
@@ -273,13 +278,13 @@ enum MLXError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .modelNotLoaded:
-            return String(localized: "The AI model isn't ready yet. Download or select a model in Settings.")
+            return L10n.text("The AI model isn't ready yet. Download or select a model in Settings.")
         case .modelLoadFailed(let reason):
-            return String(localized: "Couldn't load the model: \(reason)")
+            return L10n.text("Couldn't load the model: \(reason)")
         case .generationFailed(let reason):
-            return String(localized: "Couldn't generate a response: \(reason)")
+            return L10n.text("Couldn't generate a response: \(reason)")
         case .unsupportedBackend(let name):
-            return String(localized: "\(name) can't run on this engine.")
+            return L10n.text("\(name) can't run on this engine.")
         }
     }
 }

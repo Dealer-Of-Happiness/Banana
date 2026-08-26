@@ -156,7 +156,7 @@ struct ChatView: View {
                 showingModelPicker = true
             } label: {
                 VStack(spacing: 1) {
-                    Text(appState.currentConversation?.title ?? String(localized: "New Chat"))
+                    Text(appState.currentConversation?.title ?? L10n.text("New Chat"))
                         .font(.headline)
                         .lineLimit(1)
                     HStack(spacing: 3) {
@@ -169,7 +169,7 @@ struct ChatView: View {
                 }
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("Current chat: \(appState.currentConversation?.title ?? String(localized: "New Chat")). Model: \(appState.engine.selectedModel.name). Tap to change model."))
+            .accessibilityLabel(Text("Current chat: \(appState.currentConversation?.title ?? L10n.text("New Chat")). Model: \(appState.engine.selectedModel.name). Tap to change model."))
         }
 
         ToolbarItem(placement: .topBarTrailing) {
@@ -374,24 +374,24 @@ struct ChatView: View {
                 VStack(spacing: 12) {
                     QuickActionButton(
                         icon: "photo.fill",
-                        title: String(localized: "Analyze an Image"),
-                        subtitle: String(localized: "Add a photo and ask about it")
+                        title: L10n.text("Analyze an Image"),
+                        subtitle: L10n.text("Add a photo and ask about it")
                     ) {
                         showingPhotoPicker = true
                     }
 
                     QuickActionButton(
                         icon: "doc.text.fill",
-                        title: String(localized: "Read a Document"),
-                        subtitle: String(localized: "Upload PDF or text files")
+                        title: L10n.text("Read a Document"),
+                        subtitle: L10n.text("Upload PDF or text files")
                     ) {
                         showingDocumentPicker = true
                     }
 
                     QuickActionButton(
                         icon: "text.bubble.fill",
-                        title: String(localized: "Just Chat"),
-                        subtitle: String(localized: "Ask anything")
+                        title: L10n.text("Just Chat"),
+                        subtitle: L10n.text("Ask anything")
                     ) {
                         isInputFocused = true
                     }
@@ -541,8 +541,8 @@ struct ChatView: View {
 
                 TextField(
                     viewModel.pendingImage != nil
-                        ? String(localized: "Ask about this image...")
-                        : String(localized: "Message..."),
+                        ? L10n.text("Ask about this image...")
+                        : L10n.text("Message..."),
                     text: $viewModel.inputText,
                     axis: .vertical
                 )
@@ -731,7 +731,7 @@ class ChatViewModel: ObservableObject {
 
         do {
             guard let data = try await item.loadTransferable(type: Data.self) else {
-                presentImportError(String(localized: "This photo couldn't be loaded. Try a different one."))
+                presentImportError(L10n.text("This photo couldn't be loaded. Try a different one."))
                 return
             }
 
@@ -756,10 +756,10 @@ class ChatViewModel: ObservableObject {
                 pendingImage = image
                 pendingImageId = UUID()
             } else {
-                presentImportError(String(localized: "This photo couldn't be read. Try a different one."))
+                presentImportError(L10n.text("This photo couldn't be read. Try a different one."))
             }
         } catch {
-            presentImportError(String(localized: "Couldn't load the photo: \(error.localizedDescription)"))
+            presentImportError(L10n.text("Couldn't load the photo: \(error.localizedDescription)"))
         }
     }
 
@@ -784,14 +784,14 @@ class ChatViewModel: ObservableObject {
 
             let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else {
-                presentImportError(String(localized: "No readable text was found in \(url.lastPathComponent)."))
+                presentImportError(L10n.text("No readable text was found in \(url.lastPathComponent)."))
                 return
             }
 
             pendingDocumentName = url.lastPathComponent
             pendingDocumentContent = String(trimmed.prefix(4000))
         } catch {
-            presentImportError(String(localized: "Couldn't read \(url.lastPathComponent): \(error.localizedDescription)"))
+            presentImportError(L10n.text("Couldn't read \(url.lastPathComponent): \(error.localizedDescription)"))
         }
     }
 
@@ -847,12 +847,12 @@ class ChatViewModel: ObservableObject {
         var hiddenContext: String?
 
         if let docName = documentName, let docContent = documentContent {
-            let question = text.isEmpty ? String(localized: "Please analyze this document and provide a summary.") : text
+            let question = text.isEmpty ? L10n.text("Please analyze this document and provide a summary.") : text
             prompt = "I've uploaded a document (\(docName)). Here's its content:\n\n\(docContent)\n\n\(question)"
-            displayMessage = "[\(docName)] \(text.isEmpty ? String(localized: "Analyze this document") : text)"
+            displayMessage = "[\(docName)] \(text.isEmpty ? L10n.text("Analyze this document") : text)"
             hiddenContext = prompt
         } else if text.isEmpty && image != nil {
-            prompt = String(localized: "What's in this image?")
+            prompt = L10n.text("What's in this image?")
             displayMessage = prompt
         } else {
             prompt = text
@@ -1002,12 +1002,12 @@ class ChatViewModel: ObservableObject {
         case .needsDownloadConsent(let model):
             consentRequest = ConsentRequest(
                 model: model,
-                reason: String(localized: "To chat privately on this device, \(model.name) (\(model.size)) needs to be downloaded once. After that, everything works offline.")
+                reason: L10n.text("To chat privately on this device, \(model.name) (\(model.size)) needs to be downloaded once. After that, everything works offline.")
             )
         case .visionNeedsDownloadedModel(let model):
             consentRequest = ConsentRequest(
                 model: model,
-                reason: String(localized: "Analyzing images needs the \(model.name) vision model (\(model.size)). It downloads once and then works offline.")
+                reason: L10n.text("Analyzing images needs the \(model.name) vision model (\(model.size)). It downloads once and then works offline.")
             )
         case .nothingAvailable(let reason):
             errorBanner = ErrorBanner(message: reason, canRetry: false)
@@ -1197,8 +1197,8 @@ struct MessageBubble: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(message.role == .user
-            ? String(localized: "You said: \(message.content)")
-            : String(localized: "Assistant said: \(message.content)")))
+            ? L10n.text("You said: \(message.content)")
+            : L10n.text("Assistant said: \(message.content)")))
     }
 
     private var backgroundColor: Color {

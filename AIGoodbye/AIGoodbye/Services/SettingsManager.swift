@@ -18,6 +18,7 @@ class SettingsManager: ObservableObject {
         static let temperature = "ai_temperature"
         static let contextWindow = "ai_context_window"
         static let hapticFeedback = "haptic_feedback"
+        static let appLanguage = "app_language"
     }
 
     // MARK: - AI Settings
@@ -38,6 +39,28 @@ class SettingsManager: ObservableObject {
         didSet { defaults.set(hapticFeedbackEnabled, forKey: Keys.hapticFeedback) }
     }
 
+    // MARK: - Language
+
+    /// App-wide language. Switches the UI and the AI's response language.
+    @Published var appLanguage: AppLanguage {
+        didSet {
+            defaults.set(appLanguage.rawValue, forKey: Keys.appLanguage)
+            Self.applySystemLanguageOverride(appLanguage)
+        }
+    }
+
+    /// Mirror the choice into AppleLanguages so string lookups that resolve
+    /// through the main bundle (and the next cold launch) follow it too, and
+    /// point L10n at the right language bundle for instant switching.
+    private static func applySystemLanguageOverride(_ language: AppLanguage) {
+        if language == .automatic {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+        } else {
+            UserDefaults.standard.set([language.rawValue, "en"], forKey: "AppleLanguages")
+        }
+        L10n.apply(language)
+    }
+
     // MARK: - Initialization
 
     init() {
@@ -53,6 +76,12 @@ class SettingsManager: ObservableObject {
         self.hapticFeedbackEnabled = defaults.object(forKey: Keys.hapticFeedback) == nil
             ? true
             : defaults.bool(forKey: Keys.hapticFeedback)
+
+        let storedLanguage = AppLanguage(
+            rawValue: defaults.string(forKey: Keys.appLanguage) ?? AppLanguage.automatic.rawValue
+        ) ?? .automatic
+        self.appLanguage = storedLanguage
+        L10n.apply(storedLanguage)
     }
 
     // MARK: - Reset
@@ -61,6 +90,7 @@ class SettingsManager: ObservableObject {
         temperature = 0.7
         contextWindow = 8192
         hapticFeedbackEnabled = true
+        appLanguage = .automatic
     }
 }
 

@@ -20,18 +20,20 @@ struct AIGoodbyeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            contentView
-                .environmentObject(appState)
-                .task {
-                    if hasAcceptedTerms {
-                        await appState.initialize()
-                    }
+            LanguageAwareRoot(settings: appState.settings) {
+                contentView
+            }
+            .environmentObject(appState)
+            .task {
+                if hasAcceptedTerms {
+                    await appState.initialize()
                 }
-                .onChange(of: hasAcceptedTerms) { _, accepted in
-                    if accepted {
-                        Task { await appState.initialize() }
-                    }
+            }
+            .onChange(of: hasAcceptedTerms) { _, accepted in
+                if accepted {
+                    Task { await appState.initialize() }
                 }
+            }
         }
     }
 
@@ -42,6 +44,28 @@ struct AIGoodbyeApp: App {
         } else {
             MainView()
         }
+    }
+}
+
+// MARK: - Language-aware root
+
+/// Applies the in-app language choice to the whole view tree, immediately.
+/// The `.id` forces a rebuild on change so localized text re-resolves; the
+/// AppleLanguages override in SettingsManager covers the next cold launch.
+private struct LanguageAwareRoot<Content: View>: View {
+    @ObservedObject var settings: SettingsManager
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        Group {
+            if let locale = settings.appLanguage.locale {
+                content()
+                    .environment(\.locale, locale)
+            } else {
+                content()
+            }
+        }
+        .id(settings.appLanguage)
     }
 }
 
@@ -79,7 +103,7 @@ class AppState: ObservableObject {
         // Never blocks the UI and never surfaces launch errors.
         let model = engine.selectedModel
         if model.backend == .appleIntelligence && engine.appleIntelligence.isAvailable {
-            engine.appleIntelligence.startSession(history: [])
+            try? await engine.startConversation(model: model, history: [])
         } else if model.backend == .mlx && model.isDownloaded {
             Task { [engine] in
                 try? await engine.startConversation(model: model, history: [])

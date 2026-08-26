@@ -77,99 +77,99 @@ extension AIModel {
 
     /// Qwen3-VL 2B: current-generation vision-language model. Default for devices
     /// with 6 GB of RAM or more.
-    static let qwen3VL2B = AIModel(
+    static var qwen3VL2B: AIModel { AIModel(
         id: "qwen3-vl-2b",
         name: "Qwen3 Vision 2B",
-        shortDescription: String(localized: "Best quality - vision, 30+ languages"),
-        fullDescription: String(localized: "Qwen3-VL 2B (4-bit). The strongest small vision model available: sharper image understanding, better reasoning, and wide language coverage. Recommended for iPhone 14 Pro and newer."),
+        shortDescription: L10n.text("Best quality - vision, 30+ languages"),
+        fullDescription: L10n.text("Qwen3-VL 2B (4-bit). The strongest small vision model available: sharper image understanding, better reasoning, and wide language coverage. Recommended for iPhone 14 Pro and newer."),
         size: "1.8 GB",
         sizeBytes: 1_780_000_000,
         capabilities: [.chat, .vision, .multilingual, .documentAnalysis],
-        memoryRequired: String(localized: "3 GB RAM while active"),
+        memoryRequired: L10n.text("3 GB RAM while active"),
         backend: .mlx,
         supportsVision: true,
         huggingFaceId: "mlx-community/Qwen3-VL-2B-Instruct-4bit",
         minRecommendedRAMGB: 6,
         imageProcessingEdge: 768,
         isLegacy: false
-    )
+    ) }
 
     /// Qwen3-VL 8B "Pro": the most powerful model we offer. Only for phones
     /// with 12 GB of RAM (iPhone 17 Pro / Pro Max class); hidden elsewhere.
-    static let qwen3VL8BPro = AIModel(
+    static var qwen3VL8BPro: AIModel { AIModel(
         id: "qwen3-vl-8b",
         name: "Qwen3 Vision 8B Pro",
-        shortDescription: String(localized: "Maximum intelligence - for Pro phones"),
-        fullDescription: String(localized: "Qwen3-VL 8B (4-bit). Our most powerful model: noticeably deeper reasoning, richer answers, and the sharpest image understanding. Requires a phone with 12 GB of RAM, like iPhone 17 Pro Max. Responses are slower than the 2B model."),
+        shortDescription: L10n.text("Maximum intelligence - for Pro phones"),
+        fullDescription: L10n.text("Qwen3-VL 8B (4-bit). Our most powerful model: noticeably deeper reasoning, richer answers, and the sharpest image understanding. Requires a phone with 12 GB of RAM, like iPhone 17 Pro Max. Responses are slower than the 2B model."),
         size: "5.8 GB",
         sizeBytes: 5_760_000_000,
         capabilities: [.chat, .vision, .multilingual, .documentAnalysis],
-        memoryRequired: String(localized: "About 7 GB RAM while active"),
+        memoryRequired: L10n.text("About 7 GB RAM while active"),
         backend: .mlx,
         supportsVision: true,
         huggingFaceId: "mlx-community/Qwen3-VL-8B-Instruct-4bit",
         minRecommendedRAMGB: 12,
         imageProcessingEdge: 768,
         isLegacy: false
-    )
+    ) }
 
     /// SmolVLM2 500M: compact vision model for devices with 4 GB of RAM.
-    static let smolVLM2 = AIModel(
+    static var smolVLM2: AIModel { AIModel(
         id: "smolvlm2-500m",
         name: "Smol Vision 500M",
-        shortDescription: String(localized: "Light and fast - great for older iPhones"),
-        fullDescription: String(localized: "SmolVLM2 500M. A compact vision model that runs comfortably on older devices (iPhone 11-13). Faster responses and lower memory use, with simpler answers than the larger models."),
+        shortDescription: L10n.text("Light and fast - great for older iPhones"),
+        fullDescription: L10n.text("SmolVLM2 500M. A compact vision model that runs comfortably on older devices (iPhone 11-13). Faster responses and lower memory use, with simpler answers than the larger models."),
         size: "1.0 GB",
         sizeBytes: 1_020_000_000,
         capabilities: [.chat, .vision, .fast],
-        memoryRequired: String(localized: "1.5 GB RAM while active"),
+        memoryRequired: L10n.text("1.5 GB RAM while active"),
         backend: .mlx,
         supportsVision: true,
         huggingFaceId: "mlx-community/SmolVLM2-500M-Video-Instruct-mlx",
         minRecommendedRAMGB: 3,
         imageProcessingEdge: 512,
         isLegacy: false
-    )
+    ) }
 
     /// Qwen2-VL 2B: previous default. Kept so existing users' downloads keep working.
-    static let qwen2VL2B = AIModel(
+    static var qwen2VL2B: AIModel { AIModel(
         id: "qwen2-vl-2b",
         name: "Qwen2 Vision 2B",
-        shortDescription: String(localized: "Previous generation vision model"),
-        fullDescription: String(localized: "Qwen2-VL 2B (4-bit). The previous default model. Still works well; Qwen3 Vision 2B gives better answers at the same size."),
+        shortDescription: L10n.text("Previous generation vision model"),
+        fullDescription: L10n.text("Qwen2-VL 2B (4-bit). The previous default model. Still works well; Qwen3 Vision 2B gives better answers at the same size."),
         size: "1.25 GB",
         sizeBytes: 1_250_000_000,
         capabilities: [.chat, .vision, .multilingual],
-        memoryRequired: String(localized: "2.5 GB RAM while active"),
+        memoryRequired: L10n.text("2.5 GB RAM while active"),
         backend: .mlx,
         supportsVision: true,
         huggingFaceId: "mlx-community/Qwen2-VL-2B-Instruct-4bit",
         minRecommendedRAMGB: 6,
         imageProcessingEdge: 768,
         isLegacy: true
-    )
+    ) }
 
     /// Apple Intelligence: the built-in on-device model. Instant, no download,
     /// text-only. Availability is checked at runtime.
-    static let appleIntelligence = AIModel(
+    static var appleIntelligence: AIModel { AIModel(
         id: "apple-intelligence",
         name: "Apple Intelligence",
-        shortDescription: String(localized: "Built into your iPhone - instant, no download"),
-        fullDescription: String(localized: "Apple's on-device model, built into iOS. Starts instantly with no download and handles everyday questions well. Image analysis uses a downloaded vision model."),
-        size: String(localized: "Built in"),
+        shortDescription: L10n.text("Built into your iPhone - instant, no download"),
+        fullDescription: L10n.text("Apple's on-device model, built into iOS. Starts instantly with no download and handles everyday questions well. Image analysis uses a downloaded vision model."),
+        size: L10n.text("Built in"),
         sizeBytes: 0,
         capabilities: [.chat, .fast, .multilingual],
-        memoryRequired: String(localized: "Managed by iOS"),
+        memoryRequired: L10n.text("Managed by iOS"),
         backend: .appleIntelligence,
         supportsVision: false,
         huggingFaceId: nil,
         minRecommendedRAMGB: 0,
         imageProcessingEdge: 768,
         isLegacy: false
-    )
+    ) }
 
     /// All downloadable models (legacy ones included; pickers decide visibility).
-    static let allModels: [AIModel] = [qwen3VL8BPro, qwen3VL2B, smolVLM2, qwen2VL2B]
+    static var allModels: [AIModel] { [qwen3VL8BPro, qwen3VL2B, smolVLM2, qwen2VL2B] }
 
     /// True when this device can offer the model. RAM figures up to 6 GB are
     /// soft recommendations (every supported iPhone may still choose those

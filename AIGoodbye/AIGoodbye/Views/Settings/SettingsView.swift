@@ -14,6 +14,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             ModelSection(engine: appState.engine)
+            LanguageSection(settings: appState.settings)
             BehaviorSection(settings: appState.settings)
             FeedbackSection(settings: appState.settings)
             PrivacySection()
@@ -142,13 +143,43 @@ private struct BehaviorSection: View {
             .padding(.vertical, 4)
         } header: {
             Text("AI Behavior")
-        } footer: {
-            Text("The AI automatically replies in the language you write in.")
         }
         .onChange(of: settings.temperature) { _, _ in
             appState.engine.resetSessions()
         }
         .onChange(of: settings.contextWindow) { _, _ in
+            appState.engine.resetSessions()
+        }
+    }
+}
+
+// MARK: - Language Section
+
+private struct LanguageSection: View {
+    @ObservedObject var settings: SettingsManager
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        Section {
+            Picker(selection: $settings.appLanguage) {
+                ForEach(AppLanguage.pickerOrder) { language in
+                    Text(verbatim: language.displayName).tag(language)
+                }
+            } label: {
+                Label {
+                    Text("App Language")
+                } icon: {
+                    Image(systemName: "globe")
+                        .foregroundStyle(.blue)
+                }
+            }
+            .pickerStyle(.navigationLink)
+        } header: {
+            Text("Language")
+        } footer: {
+            Text("Changes the app and the AI's answers. With Automatic, the app follows your iPhone language and the AI replies in whatever language you write in.")
+        }
+        .onChange(of: settings.appLanguage) { _, _ in
             appState.engine.resetSessions()
         }
     }

@@ -83,12 +83,20 @@ class AppState: ObservableObject {
     let documentService: DocumentService
     let conversationManager: ConversationManager
 
+    private var cancellables = Set<AnyCancellable>()
+
     init() {
         let settings = SettingsManager()
         self.settings = settings
         self.engine = ChatEngine(settings: settings)
         self.documentService = DocumentService()
         self.conversationManager = ConversationManager()
+
+        // Views read engine state through `appState.engine`; forward engine
+        // changes so those views (e.g. the download progress chip) update.
+        engine.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
     }
 
     /// Fast, non-blocking startup: prepare storage, then show the app.

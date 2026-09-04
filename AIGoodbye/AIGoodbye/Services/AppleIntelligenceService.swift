@@ -36,6 +36,15 @@ final class AppleIntelligenceService: ObservableObject {
     }
 
     func refreshAvailability() {
+        #if DEBUG
+        // Test hook: lets the simulator exercise the no-Apple-Intelligence path
+        // (iPhone 13-class devices). Launch with AIG_FORCE_NO_AI=1 to activate.
+        // Compiled out of release builds entirely.
+        if ProcessInfo.processInfo.environment["AIG_FORCE_NO_AI"] == "1" {
+            availability = .unavailable(L10n.text("This device doesn't support Apple Intelligence."))
+            return
+        }
+        #endif
         #if canImport(FoundationModels)
         switch SystemLanguageModel.default.availability {
         case .available:

@@ -167,7 +167,4 @@ desktop/src-tauri/gpu-runners.zip
 desktop/dist/
 desktop/build/
 desktop/requirements-minimal.txt
-
-# Xcode user state (added 2026-08-17)
-xcuserdata/
-*.xcuserstate
+DOHAI/

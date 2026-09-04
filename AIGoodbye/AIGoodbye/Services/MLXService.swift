@@ -28,8 +28,15 @@ final class MLXService: ObservableObject {
 
     @Published var isDownloading: Bool = false
     @Published var downloadProgress: Double = 0
+    @Published var downloadedBytes: Int64 = 0
+    @Published var totalDownloadBytes: Int64 = 0
+    @Published var isDownloadStalled: Bool = false
     @Published var isPreparingModel: Bool = false
     @Published var loadedModelId: String?
+
+    /// Last moment download bytes moved; drives the stall warning.
+    private var lastDownloadActivity = Date()
+    private var stallMonitor: Task<Void, Never>?
 
     // MARK: - Private state
 
@@ -79,14 +86,34 @@ final class MLXService: ObservableObject {
 
         let wasDownloaded = ModelManager.shared.isModelDownloaded(model)
         if !wasDownloaded {
-            isDownloading = true
-            downloadProgress = 0
+            beginDownloadState(expectedBytes: model.sizeBytes)
         } else {
             isPreparingModel = true
         }
         defer {
-            isDownloading = false
+            endDownloadState()
             isPreparingModel = false
+        }
+
+        // Fast path: download the files ourselves at full network speed with
+        // real byte progress. On any failure fall back to the library's own
+        // downloader below (which then finds whatever we already fetched).
+        if !wasDownloaded, let repoDir = ModelManager.shared.modelDirectory(for: model) {
+            do {
+                try await ModelPrefetcher().prefetch(hfId: hfId, into: repoDir) { [weak self] done, total in
+                    Task { @MainActor in
+                        self?.noteDownloadProgress(done: done, total: total)
+                    }
+                }
+                isDownloading = false
+                isDownloadStalled = false
+                isPreparingModel = true
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                // Library fallback still runs; show byte progress from disk.
+                startDiskPollProgress(for: model)
+            }
         }
 
         let configuration = ModelConfiguration(id: hfId)
@@ -96,10 +123,14 @@ final class MLXService: ObservableObject {
             ) { [weak self] progress in
                 Task { @MainActor in
                     guard let self else { return }
-                    self.downloadProgress = progress.fractionCompleted
-                    if progress.isFinished { self.isDownloading = false }
+                    if progress.isFinished && self.isDownloading {
+                        self.isDownloading = false
+                        self.isPreparingModel = true
+                    }
                 }
             }
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             throw MLXError.modelLoadFailed(friendlyMessage(for: error))
         }
@@ -107,6 +138,78 @@ final class MLXService: ObservableObject {
         loadedModelId = model.id
         ModelManager.shared.noteModelInstalled(model)
     }
+
+    // MARK: - Download progress bookkeeping
+
+    private func beginDownloadState(expectedBytes: Int64) {
+        isDownloading = true
+        downloadProgress = 0
+        downloadedBytes = 0
+        totalDownloadBytes = expectedBytes
+        isDownloadStalled = false
+        lastDownloadActivity = Date()
+
+        // Warn when no bytes have moved for a while (bad Wi-Fi, captive
+        // portal, etc.) so the user is never stuck staring at a frozen bar.
+        stallMonitor?.cancel()
+        stallMonitor = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                guard let self, self.isDownloading else { break }
+                if Date().timeIntervalSince(self.lastDownloadActivity) > 45 {
+                    self.isDownloadStalled = true
+                }
+            }
+        }
+    }
+
+    private func endDownloadState() {
+        isDownloading = false
+        isDownloadStalled = false
+        stallMonitor?.cancel()
+        stallMonitor = nil
+    }
+
+    private func noteDownloadProgress(done: Int64, total: Int64) {
+        if done > downloadedBytes {
+            lastDownloadActivity = Date()
+            isDownloadStalled = false
+        }
+        downloadedBytes = done
+        totalDownloadBytes = max(total, 1)
+        downloadProgress = min(Double(done) / Double(max(total, 1)), 0.999)
+    }
+
+    /// Fallback progress source: watch bytes appear on disk while the
+    /// library's own downloader runs.
+    private func startDiskPollProgress(for model: AIModel) {
+        Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self, self.isDownloading else { break }
+                let bytes = ModelManager.shared.downloadedSizeBytes(for: model)
+                self.noteDownloadProgress(done: bytes, total: max(model.sizeBytes, bytes))
+                try? await Task.sleep(nanoseconds: 700_000_000)
+            }
+        }
+    }
+
+    #if DEBUG
+    /// Test hook: run only the download phase (no Metal weight loading), so
+    /// the full download UX can be exercised in the iOS Simulator.
+    /// Launch with AIG_SIM_TEST_DOWNLOAD=1 to activate.
+    func debugDownloadOnly(_ model: AIModel) async throws {
+        guard let hfId = model.huggingFaceId,
+              let repoDir = ModelManager.shared.modelDirectory(for: model) else { return }
+        beginDownloadState(expectedBytes: model.sizeBytes)
+        defer { endDownloadState() }
+        try await ModelPrefetcher().prefetch(hfId: hfId, into: repoDir) { [weak self] done, total in
+            Task { @MainActor in
+                self?.noteDownloadProgress(done: done, total: total)
+            }
+        }
+        ModelManager.shared.noteModelInstalled(model)
+    }
+    #endif
 
     func unload() {
         session = nil
@@ -138,10 +241,14 @@ final class MLXService: ObservableObject {
             return
         }
 
+        // repetitionPenalty is essential for small quantized models: without
+        // it, 2B-class models can loop the same phrases endlessly.
         let parameters = GenerateParameters(
             maxTokens: 1200,
             temperature: Float(settings.temperature),
-            topP: 0.9
+            topP: 0.9,
+            repetitionPenalty: 1.15,
+            repetitionContextSize: 64
         )
 
         let edge = model.imageProcessingEdge
@@ -262,6 +369,12 @@ final class MLXService: ObservableObject {
                 return L10n.text("The connection timed out. Please try again.")
             default: break
             }
+        }
+        // Missing files after a failed download attempt (the library falls
+        // back to an empty local folder when it can't reach the internet).
+        if ns.domain == NSCocoaErrorDomain
+            && (ns.code == NSFileReadNoSuchFileError || ns.code == NSFileNoSuchFileError) {
+            return L10n.text("The download couldn't start. Check your internet connection and try again.")
         }
         return error.localizedDescription
     }

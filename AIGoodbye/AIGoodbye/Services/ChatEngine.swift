@@ -55,6 +55,8 @@ final class ChatEngine: ObservableObject {
     private static let selectedModelKey = "selectedModelId"
     private static let approvedDownloadsKey = "approvedModelDownloads"
 
+    private var cancellables = Set<AnyCancellable>()
+
     // MARK: - Init
 
     init(settings: SettingsManager) {
@@ -72,6 +74,16 @@ final class ChatEngine: ObservableObject {
         } else {
             self.selectedModel = AIModel.recommendedDownloadModel
         }
+
+        // Forward child service changes so views observing the engine (and
+        // anything derived like `status`) re-render on download progress,
+        // availability changes, etc. Without this the download chip freezes.
+        mlx.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        appleIntelligence.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
     }
 
     // MARK: - Selection
@@ -159,6 +171,14 @@ final class ChatEngine: ObservableObject {
         if model.backend == .appleIntelligence {
             appleIntelligence.startSession(history: history, instructions: currentInstructions)
         }
+        #if DEBUG
+        // Test hook: exercise the real download pipeline (network + progress
+        // UI) in the simulator, skipping only the Metal weight loading.
+        if ProcessInfo.processInfo.environment["AIG_SIM_TEST_DOWNLOAD"] == "1",
+           model.backend == .mlx, !model.isDownloaded {
+            try await mlx.debugDownloadOnly(model)
+        }
+        #endif
         return
         #else
         if model.backend == .appleIntelligence {

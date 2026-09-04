@@ -10,10 +10,11 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
+    @State private var showModelPicker = false
 
     var body: some View {
         Form {
-            ModelSection(engine: appState.engine)
+            ModelSection(engine: appState.engine, showModelPicker: $showModelPicker)
             LanguageSection(settings: appState.settings)
             BehaviorSection(settings: appState.settings)
             FeedbackSection(settings: appState.settings)
@@ -22,6 +23,13 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        // Presented from the Form level: presenting from a Section inside an
+        // already-presented sheet can grab the wrong presentation context and
+        // dismiss the whole Settings sheet on some devices.
+        .sheet(isPresented: $showModelPicker) {
+            ModelSelectionView()
+                .environmentObject(appState)
+        }
     }
 }
 
@@ -30,7 +38,7 @@ struct SettingsView: View {
 private struct ModelSection: View {
     @ObservedObject var engine: ChatEngine
     @EnvironmentObject var appState: AppState
-    @State private var showModelPicker = false
+    @Binding var showModelPicker: Bool
 
     var body: some View {
         Section {
@@ -65,10 +73,6 @@ private struct ModelSection: View {
             }
         } header: {
             Text("AI Model")
-        }
-        .sheet(isPresented: $showModelPicker) {
-            ModelSelectionView()
-                .environmentObject(appState)
         }
     }
 }
@@ -270,7 +274,8 @@ private struct DataSection: View {
 /// Small about screen reusing the shared LegalText copy, so Settings and
 /// onboarding never drift apart.
 struct AboutView: View {
-    private let appVersion = "3.0.0"
+    private let appVersion =
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "3.0.1"
 
     var body: some View {
         ScrollView {

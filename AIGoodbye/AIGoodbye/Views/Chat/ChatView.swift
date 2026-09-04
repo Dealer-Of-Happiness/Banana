@@ -268,13 +268,20 @@ struct ChatView: View {
     private var engineStatusChip: some View {
         switch appState.engine.status {
         case .downloading(let progress):
-            HStack(spacing: 8) {
-                ProgressView(value: progress)
-                    .frame(maxWidth: 120)
-                Text("Downloading \(appState.engine.selectedModel.name) · \(Int(progress * 100))%")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+            VStack(spacing: 4) {
+                HStack(spacing: 8) {
+                    ProgressView(value: progress)
+                        .frame(maxWidth: 120)
+                    Text(downloadStatusText(progress: progress))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+                if appState.engine.mlx.isDownloadStalled {
+                    Text("Download stalled. Check your internet connection.")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
             }
             .padding(.horizontal)
             .padding(.vertical, 6)
@@ -295,6 +302,19 @@ struct ChatView: View {
         default:
             EmptyView()
         }
+    }
+
+    /// "Downloading Qwen3 Vision 2B · 213 MB of 1.8 GB" when byte counts are
+    /// known, falling back to a simple percentage.
+    private func downloadStatusText(progress: Double) -> String {
+        let mlx = appState.engine.mlx
+        let name = appState.engine.selectedModel.name
+        if mlx.totalDownloadBytes > 1, mlx.downloadedBytes > 0 {
+            let done = ByteCountFormatter.string(fromByteCount: mlx.downloadedBytes, countStyle: .file)
+            let total = ByteCountFormatter.string(fromByteCount: mlx.totalDownloadBytes, countStyle: .file)
+            return L10n.text("Downloading \(name) · \(done) of \(total)")
+        }
+        return L10n.text("Downloading \(name)") + " · \(Int(progress * 100))%"
     }
 
     // MARK: - Error banner
@@ -963,8 +983,12 @@ class ChatViewModel: ObservableObject {
                     streamingText = snapshot
                     finalText = snapshot
                 }
+            } catch is CancellationError {
+                // User tapped Stop (possibly mid-download); not an error.
             } catch {
-                failure = error.localizedDescription
+                if !Task.isCancelled {
+                    failure = error.localizedDescription
+                }
             }
 
             // Finalize on the main actor.

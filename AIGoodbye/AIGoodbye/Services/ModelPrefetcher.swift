@@ -10,6 +10,9 @@
 //  the per-file metadata sidecars - so the library's loader finds everything
 //  already on disk and skips its own (much slower) downloader.
 //
+//  Failed transfers retry with URLSession resume data, so a network blip at
+//  90% of a 5.8 GB file continues instead of starting over.
+//
 //  If anything here fails, MLXService falls back to the library's built-in
 //  downloader, so this is a pure fast-path: correctness never depends on it.
 //
@@ -20,6 +23,7 @@ enum PrefetchError: Error {
     case listingFailed
     case noFiles
     case downloadFailed
+    case sizeMismatch
 }
 
 final class ModelPrefetcher {
@@ -32,20 +36,20 @@ final class ModelPrefetcher {
         into repoDir: URL,
         progress: @escaping @Sendable (Int64, Int64) -> Void
     ) async throws {
-        // 1. Repo info: latest commit hash (for metadata sidecars).
-        let infoURL = URL(string: "https://huggingface.co/api/models/\(hfId)")!
-        let commitHash: String?
-        do {
-            let (data, response) = try await URLSession.shared.data(from: infoURL)
-            guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-                throw PrefetchError.listingFailed
-            }
-            let info = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-            commitHash = info?["sha"] as? String
+        // 1. Repo info: latest commit hash (nicety for metadata sidecars —
+        // a failure here must not forfeit the fast path).
+        var commitHash: String?
+        if let infoURL = URL(string: "https://huggingface.co/api/models/\(hfId)"),
+           let (data, response) = try? await URLSession.shared.data(from: infoURL),
+           (response as? HTTPURLResponse)?.statusCode == 200,
+           let info = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            commitHash = info["sha"] as? String
         }
 
         // 2. File listing with sizes.
-        let treeURL = URL(string: "https://huggingface.co/api/models/\(hfId)/tree/main?recursive=true")!
+        guard let treeURL = URL(string: "https://huggingface.co/api/models/\(hfId)/tree/main?recursive=true") else {
+            throw PrefetchError.listingFailed
+        }
         let (treeData, treeResponse) = try await URLSession.shared.data(from: treeURL)
         guard (treeResponse as? HTTPURLResponse)?.statusCode == 200 else {
             throw PrefetchError.listingFailed
@@ -71,59 +75,84 @@ final class ModelPrefetcher {
             try Task.checkCancellation()
 
             let destination = repoDir.appendingPathComponent(file.path)
-            let metaPath = metaDir.appendingPathComponent(file.path + ".metadata")
-            let size = file.actualSize
+            let expectedSize = file.actualSize
 
-            // Already fully downloaded with metadata? Count it and move on.
-            if let existing = try? FileManager.default.attributesOfItem(atPath: destination.path),
-               (existing[.size] as? Int64) == size, size > 0,
-               FileManager.default.fileExists(atPath: metaPath.path) {
-                completedBytes += size
+            // Already fully downloaded (size matches)? Count it and move on.
+            if expectedSize > 0,
+               let attrs = try? FileManager.default.attributesOfItem(atPath: destination.path),
+               (attrs[.size] as? Int64) == expectedSize {
+                writeSidecarIfNeeded(for: file, commitHash: commitHash, metaDir: metaDir)
+                completedBytes += expectedSize
                 progress(completedBytes, totalBytes)
                 continue
             }
 
-            let sourceURL = URL(string: "https://huggingface.co/\(hfId)/resolve/main/\(file.path)")!
+            guard let sourceURL = URL(string: "https://huggingface.co/\(hfId)/resolve/main/\(file.path)") else {
+                throw PrefetchError.downloadFailed
+            }
             let base = completedBytes
             var attempt = 0
+            var resumeData: Data?
             while true {
                 do {
                     let download = FileDownload(destination: destination) { bytesSoFar in
                         progress(base + bytesSoFar, totalBytes)
                     }
-                    try await download.run(url: sourceURL, timeout: 30)
+                    try await download.run(url: sourceURL, resumeData: resumeData, timeout: 30)
+
+                    // Verify size when known: a truncated weights file would
+                    // otherwise surface later as a cryptic load failure.
+                    if expectedSize > 0 {
+                        let written = (try? FileManager.default.attributesOfItem(atPath: destination.path))?[.size] as? Int64
+                        if written != expectedSize {
+                            try? FileManager.default.removeItem(at: destination)
+                            throw PrefetchError.sizeMismatch
+                        }
+                    }
                     break
                 } catch {
                     try Task.checkCancellation()
+                    // A full disk won't heal with retries.
+                    if MLXService.isOutOfSpace(error) { throw error }
+                    // Keep partial progress for the next attempt when available.
+                    resumeData = (error as NSError).userInfo[NSURLSessionDownloadTaskResumeData] as? Data
                     attempt += 1
-                    if attempt > 2 { throw error }
+                    if attempt > 3 { throw error }
                     try await Task.sleep(nanoseconds: 1_500_000_000)
                 }
             }
 
-            // Metadata sidecar so the library's loader (and its offline mode)
-            // recognizes the file as a valid, verified download.
-            let etag = file.lfs?.oid ?? file.oid ?? ""
-            if let commitHash, !etag.isEmpty {
-                try? FileManager.default.createDirectory(
-                    at: metaPath.deletingLastPathComponent(),
-                    withIntermediateDirectories: true
-                )
-                let contents = "\(commitHash)\n\(etag)\n\(Date().timeIntervalSince1970)\n"
-                try? contents.write(to: metaPath, atomically: true, encoding: .utf8)
-            }
+            writeSidecarIfNeeded(for: file, commitHash: commitHash, metaDir: metaDir)
 
             // Clear any stale partial download the library may have left behind.
-            let incompleteDir = metaPath.deletingLastPathComponent()
-            if let leftovers = try? FileManager.default.contentsOfDirectory(atPath: incompleteDir.path) {
-                for name in leftovers where name.hasPrefix(file.path + ".") && name.hasSuffix(".incomplete") {
-                    try? FileManager.default.removeItem(at: incompleteDir.appendingPathComponent(name))
+            let parent = metaDir.appendingPathComponent(file.path).deletingLastPathComponent()
+            if let leftovers = try? FileManager.default.contentsOfDirectory(atPath: parent.path) {
+                let fileName = (file.path as NSString).lastPathComponent
+                for name in leftovers where name.hasPrefix(fileName + ".") && name.hasSuffix(".incomplete") {
+                    try? FileManager.default.removeItem(at: parent.appendingPathComponent(name))
                 }
             }
 
-            completedBytes += size
+            completedBytes += expectedSize
             progress(completedBytes, totalBytes)
         }
+    }
+
+    /// Metadata sidecar (commitHash\netag\ntimestamp) so the library's loader
+    /// - including its offline mode - recognizes the file as a verified
+    /// download. Best-effort: absence only costs a quick re-check online.
+    private func writeSidecarIfNeeded(for file: RepoFile, commitHash: String?, metaDir: URL) {
+        guard let commitHash else { return }
+        let etag = file.lfs?.oid ?? file.oid ?? ""
+        guard !etag.isEmpty else { return }
+        let metaPath = metaDir.appendingPathComponent(file.path + ".metadata")
+        guard !FileManager.default.fileExists(atPath: metaPath.path) else { return }
+        try? FileManager.default.createDirectory(
+            at: metaPath.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        let contents = "\(commitHash)\n\(etag)\n\(Date().timeIntervalSince1970)\n"
+        try? contents.write(to: metaPath, atomically: true, encoding: .utf8)
     }
 
     // MARK: - Repo listing model
@@ -151,12 +180,16 @@ final class ModelPrefetcher {
 
 /// Downloads one file with URLSessionDownloadTask, reporting byte progress.
 /// One instance per file; the session is torn down when the transfer ends.
+/// All mutable state is lock-protected: the caller's task, the delegate
+/// queue, and the cancellation handler all touch it.
 private final class FileDownload: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
     private let destination: URL
     private let onBytes: @Sendable (Int64) -> Void
 
+    private let lock = NSLock()
     private var continuation: CheckedContinuation<Void, Error>?
     private var session: URLSession?
+    private var cancelled = false
     private var moveError: Error?
     private var lastReport = Date.distantPast
 
@@ -165,11 +198,9 @@ private final class FileDownload: NSObject, URLSessionDownloadDelegate, @uncheck
         self.onBytes = onBytes
     }
 
-    func run(url: URL, timeout: TimeInterval) async throws {
+    func run(url: URL, resumeData: Data?, timeout: TimeInterval) async throws {
         try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-                self.continuation = cont
-
                 let config = URLSessionConfiguration.default
                 config.timeoutIntervalForRequest = timeout
 
@@ -177,10 +208,31 @@ private final class FileDownload: NSObject, URLSessionDownloadDelegate, @uncheck
                 queue.maxConcurrentOperationCount = 1
 
                 let session = URLSession(configuration: config, delegate: self, delegateQueue: queue)
+
+                lock.lock()
+                if cancelled {
+                    lock.unlock()
+                    session.invalidateAndCancel()
+                    cont.resume(throwing: CancellationError())
+                    return
+                }
+                self.continuation = cont
                 self.session = session
-                session.downloadTask(with: url).resume()
+                lock.unlock()
+
+                let task: URLSessionDownloadTask
+                if let resumeData {
+                    task = session.downloadTask(withResumeData: resumeData)
+                } else {
+                    task = session.downloadTask(with: url)
+                }
+                task.resume()
             }
         } onCancel: {
+            lock.lock()
+            cancelled = true
+            let session = self.session
+            lock.unlock()
             session?.invalidateAndCancel()
         }
     }
@@ -219,13 +271,19 @@ private final class FileDownload: NSObject, URLSessionDownloadDelegate, @uncheck
             }
             try FileManager.default.moveItem(at: location, to: destination)
         } catch {
+            lock.lock()
             moveError = error
+            lock.unlock()
         }
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        lock.lock()
         let cont = continuation
         continuation = nil
+        let moveError = self.moveError
+        lock.unlock()
+
         session.finishTasksAndInvalidate()
 
         if let error {

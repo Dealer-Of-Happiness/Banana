@@ -21,7 +21,6 @@ struct SideMenuView: View {
     @State private var conversationToMove: Conversation?
     @State private var showDeleteConfirmation = false
     @State private var conversationToDelete: Conversation?
-    @State private var showFolderContents = false
     @State private var folderToView: Folder?
     @State private var showRenameFolderAlert = false
     @State private var renameFolderName = ""
@@ -50,15 +49,18 @@ struct SideMenuView: View {
 
             Divider()
 
-            // Folders section
-            foldersSection
+            // One scroll region for folders + chats, so many folders can
+            // never push Recent Chats or Settings off-screen.
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    foldersSection
 
-            Divider()
+                    Divider()
+                        .padding(.top, 8)
 
-            // Recent Chats section
-            recentChatsSection
-
-            Spacer()
+                    recentChatsSection
+                }
+            }
 
             Divider()
 
@@ -115,14 +117,13 @@ struct SideMenuView: View {
         } message: {
             Text("This conversation will be permanently deleted.")
         }
-        .sheet(isPresented: $showFolderContents) {
-            if let folder = folderToView {
+        .sheet(item: $folderToView) { folder in
                 FolderContentsView(
                     folder: folder,
                     conversations: appState.conversationManager.conversations.filter { $0.folderId == folder.id },
                     onSelectChat: { chat in
                         appState.currentConversation = chat
-                        showFolderContents = false
+                        folderToView = nil
                         appState.toggleSideMenu()
                     },
                     onRemoveFromFolder: { chat in
@@ -136,7 +137,6 @@ struct SideMenuView: View {
                         }
                     }
                 )
-            }
         }
     }
 
@@ -227,7 +227,6 @@ struct SideMenuView: View {
                         chatCount: folderChatCounts[folder.id, default: 0],
                         onTap: {
                             folderToView = folder
-                            showFolderContents = true
                         },
                         onRename: {
                             folderToRename = folder
@@ -289,7 +288,6 @@ struct SideMenuView: View {
                 .padding(.horizontal)
                 .padding(.top, 12)
 
-            ScrollView {
                 LazyVStack(spacing: 4) {
                     if appState.conversationManager.conversations.isEmpty {
                         Text("No chats yet")
@@ -298,11 +296,13 @@ struct SideMenuView: View {
                             .padding()
                     } else {
                         ForEach(appState.conversationManager.conversations) { chat in
-                            ChatRow(conversation: chat, isDragging: draggedConversation?.id == chat.id)
-                                .onTapGesture {
-                                    appState.currentConversation = chat
-                                    appState.toggleSideMenu()
-                                }
+                            Button {
+                                appState.currentConversation = chat
+                                appState.toggleSideMenu()
+                            } label: {
+                                ChatRow(conversation: chat, isDragging: draggedConversation?.id == chat.id)
+                            }
+                            .buttonStyle(.plain)
                                 .contextMenu {
                                     Button {
                                         conversationToMove = chat
@@ -331,7 +331,7 @@ struct SideMenuView: View {
                                 }
                                 .draggable(chat.id.uuidString) {
                                     // Drag preview
-                                    ChatDragPreview(title: chat.title)
+                                    ChatDragPreview(title: chat.displayTitle)
                                 }
                                 .onDrag {
                                     draggedConversation = chat
@@ -340,7 +340,6 @@ struct SideMenuView: View {
                         }
                     }
                 }
-            }
         }
     }
 
@@ -485,7 +484,7 @@ struct ChatRow: View {
                 .foregroundStyle(.tertiary)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(conversation.title)
+                Text(conversation.displayTitle)
                     .font(.subheadline)
                     .lineLimit(1)
 
@@ -621,7 +620,7 @@ struct FolderContentsView: View {
                             onSelectChat(chat)
                         } label: {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(chat.title)
+                                Text(chat.displayTitle)
                                     .font(.body)
                                     .foregroundStyle(.primary)
 

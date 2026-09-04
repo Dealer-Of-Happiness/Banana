@@ -109,9 +109,17 @@ private struct BehaviorSection: View {
                         .monospacedDigit()
                 }
 
-                Slider(value: $settings.temperature, in: 0.1...1.0, step: 0.1) {
-                    Text("Creativity")
-                }
+                Slider(
+                    value: $settings.temperature,
+                    in: 0.1...1.0,
+                    step: 0.1,
+                    onEditingChanged: { editing in
+                        // Rebuild sessions once, when the drag ends — not on
+                        // every tick.
+                        if !editing { appState.engine.resetSessions() }
+                    }
+                )
+                .accessibilityLabel(Text("Creativity"))
                 .accessibilityValue(temperatureText)
 
                 Text("Lower = more precise, higher = more creative.")
@@ -129,30 +137,31 @@ private struct BehaviorSection: View {
                         .monospacedDigit()
                 }
 
-                Slider(value: contextWindowBinding, in: 4096...32768, step: 4096) {
-                    Text("Conversation Memory")
-                } minimumValueLabel: {
+                HStack(spacing: 8) {
                     Text("4K")
                         .font(.caption2)
-                } maximumValueLabel: {
+                    Slider(
+                        value: contextWindowBinding,
+                        in: 4096...32768,
+                        step: 4096,
+                        onEditingChanged: { editing in
+                            if !editing { appState.engine.resetSessions() }
+                        }
+                    )
                     Text("32K")
                         .font(.caption2)
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(Text("Conversation Memory"))
                 .accessibilityValue(contextWindowText)
 
-                Text("How much of the conversation the AI re-reads. Higher remembers more but uses more memory and can be slower on older iPhones.")
+                Text("How much of the conversation the AI re-reads. Higher remembers more but uses more memory and can be slower on older devices.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             .padding(.vertical, 4)
         } header: {
             Text("AI Behavior")
-        }
-        .onChange(of: settings.temperature) { _, _ in
-            appState.engine.resetSessions()
-        }
-        .onChange(of: settings.contextWindow) { _, _ in
-            appState.engine.resetSessions()
         }
     }
 }
@@ -181,7 +190,7 @@ private struct LanguageSection: View {
         } header: {
             Text("Language")
         } footer: {
-            Text("Changes the app and the AI's answers. With Automatic, the app follows your iPhone language and the AI replies in whatever language you write in.")
+            Text("Changes the app and the AI's answers. With Automatic, the app follows your device language and the AI replies in whatever language you write in.")
         }
         .onChange(of: settings.appLanguage) { _, _ in
             appState.engine.resetSessions()
@@ -291,6 +300,8 @@ struct AboutView: View {
             .padding(.horizontal, 20)
             .padding(.top, 16)
             .padding(.bottom, 24)
+            .frame(maxWidth: 600)          // readable width on iPad
+            .frame(maxWidth: .infinity)
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("About & Legal")

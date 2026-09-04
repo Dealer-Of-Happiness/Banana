@@ -1,7 +1,9 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "%1$@ - %2$@": {},
+    "%@ - %@": {
+      "shouldTranslate": false
+    },
     "%@ can't run on this engine.": {
       "localizations": {
         "de": {
@@ -154,7 +156,9 @@
         }
       }
     },
-    "%lld": {},
+    "%lld": {
+      "shouldTranslate": false
+    },
     "1.5 GB RAM while active": {
       "localizations": {
         "de": {
@@ -459,8 +463,12 @@
         }
       }
     },
-    "32K": {},
-    "4K": {},
+    "32K": {
+      "shouldTranslate": false
+    },
+    "4K": {
+      "shouldTranslate": false
+    },
     "AI Behavior": {
       "localizations": {
         "de": {
@@ -841,231 +849,78 @@
         }
       }
     },
-    "AI models are downloaded once from Hugging Face - about 1 to 2 GB, so Wi-Fi is recommended. After the download, everything works fully offline. You can delete models anytime in Settings.": {
+    "AI models are downloaded once from Hugging Face - about 1 to 6 GB depending on the model, so Wi-Fi is recommended. After the download, everything works fully offline. You can delete models anytime in Settings.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "KI-Modelle werden einmalig von Hugging Face geladen – etwa 1 bis 2 GB, daher wird Wi-Fi empfohlen. Nach dem Download funktioniert alles vollständig offline. Sie können Modelle jederzeit in den Einstellungen löschen."
+            "value": "KI-Modelle werden einmalig von Hugging Face geladen – je nach Modell etwa 1 bis 6 GB, daher wird WLAN empfohlen. Nach dem Download funktioniert alles vollständig offline. Modelle kannst du jederzeit in den Einstellungen löschen."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Τα μοντέλα AI λαμβάνονται μία φορά από το Hugging Face – περίπου 1 έως 2 GB, οπότε συνιστάται Wi-Fi. Μετά τη λήψη, όλα λειτουργούν πλήρως εκτός σύνδεσης. Μπορείτε να διαγράψετε τα μοντέλα οποτεδήποτε στις Ρυθμίσεις."
+            "value": "Τα μοντέλα AI κατεβαίνουν μία φορά από το Hugging Face — περίπου 1 έως 6 GB ανάλογα με το μοντέλο, γι' αυτό συνιστάται Wi-Fi. Μετά τη λήψη, όλα λειτουργούν πλήρως εκτός σύνδεσης. Μπορείτε να διαγράψετε τα μοντέλα οποιαδήποτε στιγμή στις Ρυθμίσεις."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Los modelos de IA se descargan una sola vez desde Hugging Face: entre 1 y 2 GB aproximadamente, por lo que se recomienda usar Wi-Fi. Tras la descarga, todo funciona completamente sin conexión. Puedes eliminar los modelos cuando quieras en Ajustes."
+            "value": "Los modelos de IA se descargan una vez desde Hugging Face: entre 1 y 6 GB según el modelo, por lo que se recomienda Wi-Fi. Tras la descarga, todo funciona completamente sin conexión. Puedes eliminar los modelos cuando quieras en Ajustes."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les modèles d'IA sont téléchargés une seule fois depuis Hugging Face – environ 1 à 2 GB, le Wi-Fi est donc recommandé. Après le téléchargement, tout fonctionne entièrement hors ligne. Vous pouvez supprimer les modèles à tout moment dans Réglages."
+            "value": "Les modèles d'IA sont téléchargés une seule fois depuis Hugging Face — environ 1 à 6 Go selon le modèle, le Wi-Fi est donc recommandé. Après le téléchargement, tout fonctionne entièrement hors ligne. Vous pouvez supprimer les modèles à tout moment dans Réglages."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "I modelli di IA vengono scaricati una sola volta da Hugging Face: circa 1-2 GB, quindi è consigliato il Wi-Fi. Dopo il download, tutto funziona completamente offline. Puoi eliminare i modelli in qualsiasi momento in Impostazioni."
+            "value": "I modelli di IA si scaricano una sola volta da Hugging Face: da 1 a 6 GB circa a seconda del modello, quindi è consigliato il Wi-Fi. Dopo il download tutto funziona completamente offline. Puoi eliminare i modelli quando vuoi nelle Impostazioni."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "AIモデルはHugging Faceから一度だけダウンロードされます。サイズは約1〜2 GBのため、Wi-Fiの使用をおすすめします。ダウンロード後はすべて完全にオフラインで動作します。モデルは設定でいつでも削除できます。"
+            "value": "AIモデルはHugging Faceから一度だけダウンロードされます。モデルにより約1〜6GBのため、Wi-Fiを推奨します。ダウンロード後はすべて完全オフラインで動作します。モデルは設定からいつでも削除できます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI 모델은 Hugging Face에서 한 번만 다운로드됩니다. 용량이 약 1~2 GB이므로 Wi-Fi 사용을 권장합니다. 다운로드 후에는 모든 것이 완전히 오프라인으로 작동합니다. 모델은 설정에서 언제든지 삭제할 수 있습니다."
+            "value": "AI 모델은 Hugging Face에서 한 번만 다운로드됩니다. 모델에 따라 약 1~6GB이므로 Wi-Fi를 권장합니다. 다운로드 후에는 모든 것이 완전히 오프라인으로 작동합니다. 설정에서 언제든지 모델을 삭제할 수 있습니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Os modelos de IA são baixados uma única vez do Hugging Face: cerca de 1 a 2 GB, então recomendamos Wi-Fi. Após o download, tudo funciona totalmente offline. Você pode apagar os modelos a qualquer momento nos Ajustes."
+            "value": "Os modelos de IA são baixados uma única vez do Hugging Face: de 1 a 6 GB dependendo do modelo, então recomendamos Wi-Fi. Após o download, tudo funciona totalmente offline. Você pode excluir os modelos a qualquer momento nos Ajustes."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Модели ИИ скачиваются один раз с Hugging Face — около 1–2 GB, поэтому рекомендуется Wi-Fi. После скачивания всё работает полностью офлайн. Модели можно удалить в любой момент в Настройках."
+            "value": "Модели ИИ загружаются один раз с Hugging Face — примерно от 1 до 6 ГБ в зависимости от модели, поэтому рекомендуется Wi-Fi. После загрузки всё работает полностью офлайн. Модели можно удалить в настройках в любой момент."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Моделі ШІ завантажуються один раз із Hugging Face — приблизно 1–2 GB, тому рекомендується Wi-Fi. Після завантаження все працює повністю офлайн. Моделі можна будь-коли видалити в Налаштуваннях."
+            "value": "Моделі ШІ завантажуються один раз із Hugging Face — приблизно від 1 до 6 ГБ залежно від моделі, тому радимо Wi-Fi. Після завантаження все працює повністю офлайн. Моделі можна будь-коли видалити в налаштуваннях."
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI 模型只需由 Hugging Face 下載一次，大小約 1 至 2 GB，建議使用 Wi-Fi。下載完成後，一切都完全離線運作。你可以隨時在設定中刪除模型。"
+            "value": "AI 模型由 Hugging Face 一次過下載——視乎型號大約 1 至 6 GB，建議用 Wi-Fi。下載之後一切完全離線運作。你可以隨時喺設定度刪除模型。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI 模型只需从 Hugging Face 下载一次，大小约 1 到 2 GB，建议使用 Wi-Fi。下载完成后，一切都完全离线运行。您可以随时在设置中删除模型。"
-          }
-        }
-      }
-    },
-    "AIGoodbye": {},
-    "AIGoodbye uses the camera to take photos for image analysis": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye verwendet die Kamera, um Fotos für die Bildanalyse aufzunehmen"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Το AIGoodbye χρησιμοποιεί την κάμερα για τη λήψη φωτογραφιών για ανάλυση εικόνων"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye usa la cámara para tomar fotos y analizar imágenes"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye utilise l'appareil photo pour prendre des photos à analyser"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye usa la fotocamera per scattare foto da analizzare"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbyeは画像分析のためにカメラで写真を撮影します"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye는 이미지 분석을 위한 사진을 촬영하기 위해 카메라를 사용합니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O AIGoodbye usa a câmera para tirar fotos para análise de imagens"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye использует камеру, чтобы делать фото для анализа изображений"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye використовує камеру, щоб робити фото для аналізу зображень"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye 使用相機影相以進行圖像分析"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye 使用相机拍摄照片以进行图像分析"
-          }
-        }
-      }
-    },
-    "AIGoodbye uses your photo library to select images for analysis": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye verwendet Ihre Fotomediathek, um Bilder für die Analyse auszuwählen"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Το AIGoodbye χρησιμοποιεί τη βιβλιοθήκη φωτογραφιών σας για την επιλογή εικόνων προς ανάλυση"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye usa tu fototeca para seleccionar imágenes y analizarlas"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye utilise votre photothèque pour sélectionner des images à analyser"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye usa la tua libreria foto per selezionare immagini da analizzare"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbyeは分析する画像を選択するためにフォトライブラリを使用します"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye는 분석할 이미지를 선택하기 위해 사진 보관함을 사용합니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O AIGoodbye usa sua fototeca para selecionar imagens para análise"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye использует вашу медиатеку для выбора изображений для анализа"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye використовує вашу медіатеку для вибору зображень для аналізу"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye 使用你的相片圖庫選擇要分析的圖像"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye 使用您的照片图库来选择要分析的图像"
+            "value": "AI 模型从 Hugging Face 一次性下载——视模型而定约 1 到 6 GB，建议使用 Wi-Fi。下载后一切完全离线运行。您可以随时在设置中删除模型。"
           }
         }
       }
@@ -1526,7 +1381,9 @@
         }
       }
     },
-    "AiGoodbye": {},
+    "AiGoodbye": {
+      "shouldTranslate": false
+    },
     "AiGoodbye is a one-time purchase. There are no subscriptions and no hidden fees - pay once and it is yours.": {
       "localizations": {
         "de": {
@@ -1603,78 +1460,78 @@
         }
       }
     },
-    "All AI runs directly on your device, and your conversations never leave your phone. There are no servers, no accounts, no tracking, and no data collection. What you talk about stays yours.": {
+    "All AI runs directly on your device, and your conversations never leave it. There are no servers, no accounts, no tracking, and no data collection. What you talk about stays yours.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die gesamte KI läuft direkt auf Ihrem Gerät, und Ihre Unterhaltungen verlassen nie Ihr Telefon. Es gibt keine Server, keine Konten, kein Tracking und keine Datenerfassung. Worüber Sie sprechen, bleibt ganz bei Ihnen."
+            "value": "Die gesamte KI läuft direkt auf deinem Gerät, und deine Unterhaltungen verlassen es nie. Keine Server, keine Konten, kein Tracking, keine Datensammlung. Worüber du sprichst, bleibt deins."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Όλη η AI εκτελείται απευθείας στη συσκευή σας και οι συζητήσεις σας δεν φεύγουν ποτέ από το τηλέφωνό σας. Δεν υπάρχουν διακομιστές, λογαριασμοί, παρακολούθηση ή συλλογή δεδομένων. Αυτά που συζητάτε παραμένουν δικά σας."
+            "value": "Όλο το AI τρέχει απευθείας στη συσκευή σας και οι συνομιλίες σας δεν τη φεύγουν ποτέ. Χωρίς διακομιστές, λογαριασμούς, παρακολούθηση ή συλλογή δεδομένων. Ό,τι συζητάτε μένει δικό σας."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Toda la IA se ejecuta directamente en tu dispositivo y tus conversaciones nunca salen de tu teléfono. No hay servidores, ni cuentas, ni rastreo, ni recopilación de datos. Lo que hablas sigue siendo tuyo."
+            "value": "Toda la IA funciona directamente en tu dispositivo y tus conversaciones nunca salen de él. No hay servidores, ni cuentas, ni rastreo, ni recopilación de datos. De lo que hablas, es tuyo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Toute l'IA s'exécute directement sur votre appareil, et vos conversations ne quittent jamais votre téléphone. Il n'y a ni serveurs, ni comptes, ni suivi, ni collecte de données. Ce dont vous parlez reste à vous."
+            "value": "Toute l'IA fonctionne directement sur votre appareil et vos conversations ne le quittent jamais. Pas de serveurs, pas de comptes, pas de suivi, pas de collecte de données. Ce dont vous parlez reste à vous."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tutta l'IA viene eseguita direttamente sul tuo dispositivo e le tue conversazioni non lasciano mai il telefono. Non ci sono server, né account, né tracciamento, né raccolta di dati. Ciò di cui parli resta tuo."
+            "value": "Tutta l'IA funziona direttamente sul tuo dispositivo e le tue conversazioni non lo lasciano mai. Niente server, niente account, niente tracciamento, nessuna raccolta dati. Ciò di cui parli resta tuo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "すべてのAIはデバイス上で直接実行され、会話が端末の外に出ることはありません。サーバーもアカウントもトラッキングもデータ収集もありません。話した内容はあなただけのものです。"
+            "value": "すべてのAIはデバイス上で直接動作し、会話がデバイスから出ることはありません。サーバーもアカウントもトラッキングもデータ収集もありません。話した内容はあなたのものです。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "모든 AI가 기기에서 직접 실행되며, 대화 내용은 절대 휴대폰 밖으로 나가지 않습니다. 서버도, 계정도, 추적도, 데이터 수집도 없습니다. 나눈 이야기는 온전히 사용자의 것으로 남습니다."
+            "value": "모든 AI가 기기에서 직접 실행되며 대화는 절대 기기를 떠나지 않습니다. 서버도, 계정도, 추적도, 데이터 수집도 없습니다. 대화 내용은 온전히 당신의 것입니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Toda a IA é executada diretamente no seu dispositivo, e suas conversas nunca saem do seu telefone. Não há servidores, contas, rastreamento nem coleta de dados. O que você conversa continua sendo seu."
+            "value": "Toda a IA roda diretamente no seu dispositivo e suas conversas nunca saem dele. Sem servidores, sem contas, sem rastreamento e sem coleta de dados. O que você conversa continua seu."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Весь ИИ работает прямо на вашем устройстве, и ваши беседы никогда не покидают телефон. Нет серверов, аккаунтов, отслеживания и сбора данных. Всё, о чём вы говорите, остаётся только вашим."
+            "value": "Весь ИИ работает прямо на вашем устройстве, и ваши беседы никогда его не покидают. Нет серверов, аккаунтов, отслеживания и сбора данных. О чём вы говорите — остаётся вашим."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Увесь ШІ працює безпосередньо на вашому пристрої, і ваші розмови ніколи не залишають телефон. Немає серверів, облікових записів, відстеження та збору даних. Усе, про що ви говорите, залишається тільки вашим."
+            "value": "Увесь ШІ працює прямо на вашому пристрої, і ваші розмови ніколи його не залишають. Жодних серверів, акаунтів, стеження чи збору даних. Те, про що ви говорите, залишається вашим."
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "所有 AI 都直接在你的裝置上運行，你的對話永遠不會離開你的手機。沒有伺服器、沒有帳戶、不追蹤，也不收集資料。你傾過的內容，始終只屬於你。"
+            "value": "所有 AI 都直接喺你部裝置上運行，對話絕對唔會離開裝置。冇伺服器、冇帳戶、冇追蹤、冇收集數據。你傾嘅嘢只屬於你。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "所有 AI 都直接在您的设备上运行，您的对话永远不会离开您的手机。没有服务器、没有账户、没有跟踪，也没有数据收集。您聊的内容始终属于您。"
+            "value": "所有 AI 都直接在您的设备上运行，对话绝不离开设备。没有服务器、没有账号、没有跟踪、没有数据收集。您聊的内容只属于您。"
           }
         }
       }
@@ -1983,7 +1840,7 @@
         }
       }
     },
-    "Analyzing images needs the %1$@ vision model (%2$@). It downloads once and then works offline.": {
+    "Analyzing images needs the %@ vision model (%@). It downloads once and then works offline.": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -2211,7 +2068,9 @@
         }
       }
     },
-    "Apple Intelligence": {},
+    "Apple Intelligence": {
+      "shouldTranslate": false
+    },
     "Apple Intelligence declined this request. Try rephrasing, or switch to a downloaded model in Settings.": {
       "localizations": {
         "de": {
@@ -3048,78 +2907,78 @@
         }
       }
     },
-    "Ask questions, analyze images, or discuss documents. Everything stays on your iPhone.": {
+    "Ask questions, analyze images, or discuss documents. Everything stays on your device.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Stellen Sie Fragen, analysieren Sie Bilder oder besprechen Sie Dokumente. Alles bleibt auf Ihrem iPhone."
+            "value": "Stelle Fragen, analysiere Bilder oder bespreche Dokumente. Alles bleibt auf deinem Gerät."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Κάντε ερωτήσεις, αναλύστε εικόνες ή συζητήστε έγγραφα. Όλα παραμένουν στο iPhone σας."
+            "value": "Κάντε ερωτήσεις, αναλύστε εικόνες ή συζητήστε έγγραφα. Όλα μένουν στη συσκευή σας."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haz preguntas, analiza imágenes o comenta documentos. Todo se queda en tu iPhone."
+            "value": "Haz preguntas, analiza imágenes o comenta documentos. Todo se queda en tu dispositivo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Posez des questions, analysez des images ou discutez de documents. Tout reste sur votre iPhone."
+            "value": "Posez des questions, analysez des images ou discutez de documents. Tout reste sur votre appareil."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fai domande, analizza immagini o discuti di documenti. Tutto resta sul tuo iPhone."
+            "value": "Fai domande, analizza immagini o discuti documenti. Tutto resta sul tuo dispositivo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "質問、画像の分析、書類の相談ができます。すべてはあなたのiPhoneの中だけで行われます。"
+            "value": "質問したり、画像を分析したり、書類について話したり。すべてはあなたのデバイスの中に留まります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "질문을 하고 이미지를 분석하고 문서를 살펴보세요. 모든 내용은 iPhone에 그대로 남습니다."
+            "value": "질문하고, 이미지를 분석하고, 문서에 대해 대화하세요. 모든 것이 기기 안에 남습니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Faça perguntas, analise imagens ou converse sobre documentos. Tudo fica no seu iPhone."
+            "value": "Faça perguntas, analise imagens ou converse sobre documentos. Tudo fica no seu dispositivo."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Задавайте вопросы, анализируйте изображения и обсуждайте документы. Всё остаётся на вашем iPhone."
+            "value": "Задавайте вопросы, анализируйте изображения и обсуждайте документы. Всё остаётся на вашем устройстве."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ставте запитання, аналізуйте зображення й обговорюйте документи. Усе залишається на вашому iPhone."
+            "value": "Ставте запитання, аналізуйте зображення й обговорюйте документи. Усе залишається на вашому пристрої."
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "問問題、分析圖像、討論文件都得。一切都只會留在你的 iPhone 上。"
+            "value": "提問、分析圖片、傾吓文件。一切都留喺你部裝置度。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "提出问题、分析图像或讨论文稿。一切都保留在您的 iPhone 上。"
+            "value": "提问、分析图片、讨论文档。一切都保留在您的设备上。"
           }
         }
       }
@@ -3428,78 +3287,78 @@
         }
       }
     },
-    "Automatic (match iPhone)": {
+    "Automatic (match device)": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatisch (wie iPhone)"
+            "value": "Automatisch (wie Gerät)"
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Αυτόματα (όπως το iPhone)"
+            "value": "Αυτόματο (όπως η συσκευή)"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automático (igual que el iPhone)"
+            "value": "Automático (según el dispositivo)"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatique (comme l'iPhone)"
+            "value": "Automatique (langue de l'appareil)"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatico (come iPhone)"
+            "value": "Automatico (come il dispositivo)"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "自動（iPhoneに合わせる）"
+            "value": "自動（デバイスに合わせる）"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "자동(iPhone과 동일)"
+            "value": "자동(기기 언어에 맞춤)"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automático (igual ao iPhone)"
+            "value": "Automático (idioma do dispositivo)"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Автоматически (как на iPhone)"
+            "value": "Автоматически (как на устройстве)"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Автоматично (як на iPhone)"
+            "value": "Автоматично (як на пристрої)"
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "自動（跟隨 iPhone）"
+            "value": "自動（跟裝置）"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "自动（跟随 iPhone）"
+            "value": "自动（跟随设备）"
           }
         }
       }
@@ -3732,78 +3591,78 @@
         }
       }
     },
-    "Built into your iPhone - instant, no download": {
+    "Built into your device - instant, no download": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "In Ihr iPhone integriert – sofort bereit, kein Download"
+            "value": "In dein Gerät integriert – sofort, ohne Download"
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ενσωματωμένο στο iPhone σας – άμεσο, χωρίς λήψη"
+            "value": "Ενσωματωμένο στη συσκευή σας — άμεσο, χωρίς λήψη"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Integrado en tu iPhone: instantáneo y sin descargas"
+            "value": "Integrado en tu dispositivo: instantáneo, sin descargas"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Intégré à votre iPhone – instantané, sans téléchargement"
+            "value": "Intégré à votre appareil — instantané, sans téléchargement"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Integrato nel tuo iPhone: immediato, senza download"
+            "value": "Integrato nel tuo dispositivo: istantaneo, senza download"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "iPhoneに内蔵 - すぐに使え、ダウンロード不要"
+            "value": "デバイスに内蔵 — 即座に使え、ダウンロード不要"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "iPhone에 내장 - 즉시 사용, 다운로드 불필요"
+            "value": "기기에 내장 - 즉시 사용, 다운로드 불필요"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Integrado ao seu iPhone – instantâneo, sem download"
+            "value": "Integrado ao seu dispositivo: instantâneo, sem download"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Встроена в ваш iPhone — мгновенно, без скачивания"
+            "value": "Встроено в ваше устройство — мгновенно, без загрузки"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Вбудована у ваш iPhone — миттєво, без завантаження"
+            "value": "Вбудовано у ваш пристрій — миттєво, без завантаження"
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "內置於你的 iPhone - 即開即用，無需下載"
+            "value": "內置喺你部裝置——即刻用得，唔使下載"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "内置于您的 iPhone - 即时可用，无需下载"
+            "value": "内置于您的设备——即时可用，无需下载"
           }
         }
       }
@@ -4112,78 +3971,78 @@
         }
       }
     },
-    "Changes the app and the AI's answers. With Automatic, the app follows your iPhone language and the AI replies in whatever language you write in.": {
+    "Changes the app and the AI's answers. With Automatic, the app follows your device language and the AI replies in whatever language you write in.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ändert die Sprache der App und der KI-Antworten. Mit „Automatisch“ übernimmt die App die Sprache Ihres iPhone, und die KI antwortet in der Sprache, in der Sie schreiben."
+            "value": "Ändert die App und die Antworten der KI. Bei „Automatisch“ folgt die App der Gerätesprache, und die KI antwortet in der Sprache, in der du schreibst."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Αλλάζει τη γλώσσα της εφαρμογής και των απαντήσεων της AI. Με το «Αυτόματα», η εφαρμογή ακολουθεί τη γλώσσα του iPhone σας και η AI απαντά στη γλώσσα στην οποία γράφετε."
+            "value": "Αλλάζει την εφαρμογή και τις απαντήσεις του AI. Με το Αυτόματο, η εφαρμογή ακολουθεί τη γλώσσα της συσκευής και το AI απαντά στη γλώσσα που γράφετε."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cambia el idioma de la app y de las respuestas de la IA. Con Automático, la app sigue el idioma de tu iPhone y la IA responde en el idioma en que escribes."
+            "value": "Cambia la app y las respuestas de la IA. Con Automático, la app sigue el idioma de tu dispositivo y la IA responde en el idioma en que escribas."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Modifie la langue de l'app et des réponses de l'IA. Avec Automatique, l'app suit la langue de votre iPhone et l'IA répond dans la langue dans laquelle vous écrivez."
+            "value": "Change l'app et les réponses de l'IA. Avec Automatique, l'app suit la langue de votre appareil et l'IA répond dans la langue dans laquelle vous écrivez."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cambia la lingua dell'app e delle risposte dell'IA. Con Automatico, l'app segue la lingua del tuo iPhone e l'IA risponde nella lingua in cui scrivi."
+            "value": "Cambia l'app e le risposte dell'IA. Con Automatico, l'app segue la lingua del dispositivo e l'IA risponde nella lingua in cui scrivi."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アプリとAIの回答の言語を変更します。「自動」の場合、アプリはiPhoneの言語に従い、AIはあなたが書いた言語で返信します。"
+            "value": "アプリとAIの回答の言語を変更します。「自動」ではアプリはデバイスの言語に従い、AIはあなたが書いた言語で返答します。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "앱과 AI 답변의 언어를 변경합니다. 자동을 선택하면 앱은 iPhone 언어를 따르고, AI는 사용자가 쓰는 언어로 답합니다."
+            "value": "앱과 AI 답변의 언어를 변경합니다. 자동을 선택하면 앱은 기기 언어를 따르고 AI는 입력한 언어로 답합니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Muda o idioma do app e das respostas da IA. Com Automático, o app segue o idioma do seu iPhone e a IA responde no idioma em que você escreve."
+            "value": "Muda o app e as respostas da IA. Com Automático, o app segue o idioma do dispositivo e a IA responde no idioma em que você escrever."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Меняет язык приложения и ответов ИИ. В режиме «Автоматически» приложение использует язык iPhone, а ИИ отвечает на том языке, на котором вы пишете."
+            "value": "Меняет язык приложения и ответов ИИ. При «Автоматически» приложение следует языку устройства, а ИИ отвечает на языке, на котором вы пишете."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Змінює мову застосунку й відповідей ШІ. У режимі «Автоматично» застосунок використовує мову iPhone, а ШІ відповідає тією мовою, якою ви пишете."
+            "value": "Змінює мову застосунку та відповідей ШІ. З «Автоматично» застосунок використовує мову пристрою, а ШІ відповідає мовою, якою ви пишете."
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "更改應用程式和 AI 回答所用的語言。選擇「自動」時，應用程式會跟隨 iPhone 語言，AI 就用你輸入的語言回覆。"
+            "value": "更改應用程式同 AI 回覆嘅語言。揀「自動」時，應用程式會跟裝置語言，AI 會用你打嘅語言回覆。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "更改应用和 AI 回答所用的语言。选择“自动”时，应用跟随 iPhone 语言，AI 会用您所写的语言回复。"
+            "value": "更改应用和 AI 回答的语言。选择“自动”时，应用跟随设备语言，AI 用您输入的语言回复。"
           }
         }
       }
@@ -4872,6 +4731,82 @@
         }
       }
     },
+    "Conversations can't be saved right now. Restart the app; if this keeps happening, free up storage space.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterhaltungen können gerade nicht gespeichert werden. Starte die App neu; falls es weiter auftritt, gib Speicherplatz frei."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Οι συνομιλίες δεν μπορούν να αποθηκευτούν αυτήν τη στιγμή. Επανεκκινήστε την εφαρμογή· αν συνεχιστεί, ελευθερώστε αποθηκευτικό χώρο."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ahora mismo no se pueden guardar las conversaciones. Reinicia la app; si sigue pasando, libera espacio de almacenamiento."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les conversations ne peuvent pas être enregistrées pour le moment. Redémarrez l'app ; si cela persiste, libérez du stockage."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al momento le conversazioni non possono essere salvate. Riavvia l'app; se il problema persiste, libera spazio di archiviazione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在、会話を保存できません。アプリを再起動してください。続く場合はストレージを空けてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금은 대화를 저장할 수 없습니다. 앱을 다시 시작하세요. 계속되면 저장 공간을 확보하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As conversas não podem ser salvas agora. Reinicie o app; se continuar acontecendo, libere espaço de armazenamento."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сейчас беседы не сохраняются. Перезапустите приложение; если это повторяется, освободите место в хранилище."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Наразі розмови не зберігаються. Перезапустіть застосунок; якщо це повторюється, звільніть місце у сховищі."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "而家儲存唔到對話。請重新開App；如果持續發生，請清出儲存空間。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前无法保存对话。请重启应用；若持续出现，请释放存储空间。"
+          }
+        }
+      }
+    },
     "Conversations menu": {
       "localizations": {
         "de": {
@@ -5404,7 +5339,7 @@
         }
       }
     },
-    "Couldn't read %1$@: %2$@": {
+    "Couldn't read %@: %@": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -5632,7 +5567,7 @@
         }
       }
     },
-    "Current AI model: %1$@. %2$@": {
+    "Current AI model: %@. %@": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -5708,7 +5643,7 @@
         }
       }
     },
-    "Current chat: %1$@. Model: %2$@. Tap to change model.": {
+    "Current chat: %@. Model: %@. Tap to change model.": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -5780,6 +5715,82 @@
           "stringUnit": {
             "state": "translated",
             "value": "当前聊天：%1$@。模型：%2$@。轻点以更换模型。"
+          }
+        }
+      }
+    },
+    "Currently selected": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuell ausgewählt"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Επιλεγμένο"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seleccionado actualmente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actuellement sélectionné"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attualmente selezionato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在選択中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 선택됨"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selecionado no momento"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выбрано сейчас"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Наразі вибрано"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "而家揀咗"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前已选择"
           }
         }
       }
@@ -6012,6 +6023,82 @@
         }
       }
     },
+    "Delete %@?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ löschen?"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Διαγραφή του %@;"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Eliminar %@?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer %@ ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminare %@?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@を削除しますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@을(를) 삭제할까요?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir %@?"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить %@?"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Видалити %@?"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除%@？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除%@？"
+          }
+        }
+      }
+    },
     "Delete All": {
       "localizations": {
         "de": {
@@ -6160,6 +6247,82 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除对话？"
+          }
+        }
+      }
+    },
+    "Delete Model?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modell löschen?"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Διαγραφή μοντέλου;"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Eliminar el modelo?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer le modèle ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminare il modello?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モデルを削除しますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모델을 삭제할까요?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir o modelo?"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить модель?"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Видалити модель?"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除模型？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除模型？"
           }
         }
       }
@@ -7000,78 +7163,78 @@
         }
       }
     },
-    "Downloading %1$@ · %2$lld%%": {
+    "Downloaded": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ wird geladen · %2$lld%%"
+            "value": "Geladen"
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Λήψη %1$@ · %2$lld%%"
+            "value": "Λήφθηκε"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Descargando %1$@ · %2$lld%%"
+            "value": "Descargado"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Téléchargement de %1$@ · %2$lld%%"
+            "value": "Téléchargé"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Download di %1$@ · %2$lld%%"
+            "value": "Scaricato"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@をダウンロード中 · %2$lld%%"
+            "value": "ダウンロード済み"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ 다운로드 중 · %2$lld%%"
+            "value": "다운로드됨"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Baixando %1$@ · %2$lld%%"
+            "value": "Baixado"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Скачивание %1$@ · %2$lld%%"
+            "value": "Загружено"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Завантаження %1$@ · %2$lld%%"
+            "value": "Завантажено"
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "正在下載 %1$@ · %2$lld%%"
+            "value": "已下載"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "正在下载 %1$@ · %2$lld%%"
+            "value": "已下载"
           }
         }
       }
@@ -7836,78 +7999,78 @@
         }
       }
     },
-    "How much of the conversation the AI re-reads. Higher remembers more but uses more memory and can be slower on older iPhones.": {
+    "How much of the conversation the AI re-reads. Higher remembers more but uses more memory and can be slower on older devices.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wie viel der Unterhaltung die KI erneut liest. Höher bedeutet mehr Erinnerung, verbraucht aber mehr Speicher und kann auf älteren iPhones langsamer sein."
+            "value": "Wie viel des Gesprächs die KI erneut liest. Höher = mehr Erinnerung, aber mehr Speicherverbrauch und auf älteren Geräten langsamer."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Πόσο μέρος της συζήτησης ξαναδιαβάζει η AI. Υψηλότερη τιμή σημαίνει ότι θυμάται περισσότερα, αλλά χρησιμοποιεί περισσότερη μνήμη και μπορεί να είναι πιο αργή σε παλαιότερα iPhone."
+            "value": "Πόση από τη συνομιλία ξαναδιαβάζει το AI. Υψηλότερη τιμή θυμάται περισσότερα, αλλά χρησιμοποιεί περισσότερη μνήμη και μπορεί να είναι πιο αργή σε παλαιότερες συσκευές."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cuánto de la conversación relee la IA. Un valor más alto recuerda más, pero usa más memoria y puede ser más lento en iPhones antiguos."
+            "value": "Cuánta conversación relee la IA. Un valor más alto recuerda más, pero usa más memoria y puede ser más lento en dispositivos antiguos."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quelle part de la conversation l'IA relit. Plus la valeur est élevée, plus elle se souvient, mais cela utilise plus de mémoire et peut être plus lent sur les iPhone plus anciens."
+            "value": "Quantité de conversation que l'IA relit. Plus élevé = plus de mémoire, mais consomme plus de ressources et peut ralentir les appareils plus anciens."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quanta parte della conversazione l'IA rilegge. Un valore più alto ricorda di più, ma usa più memoria e può essere più lento sugli iPhone meno recenti."
+            "value": "Quanta conversazione rilegge l'IA. Più alto ricorda di più, ma usa più memoria e può essere più lento sui dispositivi meno recenti."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "AIが会話をどこまで読み返すかの設定です。大きいほど多くを記憶しますが、メモリ使用量が増え、古いiPhoneでは動作が遅くなることがあります。"
+            "value": "AIが会話をどこまで読み返すか。大きいほど多く覚えますが、メモリを多く使い、古いデバイスでは遅くなることがあります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI가 대화를 얼마나 다시 읽는지 정합니다. 높을수록 더 많이 기억하지만 메모리를 더 사용하며 오래된 iPhone에서는 느려질 수 있습니다."
+            "value": "AI가 대화를 얼마나 다시 읽을지 정합니다. 높을수록 더 많이 기억하지만 메모리를 더 쓰고 구형 기기에서는 느려질 수 있습니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quanto da conversa a IA relê. Valores maiores lembram mais, mas usam mais memória e podem ser mais lentos em iPhones antigos."
+            "value": "Quanto da conversa a IA relê. Valores maiores lembram mais, mas usam mais memória e podem ser mais lentos em dispositivos antigos."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Какую часть беседы ИИ перечитывает. Больше — помнит больше, но использует больше памяти и может работать медленнее на старых iPhone."
+            "value": "Сколько беседы ИИ перечитывает. Больше — лучше память, но выше расход памяти и медленнее на старых устройствах."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Яку частину розмови ШІ перечитує. Більше — пам'ятає більше, але використовує більше пам'яті й може працювати повільніше на старіших iPhone."
+            "value": "Скільки розмови ШІ перечитує. Більше — краща пам'ять, але більше споживання пам'яті й повільніше на старіших пристроях."
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI 會重新閱讀幾多對話內容。數值越高記得越多，但會佔用更多記憶體，在較舊的 iPhone 上可能會慢一點。"
+            "value": "AI 重讀幾多對話內容。數值越高記得越多，但用更多記憶體，喺較舊嘅裝置上可能會慢啲。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI 重新读取多少对话内容。数值越高记住的越多，但会占用更多内存，在较旧的 iPhone 上可能更慢。"
+            "value": "AI 重读多少对话内容。数值越高记住越多，但占用更多内存，在较旧的设备上可能更慢。"
           }
         }
       }
@@ -9432,6 +9595,82 @@
         }
       }
     },
+    "No messages": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Nachrichten"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Κανένα μήνυμα"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin mensajes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun message"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun messaggio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メッセージなし"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메시지 없음"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem mensagens"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет сообщений"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Немає повідомлень"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未有訊息"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无消息"
+          }
+        }
+      }
+    },
     "No readable text was found in %@.": {
       "localizations": {
         "de": {
@@ -9656,6 +9895,82 @@
           "stringUnit": {
             "state": "translated",
             "value": "未下载"
+          }
+        }
+      }
+    },
+    "Not enough free space. %@ needs about %@ free. Free up space and try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht genug freier Speicher. %1$@ benötigt etwa %2$@ frei. Gib Speicher frei und versuche es erneut."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δεν υπάρχει αρκετός ελεύθερος χώρος. Το %1$@ χρειάζεται περίπου %2$@ ελεύθερα. Ελευθερώστε χώρο και δοκιμάστε ξανά."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay suficiente espacio libre. %1$@ necesita unos %2$@ libres. Libera espacio e inténtalo de nuevo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Espace libre insuffisant. %1$@ nécessite environ %2$@ d'espace libre. Libérez de l'espace et réessayez."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spazio libero insufficiente. %1$@ richiede circa %2$@ liberi. Libera spazio e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空き容量が足りません。%1$@には約%2$@の空きが必要です。容量を空けてからもう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여유 공간이 부족합니다. %1$@에는 약 %2$@의 여유 공간이 필요합니다. 공간을 확보한 후 다시 시도하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Espaço livre insuficiente. %1$@ precisa de cerca de %2$@ livres. Libere espaço e tente novamente."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Недостаточно свободного места. Для %1$@ нужно около %2$@. Освободите место и попробуйте снова."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Недостатньо вільного місця. Для %1$@ потрібно близько %2$@. Звільніть місце та спробуйте ще раз."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可用空間唔夠。%1$@ 需要大約 %2$@ 空間。請清出空間再試。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可用空间不足。%1$@ 需要约 %2$@ 的可用空间。请释放空间后重试。"
           }
         }
       }
@@ -9960,6 +10275,82 @@
           "stringUnit": {
             "state": "translated",
             "value": "打开模型选择器"
+          }
+        }
+      }
+    },
+    "Partial download · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teildownload · %@"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Μερική λήψη · %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descarga parcial · %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléchargement partiel · %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download parziale · %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分ダウンロード · %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "부분 다운로드 · %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download parcial · %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Частичная загрузка · %@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Часткове завантаження · %@"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載咗一部分 · %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分下载 · %@"
           }
         }
       }
@@ -10344,78 +10735,78 @@
         }
       }
     },
-    "Private, on-device AI. No internet needed, no subscriptions, no data leaving your phone.": {
+    "Private, on-device AI. No internet needed, no subscriptions, no data leaving your device.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Private KI direkt auf Ihrem Gerät. Kein Internet erforderlich, keine Abos, und keine Daten verlassen Ihr Telefon."
+            "value": "Private KI direkt auf dem Gerät. Kein Internet nötig, keine Abos, keine Daten verlassen dein Gerät."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ιδιωτική AI στη συσκευή σας. Δεν χρειάζεται διαδίκτυο, χωρίς συνδρομές, κανένα δεδομένο δεν φεύγει από το τηλέφωνό σας."
+            "value": "Ιδιωτικό AI στη συσκευή. Χωρίς ίντερνετ, χωρίς συνδρομές, κανένα δεδομένο δεν φεύγει από τη συσκευή σας."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "IA privada que funciona en tu dispositivo. No necesita internet, no hay suscripciones y ningún dato sale de tu teléfono."
+            "value": "IA privada en tu dispositivo. Sin internet, sin suscripciones, sin datos que salgan de tu dispositivo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "IA privée sur votre appareil. Pas besoin d'internet, pas d'abonnement, aucune donnée ne quitte votre téléphone."
+            "value": "IA privée, sur l'appareil. Pas d'internet requis, pas d'abonnement, aucune donnée ne quitte votre appareil."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "IA privata sul tuo dispositivo. Nessuna connessione richiesta, nessun abbonamento, nessun dato lascia il tuo telefono."
+            "value": "IA privata sul dispositivo. Niente internet, niente abbonamenti, nessun dato lascia il tuo dispositivo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "プライベートなオンデバイスAI。インターネット不要、サブスクリプションなし、データは端末の外に出ません。"
+            "value": "プライベートなオンデバイスAI。インターネット不要、サブスクなし、データはデバイスから出ません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "기기에서 실행되는 프라이빗 AI. 인터넷도, 구독도 필요 없으며 데이터가 휴대폰 밖으로 나가지 않습니다."
+            "value": "프라이빗 온디바이스 AI. 인터넷 불필요, 구독 없음, 데이터는 기기를 떠나지 않습니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "IA privada no seu dispositivo. Sem necessidade de internet, sem assinaturas e nenhum dado sai do seu telefone."
+            "value": "IA privada, no dispositivo. Sem internet, sem assinaturas, nenhum dado sai do seu dispositivo."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Приватный ИИ прямо на устройстве. Не нужен интернет, нет подписок, данные не покидают ваш телефон."
+            "value": "Приватный ИИ на устройстве. Не нужен интернет, нет подписок, данные не покидают ваше устройство."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Приватний ШІ прямо на пристрої. Не потрібен інтернет, немає підписок, дані не залишають ваш телефон."
+            "value": "Приватний ШІ на пристрої. Без інтернету, без підписок, дані не залишають ваш пристрій."
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "私密的裝置端 AI。無需上網，無需訂閱，資料亦不會離開你的手機。"
+            "value": "私密嘅裝置端 AI。唔使上網，冇訂閱，數據唔會離開你部裝置。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "私密的设备端 AI。无需互联网，没有订阅，数据不会离开您的手机。"
+            "value": "私密的设备端 AI。无需网络，无订阅，数据不离开您的设备。"
           }
         }
       }
@@ -11024,6 +11415,82 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新生成"
+          }
+        }
+      }
+    },
+    "Remove": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entfernen"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Αφαίρεση"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제거"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Убрать"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Прибрати"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除"
           }
         }
       }
@@ -12320,82 +12787,6 @@
         }
       }
     },
-    "The AI automatically replies in the language you write in.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die KI antwortet automatisch in der Sprache, in der Sie schreiben."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Η AI απαντά αυτόματα στη γλώσσα στην οποία γράφετε."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La IA responde automáticamente en el idioma en que escribes."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "L'IA répond automatiquement dans la langue dans laquelle vous écrivez."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "L'IA risponde automaticamente nella lingua in cui scrivi."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIはあなたが書いた言語で自動的に返信します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI는 사용자가 쓰는 언어로 자동으로 답변합니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A IA responde automaticamente no idioma em que você escreve."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ИИ автоматически отвечает на том языке, на котором вы пишете."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ШІ автоматично відповідає тією мовою, якою ви пишете."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI 會自動以你輸入的語言回覆。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI 会自动使用您所用的语言回复。"
-          }
-        }
-      }
-    },
     "The AI model isn't ready yet. Download or select a model in Settings.": {
       "localizations": {
         "de": {
@@ -12620,6 +13011,82 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法开始下载。请检查网络连接后重试。"
+          }
+        }
+      }
+    },
+    "The model isn't downloaded yet, so your message wasn't answered.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Modell ist noch nicht geladen, daher wurde deine Nachricht nicht beantwortet."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το μοντέλο δεν έχει κατέβει ακόμη, οπότε το μήνυμά σας δεν απαντήθηκε."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El modelo aún no está descargado, así que tu mensaje no recibió respuesta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le modèle n'est pas encore téléchargé, votre message est donc resté sans réponse."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il modello non è ancora scaricato, quindi il tuo messaggio non ha ricevuto risposta."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モデルがまだダウンロードされていないため、メッセージへの回答はありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모델이 아직 다운로드되지 않아 메시지에 답변하지 못했습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O modelo ainda não foi baixado, então sua mensagem não foi respondida."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Модель ещё не загружена, поэтому на ваше сообщение нет ответа."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Модель ще не завантажена, тому на ваше повідомлення немає відповіді."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模型仲未下載，所以你嘅訊息仲未有回覆。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模型尚未下载，因此您的消息还没有回复。"
           }
         }
       }
@@ -12852,6 +13319,234 @@
         }
       }
     },
+    "This document couldn't be opened.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Dokument konnte nicht geöffnet werden."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δεν ήταν δυνατό το άνοιγμα του εγγράφου."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo abrir el documento."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d'ouvrir ce document."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile aprire il documento."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この書類を開けませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 문서를 열 수 없습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível abrir o documento."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось открыть документ."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не вдалося відкрити документ."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開唔到呢份文件。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法打开此文档。"
+          }
+        }
+      }
+    },
+    "This file can't be accessed. Try picking it again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diese Datei kann nicht zugegriffen werden. Wähle sie erneut aus."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δεν είναι δυνατή η πρόσβαση σε αυτό το αρχείο. Δοκιμάστε να το επιλέξετε ξανά."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se puede acceder a este archivo. Intenta seleccionarlo de nuevo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d'accéder à ce fichier. Essayez de le sélectionner à nouveau."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile accedere a questo file. Prova a selezionarlo di nuovo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このファイルにアクセスできません。もう一度選択してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 파일에 접근할 수 없습니다. 다시 선택해 보세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível acessar este arquivo. Tente selecioná-lo novamente."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет доступа к файлу. Попробуйте выбрать его снова."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Немає доступу до файлу. Спробуйте вибрати його ще раз."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "存取唔到呢個檔案。請再揀多次。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法访问此文件。请重新选择。"
+          }
+        }
+      }
+    },
+    "This file is too large to import. The limit is %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Datei ist zu groß für den Import. Das Limit ist %@."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το αρχείο είναι πολύ μεγάλο για εισαγωγή. Το όριο είναι %@."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El archivo es demasiado grande para importarlo. El límite es %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce fichier est trop volumineux pour être importé. La limite est de %@."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il file è troppo grande per essere importato. Il limite è %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このファイルは大きすぎて読み込めません。上限は%@です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일이 너무 커서 가져올 수 없습니다. 한도는 %@입니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O arquivo é grande demais para importar. O limite é %@."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Файл слишком большой для импорта. Лимит — %@."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Файл завеликий для імпорту. Ліміт — %@."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "檔案太大，冇辦法匯入。上限係 %@。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件太大，无法导入。上限为 %@。"
+          }
+        }
+      }
+    },
     "This folder is empty": {
       "localizations": {
         "de": {
@@ -12924,6 +13619,158 @@
           "stringUnit": {
             "state": "translated",
             "value": "此文件夹为空"
+          }
+        }
+      }
+    },
+    "This frees %@ right away. %@ is your current model, so it will be re-downloaded the next time you use it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das gibt sofort %1$@ frei. %2$@ ist dein aktuelles Modell und wird bei der nächsten Nutzung erneut geladen."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Αυτό ελευθερώνει αμέσως %1$@. Το %2$@ είναι το τρέχον μοντέλο σας, οπότε θα κατέβει ξανά την επόμενη φορά που θα το χρησιμοποιήσετε."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esto libera %1$@ de inmediato. %2$@ es tu modelo actual, así que se volverá a descargar la próxima vez que lo uses."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cela libère %1$@ immédiatement. %2$@ est votre modèle actuel, il sera donc retéléchargé à la prochaine utilisation."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo libera subito %1$@. %2$@ è il tuo modello attuale, quindi verrà scaricato di nuovo al prossimo utilizzo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すぐに%1$@が解放されます。%2$@は現在使用中のモデルのため、次回使用時に再ダウンロードされます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "즉시 %1$@가 확보됩니다. %2$@은(는) 현재 사용 중인 모델이므로 다음에 사용할 때 다시 다운로드됩니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Isso libera %1$@ imediatamente. %2$@ é seu modelo atual, então será baixado de novo na próxima vez que você usá-lo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это сразу освободит %1$@. %2$@ — ваша текущая модель, поэтому при следующем использовании она будет загружена заново."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Це одразу звільнить %1$@. %2$@ — ваша поточна модель, тому наступного разу її буде завантажено знову."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "咁樣即刻釋放 %1$@。%2$@ 係你而家用緊嘅模型，下次用嘅時候會重新下載。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这将立即释放 %1$@。%2$@ 是您当前的模型，下次使用时会重新下载。"
+          }
+        }
+      }
+    },
+    "This frees %@ right away. You can download %@ again anytime.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das gibt sofort %1$@ frei. Du kannst %2$@ jederzeit erneut laden."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Αυτό ελευθερώνει αμέσως %1$@. Μπορείτε να κατεβάσετε ξανά το %2$@ οποιαδήποτε στιγμή."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esto libera %1$@ de inmediato. Puedes volver a descargar %2$@ cuando quieras."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cela libère %1$@ immédiatement. Vous pouvez retélécharger %2$@ à tout moment."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo libera subito %1$@. Puoi scaricare di nuovo %2$@ quando vuoi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すぐに%1$@が解放されます。%2$@はいつでも再ダウンロードできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "즉시 %1$@가 확보됩니다. %2$@은(는) 언제든지 다시 다운로드할 수 있습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Isso libera %1$@ imediatamente. Você pode baixar %2$@ de novo a qualquer momento."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это сразу освободит %1$@. Вы можете снова загрузить %2$@ в любой момент."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Це одразу звільнить %1$@. Ви можете знову завантажити %2$@ будь-коли."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "咁樣即刻釋放 %1$@。你可以隨時再下載 %2$@。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这将立即释放 %1$@。您可以随时重新下载 %2$@。"
           }
         }
       }
@@ -13156,7 +14003,7 @@
         }
       }
     },
-    "To chat privately on this device, %1$@ (%2$@) needs to be downloaded once. After that, everything works offline.": {
+    "To chat privately on this device, %@ (%@) needs to be downloaded once. After that, everything works offline.": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -14068,8 +14915,88 @@
         }
       }
     },
-    "aigoodbye.ai": {},
-    "marketing@dealerofhappiness.com": {}
+    "Your device is out of free space. Free up storage and try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Gerät hat keinen freien Speicher mehr. Gib Speicher frei und versuche es erneut."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Η συσκευή σας δεν έχει ελεύθερο χώρο. Ελευθερώστε αποθηκευτικό χώρο και δοκιμάστε ξανά."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu dispositivo se quedó sin espacio libre. Libera almacenamiento e inténtalo de nuevo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre appareil n'a plus d'espace libre. Libérez du stockage et réessayez."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il dispositivo ha esaurito lo spazio libero. Libera spazio e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバイスの空き容量がありません。ストレージを空けてからもう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기의 여유 공간이 없습니다. 저장 공간을 확보한 후 다시 시도하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu dispositivo está sem espaço livre. Libere armazenamento e tente novamente."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На устройстве закончилось свободное место. Освободите память и попробуйте снова."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На пристрої закінчилося вільне місце. Звільніть сховище та спробуйте ще раз."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "裝置嘅可用空間用晒。請清出儲存空間再試。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设备可用空间已用完。请释放存储空间后重试。"
+          }
+        }
+      }
+    },
+    "aigoodbye.ai": {
+      "shouldTranslate": false
+    },
+    "marketing@dealerofhappiness.com": {
+      "shouldTranslate": false
+    }
   },
   "version": "1.0"
 }

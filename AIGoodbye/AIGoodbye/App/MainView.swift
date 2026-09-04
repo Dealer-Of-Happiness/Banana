@@ -25,10 +25,11 @@ struct MainView: View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
                 // Main Content
-                ChatView()
+                ChatView(viewModel: appState.chatViewModel)
                     .frame(width: geometry.size.width)
                     .offset(x: revealAmount)
                     .disabled(appState.showSideMenu)
+                    .accessibilityHidden(appState.showSideMenu)
 
                 // Dimmed overlay when menu is open (or being dragged open)
                 if revealAmount > 0 {
@@ -42,10 +43,12 @@ struct MainView: View {
                         .accessibilityAddTraits(.isButton)
                 }
 
-                // Side Menu
+                // Side Menu (hidden from VoiceOver while off-screen —
+                // offset views otherwise stay swipe-reachable).
                 SideMenuView()
                     .frame(width: menuWidth)
                     .offset(x: revealAmount - menuWidth)
+                    .accessibilityHidden(revealAmount == 0)
             }
             .simultaneousGesture(
                 DragGesture(minimumDistance: 15)

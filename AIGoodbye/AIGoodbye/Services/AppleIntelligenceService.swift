@@ -89,11 +89,21 @@ final class AppleIntelligenceService: ObservableObject {
         #endif
     }
 
+    /// Drop the live session. The next conversation turn rebuilds it with
+    /// history via startSession — mirrors MLXService.dropSession, so reopened
+    /// conversations get their past turns seeded correctly.
+    func dropSession() {
+        #if canImport(FoundationModels)
+        session = nil
+        #endif
+    }
+
     // MARK: - Generation
 
     /// Stream a response with snapshot semantics (each event is the full text so far).
+    /// Only the newest snapshot is buffered; older ones are superseded anyway.
     func respondStream(prompt: String) -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream { continuation in
+        AsyncThrowingStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
             #if canImport(FoundationModels)
             guard let session = self.session else {
                 continuation.finish(throwing: AppleIntelligenceError.notReady)
@@ -107,13 +117,11 @@ final class AppleIntelligenceService: ObservableObject {
                     for try await partial in stream {
                         if Task.isCancelled { break }
                         let text = String(describing: partial.content)
-                        // Foundation Models streams cumulative snapshots; fall back
-                        // to accumulation if a delta ever arrives.
-                        if text.hasPrefix(lastText) || lastText.isEmpty {
-                            lastText = text
-                        } else {
-                            lastText += text
-                        }
+                        // Foundation Models streams cumulative snapshots; if a
+                        // snapshot ever revises earlier text, trust the newest
+                        // snapshot rather than concatenating (which would
+                        // duplicate the whole response).
+                        lastText = text
                         continuation.yield(lastText)
                     }
                     continuation.finish()

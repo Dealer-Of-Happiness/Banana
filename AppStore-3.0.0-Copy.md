@@ -1,6 +1,33 @@
-# App Store copy for AiGoodbye 3.0.0
+# App Store copy for AiGoodbye 3.0.x
 
-Paste-ready text for App Store Connect. Written August 17, 2026.
+Paste-ready text for App Store Connect.
+
+## What's New (version 3.0.1, build 11) - quality release, September 4, 2026
+
+Thanks for the quick feedback on 3.0! This update polishes everything:
+
+DOWNLOADS
+- Much faster model downloads with real progress in megabytes (no more stuck "0%")
+- Interrupted downloads resume instead of starting over, and a clear warning appears if your connection stalls
+- The app now checks free space first and explains clearly if there isn't enough
+
+CHAT
+- Fixed the AI occasionally repeating itself in a loop mid-answer
+- Apple Intelligence now remembers the conversation when you reopen a chat
+- Answers can no longer land in the wrong chat if you switch mid-response
+
+POLISH
+- Fixed the model picker in Settings closing unexpectedly
+- Fixed several translations that showed English (including the download screen and camera permission)
+- Better iPad layouts, larger touch targets, and improved VoiceOver support
+- Chats list stays sorted by recent activity; long folder lists now scroll
+- Dozens of smaller fixes across storage, files, and settings
+
+As always: 100% private, 100% on-device. Your conversations never leave your device.
+
+---
+
+# Original 3.0.0 copy below. Written August 17, 2026.
 
 ## What's New (version 3.0.0)
 

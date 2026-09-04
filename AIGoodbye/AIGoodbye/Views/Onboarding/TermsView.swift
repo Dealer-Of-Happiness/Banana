@@ -20,6 +20,8 @@ struct TermsView: View {
             .padding(.horizontal, 20)
             .padding(.top, 32)
             .padding(.bottom, 24)
+            .frame(maxWidth: 600)          // readable width on iPad
+            .frame(maxWidth: .infinity)
         }
         .background(Color(.systemBackground))
     }

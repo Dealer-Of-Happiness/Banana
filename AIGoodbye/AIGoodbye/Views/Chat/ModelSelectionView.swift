@@ -111,13 +111,15 @@ struct ModelSelectionView: View {
     private func accessibilityLabel(for model: AIModel, isSelected: Bool) -> String {
         var parts: [String] = [model.name, model.shortDescription, model.size, model.memoryRequired]
         if model.id == AIModel.recommendedDownloadModel.id {
-            parts.append("Recommended")
+            parts.append(L10n.text("Recommended"))
         }
         if isSelected {
-            parts.append("Currently selected")
+            parts.append(L10n.text("Currently selected"))
         }
         if model.backend == .mlx {
-            parts.append(model.isDownloaded ? "Downloaded" : "Not downloaded, downloads on first use")
+            parts.append(model.isDownloaded
+                ? L10n.text("Downloaded")
+                : L10n.text("Not downloaded") + ", " + L10n.text("Downloads on first use"))
         }
         return parts.joined(separator: ", ")
     }

@@ -43,7 +43,13 @@ final class Conversation {
     }
 
     var previewText: String {
-        lastMessage?.content.prefix(100).description ?? "No messages"
+        lastMessage?.content.prefix(100).description ?? L10n.text("No messages")
+    }
+
+    /// Title for display: the stored default localizes at render time, so
+    /// untitled chats follow the selected app language.
+    var displayTitle: String {
+        title == "New Chat" ? L10n.text("New Chat") : title
     }
 
     func updateTitle(from message: String) {

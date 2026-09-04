@@ -64,14 +64,15 @@ class SettingsManager: ObservableObject {
     // MARK: - Initialization
 
     init() {
-        // Load saved values or use defaults
-        self.temperature = defaults.double(forKey: Keys.temperature) != 0
-            ? defaults.double(forKey: Keys.temperature)
-            : 0.7
+        // Load saved values or use defaults ("never set" checked explicitly,
+        // so a legitimate stored value can never be mistaken for unset).
+        self.temperature = defaults.object(forKey: Keys.temperature) == nil
+            ? 0.7
+            : defaults.double(forKey: Keys.temperature)
 
-        self.contextWindow = defaults.integer(forKey: Keys.contextWindow) != 0
-            ? defaults.integer(forKey: Keys.contextWindow)
-            : 8192
+        self.contextWindow = defaults.object(forKey: Keys.contextWindow) == nil
+            ? 8192
+            : defaults.integer(forKey: Keys.contextWindow)
 
         self.hapticFeedbackEnabled = defaults.object(forKey: Keys.hapticFeedback) == nil
             ? true
@@ -97,8 +98,11 @@ class SettingsManager: ObservableObject {
 // MARK: - Keychain Helper
 
 enum KeychainHelper {
-    static func save(key: String, value: String) {
-        guard let data = value.data(using: .utf8) else { return }
+    /// Returns true only if the value is actually stored — callers that gate
+    /// destructive state (like locking a folder) must check this.
+    @discardableResult
+    static func save(key: String, value: String) -> Bool {
+        guard let data = value.data(using: .utf8) else { return false }
 
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -108,7 +112,7 @@ enum KeychainHelper {
         ]
 
         SecItemDelete(query as CFDictionary)
-        SecItemAdd(query as CFDictionary, nil)
+        return SecItemAdd(query as CFDictionary, nil) == errSecSuccess
     }
 
     static func load(key: String) -> String? {

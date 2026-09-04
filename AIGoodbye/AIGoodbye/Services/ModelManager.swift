@@ -37,15 +37,37 @@ final class ModelManager: ObservableObject {
 
     // MARK: - State
 
+    /// Name of the marker file written once a download is verified complete.
+    private static let completeMarkerName = ".aig_download_complete"
+
     func isModelDownloaded(_ model: AIModel) -> Bool {
         guard let dir = modelDirectory(for: model) else { return false }
         guard let contents = try? FileManager.default.contentsOfDirectory(
             at: dir, includingPropertiesForKeys: nil
         ) else { return false }
-        // A complete model has at least one weights file and a config.
+        // A complete model has at least one weights file and a config...
         let hasWeights = contents.contains { $0.pathExtension == "safetensors" }
         let hasConfig = contents.contains { $0.lastPathComponent == "config.json" }
-        return hasWeights && hasConfig
+        guard hasWeights && hasConfig else { return false }
+
+        // ...but a download killed mid-flight can leave exactly that state.
+        // Require the completion marker, or (for models downloaded before the
+        // marker existed) an on-disk size close to the expected size.
+        if FileManager.default.fileExists(
+            atPath: dir.appendingPathComponent(Self.completeMarkerName).path
+        ) {
+            return true
+        }
+        return downloadedSizeBytes(for: model) >= Int64(Double(model.sizeBytes) * 0.9)
+    }
+
+    /// Record that this model's files are verified complete (called after the
+    /// model successfully loads).
+    func markDownloadComplete(_ model: AIModel) {
+        guard let dir = modelDirectory(for: model) else { return }
+        let marker = dir.appendingPathComponent(Self.completeMarkerName)
+        try? Data().write(to: marker)
+        revision += 1
     }
 
     func downloadedSizeBytes(for model: AIModel) -> Int64 {

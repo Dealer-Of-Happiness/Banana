@@ -14,7 +14,7 @@ enum LegalText {
     static let appName = "AiGoodbye"
 
     static var tagline: String {
-        L10n.text("Private, on-device AI. No internet needed, no subscriptions, no data leaving your phone.")
+        L10n.text("Private, on-device AI. No internet needed, no subscriptions, no data leaving your device.")
     }
 
     /// The sections rendered as cards in onboarding and reused anywhere the
@@ -23,12 +23,12 @@ enum LegalText {
         [
             (
                 title: L10n.text("100% Private, 100% Offline"),
-                body: L10n.text("All AI runs directly on your device, and your conversations never leave your phone. There are no servers, no accounts, no tracking, and no data collection. What you talk about stays yours."),
+                body: L10n.text("All AI runs directly on your device, and your conversations never leave it. There are no servers, no accounts, no tracking, and no data collection. What you talk about stays yours."),
                 icon: "lock.shield.fill"
             ),
             (
                 title: L10n.text("Model Downloads"),
-                body: L10n.text("AI models are downloaded once from Hugging Face - about 1 to 2 GB, so Wi-Fi is recommended. After the download, everything works fully offline. You can delete models anytime in Settings."),
+                body: L10n.text("AI models are downloaded once from Hugging Face - about 1 to 6 GB depending on the model, so Wi-Fi is recommended. After the download, everything works fully offline. You can delete models anytime in Settings."),
                 icon: "arrow.down.circle.fill"
             ),
             (

@@ -154,7 +154,7 @@ extension AIModel {
     static var appleIntelligence: AIModel { AIModel(
         id: "apple-intelligence",
         name: "Apple Intelligence",
-        shortDescription: L10n.text("Built into your iPhone - instant, no download"),
+        shortDescription: L10n.text("Built into your device - instant, no download"),
         fullDescription: L10n.text("Apple's on-device model, built into iOS. Starts instantly with no download and handles everyday questions well. Image analysis uses a downloaded vision model."),
         size: L10n.text("Built in"),
         sizeBytes: 0,
@@ -203,13 +203,4 @@ enum DeviceCapability {
     static var isLowMemoryDevice: Bool {
         physicalMemoryGB < 6
     }
-}
-
-// MARK: - Download State
-
-enum ModelDownloadState: Equatable {
-    case notDownloaded
-    case downloading(progress: Double)
-    case downloaded
-    case failed(String)
 }

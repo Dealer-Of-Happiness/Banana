@@ -18,7 +18,9 @@ import PDFKit
 
 struct ChatView: View {
     @EnvironmentObject var appState: AppState
-    @StateObject private var viewModel = ChatViewModel()
+    /// Owned by AppState so drafts and in-flight answers survive the
+    /// language-change rebuild of the view tree.
+    @ObservedObject var viewModel: ChatViewModel
     @FocusState private var isInputFocused: Bool
 
     // Attachment state
@@ -42,6 +44,22 @@ struct ChatView: View {
                 // Inline error banner with Retry
                 if let error = viewModel.errorBanner {
                     errorBanner(error)
+                }
+
+                // Storage failure warning: conversations aren't being saved.
+                if let storageError = appState.conversationManager.storageError {
+                    HStack(spacing: 10) {
+                        Image(systemName: "externaldrive.badge.exclamationmark")
+                            .foregroundStyle(.red)
+                        Text(storageError)
+                            .font(.caption)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.red.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal)
                 }
 
                 Divider()
@@ -73,12 +91,15 @@ struct ChatView: View {
                     selectedPhotoItem = nil
                 }
             }
-            .sheet(isPresented: $showingCamera) {
+            .fullScreenCover(isPresented: $showingCamera) {
+                // Full screen per Apple guidance for the camera (a sheet
+                // letterboxes on iPad).
                 CameraView { image in
                     viewModel.pendingImage = image
                     viewModel.pendingImageId = UUID()
                     showingCamera = false
                 }
+                .ignoresSafeArea()
             }
             .sheet(isPresented: $showingDocumentPicker) {
                 DocumentPickerView { urls in
@@ -100,10 +121,10 @@ struct ChatView: View {
                         viewModel.approveConsentAndResend()
                     },
                     onCancel: {
-                        viewModel.consentRequest = nil
+                        viewModel.declineConsent()
                     }
                 )
-                .presentationDetents([.medium])
+                .presentationDetents([.medium, .large])
             }
             .alert("Camera Unavailable", isPresented: $showingCameraUnavailableAlert) {
                 Button("OK", role: .cancel) {}
@@ -115,10 +136,9 @@ struct ChatView: View {
             } message: {
                 Text(viewModel.importErrorMessage)
             }
-            .confirmationDialog(
+            .alert(
                 "Clear this chat?",
-                isPresented: $showingClearConfirmation,
-                titleVisibility: .visible
+                isPresented: $showingClearConfirmation
             ) {
                 Button("Clear Chat", role: .destructive) {
                     viewModel.clearConversation()
@@ -156,7 +176,7 @@ struct ChatView: View {
                 showingModelPicker = true
             } label: {
                 VStack(spacing: 1) {
-                    Text(appState.currentConversation?.title ?? L10n.text("New Chat"))
+                    Text(appState.currentConversation?.displayTitle ?? L10n.text("New Chat"))
                         .font(.headline)
                         .lineLimit(1)
                     HStack(spacing: 3) {
@@ -169,7 +189,7 @@ struct ChatView: View {
                 }
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("Current chat: \(appState.currentConversation?.title ?? L10n.text("New Chat")). Model: \(appState.engine.selectedModel.name). Tap to change model."))
+            .accessibilityLabel(Text("Current chat: \(appState.currentConversation?.displayTitle ?? L10n.text("New Chat")). Model: \(appState.engine.selectedModel.name). Tap to change model."))
         }
 
         ToolbarItem(placement: .topBarTrailing) {
@@ -223,7 +243,11 @@ struct ChatView: View {
                                 Label("Share", systemImage: "square.and.arrow.up")
                             }
 
-                            if message.role == .assistant && !viewModel.isGenerating {
+                            // Regenerate only the LAST answer: regenerating a
+                            // middle-of-chat reply would append the new answer
+                            // at the bottom, out of context.
+                            if message.role == .assistant && !viewModel.isGenerating
+                                && message.id == viewModel.messages.last(where: { $0.role == .assistant })?.id {
                                 Button {
                                     viewModel.regenerateResponse(for: message)
                                 } label: {
@@ -335,6 +359,7 @@ struct ChatView: View {
                     } label: {
                         Text("Try Again")
                             .font(.subheadline.weight(.semibold))
+                            .frame(minHeight: 44)
                     }
                 }
             }
@@ -347,7 +372,7 @@ struct ChatView: View {
                 Image(systemName: "xmark")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
-                    .frame(minWidth: 32, minHeight: 32)
+                    .frame(minWidth: 44, minHeight: 44)
             }
             .accessibilityLabel(Text("Dismiss error"))
         }
@@ -386,7 +411,7 @@ struct ChatView: View {
                 Text("Start a Conversation")
                     .font(.title2.bold())
 
-                Text("Ask questions, analyze images, or discuss documents. Everything stays on your iPhone.")
+                Text("Ask questions, analyze images, or discuss documents. Everything stays on your device.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -712,6 +737,8 @@ class ChatViewModel: ObservableObject {
         pendingDocumentName = nil
         pendingDocumentContent = nil
         errorBanner = nil
+        consentRequest = nil
+        lastRequest = nil
         currentConversationId = conversation?.id
 
         // Sessions rebuild lazily on the next message.
@@ -785,6 +812,10 @@ class ChatViewModel: ObservableObject {
 
     // MARK: - Document Handling
 
+    /// Largest file the importer will open. Only ~4,000 characters are used,
+    /// so anything bigger than this is pointless to read into memory.
+    private static let maxImportBytes: Int64 = 25 * 1024 * 1024
+
     func processDocuments(_ urls: [URL]) async {
         guard let url = urls.first else { return }
 
@@ -794,12 +825,23 @@ class ChatViewModel: ObservableObject {
             }
             defer { url.stopAccessingSecurityScopedResource() }
 
+            // Size cap: without it a huge file is read fully into memory.
+            if let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+               Int64(size) > Self.maxImportBytes {
+                let limit = ByteCountFormatter.string(fromByteCount: Self.maxImportBytes, countStyle: .file)
+                presentImportError(L10n.text("This file is too large to import. The limit is \(limit)."))
+                return
+            }
+
             let content: String
             switch url.pathExtension.lowercased() {
             case "pdf":
                 content = try await extractTextFromPDF(url)
             default:
-                content = try String(contentsOf: url, encoding: .utf8)
+                // Read and decode off the main thread.
+                content = try await Task.detached(priority: .userInitiated) {
+                    try String(contentsOf: url, encoding: .utf8)
+                }.value
             }
 
             let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -821,23 +863,40 @@ class ChatViewModel: ObservableObject {
     }
 
     private func extractTextFromPDF(_ url: URL) async throws -> String {
-        guard let document = PDFDocument(url: url) else {
-            throw DocumentError.invalidDocument
-        }
-
-        var fullText = ""
-        let pageCount = min(document.pageCount, 20)
-        for pageIndex in 0..<pageCount {
-            if let page = document.page(at: pageIndex), let pageText = page.string {
-                fullText += "[Page \(pageIndex + 1)]\n\(pageText)\n\n"
+        // PDF parsing happens off the main thread.
+        try await Task.detached(priority: .userInitiated) {
+            guard let document = PDFDocument(url: url) else {
+                throw DocumentError.invalidDocument
             }
-        }
-        return fullText
+
+            var fullText = ""
+            let pageCount = min(document.pageCount, 20)
+            for pageIndex in 0..<pageCount {
+                if let page = document.page(at: pageIndex), let pageText = page.string {
+                    fullText += "[Page \(pageIndex + 1)]\n\(pageText)\n\n"
+                }
+            }
+            return fullText
+        }.value
     }
 
     private func presentImportError(_ message: String) {
         importErrorMessage = message
         showingImportError = true
+    }
+
+    enum DocumentError: LocalizedError {
+        case accessDenied
+        case invalidDocument
+
+        var errorDescription: String? {
+            switch self {
+            case .accessDenied:
+                return L10n.text("This file can't be accessed. Try picking it again.")
+            case .invalidDocument:
+                return L10n.text("This document couldn't be opened.")
+            }
+        }
     }
 
     // MARK: - Send
@@ -1000,14 +1059,18 @@ class ChatViewModel: ObservableObject {
                     role: .assistant,
                     content: cleaned
                 )
-                messages.append(assistantMessage)
+                // Only show the bubble if this conversation is still the one
+                // on screen — the user may have switched chats mid-answer.
+                if currentConversationId == conv.id {
+                    messages.append(assistantMessage)
 
-                if appState.settings.hapticFeedbackEnabled {
-                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    if appState.settings.hapticFeedbackEnabled {
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    }
                 }
             }
 
-            if let failure {
+            if let failure, currentConversationId == conversation?.id {
                 errorBanner = ErrorBanner(message: failure, canRetry: true)
                 // The session may be mid-turn; rebuild next time.
                 appState.engine.resetSessions()
@@ -1039,6 +1102,18 @@ class ChatViewModel: ObservableObject {
     }
 
     // MARK: - Consent
+
+    /// "Not Now" on the download sheet: the sent message would otherwise sit
+    /// unanswered with no affordance. Offer a retry.
+    func declineConsent() {
+        consentRequest = nil
+        if lastRequest != nil {
+            errorBanner = ErrorBanner(
+                message: L10n.text("The model isn't downloaded yet, so your message wasn't answered."),
+                canRetry: true
+            )
+        }
+    }
 
     func approveConsentAndResend() {
         guard let request = consentRequest else { return }
@@ -1154,15 +1229,11 @@ class ChatViewModel: ObservableObject {
 
     private func saveImage(_ image: UIImage, withId id: UUID) {
         guard let data = image.jpegData(compressionQuality: 0.8) else { return }
-        guard let path = getImagePath(for: id) else { return }
-        try? data.write(to: path)
+        try? data.write(to: ConversationManager.imagePath(for: id))
     }
 
     private func getImagePath(for id: UUID) -> URL? {
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let imagesDir = documentsPath.appendingPathComponent("images")
-        try? FileManager.default.createDirectory(at: imagesDir, withIntermediateDirectories: true)
-        return imagesDir.appendingPathComponent("\(id.uuidString).jpg")
+        ConversationManager.imagePath(for: id)
     }
 }
 
@@ -1220,9 +1291,12 @@ struct MessageBubble: View {
             if message.role != .user { Spacer(minLength: 60) }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(message.role == .user
-            ? L10n.text("You said: \(message.content)")
-            : L10n.text("Assistant said: \(message.content)")))
+        .accessibilityLabel(Text(
+            (message.role == .user
+                ? L10n.text("You said: \(message.content)")
+                : L10n.text("Assistant said: \(message.content)"))
+            + " " + message.timestamp.formatted(date: .omitted, time: .shortened)
+        ))
     }
 
     private var backgroundColor: Color {
@@ -1266,54 +1340,61 @@ struct ModelDownloadConsentSheet: View {
     let onCancel: () -> Void
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 0) {
             Capsule()
                 .fill(Color(.systemGray4))
                 .frame(width: 36, height: 5)
                 .padding(.top, 8)
 
-            Image(systemName: "arrow.down.circle.fill")
-                .font(.system(size: 44))
-                .foregroundStyle(.blue)
-                .accessibilityHidden(true)
+            // Scrollable content so the buttons below stay reachable at
+            // large Dynamic Type sizes.
+            ScrollView {
+                VStack(spacing: 20) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.system(size: 44))
+                        .foregroundStyle(.blue)
+                        .accessibilityHidden(true)
 
-            Text("Download \(model.name)?")
-                .font(.title3.bold())
-                .multilineTextAlignment(.center)
+                    Text("Download \(model.name)?")
+                        .font(.title3.bold())
+                        .multilineTextAlignment(.center)
 
-            Text(reason)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal)
+                    Text(reason)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Label {
-                    Text("One-time download of \(model.size)")
-                } icon: {
-                    Image(systemName: "arrow.down.circle")
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label {
+                            Text("One-time download of \(model.size)")
+                        } icon: {
+                            Image(systemName: "arrow.down.circle")
+                        }
+                        Label {
+                            Text("Wi-Fi recommended")
+                        } icon: {
+                            Image(systemName: "wifi")
+                        }
+                        Label {
+                            Text("Works fully offline afterward")
+                        } icon: {
+                            Image(systemName: "airplane")
+                        }
+                        Label {
+                            Text("You can delete it anytime in Settings")
+                        } icon: {
+                            Image(systemName: "trash")
+                        }
+                    }
+                    .font(.subheadline)
+                    .padding(.horizontal)
                 }
-                Label {
-                    Text("Wi-Fi recommended")
-                } icon: {
-                    Image(systemName: "wifi")
-                }
-                Label {
-                    Text("Works fully offline afterward")
-                } icon: {
-                    Image(systemName: "airplane")
-                }
-                Label {
-                    Text("You can delete it anytime in Settings")
-                } icon: {
-                    Image(systemName: "trash")
-                }
+                .padding(.top, 12)
+                .frame(maxWidth: 500)
+                .frame(maxWidth: .infinity)
             }
-            .font(.subheadline)
-            .padding(.horizontal)
-
-            Spacer()
 
             VStack(spacing: 10) {
                 Button {
@@ -1328,9 +1409,11 @@ struct ModelDownloadConsentSheet: View {
 
                 Button("Not Now", action: onCancel)
                     .font(.subheadline)
+                    .frame(minHeight: 44)
             }
             .padding(.horizontal)
             .padding(.bottom, 16)
+            .frame(maxWidth: 500)
         }
     }
 }
@@ -1451,6 +1534,7 @@ struct TypingIndicator: View {
 }
 
 #Preview {
-    ChatView()
-        .environmentObject(AppState())
+    let appState = AppState()
+    return ChatView(viewModel: appState.chatViewModel)
+        .environmentObject(appState)
 }

@@ -133,6 +133,8 @@ private struct CodeBlockView: View {
                 } label: {
                     Image(systemName: "doc.on.doc")
                         .font(.caption)
+                        .frame(minWidth: 44, minHeight: 32)
+                        .contentShape(Rectangle())
                 }
                 .accessibilityLabel(Text("Copy code"))
             }

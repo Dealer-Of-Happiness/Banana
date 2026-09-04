@@ -62,13 +62,14 @@ final class ChatEngine: ObservableObject {
     init(settings: SettingsManager) {
         self.settings = settings
         self.mlx = MLXService(settings: settings)
-        self.appleIntelligence = AppleIntelligenceService()
+        let ai = AppleIntelligenceService()
+        self.appleIntelligence = ai
 
         // Restore selection, or pick a smart device-aware default.
         if let savedId = UserDefaults.standard.string(forKey: Self.selectedModelKey),
            let saved = AIModel.model(withId: savedId) {
             self.selectedModel = saved
-        } else if AppleIntelligenceService().isAvailable {
+        } else if ai.isAvailable {
             // Instant chat out of the box; vision model can come later.
             self.selectedModel = .appleIntelligence
         } else {
@@ -91,6 +92,12 @@ final class ChatEngine: ObservableObject {
     func select(_ model: AIModel) {
         selectedModel = model
         UserDefaults.standard.set(model.id, forKey: Self.selectedModelKey)
+
+        // Switching to the built-in engine frees the downloaded model's RAM
+        // (up to ~7 GB for the Pro model) instead of keeping it resident.
+        if model.backend == .appleIntelligence {
+            mlx.unload()
+        }
     }
 
     /// Models shown in pickers: built-in first (when available), then current
@@ -130,8 +137,10 @@ final class ChatEngine: ObservableObject {
                 return try routeMLX(selectedModel)
             }
             // Apple Intelligence selected: fall back to the best downloaded
-            // vision model, or ask to set one up.
-            if let downloaded = AIModel.allModels.first(where: { $0.isDownloaded && $0.supportsVision }) {
+            // vision model that this device can actually run.
+            if let downloaded = AIModel.allModels.first(where: {
+                $0.isDownloaded && $0.supportsVision && $0.fitsThisDevice()
+            }) {
                 return try routeMLX(downloaded)
             }
             throw RouteError.visionNeedsDownloadedModel(AIModel.recommendedDownloadModel)
@@ -252,15 +261,30 @@ final class ChatEngine: ObservableObject {
     #endif
 
     /// Drop all live sessions (e.g. after clearing a chat or changing settings).
+    /// Both backends drop to nil so the next turn rebuilds WITH history —
+    /// recreating an empty Apple Intelligence session here would silently
+    /// erase conversation memory (the send path only seeds history when no
+    /// session exists).
     func resetSessions() {
         mlx.dropSession()
-        appleIntelligence.startSession(history: [], instructions: currentInstructions)
+        appleIntelligence.dropSession()
 
         // Refresh the stored model copy so localized descriptions follow
         // the current app language.
         if let fresh = AIModel.model(withId: selectedModel.id) {
             selectedModel = fresh
         }
+    }
+
+    /// Called when the user deletes a model's files: frees its RAM if loaded
+    /// and forgets the download approval so it never silently re-downloads.
+    func modelWasDeleted(_ model: AIModel) {
+        if mlx.loadedModelId == model.id {
+            mlx.unload()
+        }
+        var approved = UserDefaults.standard.stringArray(forKey: Self.approvedDownloadsKey) ?? []
+        approved.removeAll { $0 == model.id }
+        UserDefaults.standard.set(approved, forKey: Self.approvedDownloadsKey)
     }
 
     // MARK: - Status for UI

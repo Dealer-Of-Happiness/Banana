@@ -22,22 +22,20 @@ struct ModelsSettingsView: View {
             builtInSection
         }
         .navigationTitle("AI Models")
-        .confirmationDialog(
+        .alert(
             deleteDialogTitle,
             isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible,
             presenting: modelToDelete
         ) { model in
             Button("Delete", role: .destructive) {
                 modelManager.deleteModel(model)
+                appState.engine.modelWasDeleted(model)
                 modelToDelete = nil
             }
-            .accessibilityLabel("Delete \(model.name)")
 
             Button("Cancel", role: .cancel) {
                 modelToDelete = nil
             }
-            .accessibilityLabel("Cancel")
         } message: { model in
             Text(deleteDialogMessage(for: model))
         }
@@ -91,6 +89,7 @@ struct ModelsSettingsView: View {
 
     private func modelRow(for model: AIModel) -> some View {
         let isDownloaded = modelManager.isModelDownloaded(model)
+        let bytesOnDisk = modelManager.downloadedSizeBytes(for: model)
         return HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(model.name)
@@ -104,6 +103,12 @@ struct ModelsSettingsView: View {
                     Text(onDiskSize(for: model))
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                } else if bytesOnDisk > 0 {
+                    // Interrupted download: show what it occupies so it can
+                    // be reclaimed.
+                    Text("Partial download · \(onDiskSize(for: model))")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
                 } else {
                     Text("Not downloaded")
                         .font(.caption)
@@ -114,8 +119,8 @@ struct ModelsSettingsView: View {
 
             Spacer(minLength: 8)
 
-            if isDownloaded {
-                Button("Delete", role: .destructive) {
+            if isDownloaded || bytesOnDisk > 0 {
+                Button(isDownloaded ? "Delete" : "Remove", role: .destructive) {
                     modelToDelete = model
                     showDeleteConfirmation = true
                 }
@@ -138,17 +143,17 @@ struct ModelsSettingsView: View {
 
     private var deleteDialogTitle: String {
         if let model = modelToDelete {
-            return "Delete \(model.name)?"
+            return L10n.text("Delete \(model.name)?")
         }
-        return "Delete Model?"
+        return L10n.text("Delete Model?")
     }
 
     private func deleteDialogMessage(for model: AIModel) -> String {
         let size = onDiskSize(for: model)
         if appState.engine.selectedModel.id == model.id {
-            return "This frees \(size) right away. \(model.name) is your current model, so it will be re-downloaded the next time you use it."
+            return L10n.text("This frees \(size) right away. \(model.name) is your current model, so it will be re-downloaded the next time you use it.")
         }
-        return "This frees \(size) right away. You can download \(model.name) again anytime."
+        return L10n.text("This frees \(size) right away. You can download \(model.name) again anytime.")
     }
 }
 

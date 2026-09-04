@@ -87,3 +87,59 @@ struct LegalTextTests {
         #expect(allText.contains("marketing@dealerofhappiness.com"))
     }
 }
+
+struct LocalizationTests {
+
+    /// Every non-automatic app language must ship a resource bundle;
+    /// without one, L10n silently falls back to English.
+    @Test func everyLanguageHasABundle() {
+        for language in AppLanguage.allCases where language != .automatic && language != .english {
+            let path = Bundle.main.path(forResource: language.rawValue, ofType: "lproj")
+            #expect(path != nil, "Missing lproj for \(language.rawValue)")
+        }
+    }
+
+    /// Guard against the 3.0.0 bug class: hand-written positional catalog
+    /// keys (%1$@) that String(localized:) never generates at runtime,
+    /// leaving translations dead. If this multi-argument key resolves to
+    /// Russian, the runtime and catalog key formats agree.
+    @Test @MainActor func multiArgumentKeysResolveInOtherLanguages() {
+        L10n.apply(.russian)
+        defer { L10n.apply(.automatic) }
+        let text = L10n.text("Couldn't read \("f"): \("e")")
+        #expect(text != "Couldn't read f: e", "Multi-arg key fell back to English — key format mismatch")
+    }
+
+    /// A translated language must actually resolve differently from English
+    /// through the instant-switch bundle routing.
+    @Test @MainActor func bundleRoutingResolvesTranslations() {
+        L10n.apply(.russian)
+        defer { L10n.apply(.automatic) }
+        let russian = L10n.text("Settings")
+        #expect(russian != "Settings", "Russian bundle should override English")
+    }
+}
+
+struct WeightedLengthTests {
+
+    @Test func cjkTextCostsMoreThanLatin() {
+        let latin = String(repeating: "a", count: 100)
+        let cjk = String(repeating: "中", count: 100)
+        #expect(MLXService.weightedLength(of: latin) == 100)
+        #expect(MLXService.weightedLength(of: cjk) > 200)
+    }
+
+    @Test func cjkHistoryTrimsTighterThanLatin() {
+        let latinHistory: [(role: String, content: String)] = (0..<40).map {
+            ($0 % 2 == 0 ? "user" : "assistant", String(repeating: "hello ", count: 100))
+        }
+        let cjkHistory: [(role: String, content: String)] = (0..<40).map {
+            ($0 % 2 == 0 ? "user" : "assistant", String(repeating: "你好啊那么", count: 120))
+        }
+        let latinTrimmed = MLXService.trimHistory(latinHistory, tokenBudget: 4096)
+        let cjkTrimmed = MLXService.trimHistory(cjkHistory, tokenBudget: 4096)
+        // Same visual length, but CJK carries more tokens per character, so
+        // fewer messages must fit.
+        #expect(cjkTrimmed.count < latinTrimmed.count)
+    }
+}

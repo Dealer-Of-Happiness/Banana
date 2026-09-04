@@ -1,0 +1,170 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSCameraUsageDescription": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye verwendet die Kamera, um Fotos für die Bildanalyse aufzunehmen"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το AIGoodbye χρησιμοποιεί την κάμερα για τη λήψη φωτογραφιών για ανάλυση εικόνων"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye uses the camera to take photos for image analysis"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye usa la cámara para tomar fotos y analizar imágenes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye utilise l'appareil photo pour prendre des photos à analyser"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye usa la fotocamera per scattare foto da analizzare"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbyeは画像分析のためにカメラで写真を撮影します"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye는 이미지 분석을 위한 사진을 촬영하기 위해 카메라를 사용합니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O AIGoodbye usa a câmera para tirar fotos para análise de imagens"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye использует камеру, чтобы делать фото для анализа изображений"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye використовує камеру, щоб робити фото для аналізу зображень"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye 使用相機影相以進行圖像分析"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye 使用相机拍摄照片以进行图像分析"
+          }
+        }
+      }
+    },
+    "NSPhotoLibraryUsageDescription": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye verwendet Ihre Fotomediathek, um Bilder für die Analyse auszuwählen"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το AIGoodbye χρησιμοποιεί τη βιβλιοθήκη φωτογραφιών σας για την επιλογή εικόνων προς ανάλυση"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye uses your photo library to select images for analysis"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye usa tu fototeca para seleccionar imágenes y analizarlas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye utilise votre photothèque pour sélectionner des images à analyser"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye usa la tua libreria foto per selezionare immagini da analizzare"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbyeは分析する画像を選択するためにフォトライブラリを使用します"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye는 분석할 이미지를 선택하기 위해 사진 보관함을 사용합니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O AIGoodbye usa sua fototeca para selecionar imagens para análise"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye использует вашу медиатеку для выбора изображений для анализа"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye використовує вашу медіатеку для вибору зображень для аналізу"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye 使用你的相片圖庫選擇要分析的圖像"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIGoodbye 使用您的照片图库来选择要分析的图像"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

@@ -2,12 +2,17 @@
 //  ConversationManager.swift
 //  AIGoodbye
 //
-//  Manages conversations and folders with SwiftData
+//  Manages conversations and folders with SwiftData.
+//
+//  v3.0.1: storage failures are surfaced instead of swallowed, deleting
+//  conversations also deletes their attachment files, folder passwords are
+//  stored as hashes, and the sidebar ordering stays fresh.
 //
 
 import Foundation
 import SwiftData
 import Combine
+import CryptoKit
 
 @MainActor
 class ConversationManager: ObservableObject {
@@ -16,6 +21,10 @@ class ConversationManager: ObservableObject {
 
     @Published var conversations: [Conversation] = []
     @Published var folders: [Folder] = []
+
+    /// Set when the persistent store failed to open: the app still runs, but
+    /// nothing will be saved. The UI shows a warning when this is non-nil.
+    @Published private(set) var storageError: String?
 
     // MARK: - Initialization
 
@@ -45,6 +54,19 @@ class ConversationManager: ObservableObject {
             await loadData()
         } catch {
             print("Failed to initialize SwiftData: \(error)")
+            storageError = L10n.text("Conversations can't be saved right now. Restart the app; if this keeps happening, free up storage space.")
+        }
+    }
+
+    /// Save, surfacing failures instead of silently dropping data.
+    private func save() {
+        guard let context = modelContext else { return }
+        do {
+            try context.save()
+            if storageError != nil { storageError = nil }
+        } catch {
+            print("SwiftData save failed: \(error)")
+            storageError = L10n.text("Conversations can't be saved right now. Restart the app; if this keeps happening, free up storage space.")
         }
     }
 
@@ -66,13 +88,18 @@ class ConversationManager: ObservableObject {
         folders = (try? context.fetch(folderDescriptor)) ?? []
     }
 
+    /// Keep the sidebar ordered by recency as conversations change.
+    private func resortConversations() {
+        conversations.sort { $0.updatedAt > $1.updatedAt }
+    }
+
     // MARK: - Conversation CRUD
 
     func createConversation(title: String = "New Chat", folderId: UUID? = nil) -> Conversation {
         let conversation = Conversation(title: title, folderId: folderId)
 
         modelContext?.insert(conversation)
-        try? modelContext?.save()
+        save()
 
         conversations.insert(conversation, at: 0)
         return conversation
@@ -80,12 +107,14 @@ class ConversationManager: ObservableObject {
 
     func updateConversation(_ conversation: Conversation) {
         conversation.updatedAt = Date()
-        try? modelContext?.save()
+        save()
+        resortConversations()
     }
 
     func deleteConversation(_ conversation: Conversation) {
+        deleteAttachmentFiles(for: conversation)
         modelContext?.delete(conversation)
-        try? modelContext?.save()
+        save()
         conversations.removeAll { $0.id == conversation.id }
     }
 
@@ -94,6 +123,26 @@ class ConversationManager: ObservableObject {
             return conversations.filter { $0.folderId == folder.id }
         }
         return conversations.filter { $0.folderId == nil }
+    }
+
+    // MARK: - Attachment files
+
+    /// Directory holding attached images (Documents/images/<uuid>.jpg).
+    static var imagesDirectory: URL {
+        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        return documents.appendingPathComponent("images", isDirectory: true)
+    }
+
+    static func imagePath(for id: UUID) -> URL {
+        try? FileManager.default.createDirectory(at: imagesDirectory, withIntermediateDirectories: true)
+        return imagesDirectory.appendingPathComponent("\(id.uuidString).jpg")
+    }
+
+    /// Delete this conversation's attachment files so they don't leak forever.
+    private func deleteAttachmentFiles(for conversation: Conversation) {
+        for imageId in conversation.attachedImageIds {
+            try? FileManager.default.removeItem(at: Self.imagePath(for: imageId))
+        }
     }
 
     // MARK: - Message CRUD
@@ -126,13 +175,14 @@ class ConversationManager: ObservableObject {
             conversation.updateTitle(from: titleContent)
         }
 
-        try? modelContext?.save()
+        save()
+        resortConversations()
         return message
     }
 
     func deleteMessage(_ message: Message) {
         modelContext?.delete(message)
-        try? modelContext?.save()
+        save()
     }
 
     // MARK: - Folder CRUD
@@ -140,14 +190,14 @@ class ConversationManager: ObservableObject {
     func createFolder(name: String) -> Folder {
         let folder = Folder(name: name)
         modelContext?.insert(folder)
-        try? modelContext?.save()
+        save()
         folders.append(folder)
         return folder
     }
 
     func renameFolder(_ folder: Folder, to name: String) {
         folder.name = name
-        try? modelContext?.save()
+        save()
     }
 
     func deleteFolder(_ folder: Folder, deleteContents: Bool = false) {
@@ -164,36 +214,56 @@ class ConversationManager: ObservableObject {
             }
         }
 
+        KeychainHelper.delete(key: "folder_\(folder.id.uuidString)")
         modelContext?.delete(folder)
-        try? modelContext?.save()
+        save()
         folders.removeAll { $0.id == folder.id }
     }
 
     func moveConversation(_ conversation: Conversation, to folder: Folder?) {
         conversation.folderId = folder?.id
         conversation.updatedAt = Date()
-        try? modelContext?.save()
+        save()
+        resortConversations()
     }
 
     // MARK: - Folder Locking
 
-    func lockFolder(_ folder: Folder, password: String) {
+    private func passwordHash(_ password: String) -> String {
+        let digest = SHA256.hash(data: Data(password.utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Locks the folder. Returns false (and does NOT lock) if the credential
+    /// could not be stored — otherwise the folder would be locked forever.
+    @discardableResult
+    func lockFolder(_ folder: Folder, password: String) -> Bool {
+        guard KeychainHelper.save(key: "folder_\(folder.id.uuidString)", value: passwordHash(password)) else {
+            return false
+        }
         folder.isLocked = true
-        // Store password hash in Keychain
-        KeychainHelper.save(key: "folder_\(folder.id.uuidString)", value: password)
-        try? modelContext?.save()
+        save()
+        return true
     }
 
     func unlockFolder(_ folder: Folder, password: String) -> Bool {
-        let storedPassword = KeychainHelper.load(key: "folder_\(folder.id.uuidString)")
-        return storedPassword == password
+        guard let stored = KeychainHelper.load(key: "folder_\(folder.id.uuidString)") else {
+            return false
+        }
+        if stored == passwordHash(password) { return true }
+        // Older versions stored the raw password; accept it once and upgrade.
+        if stored == password {
+            _ = KeychainHelper.save(key: "folder_\(folder.id.uuidString)", value: passwordHash(password))
+            return true
+        }
+        return false
     }
 
     func removeLock(from folder: Folder, password: String) -> Bool {
         if unlockFolder(folder, password: password) {
             folder.isLocked = false
             KeychainHelper.delete(key: "folder_\(folder.id.uuidString)")
-            try? modelContext?.save()
+            save()
             return true
         }
         return false
@@ -201,8 +271,7 @@ class ConversationManager: ObservableObject {
 
     func changePassword(for folder: Folder, oldPassword: String, newPassword: String) -> Bool {
         if unlockFolder(folder, password: oldPassword) {
-            KeychainHelper.save(key: "folder_\(folder.id.uuidString)", value: newPassword)
-            return true
+            return KeychainHelper.save(key: "folder_\(folder.id.uuidString)", value: passwordHash(newPassword))
         }
         return false
     }
@@ -210,29 +279,24 @@ class ConversationManager: ObservableObject {
     // MARK: - Clear All Data
 
     func clearAllData() {
-        // Delete all conversations
+        // Delete all conversations (and their attachment files)
         for conversation in conversations {
+            deleteAttachmentFiles(for: conversation)
             modelContext?.delete(conversation)
         }
 
-        // Delete all folders
+        // Delete all folders (and their lock credentials)
         for folder in folders {
+            KeychainHelper.delete(key: "folder_\(folder.id.uuidString)")
             modelContext?.delete(folder)
         }
 
-        try? modelContext?.save()
+        save()
+
+        // Sweep any orphaned attachment files.
+        try? FileManager.default.removeItem(at: Self.imagesDirectory)
 
         conversations.removeAll()
         folders.removeAll()
-    }
-
-    // MARK: - Search
-
-    func searchConversations(query: String) -> [Conversation] {
-        let lowercased = query.lowercased()
-        return conversations.filter { conversation in
-            conversation.title.lowercased().contains(lowercased) ||
-            conversation.messages.contains { $0.content.lowercased().contains(lowercased) }
-        }
     }
 }

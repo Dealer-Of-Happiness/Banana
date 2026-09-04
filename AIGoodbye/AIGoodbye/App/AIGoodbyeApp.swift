@@ -80,8 +80,11 @@ class AppState: ObservableObject {
     // Services
     let settings: SettingsManager
     let engine: ChatEngine
-    let documentService: DocumentService
     let conversationManager: ConversationManager
+
+    /// Owned here (not by ChatView) so drafts, pending attachments, and an
+    /// in-flight answer survive the language-change UI rebuild.
+    let chatViewModel = ChatViewModel()
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -89,12 +92,15 @@ class AppState: ObservableObject {
         let settings = SettingsManager()
         self.settings = settings
         self.engine = ChatEngine(settings: settings)
-        self.documentService = DocumentService()
         self.conversationManager = ConversationManager()
 
-        // Views read engine state through `appState.engine`; forward engine
-        // changes so those views (e.g. the download progress chip) update.
+        // Views read child-object state through `appState.…`; forward their
+        // changes so those views (e.g. the download progress chip, the
+        // sidebar list) update.
         engine.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        conversationManager.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
     }

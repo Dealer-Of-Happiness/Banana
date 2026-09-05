@@ -6,6 +6,10 @@
 //  loud, and listening resumes automatically. Turns are saved into the
 //  current chat like typed messages.
 //
+//  The conversation runs as an explicit turn state machine so the
+//  microphone is never live while the app is speaking (which would make it
+//  transcribe its own voice and loop forever).
+//
 
 import SwiftUI
 
@@ -14,9 +18,21 @@ struct VoiceModeView: View {
     @ObservedObject var viewModel: ChatViewModel
     @StateObject private var voice = VoiceService()
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
+    private enum Turn: Equatable {
+        case starting
+        case listening
+        case thinking
+        case speaking
+        case idle          // waiting for the user to tap "Tap to talk"
+        case blocked(String)
+    }
+
+    @State private var turn: Turn = .starting
     @State private var permissionDenied = false
-    @State private var spokenOffset: Int = 0
+    @State private var spokenOffset = 0
+    @State private var lastStreamed = ""
     @State private var isActive = true
 
     var body: some View {
@@ -29,31 +45,46 @@ struct VoiceModeView: View {
 
             VStack(spacing: 24) {
                 header
-
                 Spacer()
-
                 statusIndicator
-
                 statusText
-
                 Spacer()
-
                 transcriptArea
-
                 controls
             }
             .padding()
         }
         .onAppear(perform: start)
-        .onDisappear {
-            isActive = false
-            voice.shutdown()
+        .onDisappear(perform: teardown)
+        .onChange(of: scenePhase) { _, phase in
+            // Backgrounding doesn't fire onDisappear: never leave the mic hot.
+            // `pause` keeps the callbacks so the screen still works on return.
+            if phase != .active {
+                voice.pause()
+                if isActive { turn = .idle }
+            }
         }
-        .onChange(of: viewModel.streamingText) { _, _ in
-            speakNewSentences()
+        .onChange(of: viewModel.streamingText) { _, text in
+            if let text, !text.isEmpty {
+                lastStreamed = text
+                turn = .speaking
+                speakNewSentences(in: text)
+            }
         }
         .onChange(of: viewModel.isGenerating) { _, generating in
-            if !generating { speakRemainder() }
+            if generating {
+                turn = .thinking
+            } else {
+                finishAssistantTurn()
+            }
+        }
+        .onChange(of: viewModel.errorBanner) { _, banner in
+            // Errors are surfaced in the chat screen behind this cover.
+            if banner != nil { dismiss() }
+        }
+        .onChange(of: viewModel.consentRequest?.id) { _, request in
+            // A model download needs the consent sheet in the chat screen.
+            if request != nil { dismiss() }
         }
     }
 
@@ -83,7 +114,6 @@ struct VoiceModeView: View {
 
     private var statusIndicator: some View {
         ZStack {
-            // Pulsing ring driven by mic level / speaking state.
             Circle()
                 .fill(indicatorColor.opacity(0.15))
                 .frame(width: 190, height: 190)
@@ -101,10 +131,14 @@ struct VoiceModeView: View {
         }
         .contentShape(Circle())
         .onTapGesture {
-            // Barge-in: interrupt the answer and talk.
-            if voice.isSpeaking {
+            // Barge-in: interrupt the answer (including any generation still
+            // streaming, which would otherwise speak over the user) and talk.
+            if turn == .speaking || turn == .thinking || voice.isSpeaking {
+                viewModel.stopGeneration()
                 voice.stopSpeaking()
-                restartListening()
+                beginListening()
+            } else if turn == .idle {
+                beginListening()
             }
         }
         .accessibilityElement()
@@ -113,44 +147,47 @@ struct VoiceModeView: View {
     }
 
     private var indicatorColor: Color {
-        if voice.isSpeaking { return .green }
-        if viewModel.isGenerating { return .purple }
-        if voice.listeningState == .listening { return .blue }
-        return .gray
+        switch turn {
+        case .speaking: return .green
+        case .thinking: return .purple
+        case .listening: return .blue
+        default: return .gray
+        }
     }
 
     private var indicatorSymbol: String {
-        if voice.isSpeaking { return "speaker.wave.2.fill" }
-        if viewModel.isGenerating { return "brain" }
-        if voice.listeningState == .listening { return "mic.fill" }
-        return "mic.slash.fill"
+        switch turn {
+        case .speaking: return "speaker.wave.2.fill"
+        case .thinking: return "brain"
+        case .listening: return "mic.fill"
+        default: return "mic.slash.fill"
+        }
     }
 
     @ViewBuilder
     private var statusText: some View {
-        if permissionDenied {
-            Text("AiGoodbye needs microphone and speech access for voice conversations. You can enable both in the Settings app.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        } else if case .unavailable(let reason) = voice.listeningState {
-            Text(reason)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        } else if voice.isSpeaking {
-            Text("Speaking · tap the circle to interrupt")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        } else if viewModel.isGenerating {
-            Text("Thinking...")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        } else if voice.listeningState == .listening {
-            Text("Listening · pause to send")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+        Group {
+            if permissionDenied {
+                Text("AiGoodbye needs microphone and speech access for voice conversations. You can enable both in the Settings app.")
+            } else if case .blocked(let reason) = turn {
+                Text(reason)
+            } else {
+                switch turn {
+                case .speaking:
+                    Text("Speaking · tap the circle to interrupt")
+                case .thinking:
+                    Text("Thinking...")
+                case .listening:
+                    Text("Listening · pause to send")
+                default:
+                    Text("Tap to talk")
+                }
+            }
         }
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal)
     }
 
     private var transcriptArea: some View {
@@ -163,8 +200,8 @@ struct VoiceModeView: View {
                         .multilineTextAlignment(.trailing)
                         .foregroundStyle(.blue)
                 }
-                if let streaming = viewModel.streamingText, !streaming.isEmpty {
-                    Text(streaming)
+                if !lastStreamed.isEmpty {
+                    Text(lastStreamed)
                         .font(.body)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .foregroundStyle(.primary)
@@ -174,20 +211,19 @@ struct VoiceModeView: View {
         }
         .frame(maxHeight: 220)
         .defaultScrollAnchor(.bottom)
-
     }
 
     private var controls: some View {
-        HStack(spacing: 40) {
-            Button {
-                restartListening()
-            } label: {
-                Label("Tap to talk", systemImage: "mic.badge.plus")
-                    .font(.subheadline.weight(.medium))
-                    .frame(minHeight: 44)
-            }
-            .disabled(voice.listeningState == .listening)
+        Button {
+            viewModel.stopGeneration()
+            voice.stopSpeaking()
+            beginListening()
+        } label: {
+            Label("Tap to talk", systemImage: "mic.badge.plus")
+                .font(.subheadline.weight(.medium))
+                .frame(minHeight: 44)
         }
+        .disabled(turn == .listening || permissionDenied)
         .padding(.bottom, 8)
     }
 
@@ -198,54 +234,79 @@ struct VoiceModeView: View {
             Task { @MainActor in
                 guard isActive else { return }
                 spokenOffset = 0
+                lastStreamed = ""
+                turn = .thinking
                 await viewModel.sendVoicePrompt(text)
             }
         }
         voice.onFinishedSpeaking = {
             Task { @MainActor in
-                guard isActive, !viewModel.isGenerating else { return }
-                restartListening()
+                guard isActive, !viewModel.isGenerating, turn == .speaking else { return }
+                beginListening()
+            }
+        }
+        voice.onListeningEnded = {
+            Task { @MainActor in
+                guard isActive, turn == .listening else { return }
+                turn = .idle
             }
         }
         Task {
             let granted = await VoiceService.requestPermissions()
             if granted {
-                restartListening()
+                beginListening()
             } else {
                 permissionDenied = true
+                turn = .idle
             }
         }
     }
 
-    private func restartListening() {
-        guard isActive else { return }
+    private func teardown() {
+        isActive = false
+        voice.shutdown()   // also clears the callbacks (no retain cycle)
+    }
+
+    private func beginListening() {
+        guard isActive, !permissionDenied else { return }
         voice.startListening(language: appState.settings.appLanguage)
+        if case .unavailable(let reason) = voice.listeningState {
+            turn = .blocked(reason)
+        } else {
+            turn = .listening
+        }
     }
 
     /// Speak completed sentences as they stream in.
-    private func speakNewSentences() {
-        guard let text = viewModel.streamingText else { return }
-        let start = text.index(text.startIndex, offsetBy: min(spokenOffset, text.count))
+    private func speakNewSentences(in text: String) {
+        let safeOffset = min(spokenOffset, text.count)
+        let start = text.index(text.startIndex, offsetBy: safeOffset)
         guard let range = SpeechChunker.speakableSlice(of: text, from: start) else { return }
         let slice = String(text[range])
-        spokenOffset += slice.count
+        spokenOffset = safeOffset + slice.count
         voice.speak(slice)
     }
 
-    /// Speak whatever remains once generation finishes.
-    private func speakRemainder() {
+    /// Speak whatever remains once generation finishes, then hand the turn
+    /// back to the user.
+    private func finishAssistantTurn() {
         guard isActive else { return }
-        // The final text lives in the last assistant message once streaming ends.
-        let finalText = viewModel.streamingText
-            ?? viewModel.messages.last(where: { $0.role == .assistant })?.content
-        guard let finalText else { restartListening(); return }
-        let start = finalText.index(finalText.startIndex, offsetBy: min(spokenOffset, finalText.count))
-        let remainder = String(finalText[start...]).trimmingCharacters(in: .whitespacesAndNewlines)
-        spokenOffset = finalText.count
+        // Only ever speak THIS turn's text (never an older message).
+        let text = lastStreamed
+        guard !text.isEmpty else {
+            // Nothing was generated (cancelled, blocked, or empty).
+            if !voice.isSpeaking { turn = .idle }
+            return
+        }
+        let safeOffset = min(spokenOffset, text.count)
+        let start = text.index(text.startIndex, offsetBy: safeOffset)
+        let remainder = String(text[start...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        spokenOffset = text.count
         if !remainder.isEmpty {
+            turn = .speaking
             voice.speak(remainder)
         } else if !voice.isSpeaking {
-            restartListening()
+            beginListening()
         }
     }
 }

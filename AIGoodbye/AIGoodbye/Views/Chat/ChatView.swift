@@ -736,6 +736,8 @@ class ChatViewModel: ObservableObject {
         let attachmentType: AttachmentType?
         let persistUserMessage: Bool
         var documentId: UUID? = nil
+        /// Extra material for THIS generation only (never persisted).
+        var transientContext: String? = nil
     }
 
     @Published var messages: [Message] = []
@@ -769,6 +771,11 @@ class ChatViewModel: ObservableObject {
         pendingImageId = nil
         pendingDocumentName = nil
         pendingDocumentContent = nil
+        // Never carry a pending document into a different conversation.
+        if let staleDoc = pendingDocumentId {
+            Task { await DocumentIndex.shared.removeDocument(staleDoc) }
+            pendingDocumentId = nil
+        }
         errorBanner = nil
         consentRequest = nil
         lastRequest = nil
@@ -852,6 +859,9 @@ class ChatViewModel: ObservableObject {
     func processDocuments(_ urls: [URL]) async {
         guard let url = urls.first else { return }
 
+        // Replacing an unsent attachment: don't strand the old text on disk.
+        clearPendingDocument()
+
         do {
             guard url.startAccessingSecurityScopedResource() else {
                 throw DocumentError.accessDenied
@@ -888,7 +898,9 @@ class ChatViewModel: ObservableObject {
             // of the document, not just the first page.
             pendingDocumentName = url.lastPathComponent
             pendingDocumentContent = String(trimmed.prefix(4000))
-            pendingDocumentId = DocumentIndex.shared.store(name: url.lastPathComponent, fullText: trimmed)
+            pendingDocumentId = await DocumentIndex.shared.store(
+                name: url.lastPathComponent, fullText: trimmed
+            )
         } catch {
             presentImportError(L10n.text("Couldn't read \(url.lastPathComponent): \(error.localizedDescription)"))
         }
@@ -897,7 +909,7 @@ class ChatViewModel: ObservableObject {
     func clearPendingDocument() {
         if let id = pendingDocumentId {
             // Never sent: remove the stored text again.
-            DocumentIndex.shared.removeDocument(id)
+            Task { await DocumentIndex.shared.removeDocument(id) }
         }
         pendingDocumentName = nil
         pendingDocumentContent = nil
@@ -968,19 +980,21 @@ class ChatViewModel: ObservableObject {
         let prompt: String
         let displayMessage: String
         var hiddenContext: String?
+        var summarySeed: String?
 
         if let docName = documentName {
             let question = text.isEmpty ? L10n.text("Please analyze this document and provide a summary.") : text
-            // Targeted questions retrieve the relevant passages from the
-            // whole document; summaries use the opening preview.
-            let retrieved = text.isEmpty
-                ? nil
-                : documentId.flatMap { DocumentIndex.shared.context(for: question, documentIds: [$0]) }
-            let material = retrieved
-                ?? "Opening of the document:\n\n\(documentContent ?? "")"
-            prompt = "The user attached a document (\(docName)).\n\n\(material)\n\n\(question)"
+            prompt = question
             displayMessage = "[\(docName)] \(text.isEmpty ? L10n.text("Analyze this document") : text)"
-            hiddenContext = prompt
+            // Only the question is persisted; the relevant passages are
+            // retrieved fresh for each turn in `perform` so history never
+            // fills up with duplicated document text.
+            hiddenContext = question
+            // Summaries have no keywords to match, so seed the opening of
+            // the document as a fallback for this first turn.
+            if text.isEmpty, let preview = documentContent {
+                summarySeed = "Opening of the document \(docName):\n\n\(preview)"
+            }
         } else if text.isEmpty && image != nil {
             prompt = L10n.text("What's in this image?")
             displayMessage = prompt
@@ -997,7 +1011,9 @@ class ChatViewModel: ObservableObject {
             imageId: imageId,
             attachmentType: image != nil ? .image : (documentName != nil ? .document : nil),
             persistUserMessage: true,
-            documentId: documentId
+            // Only attach a document id when a document was actually sent.
+            documentId: documentName != nil ? documentId : nil,
+            transientContext: summarySeed
         )
 
         await perform(request)
@@ -1023,9 +1039,8 @@ class ChatViewModel: ObservableObject {
 
     // MARK: - Core request execution
 
-    private func perform(_ requestIn: PendingRequest) async {
+    private func perform(_ request: PendingRequest) async {
         guard let appState else { return }
-        var request = requestIn
 
         // Ensure a conversation exists.
         var conversation = appState.currentConversation
@@ -1043,22 +1058,28 @@ class ChatViewModel: ObservableObject {
             appState.conversationManager.updateConversation(conv)
         }
 
-        // Follow-up questions in a conversation with attached documents get
-        // the relevant passages injected automatically (the document brain).
-        if request.hiddenContext == nil, request.image == nil,
-           let conv = conversation, !conv.attachedDocumentIds.isEmpty,
-           let retrieved = DocumentIndex.shared.context(for: request.prompt, documentIds: conv.attachedDocumentIds) {
-            let wrapped = "\(retrieved)\n\nUsing the passages above when they're relevant, answer:\n\(request.prompt)"
-            request = PendingRequest(
-                prompt: wrapped,
-                displayMessage: request.displayMessage,
-                hiddenContext: wrapped,
-                image: nil,
-                imageId: nil,
-                attachmentType: request.attachmentType,
-                persistUserMessage: request.persistUserMessage,
-                documentId: request.documentId
-            )
+        // The document brain: pull the passages relevant to THIS question
+        // out of the attached documents. Retrieval runs off the main actor
+        // and is used for this generation only - it is never written into
+        // history, which would crowd out the conversation itself.
+        var generationPrompt = request.prompt
+        if request.image == nil, let conv = conversation, !conv.attachedDocumentIds.isEmpty {
+            // contextWindow is measured in tokens; the retrieval budget is in
+            // characters (~3.5 per token). Spend at most ~40% of the window
+            // on passages so the conversation itself still fits.
+            let windowChars = Double(appState.settings.contextWindow) * 3.5
+            let budget = max(2000, min(Int(windowChars * 0.4), 12000))
+            let docIds = conv.attachedDocumentIds
+            let question = request.prompt
+            if let retrieved = await DocumentIndex.shared.context(
+                for: question, documentIds: docIds, budget: budget
+            ) {
+                generationPrompt = "\(retrieved)\n\nUsing the passages above when they're relevant, answer:\n\(question)"
+            } else if let seed = request.transientContext {
+                generationPrompt = "\(seed)\n\n\(question)"
+            }
+        } else if let seed = request.transientContext {
+            generationPrompt = "\(seed)\n\n\(request.prompt)"
         }
 
         // Persist and show the user message FIRST, so it is never lost when
@@ -1130,7 +1151,7 @@ class ChatViewModel: ObservableObject {
 
                 let stream = appState.engine.respondStream(
                     model: routedModel,
-                    prompt: request.prompt,
+                    prompt: generationPrompt,
                     image: request.image
                 )
 
@@ -1303,14 +1324,22 @@ class ChatViewModel: ObservableObject {
     func clearConversation() {
         stopGeneration()
 
-        // Actually delete the saved messages so the chat stays cleared.
+        // Actually delete the saved messages so the chat stays cleared -
+        // including the extracted text of any attached documents, which the
+        // user reasonably expects to be gone too.
         if let conversation = appState?.currentConversation {
             for message in conversation.messages {
                 appState?.conversationManager.deleteMessage(message)
             }
+            let docIds = conversation.attachedDocumentIds
+            Task {
+                for id in docIds { await DocumentIndex.shared.removeDocument(id) }
+            }
+            conversation.attachedDocumentIds.removeAll()
             conversation.attachedImageIds.removeAll()
             appState?.conversationManager.updateConversation(conversation)
         }
+        clearPendingDocument()
 
         messages.removeAll()
         pendingImage = nil

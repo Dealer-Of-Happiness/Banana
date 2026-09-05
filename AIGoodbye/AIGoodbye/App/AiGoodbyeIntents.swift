@@ -51,7 +51,9 @@ struct SummarizeWithAiGoodbyeIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
-        let prompt = "Summarize the following text concisely, keeping the key points:\n\n\(text.prefix(6000))"
+        // Keep well inside the on-device context window; Apple Intelligence
+        // throws on oversized prompts.
+        let prompt = "Summarize the following text concisely, keeping the key points:\n\n\(text.prefix(3500))"
         let answer = try await IntentAnswering.answer(prompt: prompt)
         return .result(value: answer, dialog: IntentDialog(stringLiteral: String(answer.prefix(900))))
     }
@@ -61,11 +63,14 @@ struct SummarizeWithAiGoodbyeIntent: AppIntent {
 
 enum IntentAnsweringError: Error, CustomLocalizedStringResourceConvertible {
     case noEngine
+    case timedOut
 
     var localizedStringResource: LocalizedStringResource {
         switch self {
         case .noEngine:
             return "Open AiGoodbye once to set up an AI model, then try again."
+        case .timedOut:
+            return "That took too long to answer. Try a shorter question, or ask in the app."
         }
     }
 }
@@ -74,39 +79,55 @@ enum IntentAnsweringError: Error, CustomLocalizedStringResourceConvertible {
 enum IntentAnswering {
 
     /// One-shot answer using the app's engines. Prefers the instantly
-    /// available backend so Siri feels fast.
+    /// available backend so Siri feels fast. Works without a running scene
+    /// because the engine lives in EngineHost, not in the view tree.
     static func answer(prompt: String) async throws -> String {
-        guard let appState = AppState.shared else {
-            throw IntentAnsweringError.noEngine
-        }
-        let engine = appState.engine
+        let engine = EngineHost.shared.engine
 
-        // Choose a backend: Apple Intelligence when available (instant),
-        // otherwise an already-downloaded model that fits this device.
+        // Choose a backend. Apple Intelligence is instant and memory-light,
+        // so it's strongly preferred here: loading a multi-gigabyte MLX
+        // model inside a background Siri process would be jetsam-killed.
         let model: AIModel
         if engine.appleIntelligence.isAvailable {
             model = .appleIntelligence
-        } else if engine.selectedModel.backend == .mlx && engine.selectedModel.isDownloaded {
-            model = engine.selectedModel
-        } else if let downloaded = AIModel.allModels.first(where: { $0.isDownloaded && $0.fitsThisDevice() }) {
-            model = downloaded
+        } else if let loadedId = engine.mlx.loadedModelId,
+                  let loaded = AIModel.model(withId: loadedId) {
+            model = loaded   // already resident: cheap to reuse
+        } else if AppState.shared != nil,
+                  engine.selectedModel.backend == .mlx,
+                  engine.selectedModel.isDownloaded,
+                  engine.selectedModel.fitsThisDevice() {
+            model = engine.selectedModel   // app is running: safe to load
         } else {
             throw IntentAnsweringError.noEngine
         }
 
+        // Always hand the chat UI a clean slate afterwards: leaving this
+        // one-shot session behind would erase the user's conversation
+        // memory on their next message.
+        defer { engine.resetSessions() }
+
         try await engine.startConversation(model: model, history: [])
 
-        var final = ""
-        let stream = engine.respondStream(model: model, prompt: prompt, image: nil)
-        for try await snapshot in stream {
-            final = snapshot
+        // Siri has a limited response budget; don't hang forever.
+        return try await withThrowingTaskGroup(of: String.self) { group in
+            group.addTask { @MainActor in
+                var final = ""
+                let stream = engine.respondStream(model: model, prompt: prompt, image: nil)
+                for try await snapshot in stream {
+                    final = snapshot
+                }
+                return final
+            }
+            group.addTask {
+                try await Task.sleep(nanoseconds: 25_000_000_000)
+                throw IntentAnsweringError.timedOut
+            }
+            let first = try await group.next() ?? ""
+            group.cancelAll()
+            let cleaned = first.trimmingCharacters(in: .whitespacesAndNewlines)
+            return cleaned.isEmpty ? L10n.text("No answer was generated. Please try again.") : cleaned
         }
-
-        // Don't leave the one-shot session behind for the chat UI.
-        engine.resetSessions()
-
-        let cleaned = final.trimmingCharacters(in: .whitespacesAndNewlines)
-        return cleaned.isEmpty ? L10n.text("No answer was generated. Please try again.") : cleaned
     }
 }
 

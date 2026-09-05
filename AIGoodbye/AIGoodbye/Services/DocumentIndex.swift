@@ -5,56 +5,82 @@
 //  The document brain: fully offline retrieval over attached documents.
 //
 //  Whole documents are extracted once, stored on disk, split into
-//  overlapping chunks, and scored per question with a hybrid ranker:
-//  keyword overlap (works in every language, zero assets) boosted by
-//  Apple's on-device sentence embeddings when the language supports them.
-//  The top chunks become the model's hidden context for that question,
-//  so the AI can answer about a 300-page PDF without ever sending a byte
-//  anywhere.
+//  overlapping chunks, and scored per question with a two-stage ranker:
+//  a fast keyword pass over every chunk (works in every language, zero
+//  assets), then Apple's on-device sentence embeddings over only the top
+//  candidates. The best chunks become the model's context for that
+//  question, so the AI can answer about a 300-page PDF without ever
+//  sending a byte anywhere.
+//
+//  All indexing and ranking runs off the main actor: a large document
+//  would otherwise freeze the UI at the exact moment the user hits send.
 //
 
 import Foundation
 import NaturalLanguage
 
-struct DocumentChunk {
+/// A passage of a document, with its keyword tokens precomputed once.
+struct DocumentChunk: Sendable {
     let documentName: String
     let text: String
     let position: Int
+    let tokens: Set<String>
 }
 
-@MainActor
-final class DocumentIndex {
+/// Off-main-actor store and ranker. Chunking, embedding and file I/O all
+/// happen inside this actor.
+actor DocumentIndex {
 
     static let shared = DocumentIndex()
     private init() {}
 
-    /// In-memory chunk cache per document id.
+    /// Chunk cache, bounded so a session with many documents can't grow
+    /// without limit next to a multi-gigabyte model.
     private var chunkCache: [UUID: [DocumentChunk]] = [:]
+    private var cacheOrder: [UUID] = []
     private var nameCache: [UUID: String] = [:]
+    private static let maxCachedDocuments = 3
+
+    /// Reused embedding models (loading one is expensive).
+    private var embeddings: [NLLanguage: NLEmbedding] = [:]
 
     // MARK: - Storage
 
-    static var documentsDirectory: URL {
-        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let dir = documents.appendingPathComponent("docs", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    /// Documents live in Application Support (not backed up: this is a
+    /// local cache of the user's own files, and the app promises the text
+    /// stays on the device).
+    static func documentsDirectory() -> URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        var dir = base.appendingPathComponent("AiGoodbyeDocs", isDirectory: true)
+        if !FileManager.default.fileExists(atPath: dir.path) {
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try? dir.setResourceValues(values)
+        }
         return dir
     }
 
     private static func textURL(for id: UUID) -> URL {
-        documentsDirectory.appendingPathComponent("\(id.uuidString).txt")
+        documentsDirectory().appendingPathComponent("\(id.uuidString).txt")
     }
 
     private static func nameURL(for id: UUID) -> URL {
-        documentsDirectory.appendingPathComponent("\(id.uuidString).name")
+        documentsDirectory().appendingPathComponent("\(id.uuidString).name")
     }
 
     /// Store a document's full extracted text. Returns its id.
     func store(name: String, fullText: String) -> UUID {
         let id = UUID()
-        try? fullText.write(to: Self.textURL(for: id), atomically: true, encoding: .utf8)
+        let textURL = Self.textURL(for: id)
+        try? fullText.write(to: textURL, atomically: true, encoding: .utf8)
+        // Encrypt at rest while the device is locked.
+        try? FileManager.default.setAttributes(
+            [.protectionKey: FileProtectionType.complete],
+            ofItemAtPath: textURL.path
+        )
         try? name.write(to: Self.nameURL(for: id), atomically: true, encoding: .utf8)
-        chunkCache[id] = Self.chunk(fullText, documentName: name)
+        cache(Self.chunk(fullText, documentName: name), for: id)
         nameCache[id] = name
         return id
     }
@@ -66,36 +92,59 @@ final class DocumentIndex {
         return name
     }
 
-    func hasDocument(_ id: UUID) -> Bool {
-        chunkCache[id] != nil || FileManager.default.fileExists(atPath: Self.textURL(for: id).path)
-    }
-
     func removeDocument(_ id: UUID) {
         chunkCache[id] = nil
+        cacheOrder.removeAll { $0 == id }
         nameCache[id] = nil
         try? FileManager.default.removeItem(at: Self.textURL(for: id))
         try? FileManager.default.removeItem(at: Self.nameURL(for: id))
     }
 
+    /// Delete stored text for documents no longer referenced by any chat.
+    func removeDocuments(notIn keepIds: Set<UUID>) {
+        let dir = Self.documentsDirectory()
+        guard let files = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return }
+        for file in files {
+            let base = (file as NSString).deletingPathExtension
+            guard let id = UUID(uuidString: base), !keepIds.contains(id) else { continue }
+            removeDocument(id)
+        }
+    }
+
+    private func cache(_ chunks: [DocumentChunk], for id: UUID) {
+        chunkCache[id] = chunks
+        cacheOrder.removeAll { $0 == id }
+        cacheOrder.append(id)
+        while cacheOrder.count > Self.maxCachedDocuments {
+            let evicted = cacheOrder.removeFirst()
+            chunkCache[evicted] = nil
+        }
+    }
+
     private func chunks(for id: UUID) -> [DocumentChunk] {
-        if let cached = chunkCache[id] { return cached }
+        if let cached = chunkCache[id] {
+            // Refresh recency.
+            cacheOrder.removeAll { $0 == id }
+            cacheOrder.append(id)
+            return cached
+        }
         guard let text = try? String(contentsOf: Self.textURL(for: id), encoding: .utf8) else { return [] }
         let name = documentName(for: id) ?? "document"
         let chunks = Self.chunk(text, documentName: name)
-        chunkCache[id] = chunks
+        cache(chunks, for: id)
         return chunks
     }
 
     // MARK: - Retrieval
 
     /// The most relevant document passages for a question, formatted as
-    /// hidden context for the model. Returns nil when nothing is attached
-    /// or nothing matches.
+    /// context for the model. Returns nil when nothing is attached or
+    /// nothing matches. Runs entirely off the main actor.
     func context(for question: String, documentIds: [UUID], budget: Int = 6000) -> String? {
         let allChunks = documentIds.flatMap { chunks(for: $0) }
         guard !allChunks.isEmpty else { return nil }
 
-        let ranked = Self.rank(chunks: allChunks, question: question)
+        let ranked = rank(chunks: allChunks, question: question)
         guard !ranked.isEmpty else { return nil }
 
         var used = 0
@@ -118,7 +167,8 @@ final class DocumentIndex {
     // MARK: - Chunking
 
     /// Overlapping chunks of roughly `size` characters, split on sentence
-    /// boundaries where possible.
+    /// boundaries where possible. Tokens are computed once, here, so
+    /// ranking never re-tokenizes the document.
     nonisolated static func chunk(
         _ text: String,
         documentName: String,
@@ -128,7 +178,10 @@ final class DocumentIndex {
         let cleaned = text.replacingOccurrences(of: "\r", with: "")
         guard cleaned.count > size else {
             let trimmed = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? [] : [DocumentChunk(documentName: documentName, text: trimmed, position: 0)]
+            return trimmed.isEmpty
+                ? []
+                : [DocumentChunk(documentName: documentName, text: trimmed,
+                                 position: 0, tokens: tokens(of: trimmed))]
         }
 
         var chunks: [DocumentChunk] = []
@@ -148,7 +201,8 @@ final class DocumentIndex {
 
             let piece = cleaned[start..<end].trimmingCharacters(in: .whitespacesAndNewlines)
             if !piece.isEmpty {
-                chunks.append(DocumentChunk(documentName: documentName, text: piece, position: position))
+                chunks.append(DocumentChunk(documentName: documentName, text: piece,
+                                            position: position, tokens: tokens(of: piece)))
                 position += 1
             }
 
@@ -167,42 +221,55 @@ final class DocumentIndex {
 
     // MARK: - Ranking
 
-    /// Hybrid ranking: keyword overlap in every language, plus Apple's
-    /// on-device sentence embeddings when available for the language.
-    nonisolated static func rank(chunks: [DocumentChunk], question: String, topK: Int = 6) -> [DocumentChunk] {
-        let questionTokens = tokens(of: question)
+    /// Two-stage ranking: a cheap keyword pass over every chunk, then
+    /// on-device sentence embeddings over only the best candidates (running
+    /// an embedding model over hundreds of chunks would take seconds).
+    func rank(chunks: [DocumentChunk], question: String, topK: Int = 6) -> [DocumentChunk] {
+        let questionTokens = Self.tokens(of: question)
         guard !questionTokens.isEmpty else { return Array(chunks.prefix(topK)) }
+        let questionWeight = Double(questionTokens.reduce(0) { $0 + $1.count })
 
-        // Optional semantic scores.
-        let embedding = sentenceEmbedding(for: question)
-        let questionVector = embedding?.vector(for: question)
+        // Stage 1: keyword overlap, weighted by token length.
+        var keywordScored: [(chunk: DocumentChunk, score: Double)] = []
+        for chunk in chunks where !chunk.tokens.isEmpty {
+            let overlap = questionTokens.intersection(chunk.tokens)
+            guard !overlap.isEmpty else { continue }
+            let score = overlap.reduce(0.0) { $0 + Double($1.count) } / max(questionWeight, 1)
+            keywordScored.append((chunk, score))
+        }
+        // Nothing matched by keyword: fall back to the opening of the
+        // document so summaries and vague questions still have material.
+        guard !keywordScored.isEmpty else { return Array(chunks.prefix(topK)) }
 
-        var scored: [(chunk: DocumentChunk, score: Double)] = []
-        for chunk in chunks {
-            let chunkTokens = tokens(of: chunk.text)
-            guard !chunkTokens.isEmpty else { continue }
-            let overlap = questionTokens.intersection(chunkTokens)
-            // Keyword score: overlap weighted by rarity-ish (longer tokens count more).
-            var score = overlap.reduce(0.0) { $0 + Double($1.count) }
-                / Double(questionTokens.reduce(0) { $0 + $1.count })
+        keywordScored.sort { $0.score > $1.score }
+        let candidates = Array(keywordScored.prefix(30))
 
-            if let embedding, let questionVector,
-               let chunkVector = embedding.vector(for: String(chunk.text.prefix(512))) {
-                score += 0.8 * cosine(questionVector, chunkVector)
-            }
-            scored.append((chunk, score))
+        // Stage 2: semantic re-rank of the shortlist only.
+        guard let embedding = embedding(for: question),
+              let questionVector = embedding.vector(for: question) else {
+            return candidates.prefix(topK).map(\.chunk)
         }
 
-        return scored
-            .filter { $0.score > 0.02 }
+        let reranked = candidates.map { candidate -> (chunk: DocumentChunk, score: Double) in
+            guard let vector = embedding.vector(for: String(candidate.chunk.text.prefix(512))) else {
+                return candidate
+            }
+            return (candidate.chunk, candidate.score + 0.8 * Self.cosine(questionVector, vector))
+        }
+
+        return reranked
             .sorted { $0.score > $1.score }
             .prefix(topK)
             .map(\.chunk)
     }
 
-    nonisolated private static func sentenceEmbedding(for text: String) -> NLEmbedding? {
+    /// Cached sentence-embedding model for the question's language.
+    private func embedding(for text: String) -> NLEmbedding? {
         let language = NLLanguageRecognizer.dominantLanguage(for: text) ?? .english
-        return NLEmbedding.sentenceEmbedding(for: language)
+        if let cached = embeddings[language] { return cached }
+        guard let model = NLEmbedding.sentenceEmbedding(for: language) else { return nil }
+        embeddings[language] = model
+        return model
     }
 
     nonisolated private static func cosine(_ a: [Double], _ b: [Double]) -> Double {
@@ -217,8 +284,8 @@ final class DocumentIndex {
         return denom > 0 ? dot / denom : 0
     }
 
-    /// Lowercased word tokens, script-aware: CJK text is split into
-    /// bigrams so overlap works without spaces.
+    /// Lowercased word tokens, script-aware: CJK characters are kept
+    /// individually so overlap works without spaces.
     nonisolated static func tokens(of text: String) -> Set<String> {
         var result = Set<String>()
         let tokenizer = NLTokenizer(unit: .word)

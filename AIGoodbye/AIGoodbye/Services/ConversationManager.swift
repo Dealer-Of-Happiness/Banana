@@ -143,9 +143,17 @@ class ConversationManager: ObservableObject {
         for imageId in conversation.attachedImageIds {
             try? FileManager.default.removeItem(at: Self.imagePath(for: imageId))
         }
-        for docId in conversation.attachedDocumentIds {
-            DocumentIndex.shared.removeDocument(docId)
+        let docIds = conversation.attachedDocumentIds
+        Task {
+            for id in docIds { await DocumentIndex.shared.removeDocument(id) }
         }
+    }
+
+    /// Delete stored document text that no conversation references anymore
+    /// (e.g. left behind by an interrupted import). Called at launch.
+    func sweepOrphanedDocuments() {
+        let keep = Set(conversations.flatMap { $0.attachedDocumentIds })
+        Task { await DocumentIndex.shared.removeDocuments(notIn: keep) }
     }
 
     // MARK: - Message CRUD

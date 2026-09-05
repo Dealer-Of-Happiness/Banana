@@ -143,18 +143,42 @@ struct DocumentIndexTests {
         #expect(chunks[0].text == "Hello world.")
     }
 
-    @Test func rankingFindsTheRelevantChunk() {
+    private func makeChunk(_ text: String, _ position: Int) -> DocumentChunk {
+        DocumentChunk(documentName: "doc", text: text, position: position,
+                      tokens: DocumentIndex.tokens(of: text))
+    }
+
+    @Test func rankingFindsTheRelevantChunk() async {
         var chunks: [DocumentChunk] = (0..<20).map {
-            DocumentChunk(documentName: "doc", text: "Filler paragraph about weather, sports and cooking recipes number \($0).", position: $0)
+            makeChunk("Filler paragraph about weather, sports and cooking recipes number \($0).", $0)
         }
-        chunks.append(DocumentChunk(
-            documentName: "doc",
-            text: "The warranty period for the espresso machine is 24 months from purchase.",
-            position: 20
+        chunks.append(makeChunk(
+            "The warranty period for the espresso machine is 24 months from purchase.", 20
         ))
 
-        let ranked = DocumentIndex.rank(chunks: chunks, question: "How long is the espresso machine warranty?")
+        let ranked = await DocumentIndex.shared.rank(
+            chunks: chunks, question: "How long is the espresso machine warranty?"
+        )
         #expect(ranked.first?.position == 20, "The warranty chunk should rank first")
+    }
+
+    /// The whole document must be searchable, not just the opening: a fact
+    /// buried at the very end has to come back for a targeted question.
+    @Test func retrievesFactFromTheEndOfALongDocument() async {
+        let filler = String(repeating: "This paragraph discusses general background information. ", count: 400)
+        let text = filler + "\n\nThe activation code for the roof module is QX-4417.\n"
+        let id = await DocumentIndex.shared.store(name: "manual.txt", fullText: text)
+        defer { Task { await DocumentIndex.shared.removeDocument(id) } }
+
+        let context = await DocumentIndex.shared.context(
+            for: "What is the activation code for the roof module?", documentIds: [id]
+        )
+        #expect(context?.contains("QX-4417") == true, "Retrieval must find facts anywhere in the document")
+    }
+
+    @Test func chunkCarriesPrecomputedTokens() {
+        let chunks = DocumentIndex.chunk("Espresso machine warranty details.", documentName: "d.txt")
+        #expect(chunks.first?.tokens.contains("warranty") == true)
     }
 
     @Test func cjkTokensWork() {
@@ -175,6 +199,54 @@ struct SpeechChunkerTests {
     @Test func waitsWhenNoBoundary() {
         let text = "no boundary yet"
         #expect(SpeechChunker.speakableSlice(of: text, from: text.startIndex) == nil)
+    }
+}
+
+struct SpeechCleanupTests {
+
+    /// The model is told to use Markdown, so the synthesizer must not read
+    /// "pound pound", "asterisk", or entire code blocks aloud.
+    @Test func stripsMarkdownBeforeSpeaking() {
+        let markdown = """
+        ## Heading here
+
+        Some **bold** and `inline code` text.
+
+        - First item
+        - Second item
+
+        ```swift
+        let secret = 42
+        print(secret)
+        ```
+        """
+        let spoken = VoiceService.plainSpeech(from: markdown)
+        #expect(!spoken.contains("#"))
+        #expect(!spoken.contains("**"))
+        #expect(!spoken.contains("`"))
+        #expect(!spoken.contains("let secret"), "Code block contents must not be read aloud")
+        #expect(spoken.contains("Heading here"))
+        #expect(spoken.contains("First item"))
+    }
+
+    @Test func emptyAndPlainTextSurvive() {
+        #expect(VoiceService.plainSpeech(from: "").isEmpty)
+        #expect(VoiceService.plainSpeech(from: "Hello there.").contains("Hello there"))
+    }
+}
+
+struct SpeechVoiceSelectionTests {
+
+    /// Voice codes must be BCP-47 and map to codes iOS actually ships
+    /// (zh-Hans has no voice; zh-CN does), otherwise answers are read by an
+    /// English voice in every language.
+    @Test @MainActor func mapsAppLanguagesToRealVoiceCodes() {
+        #expect(!VoiceService.speechCode(for: .mandarin).contains("Hans"))
+        for language in [AppLanguage.russian, .japanese, .korean, .french, .german, .mandarin] {
+            let code = VoiceService.speechCode(for: language)
+            #expect(!code.contains("_"), "\(code) must be BCP-47")
+            #expect(!code.isEmpty)
+        }
     }
 }
 

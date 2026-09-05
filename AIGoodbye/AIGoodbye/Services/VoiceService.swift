@@ -16,6 +16,14 @@ import AVFoundation
 import Speech
 import Combine
 
+/// Thread-safe level meter written from the audio render thread.
+final class MicLevelBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: Double = 0
+    func set(_ newValue: Double) { lock.lock(); value = newValue; lock.unlock() }
+    func get() -> Double { lock.lock(); defer { lock.unlock() }; return value }
+}
+
 @MainActor
 final class VoiceService: NSObject, ObservableObject {
 
@@ -35,17 +43,27 @@ final class VoiceService: NSObject, ObservableObject {
     var onFinalTranscript: ((String) -> Void)?
     /// Called when the synthesizer finishes everything queued.
     var onFinishedSpeaking: (() -> Void)?
+    /// Called when listening ended without a transcript (recognizer gave up,
+    /// interruption, etc.) so the UI can recover instead of hanging.
+    var onListeningEnded: (() -> Void)?
 
     private let audioEngine = AVAudioEngine()
     private var recognizer: SFSpeechRecognizer?
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private var silenceTimer: Timer?
+    private var levelTimer: Timer?
     private var lastTranscriptChange = Date()
+    private var didInstallTap = false
+    private var sessionIsActive = false
+
+    private let levelBox = MicLevelBox()
 
     private let synthesizer = AVSpeechSynthesizer()
     private var voiceLanguageCode = "en-US"
     private var pendingUtterances = 0
+    private var speechWatchdog: Task<Void, Never>?
+    private var observers: [NSObjectProtocol] = []
 
     /// How long a pause ends the user's turn.
     private let silenceEndpoint: TimeInterval = 1.4
@@ -53,6 +71,7 @@ final class VoiceService: NSObject, ObservableObject {
     override init() {
         super.init()
         synthesizer.delegate = self
+        registerForAudioNotifications()
     }
 
     // MARK: - Permissions
@@ -70,10 +89,38 @@ final class VoiceService: NSObject, ObservableObject {
 
     // MARK: - Language
 
-    /// Locale for recognition/speech given the app language setting.
+    /// Locale for recognition given the app language setting.
     static func voiceLocale(for language: AppLanguage) -> Locale {
-        if language == .automatic { return Locale.current }
+        if language == .automatic {
+            return Locale(identifier: Locale.preferredLanguages.first ?? "en-US")
+        }
         return Locale(identifier: language.rawValue)
+    }
+
+    /// BCP-47 code for speech synthesis, mapped to codes iOS actually ships
+    /// voices for (e.g. zh-Hans has no voice; zh-CN does).
+    static func speechCode(for language: AppLanguage) -> String {
+        let raw: String
+        switch language {
+        case .automatic:
+            raw = Locale.preferredLanguages.first ?? "en-US"
+        case .mandarin:
+            raw = "zh-CN"
+        case .cantonese:
+            raw = "zh-HK"
+        default:
+            raw = language.rawValue
+        }
+        let bcp47 = raw.replacingOccurrences(of: "_", with: "-")
+            .components(separatedBy: "@")[0]
+
+        // Prefer an installed voice whose language matches exactly, then by
+        // language prefix, so "ru" finds "ru-RU".
+        let voices = AVSpeechSynthesisVoice.speechVoices().map(\.language)
+        if voices.contains(bcp47) { return bcp47 }
+        let prefix = bcp47.components(separatedBy: "-")[0]
+        if let match = voices.first(where: { $0.hasPrefix(prefix + "-") }) { return match }
+        return AVSpeechSynthesisVoice.currentLanguageCode()
     }
 
     /// Whether fully offline recognition is possible for this locale.
@@ -86,10 +133,10 @@ final class VoiceService: NSObject, ObservableObject {
 
     func startListening(language: AppLanguage) {
         stopSpeaking()
-        stopListening()
+        stopListening(notify: false)
 
         let locale = Self.voiceLocale(for: language)
-        guard let recognizer = SFSpeechRecognizer(locale: locale) ?? SFSpeechRecognizer() else {
+        guard let recognizer = SFSpeechRecognizer(locale: locale) else {
             listeningState = .unavailable(L10n.text("Voice recognition isn't available on this device."))
             return
         }
@@ -102,13 +149,12 @@ final class VoiceService: NSObject, ObservableObject {
             return
         }
         self.recognizer = recognizer
-        voiceLanguageCode = locale.identifier
+        // Speak back in the app's language (recognition locale may differ if
+        // the requested one is unsupported).
+        voiceLanguageCode = Self.speechCode(for: language)
 
         do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playAndRecord, mode: .spokenAudio,
-                                    options: [.defaultToSpeaker, .duckOthers, .allowBluetooth])
-            try session.setActive(true, options: .notifyOthersOnDeactivation)
+            try activateSession(for: .record)
 
             let request = SFSpeechAudioBufferRecognitionRequest()
             request.shouldReportPartialResults = true
@@ -123,23 +169,26 @@ final class VoiceService: NSObject, ObservableObject {
             // tap with it raises an exception - bail out gracefully instead.
             guard format.sampleRate > 0, format.channelCount > 0 else {
                 recognitionRequest = nil
+                deactivateSession()
                 listeningState = .unavailable(L10n.text("The microphone couldn't be started. Check that another app isn't using it."))
                 return
             }
 
-            inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
-                self?.recognitionRequest?.append(buffer)
-                // Cheap RMS level for the UI.
+            // The tap runs on the real-time audio thread: it must NOT touch
+            // main-actor state. Capture the request and a lock-protected
+            // level box directly instead of `self`.
+            let levelBox = self.levelBox
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [request] buffer, _ in
+                request.append(buffer)
                 if let channel = buffer.floatChannelData?[0] {
                     let frames = Int(buffer.frameLength)
                     var sum: Float = 0
                     for i in stride(from: 0, to: frames, by: 16) { sum += channel[i] * channel[i] }
                     let rms = sqrt(sum / Float(max(frames / 16, 1)))
-                    Task { @MainActor in
-                        self?.micLevel = min(Double(rms) * 12, 1)
-                    }
+                    levelBox.set(min(Double(rms) * 12, 1))
                 }
             }
+            didInstallTap = true
 
             audioEngine.prepare()
             try audioEngine.start()
@@ -147,7 +196,7 @@ final class VoiceService: NSObject, ObservableObject {
             liveTranscript = ""
             lastTranscriptChange = Date()
             listeningState = .listening
-            startSilenceTimer()
+            startTimers()
 
             recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
                 Task { @MainActor in
@@ -169,14 +218,14 @@ final class VoiceService: NSObject, ObservableObject {
                 }
             }
         } catch {
+            cleanUpAudio()
             listeningState = .unavailable(L10n.text("The microphone couldn't be started. Check that another app isn't using it."))
-            stopListening()
         }
     }
 
-    private func startSilenceTimer() {
+    private func startTimers() {
         silenceTimer?.invalidate()
-        silenceTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+        let silence = Timer(timeInterval: 0.25, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, self.listeningState == .listening else { return }
                 let quiet = Date().timeIntervalSince(self.lastTranscriptChange)
@@ -185,65 +234,252 @@ final class VoiceService: NSObject, ObservableObject {
                 }
             }
         }
+        // .common so scrolling the transcript doesn't stall the endpoint.
+        RunLoop.main.add(silence, forMode: .common)
+        silenceTimer = silence
+
+        levelTimer?.invalidate()
+        let level = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.micLevel = self.levelBox.get()
+            }
+        }
+        RunLoop.main.add(level, forMode: .common)
+        levelTimer = level
     }
 
     /// Ends the turn and delivers the final transcript.
     private func finishListening() {
         guard listeningState == .listening else { return }
         let text = liveTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
-        stopListening()
+        stopListening(notify: false)
         if !text.isEmpty {
             onFinalTranscript?(text)
+        } else {
+            // Nothing was said: let the UI recover instead of hanging.
+            onListeningEnded?()
         }
     }
 
-    func stopListening() {
-        silenceTimer?.invalidate()
-        silenceTimer = nil
-        recognitionTask?.cancel()
-        recognitionTask = nil
-        recognitionRequest?.endAudio()
-        recognitionRequest = nil
-        if audioEngine.isRunning {
-            audioEngine.stop()
+    func stopListening(notify: Bool = true) {
+        let wasListening = listeningState == .listening
+        cleanUpAudio()
+        if wasListening {
+            listeningState = .idle
+            if notify { onListeningEnded?() }
         }
-        audioEngine.inputNode.removeTap(onBus: 0)
+    }
+
+    /// Tear down recognition + audio graph. Safe to call repeatedly.
+    private func cleanUpAudio() {
+        silenceTimer?.invalidate(); silenceTimer = nil
+        levelTimer?.invalidate(); levelTimer = nil
+        recognitionTask?.cancel(); recognitionTask = nil
+        recognitionRequest?.endAudio(); recognitionRequest = nil
+        if audioEngine.isRunning { audioEngine.stop() }
+        if didInstallTap {
+            audioEngine.inputNode.removeTap(onBus: 0)
+            didInstallTap = false
+        }
         micLevel = 0
-        if listeningState == .listening { listeningState = .idle }
+        levelBox.set(0)
+        if !isSpeaking { deactivateSession() }
+    }
+
+    // MARK: - Audio session
+
+    private func activateSession(for use: SessionUse) throws {
+        let session = AVAudioSession.sharedInstance()
+        switch use {
+        case .record:
+            try session.setCategory(.playAndRecord, mode: .spokenAudio,
+                                    options: [.defaultToSpeaker, .duckOthers, .allowBluetooth])
+        case .playback:
+            try session.setCategory(.playback, mode: .spokenAudio,
+                                    options: [.duckOthers])
+        }
+        try session.setActive(true, options: .notifyOthersOnDeactivation)
+        sessionIsActive = true
+    }
+
+    private func deactivateSession() {
+        guard sessionIsActive else { return }
+        sessionIsActive = false
+        // Deactivating can throw if audio is still winding down; harmless.
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    private enum SessionUse { case record, playback }
+
+    // MARK: - Interruptions and route changes
+
+    private func registerForAudioNotifications() {
+        let center = NotificationCenter.default
+        observers.append(center.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: nil, queue: .main
+        ) { [weak self] note in
+            Task { @MainActor in self?.handleInterruption(note) }
+        })
+        observers.append(center.addObserver(
+            forName: AVAudioSession.routeChangeNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.handleRouteChange() }
+        })
+        observers.append(center.addObserver(
+            forName: AVAudioSession.mediaServicesWereResetNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            // Keep the callbacks: the screen can recover by listening again.
+            Task { @MainActor in self?.pause() }
+        })
+    }
+
+    private func removeAudioObservers() {
+        for observer in observers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        observers.removeAll()
+    }
+
+    private func handleInterruption(_ note: Notification) {
+        guard let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
+        switch type {
+        case .began:
+            // Phone call, Siri, etc. Stop cleanly and let the UI re-arm.
+            stopSpeaking()
+            stopListening()
+        default:
+            break
+        }
+    }
+
+    private func handleRouteChange() {
+        // The tap format is tied to the previous route; restart cleanly and
+        // let the UI decide whether to listen again.
+        if listeningState == .listening {
+            stopListening()
+        }
     }
 
     // MARK: - Speaking
 
     /// Queue text to be spoken with the on-device voice for the language.
     func speak(_ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        let spoken = Self.plainSpeech(from: text)
+        guard !spoken.isEmpty else { return }
 
-        let utterance = AVSpeechUtterance(string: trimmed)
+        // Never let the microphone be live while the speaker is: the
+        // recognizer would transcribe our own voice and loop forever.
+        if listeningState == .listening {
+            stopListening(notify: false)
+        }
+
+        if !sessionIsActive {
+            try? activateSession(for: .playback)
+        }
+
+        let utterance = AVSpeechUtterance(string: spoken)
         utterance.voice = AVSpeechSynthesisVoice(language: voiceLanguageCode)
-            ?? AVSpeechSynthesisVoice(language: Locale.current.identifier)
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate
         pendingUtterances += 1
         isSpeaking = true
         synthesizer.speak(utterance)
+        armSpeechWatchdog(for: spoken)
     }
 
     /// Configure the speaking language without listening first (camera mode).
     func setSpeechLanguage(_ language: AppLanguage) {
-        voiceLanguageCode = Self.voiceLocale(for: language).identifier
+        voiceLanguageCode = Self.speechCode(for: language)
     }
 
     func stopSpeaking() {
+        speechWatchdog?.cancel(); speechWatchdog = nil
         pendingUtterances = 0
-        synthesizer.stopSpeaking(at: .immediate)
-        isSpeaking = false
+        if synthesizer.isSpeaking {
+            synthesizer.stopSpeaking(at: .immediate)
+        }
+        if isSpeaking {
+            isSpeaking = false
+            if listeningState != .listening { deactivateSession() }
+        }
     }
 
-    func shutdown() {
-        stopListening()
-        stopSpeaking()
+    /// If a `didFinish` callback is ever lost (interruption, session going
+    /// inactive), don't strand the conversation on "Speaking" forever.
+    private func armSpeechWatchdog(for text: String) {
+        speechWatchdog?.cancel()
+        // Rough upper bound: ~12 characters per second, plus slack.
+        let seconds = max(6.0, Double(text.count) / 12.0 + 5.0)
+        speechWatchdog = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            guard !Task.isCancelled, let self, self.isSpeaking,
+                  !self.synthesizer.isSpeaking else { return }
+            self.pendingUtterances = 0
+            self.isSpeaking = false
+            self.onFinishedSpeaking?()
+        }
+    }
+
+    /// Stop all audio but KEEP the callbacks, so the owning screen can
+    /// resume (e.g. after the app returns from the background).
+    func pause() {
+        speechWatchdog?.cancel(); speechWatchdog = nil
+        pendingUtterances = 0
+        if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
+        isSpeaking = false
+        cleanUpAudio()
         listeningState = .idle
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        deactivateSession()
+    }
+
+    /// Permanent teardown: stops audio and drops the callbacks (breaking any
+    /// reference cycle with the presenting view). Only call when the screen
+    /// is going away for good.
+    func shutdown() {
+        pause()
+        onFinalTranscript = nil
+        onFinishedSpeaking = nil
+        onListeningEnded = nil
+        removeAudioObservers()
+    }
+
+    // MARK: - Markdown to speech
+
+    /// Strip Markdown so the synthesizer doesn't read "pound pound",
+    /// "asterisk", or entire code blocks aloud.
+    nonisolated static func plainSpeech(from text: String) -> String {
+        var result = ""
+        var inFence = false
+        for line in text.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("```") {
+                inFence.toggle()
+                if inFence { result += L10n.text("Code block.") + " " }
+                continue
+            }
+            if inFence { continue }
+
+            var cleaned = trimmed
+            // Headings and list markers.
+            while cleaned.hasPrefix("#") { cleaned.removeFirst() }
+            if cleaned.hasPrefix("- ") || cleaned.hasPrefix("* ") || cleaned.hasPrefix("+ ") {
+                cleaned = String(cleaned.dropFirst(2))
+            }
+            // Table pipes and emphasis/inline-code markers.
+            cleaned = cleaned.replacingOccurrences(of: "|", with: " ")
+            cleaned = cleaned.replacingOccurrences(of: "**", with: "")
+            cleaned = cleaned.replacingOccurrences(of: "__", with: "")
+            cleaned = cleaned.replacingOccurrences(of: "`", with: "")
+            cleaned = cleaned.replacingOccurrences(of: "*", with: "")
+            cleaned = cleaned.trimmingCharacters(in: .whitespaces)
+            if cleaned.isEmpty { continue }
+            result += cleaned + (cleaned.hasSuffix(".") ? " " : ". ")
+        }
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 
@@ -254,7 +490,10 @@ extension VoiceService: AVSpeechSynthesizerDelegate {
         Task { @MainActor in
             pendingUtterances = max(pendingUtterances - 1, 0)
             if pendingUtterances == 0 {
+                speechWatchdog?.cancel()
+                speechWatchdog = nil
                 isSpeaking = false
+                if listeningState != .listening { deactivateSession() }
                 onFinishedSpeaking?()
             }
         }
@@ -263,6 +502,8 @@ extension VoiceService: AVSpeechSynthesizerDelegate {
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
         Task { @MainActor in
             pendingUtterances = 0
+            speechWatchdog?.cancel()
+            speechWatchdog = nil
             isSpeaking = false
         }
     }

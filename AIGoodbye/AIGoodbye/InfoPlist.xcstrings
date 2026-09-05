@@ -6,79 +6,79 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "AIGoodbye verwendet die Kamera, um Fotos für die Bildanalyse aufzunehmen"
+            "value": "AiGoodbye nutzt die Kamera, damit du Fotos aufnehmen oder Fragen zur Live-Ansicht stellen kannst. Bilder werden auf deinem Gerät analysiert und niemals aufgezeichnet oder hochgeladen."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Το AIGoodbye χρησιμοποιεί την κάμερα για τη λήψη φωτογραφιών για ανάλυση εικόνων"
+            "value": "Το AiGoodbye χρησιμοποιεί την κάμερα για να τραβάτε φωτογραφίες ή να ρωτάτε για τη ζωντανή προβολή. Οι εικόνες αναλύονται στη συσκευή σας και δεν καταγράφονται ούτε μεταφορτώνονται ποτέ."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "AIGoodbye uses the camera to take photos for image analysis"
+            "value": "AiGoodbye uses the camera so you can take photos or ask about a live view. Images are analyzed on your device and never recorded or uploaded."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "AIGoodbye usa la cámara para tomar fotos y analizar imágenes"
+            "value": "AiGoodbye usa la cámara para que puedas hacer fotos o preguntar sobre lo que ve la cámara. Las imágenes se analizan en tu dispositivo y nunca se graban ni se suben."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "AIGoodbye utilise l'appareil photo pour prendre des photos à analyser"
+            "value": "AiGoodbye utilise l'appareil photo pour prendre des photos ou poser des questions sur la vue en direct. Les images sont analysées sur votre appareil et ne sont jamais enregistrées ni téléversées."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "AIGoodbye usa la fotocamera per scattare foto da analizzare"
+            "value": "AiGoodbye usa la fotocamera per scattare foto o fare domande sulla vista dal vivo. Le immagini vengono analizzate sul tuo dispositivo e non sono mai registrate né caricate."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "AIGoodbyeは画像分析のためにカメラで写真を撮影します"
+            "value": "AiGoodbyeは写真の撮影やライブ映像についての質問のためにカメラを使用します。画像はデバイス上で解析され、録画やアップロードは一切行いません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "AIGoodbye는 이미지 분석을 위한 사진을 촬영하기 위해 카메라를 사용합니다"
+            "value": "AiGoodbye는 사진 촬영이나 실시간 화면에 대한 질문을 위해 카메라를 사용합니다. 이미지는 기기에서 분석되며 녹화하거나 업로드하지 않습니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O AIGoodbye usa a câmera para tirar fotos para análise de imagens"
+            "value": "O AiGoodbye usa a câmera para você tirar fotos ou perguntar sobre a visualização ao vivo. As imagens são analisadas no seu dispositivo e nunca são gravadas nem enviadas."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "AIGoodbye использует камеру, чтобы делать фото для анализа изображений"
+            "value": "AiGoodbye использует камеру, чтобы вы могли снимать фото или задавать вопросы о том, что видит камера. Изображения анализируются на вашем устройстве и никогда не записываются и не выгружаются."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "AIGoodbye використовує камеру, щоб робити фото для аналізу зображень"
+            "value": "AiGoodbye використовує камеру, щоб ви могли робити фото або запитувати про те, що бачить камера. Зображення аналізуються на вашому пристрої й ніколи не записуються та не завантажуються."
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "AIGoodbye 使用相機影相以進行圖像分析"
+            "value": "AiGoodbye 用相機，等你可以影相或者問即時畫面。圖片喺你部裝置上分析，絕對唔會錄影或上載。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "AIGoodbye 使用相机拍摄照片以进行图像分析"
+            "value": "AiGoodbye 使用相机，让您拍照或询问实时画面。图像在您的设备上分析，绝不录制或上传。"
           }
         }
       }

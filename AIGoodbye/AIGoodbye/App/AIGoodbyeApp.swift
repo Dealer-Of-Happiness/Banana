@@ -93,9 +93,10 @@ class AppState: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     init() {
-        let settings = SettingsManager()
-        self.settings = settings
-        self.engine = ChatEngine(settings: settings)
+        // Shared with App Intents (Siri/Shortcuts), which can run without a
+        // scene and therefore without an AppState.
+        self.settings = EngineHost.shared.settings
+        self.engine = EngineHost.shared.engine
         self.conversationManager = ConversationManager()
 
         // Views read child-object state through `appState.…`; forward their
@@ -116,6 +117,7 @@ class AppState: ObservableObject {
     func initialize() async {
         guard !isInitialized else { return }
         await conversationManager.initialize()
+        conversationManager.sweepOrphanedDocuments()
         engine.appleIntelligence.refreshAvailability()
         isInitialized = true
 

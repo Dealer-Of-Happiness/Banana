@@ -40,49 +40,93 @@ final class CameraController: NSObject, ObservableObject {
     private let videoOutput = AVCaptureVideoDataOutput()
     private let sampleQueue = DispatchQueue(label: "aig.camera.frames")
     private let frameStore = FrameStore()
+    private var configureTask: Task<Void, Never>?
+    /// Inputs/outputs are wired once; restarts only need startRunning().
+    private var isConfigured = false
 
     func start() {
-        guard !isReady else { return }
-        Task.detached { [weak self] in
+        guard configureTask == nil, !isReady, !failed else { return }
+        configureTask = Task { [weak self] in
             await self?.configureAndRun()
+            await MainActor.run { self?.configureTask = nil }
         }
     }
 
-    private nonisolated func configureAndRun() async {
+    private func configureAndRun() async {
         let granted = await AVCaptureDevice.requestAccess(for: .video)
         guard granted else {
-            await MainActor.run { self.failed = true }
+            failed = true
+            return
+        }
+        // The user may have closed the screen while the permission alert or
+        // configuration was pending: never light up the camera afterwards.
+        guard !Task.isCancelled else { return }
+
+        let session = self.session
+        let videoOutput = self.videoOutput
+        let delegate = self
+        let queue = sampleQueue
+
+        // Returning from the background: inputs/outputs are already wired,
+        // so just start the session again.
+        if isConfigured {
+            await Task.detached { session.startRunning() }.value
+            guard !Task.isCancelled else {
+                await Task.detached { session.stopRunning() }.value
+                return
+            }
+            isReady = true
             return
         }
 
-        session.beginConfiguration()
-        session.sessionPreset = .hd1280x720
+        let ok = await Task.detached { () -> Bool in
+            session.beginConfiguration()
+            defer { session.commitConfiguration() }
 
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-              let input = try? AVCaptureDeviceInput(device: device),
-              session.canAddInput(input) else {
-            session.commitConfiguration()
-            await MainActor.run { self.failed = true }
-            return
-        }
-        session.addInput(input)
+            session.sessionPreset = .hd1280x720
+            // Don't let the capture session stomp the audio session we use
+            // for spoken answers.
+            session.automaticallyConfiguresApplicationAudioSession = false
 
-        videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
-        videoOutput.alwaysDiscardsLateVideoFrames = true
-        videoOutput.setSampleBufferDelegate(self, queue: sampleQueue)
-        if session.canAddOutput(videoOutput) {
+            guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+                  let input = try? AVCaptureDeviceInput(device: device),
+                  session.canAddInput(input) else {
+                return false
+            }
+            session.addInput(input)
+
+            videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+            videoOutput.alwaysDiscardsLateVideoFrames = true
+            videoOutput.setSampleBufferDelegate(delegate, queue: queue)
+            guard session.canAddOutput(videoOutput) else { return false }
             session.addOutput(videoOutput)
-        }
-        if let connection = videoOutput.connection(with: .video) {
-            connection.videoRotationAngle = 90 // portrait
-        }
 
-        session.commitConfiguration()
-        session.startRunning()
-        await MainActor.run { self.isReady = true }
+            if let connection = videoOutput.connection(with: .video),
+               connection.isVideoRotationAngleSupported(90) {
+                connection.videoRotationAngle = 90 // portrait
+            }
+            return true
+        }.value
+
+        guard ok else {
+            failed = true
+            return
+        }
+        isConfigured = true
+        guard !Task.isCancelled else { return }
+
+        await Task.detached { session.startRunning() }.value
+        guard !Task.isCancelled else {
+            await Task.detached { session.stopRunning() }.value
+            return
+        }
+        isReady = true
     }
 
     func stop() {
+        configureTask?.cancel()
+        configureTask = nil
+        isReady = false
         let session = self.session
         Task.detached {
             if session.isRunning { session.stopRunning() }
@@ -99,6 +143,10 @@ final class CameraController: NSObject, ObservableObject {
 
 /// One shared Core Image context (creating one per frame is expensive).
 private nonisolated(unsafe) let sharedCIContext = CIContext(options: nil)
+/// Last time a frame was converted, so we don't render 30 images a second
+/// while the vision model wants the GPU (and the battery).
+private nonisolated(unsafe) var lastFrameConversion = Date.distantPast
+private let frameConversionLock = NSLock()
 
 extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
     nonisolated func captureOutput(
@@ -106,13 +154,21 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
         didOutput sampleBuffer: CMSampleBuffer,
         from connection: AVCaptureConnection
     ) {
+        // Only one frame every 400 ms is ever needed: a question uses the
+        // single latest snapshot.
+        frameConversionLock.lock()
+        let now = Date()
+        let due = now.timeIntervalSince(lastFrameConversion) >= 0.4
+        if due { lastFrameConversion = now }
+        frameConversionLock.unlock()
+        guard due else { return }
+
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
-        let context = sharedCIContext
         // Downscale to ~768 on the long edge for the vision encoder.
         let scale = 768 / max(ciImage.extent.width, ciImage.extent.height)
         let scaled = ciImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-        guard let cgImage = context.createCGImage(scaled, from: scaled.extent) else { return }
+        guard let cgImage = sharedCIContext.createCGImage(scaled, from: scaled.extent) else { return }
         frames.set(UIImage(cgImage: cgImage))
     }
 }
@@ -145,6 +201,7 @@ struct LiveCameraView: View {
 
     @StateObject private var camera = CameraController()
     @StateObject private var voice = VoiceService()
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var question = ""
     @State private var answer: String?
@@ -189,6 +246,18 @@ struct LiveCameraView: View {
             generationTask?.cancel()
             camera.stop()
             voice.shutdown()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // Never keep the camera or speaker running in the background -
+            // and bring the viewfinder back when the user returns (onAppear
+            // does not fire again while the cover stays presented).
+            if phase == .active {
+                camera.start()
+            } else {
+                generationTask?.cancel()
+                camera.stop()
+                voice.stopSpeaking()
+            }
         }
     }
 
@@ -266,6 +335,7 @@ struct LiveCameraView: View {
             if isAnswering {
                 Button {
                     generationTask?.cancel()
+                    voice.stopSpeaking()
                 } label: {
                     Image(systemName: "stop.circle.fill")
                         .font(.title)
@@ -313,6 +383,9 @@ struct LiveCameraView: View {
             defer { isAnswering = false }
             do {
                 let model = try engine.route(hasImage: true)
+                // Camera Q&A must never leak into (or erase) the chat
+                // session - clean up on EVERY exit path, including errors.
+                defer { engine.resetSessions() }
                 try await engine.startConversation(model: model, history: [])
 
                 var final = ""
@@ -323,9 +396,7 @@ struct LiveCameraView: View {
                     answer = snapshot
                     speakNewSentences(in: snapshot)
                 }
-                if speakAnswers { speakRemainder(of: final) }
-                // Camera Q&A shouldn't leak into the chat session.
-                engine.resetSessions()
+                if speakAnswers && !Task.isCancelled { speakRemainder(of: final) }
             } catch let error as ChatEngine.RouteError {
                 notice = routeNotice(for: error)
             } catch is CancellationError {

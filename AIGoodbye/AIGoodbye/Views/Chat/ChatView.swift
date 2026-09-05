@@ -31,6 +31,8 @@ struct ChatView: View {
     @State private var showingCameraUnavailableAlert = false
     @State private var showingClearConfirmation = false
     @State private var showingModelPicker = false
+    @State private var showingVoiceMode = false
+    @State private var showingLiveCamera = false
 
     var body: some View {
         NavigationStack {
@@ -90,6 +92,14 @@ struct ChatView: View {
                     await viewModel.loadSelectedPhoto(newItem)
                     selectedPhotoItem = nil
                 }
+            }
+            .fullScreenCover(isPresented: $showingVoiceMode) {
+                VoiceModeView(viewModel: viewModel)
+                    .environmentObject(appState)
+            }
+            .fullScreenCover(isPresented: $showingLiveCamera) {
+                LiveCameraView()
+                    .environmentObject(appState)
             }
             .fullScreenCover(isPresented: $showingCamera) {
                 // Full screen per Apple guidance for the camera (a sheet
@@ -575,6 +585,16 @@ struct ChatView: View {
                     } label: {
                         Label("Document", systemImage: "doc")
                     }
+
+                    #if !targetEnvironment(simulator)
+                    if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                        Button {
+                            showingLiveCamera = true
+                        } label: {
+                            Label("Live Camera", systemImage: "camera.viewfinder")
+                        }
+                    }
+                    #endif
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.title)
@@ -610,18 +630,29 @@ struct ChatView: View {
                             .frame(minWidth: 44, minHeight: 44)
                     }
                     .accessibilityLabel(Text("Stop generating"))
-                } else {
+                } else if canSend {
                     Button {
                         isInputFocused = false
                         Task { await viewModel.sendMessage() }
                     } label: {
                         Image(systemName: "arrow.up.circle.fill")
                             .font(.title)
-                            .foregroundStyle(canSend ? .blue : .gray)
+                            .foregroundStyle(.blue)
                             .frame(minWidth: 44, minHeight: 44)
                     }
-                    .disabled(!canSend)
                     .accessibilityLabel(Text("Send message"))
+                } else {
+                    // Empty composer: offer hands-free voice conversation.
+                    Button {
+                        isInputFocused = false
+                        showingVoiceMode = true
+                    } label: {
+                        Image(systemName: "waveform.circle.fill")
+                            .font(.title)
+                            .foregroundStyle(.blue)
+                            .frame(minWidth: 44, minHeight: 44)
+                    }
+                    .accessibilityLabel(Text("Start a voice conversation"))
                 }
             }
             .padding(.horizontal)
@@ -704,6 +735,7 @@ class ChatViewModel: ObservableObject {
         let imageId: UUID?
         let attachmentType: AttachmentType?
         let persistUserMessage: Bool
+        var documentId: UUID? = nil
     }
 
     @Published var messages: [Message] = []
@@ -714,6 +746,7 @@ class ChatViewModel: ObservableObject {
     @Published var pendingImageId: UUID?
     @Published var pendingDocumentName: String?
     @Published var pendingDocumentContent: String?
+    @Published var pendingDocumentId: UUID?
     @Published var errorBanner: ErrorBanner?
     @Published var consentRequest: ConsentRequest?
     @Published var showingImportError = false
@@ -850,16 +883,25 @@ class ChatViewModel: ObservableObject {
                 return
             }
 
+            // Store the WHOLE document for retrieval; keep a short preview
+            // for summaries. The AI can then answer questions about any part
+            // of the document, not just the first page.
             pendingDocumentName = url.lastPathComponent
             pendingDocumentContent = String(trimmed.prefix(4000))
+            pendingDocumentId = DocumentIndex.shared.store(name: url.lastPathComponent, fullText: trimmed)
         } catch {
             presentImportError(L10n.text("Couldn't read \(url.lastPathComponent): \(error.localizedDescription)"))
         }
     }
 
     func clearPendingDocument() {
+        if let id = pendingDocumentId {
+            // Never sent: remove the stored text again.
+            DocumentIndex.shared.removeDocument(id)
+        }
         pendingDocumentName = nil
         pendingDocumentContent = nil
+        pendingDocumentId = nil
     }
 
     private func extractTextFromPDF(_ url: URL) async throws -> String {
@@ -870,7 +912,7 @@ class ChatViewModel: ObservableObject {
             }
 
             var fullText = ""
-            let pageCount = min(document.pageCount, 20)
+            let pageCount = min(document.pageCount, 300)
             for pageIndex in 0..<pageCount {
                 if let page = document.page(at: pageIndex), let pageText = page.string {
                     fullText += "[Page \(pageIndex + 1)]\n\(pageText)\n\n"
@@ -909,6 +951,7 @@ class ChatViewModel: ObservableObject {
         let imageId = pendingImageId
         let documentName = pendingDocumentName
         let documentContent = pendingDocumentContent
+        let documentId = pendingDocumentId
 
         guard !text.isEmpty || image != nil || documentName != nil else { return }
 
@@ -918,6 +961,7 @@ class ChatViewModel: ObservableObject {
         pendingImageId = nil
         pendingDocumentName = nil
         pendingDocumentContent = nil
+        pendingDocumentId = nil
         errorBanner = nil
 
         // Build model prompt and display text.
@@ -925,9 +969,16 @@ class ChatViewModel: ObservableObject {
         let displayMessage: String
         var hiddenContext: String?
 
-        if let docName = documentName, let docContent = documentContent {
+        if let docName = documentName {
             let question = text.isEmpty ? L10n.text("Please analyze this document and provide a summary.") : text
-            prompt = "I've uploaded a document (\(docName)). Here's its content:\n\n\(docContent)\n\n\(question)"
+            // Targeted questions retrieve the relevant passages from the
+            // whole document; summaries use the opening preview.
+            let retrieved = text.isEmpty
+                ? nil
+                : documentId.flatMap { DocumentIndex.shared.context(for: question, documentIds: [$0]) }
+            let material = retrieved
+                ?? "Opening of the document:\n\n\(documentContent ?? "")"
+            prompt = "The user attached a document (\(docName)).\n\n\(material)\n\n\(question)"
             displayMessage = "[\(docName)] \(text.isEmpty ? L10n.text("Analyze this document") : text)"
             hiddenContext = prompt
         } else if text.isEmpty && image != nil {
@@ -945,16 +996,36 @@ class ChatViewModel: ObservableObject {
             image: image,
             imageId: imageId,
             attachmentType: image != nil ? .image : (documentName != nil ? .document : nil),
-            persistUserMessage: true
+            persistUserMessage: true,
+            documentId: documentId
         )
 
         await perform(request)
     }
 
+    /// Voice mode entry point: sends spoken text as a normal chat turn.
+    func sendVoicePrompt(_ text: String) async {
+        guard !isGenerating else { return }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        errorBanner = nil
+        let request = PendingRequest(
+            prompt: trimmed,
+            displayMessage: trimmed,
+            hiddenContext: nil,
+            image: nil,
+            imageId: nil,
+            attachmentType: nil,
+            persistUserMessage: true
+        )
+        await perform(request)
+    }
+
     // MARK: - Core request execution
 
-    private func perform(_ request: PendingRequest) async {
+    private func perform(_ requestIn: PendingRequest) async {
         guard let appState else { return }
+        var request = requestIn
 
         // Ensure a conversation exists.
         var conversation = appState.currentConversation
@@ -962,6 +1033,32 @@ class ChatViewModel: ObservableObject {
             conversation = appState.conversationManager.createConversation()
             appState.currentConversation = conversation
             currentConversationId = conversation?.id
+        }
+
+        // Newly attached document becomes part of the conversation, so every
+        // later question can retrieve from it.
+        if let docId = request.documentId, request.persistUserMessage, let conv = conversation,
+           !conv.attachedDocumentIds.contains(docId) {
+            conv.attachedDocumentIds.append(docId)
+            appState.conversationManager.updateConversation(conv)
+        }
+
+        // Follow-up questions in a conversation with attached documents get
+        // the relevant passages injected automatically (the document brain).
+        if request.hiddenContext == nil, request.image == nil,
+           let conv = conversation, !conv.attachedDocumentIds.isEmpty,
+           let retrieved = DocumentIndex.shared.context(for: request.prompt, documentIds: conv.attachedDocumentIds) {
+            let wrapped = "\(retrieved)\n\nUsing the passages above when they're relevant, answer:\n\(request.prompt)"
+            request = PendingRequest(
+                prompt: wrapped,
+                displayMessage: request.displayMessage,
+                hiddenContext: wrapped,
+                image: nil,
+                imageId: nil,
+                attachmentType: request.attachmentType,
+                persistUserMessage: request.persistUserMessage,
+                documentId: request.documentId
+            )
         }
 
         // Persist and show the user message FIRST, so it is never lost when

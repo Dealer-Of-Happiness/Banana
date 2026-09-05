@@ -120,6 +120,64 @@ struct LocalizationTests {
     }
 }
 
+struct DocumentIndexTests {
+
+    @Test func chunkingCoversWholeDocumentWithOverlap() {
+        let sentence = "The quick brown fox jumps over the lazy dog. "
+        let text = String(repeating: sentence, count: 200) // ~9,000 chars
+        let chunks = DocumentIndex.chunk(text, documentName: "test.txt")
+
+        #expect(chunks.count > 5)
+        // Every chunk is reasonably sized.
+        for chunk in chunks {
+            #expect(chunk.text.count <= 1000)
+            #expect(!chunk.text.isEmpty)
+        }
+        // Positions are sequential.
+        #expect(chunks.map(\.position) == Array(0..<chunks.count))
+    }
+
+    @Test func shortDocumentIsOneChunk() {
+        let chunks = DocumentIndex.chunk("Hello world.", documentName: "hi.txt")
+        #expect(chunks.count == 1)
+        #expect(chunks[0].text == "Hello world.")
+    }
+
+    @Test func rankingFindsTheRelevantChunk() {
+        var chunks: [DocumentChunk] = (0..<20).map {
+            DocumentChunk(documentName: "doc", text: "Filler paragraph about weather, sports and cooking recipes number \($0).", position: $0)
+        }
+        chunks.append(DocumentChunk(
+            documentName: "doc",
+            text: "The warranty period for the espresso machine is 24 months from purchase.",
+            position: 20
+        ))
+
+        let ranked = DocumentIndex.rank(chunks: chunks, question: "How long is the espresso machine warranty?")
+        #expect(ranked.first?.position == 20, "The warranty chunk should rank first")
+    }
+
+    @Test func cjkTokensWork() {
+        let tokens = DocumentIndex.tokens(of: "咖啡机的保修期是24个月")
+        #expect(!tokens.isEmpty)
+    }
+}
+
+struct SpeechChunkerTests {
+
+    @Test func detectsCompleteSentences() {
+        let text = "First sentence is here. Second one is still stre"
+        let slice = SpeechChunker.speakableSlice(of: text, from: text.startIndex)
+        #expect(slice != nil)
+        #expect(String(text[slice!]) == "First sentence is here.")
+    }
+
+    @Test func waitsWhenNoBoundary() {
+        let text = "no boundary yet"
+        #expect(SpeechChunker.speakableSlice(of: text, from: text.startIndex) == nil)
+    }
+}
+
 struct WeightedLengthTests {
 
     @Test func cjkTextCostsMoreThanLatin() {

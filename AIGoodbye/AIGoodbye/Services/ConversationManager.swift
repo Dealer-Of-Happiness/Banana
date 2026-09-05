@@ -143,6 +143,9 @@ class ConversationManager: ObservableObject {
         for imageId in conversation.attachedImageIds {
             try? FileManager.default.removeItem(at: Self.imagePath(for: imageId))
         }
+        for docId in conversation.attachedDocumentIds {
+            DocumentIndex.shared.removeDocument(docId)
+        }
     }
 
     // MARK: - Message CRUD

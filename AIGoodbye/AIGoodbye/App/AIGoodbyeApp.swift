@@ -73,6 +73,10 @@ private struct LanguageAwareRoot<Content: View>: View {
 
 @MainActor
 class AppState: ObservableObject {
+    /// Set on creation so App Intents (Siri/Shortcuts) can reach the live
+    /// engines instead of building a second copy of everything.
+    static weak var shared: AppState?
+
     @Published var showSideMenu = false
     @Published var currentConversation: Conversation?
     @Published var isInitialized = false
@@ -103,6 +107,8 @@ class AppState: ObservableObject {
         conversationManager.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
+
+        AppState.shared = self
     }
 
     /// Fast, non-blocking startup: prepare storage, then show the app.

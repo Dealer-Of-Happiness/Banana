@@ -83,6 +83,88 @@
         }
       }
     },
+    "NSMicrophoneUsageDescription": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye nutzt das Mikrofon für private Sprachunterhaltungen. Audio wird ausschließlich auf deinem Gerät verarbeitet."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το AiGoodbye χρησιμοποιεί το μικρόφωνο για ιδιωτικές φωνητικές συνομιλίες. Ο ήχος επεξεργάζεται μόνο στη συσκευή σας."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye uses the microphone for private voice conversations. Audio is processed entirely on your device."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye usa el micrófono para conversaciones de voz privadas. El audio se procesa únicamente en tu dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye utilise le micro pour des conversations vocales privées. L'audio est traité uniquement sur votre appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye usa il microfono per conversazioni vocali private. L'audio viene elaborato solo sul tuo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbyeはプライベートな音声会話のためにマイクを使用します。音声はデバイス上でのみ処理されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye는 프라이빗 음성 대화를 위해 마이크를 사용합니다. 오디오는 기기에서만 처리됩니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O AiGoodbye usa o microfone para conversas de voz privadas. O áudio é processado somente no seu dispositivo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye использует микрофон для приватных голосовых бесед. Звук обрабатывается только на вашем устройстве."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye використовує мікрофон для приватних голосових розмов. Звук обробляється лише на вашому пристрої."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye 用麥克風進行私密語音對話。音訊只會喺你部裝置上處理。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye 使用麦克风进行私密语音对话。音频仅在您的设备上处理。"
+          }
+        }
+      }
+    },
     "NSPhotoLibraryUsageDescription": {
       "localizations": {
         "de": {
@@ -161,6 +243,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "AIGoodbye 使用您的照片图库来选择要分析的图像"
+          }
+        }
+      }
+    },
+    "NSSpeechRecognitionUsageDescription": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye wandelt Sprache nur auf diesem Gerät in Text um. Es wird nichts gesendet."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το AiGoodbye μετατρέπει την ομιλία σας σε κείμενο μόνο σε αυτήν τη συσκευή. Τίποτα δεν αποστέλλεται πουθενά."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye converts your speech to text on this device only. Nothing is sent anywhere."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye convierte tu voz en texto solo en este dispositivo. No se envía nada a ninguna parte."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye convertit votre voix en texte uniquement sur cet appareil. Rien n'est envoyé nulle part."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye converte la tua voce in testo solo su questo dispositivo. Non viene inviato nulla."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbyeは音声をこのデバイス上でのみテキストに変換します。どこにも送信されません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye는 이 기기에서만 음성을 텍스트로 변환합니다. 아무것도 전송되지 않습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O AiGoodbye converte sua fala em texto somente neste dispositivo. Nada é enviado a lugar nenhum."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye преобразует речь в текст только на этом устройстве. Ничего никуда не отправляется."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye перетворює мовлення на текст лише на цьому пристрої. Нічого нікуди не надсилається."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye 只會喺呢部裝置上將你嘅語音轉成文字。乜嘢都唔會傳送出去。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye 仅在本设备上将您的语音转换为文字。不会发送任何内容。"
           }
         }
       }

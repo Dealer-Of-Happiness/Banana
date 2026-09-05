@@ -1,6 +1,29 @@
-# App Store copy for AiGoodbye 3.0.x
+# App Store copy for AiGoodbye
 
 Paste-ready text for App Store Connect.
+
+## What's New (version 3.1.0, build 12) - the feature release, September 4, 2026
+
+Four big new abilities. All of them 100% private, 100% on your device.
+
+TALK TO YOUR AI
+- New voice conversations: tap the waveform button and just talk. Your AI answers out loud, and listening resumes automatically. Works entirely offline - even in airplane mode.
+
+HEY SIRI, ASK AIGOODBYE
+- Ask questions through Siri and use AiGoodbye in your Shortcuts automations, including a "Summarize with AiGoodbye" action for any text.
+
+CHAT WITH WHOLE DOCUMENTS
+- The new document brain reads your entire PDF or file (up to 300 pages), finds the relevant passages for each question, and remembers the document for the whole conversation.
+
+LIVE CAMERA
+- Point your camera at anything and ask about what you see. Answers can be spoken aloud. Nothing is recorded and nothing leaves your device.
+
+PLUS
+- All 3.0.1 fixes: faster downloads with real progress, better translations, iPad polish, and dozens of smaller improvements.
+
+Private AI that talks, sees, listens, and reads - with no cloud, no accounts, and no subscriptions.
+
+---
 
 ## What's New (version 3.0.1, build 11) - quality release, September 4, 2026
 

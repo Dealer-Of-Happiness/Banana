@@ -109,15 +109,57 @@ final class AIGoodbyeUITests: XCTestCase {
         }
         XCTAssertTrue(moved || !chip.exists, "Progress must move (was frozen in 3.0.0)")
 
-        // Stop must cancel cleanly: no error banner, composer usable again.
+        // Stop must cancel cleanly: no error banner, composer usable again
+        // (an empty composer shows the voice conversation button).
         let stop = app.buttons["Stop generating"]
         if stop.exists {
             stop.tap()
-            XCTAssertTrue(app.buttons["Send message"].waitForExistence(timeout: 15),
+            XCTAssertTrue(app.buttons["Start a voice conversation"].waitForExistence(timeout: 15),
                           "Composer should return after cancelling")
         }
         XCTAssertFalse(app.staticTexts["Try Again"].exists,
                        "Cancelling must not show an error banner")
+    }
+
+    /// Voice mode must open from the composer, show its UI, and close
+    /// cleanly (handling the system mic/speech permission alerts).
+    @MainActor
+    func testVoiceModeOpensAndCloses() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        acceptTermsIfNeeded(app)
+
+        addUIInterruptionMonitor(withDescription: "Permissions") { alert in
+            for label in ["OK", "Allow", "Allow While Using App"] {
+                let button = alert.buttons[label]
+                if button.exists { button.tap(); return true }
+            }
+            return false
+        }
+
+        let voiceButton = app.buttons["Start a voice conversation"]
+        XCTAssertTrue(voiceButton.waitForExistence(timeout: 10))
+        voiceButton.tap()
+
+        // Permission alerts appear asynchronously; interruption monitors only
+        // fire on interactions, so poke the app until the cover is visible.
+        let title = app.staticTexts["Voice Conversation"]
+        var presented = false
+        for _ in 0..<10 {
+            if title.exists { presented = true; break }
+            app.swipeUp() // harmless interaction that triggers the monitor
+            usleep(700_000)
+        }
+        XCTAssertTrue(presented || title.waitForExistence(timeout: 5),
+                      "Voice mode should present")
+
+        let close = app.buttons["Close voice mode"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        close.tap()
+
+        XCTAssertTrue(voiceButton.waitForExistence(timeout: 10),
+                      "Chat should return after closing voice mode")
     }
 
     // MARK: - Helpers

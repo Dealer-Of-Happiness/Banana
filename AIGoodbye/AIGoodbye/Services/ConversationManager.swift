@@ -152,7 +152,9 @@ class ConversationManager: ObservableObject {
     /// Delete stored document text that no conversation references anymore
     /// (e.g. left behind by an interrupted import). Called at launch.
     func sweepOrphanedDocuments() {
-        let keep = Set(conversations.flatMap { $0.attachedDocumentIds })
+        var keep = Set(conversations.flatMap { $0.attachedDocumentIds })
+        // Library documents are permanent and belong to no single chat.
+        keep.formUnion(KnowledgeLibrary.shared.documents.map(\.id))
         Task { await DocumentIndex.shared.removeDocuments(notIn: keep) }
     }
 

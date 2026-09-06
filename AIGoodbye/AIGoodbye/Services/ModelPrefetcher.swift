@@ -31,6 +31,9 @@ final class ModelPrefetcher {
     /// Downloads all *.safetensors and *.json files for the repo into `repoDir`.
     /// `progress` is called with (downloadedBytes, totalBytes) from a background
     /// queue; throttle/hop as needed on the receiving side.
+    /// When true, downloads are refused on cellular (models are 1-6 GB).
+    var wifiOnly: Bool = true
+
     func prefetch(
         hfId: String,
         into repoDir: URL,
@@ -95,7 +98,7 @@ final class ModelPrefetcher {
             var resumeData: Data?
             while true {
                 do {
-                    let download = FileDownload(destination: destination) { bytesSoFar in
+                    let download = FileDownload(destination: destination, wifiOnly: wifiOnly) { bytesSoFar in
                         progress(base + bytesSoFar, totalBytes)
                     }
                     try await download.run(url: sourceURL, resumeData: resumeData, timeout: 30)
@@ -184,6 +187,7 @@ final class ModelPrefetcher {
 /// queue, and the cancellation handler all touch it.
 private final class FileDownload: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
     private let destination: URL
+    private let wifiOnly: Bool
     private let onBytes: @Sendable (Int64) -> Void
 
     private let lock = NSLock()
@@ -193,8 +197,9 @@ private final class FileDownload: NSObject, URLSessionDownloadDelegate, @uncheck
     private var moveError: Error?
     private var lastReport = Date.distantPast
 
-    init(destination: URL, onBytes: @escaping @Sendable (Int64) -> Void) {
+    init(destination: URL, wifiOnly: Bool, onBytes: @escaping @Sendable (Int64) -> Void) {
         self.destination = destination
+        self.wifiOnly = wifiOnly
         self.onBytes = onBytes
     }
 
@@ -203,6 +208,15 @@ private final class FileDownload: NSObject, URLSessionDownloadDelegate, @uncheck
             try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
                 let config = URLSessionConfiguration.default
                 config.timeoutIntervalForRequest = timeout
+                // Multi-gigabyte downloads shouldn't eat a cellular plan, and
+                // should survive the screen locking mid-download.
+                config.allowsCellularAccess = !wifiOnly
+                config.allowsExpensiveNetworkAccess = !wifiOnly
+                config.allowsConstrainedNetworkAccess = false
+                config.waitsForConnectivity = true
+                config.timeoutIntervalForResource = 60 * 60 * 6
+                // Record model downloads in the Privacy Center's audit log.
+                NetworkAudit.observe(config)
 
                 let queue = OperationQueue()
                 queue.maxConcurrentOperationCount = 1

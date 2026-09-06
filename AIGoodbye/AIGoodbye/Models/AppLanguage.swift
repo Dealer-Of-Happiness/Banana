@@ -53,6 +53,26 @@ enum AppLanguage: String, CaseIterable, Identifiable, Codable {
     }
 
     /// The instruction fragment that tells the model which language to answer in.
+    /// English name of the language, for prompts sent to the model.
+    var englishName: String {
+        switch self {
+        case .automatic: return "the user's language"
+        case .english: return "English"
+        case .mandarin: return "Mandarin Chinese (Simplified characters)"
+        case .cantonese: return "Cantonese (Traditional characters)"
+        case .russian: return "Russian"
+        case .ukrainian: return "Ukrainian"
+        case .korean: return "Korean"
+        case .japanese: return "Japanese"
+        case .french: return "French"
+        case .german: return "German"
+        case .greek: return "Greek"
+        case .italian: return "Italian"
+        case .spanish: return "Spanish"
+        case .portuguese: return "Brazilian Portuguese"
+        }
+    }
+
     var modelInstruction: String {
         switch self {
         case .automatic:

@@ -19,6 +19,7 @@ class SettingsManager: ObservableObject {
         static let contextWindow = "ai_context_window"
         static let hapticFeedback = "haptic_feedback"
         static let appLanguage = "app_language"
+        static let wifiOnlyDownloads = "wifi_only_downloads"
     }
 
     // MARK: - AI Settings
@@ -37,6 +38,11 @@ class SettingsManager: ObservableObject {
 
     @Published var hapticFeedbackEnabled: Bool {
         didSet { defaults.set(hapticFeedbackEnabled, forKey: Keys.hapticFeedback) }
+    }
+
+    /// Only download models over Wi-Fi (models are 1-6 GB).
+    @Published var wifiOnlyDownloads: Bool {
+        didSet { defaults.set(wifiOnlyDownloads, forKey: Keys.wifiOnlyDownloads) }
     }
 
     // MARK: - Language
@@ -78,6 +84,10 @@ class SettingsManager: ObservableObject {
             ? true
             : defaults.bool(forKey: Keys.hapticFeedback)
 
+        self.wifiOnlyDownloads = defaults.object(forKey: Keys.wifiOnlyDownloads) == nil
+            ? true
+            : defaults.bool(forKey: Keys.wifiOnlyDownloads)
+
         let storedLanguage = AppLanguage(
             rawValue: defaults.string(forKey: Keys.appLanguage) ?? AppLanguage.automatic.rawValue
         ) ?? .automatic
@@ -91,6 +101,7 @@ class SettingsManager: ObservableObject {
         temperature = 0.7
         contextWindow = 8192
         hapticFeedbackEnabled = true
+        wifiOnlyDownloads = true
         appLanguage = .automatic
     }
 }

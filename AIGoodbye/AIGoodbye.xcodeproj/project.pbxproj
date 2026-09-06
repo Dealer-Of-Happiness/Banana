@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6ASH00D2000000000000E0D2 /* SharedInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ASH00D1000000000000E0D1 /* SharedInbox.swift */; };
+		6AWI00D3000000000000F0D3 /* SharedInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ASH00D1000000000000E0D1 /* SharedInbox.swift */; };
+		6ASH000C000000000000E00C /* AiGoodbyeShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6ASH0003000000000000E003 /* AiGoodbyeShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		6AWI000C000000000000F00C /* AiGoodbyeWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6AWI0003000000000000F003 /* AiGoodbyeWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6AFC2E132F0B5B73004CD5AA /* LLM in Frameworks */ = {isa = PBXBuildFile; productRef = 6AFC2E122F0B5B73004CD5AA /* LLM */; };
 		6AMLX001F0B5B73004CD5AA /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = 6AMLX000F0B5B73004CD5AA /* MLX */; };
 		6AMLX003F0B5B73004CD5AA /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 6AMLX002F0B5B73004CD5AA /* MLXLLM */; };
@@ -15,6 +19,20 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		6ASH000A000000000000E00A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6A1A4E352F085D0200E51DBF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6ASH0001000000000000E001;
+			remoteInfo = AiGoodbyeShare;
+		};
+		6AWI000A000000000000F00A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6A1A4E352F085D0200E51DBF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6AWI0001000000000000F001;
+			remoteInfo = AiGoodbyeWidgets;
+		};
 		6A1A4E4B2F085D0400E51DBF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 6A1A4E352F085D0200E51DBF /* Project object */;
@@ -31,15 +49,84 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		6AEM0001000000000000A001 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				6ASH000C000000000000E00C /* AiGoodbyeShare.appex in Embed Foundation Extensions */,
+				6AWI000C000000000000F00C /* AiGoodbyeWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		6ASH00D1000000000000E0D1 /* SharedInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SharedInbox.swift; path = AIGoodbye/Services/SharedInbox.swift; sourceTree = "<group>"; };
+		6ASH0003000000000000E003 /* AiGoodbyeShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AiGoodbyeShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		6AWI0003000000000000F003 /* AiGoodbyeWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AiGoodbyeWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		6A1A4E3D2F085D0200E51DBF /* AIGoodbye.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AIGoodbye.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6A1A4E4A2F085D0400E51DBF /* AIGoodbyeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIGoodbyeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6A1A4E542F085D0400E51DBF /* AIGoodbyeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIGoodbyeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		6AAP00E9000000000000A0E9 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 6A1A4E3C2F085D0200E51DBF /* AIGoodbye */;
+		};
+		6ASH00E1000000000000E0E1 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 6ASH0001000000000000E001 /* AiGoodbyeShare */;
+		};
+		6AWI00F1000000000000F0F1 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 6AWI0001000000000000F001 /* AiGoodbyeWidgets */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		6ASH0002000000000000E002 /* AiGoodbyeShare */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6ASH00E1000000000000E0E1 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = AiGoodbyeShare;
+			sourceTree = "<group>";
+		};
+		6AWI0002000000000000F002 /* AiGoodbyeWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6AWI00F1000000000000F0F1 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = AiGoodbyeWidgets;
+			sourceTree = "<group>";
+		};
 		6A1A4E3F2F085D0200E51DBF /* AIGoodbye */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6AAP00E9000000000000A0E9 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
 			path = AIGoodbye;
 			sourceTree = "<group>";
 		};
@@ -56,6 +143,20 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		6ASH0005000000000000E005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6AWI0005000000000000F005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		6A1A4E3A2F085D0200E51DBF /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -102,6 +203,8 @@
 				6A1A4E3D2F085D0200E51DBF /* AIGoodbye.app */,
 				6A1A4E4A2F085D0400E51DBF /* AIGoodbyeTests.xctest */,
 				6A1A4E542F085D0400E51DBF /* AIGoodbyeUITests.xctest */,
+				6ASH0003000000000000E003 /* AiGoodbyeShare.appex */,
+				6AWI0003000000000000F003 /* AiGoodbyeWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -116,6 +219,50 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		6ASH0001000000000000E001 /* AiGoodbyeShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6ASH0007000000000000E007 /* Build configuration list for PBXNativeTarget "AiGoodbyeShare" */;
+			buildPhases = (
+				6ASH0004000000000000E004 /* Sources */,
+				6ASH0005000000000000E005 /* Frameworks */,
+				6ASH0006000000000000E006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				6ASH0002000000000000E002 /* AiGoodbyeShare */,
+			);
+			name = AiGoodbyeShare;
+			packageProductDependencies = (
+			);
+			productName = AiGoodbyeShare;
+			productReference = 6ASH0003000000000000E003 /* AiGoodbyeShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		6AWI0001000000000000F001 /* AiGoodbyeWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6AWI0007000000000000F007 /* Build configuration list for PBXNativeTarget "AiGoodbyeWidgets" */;
+			buildPhases = (
+				6AWI0004000000000000F004 /* Sources */,
+				6AWI0005000000000000F005 /* Frameworks */,
+				6AWI0006000000000000F006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				6AWI0002000000000000F002 /* AiGoodbyeWidgets */,
+			);
+			name = AiGoodbyeWidgets;
+			packageProductDependencies = (
+			);
+			productName = AiGoodbyeWidgets;
+			productReference = 6AWI0003000000000000F003 /* AiGoodbyeWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		6A1A4E3C2F085D0200E51DBF /* AIGoodbye */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 6A1A4E5E2F085D0400E51DBF /* Build configuration list for PBXNativeTarget "AIGoodbye" */;
@@ -123,10 +270,13 @@
 				6A1A4E392F085D0200E51DBF /* Sources */,
 				6A1A4E3A2F085D0200E51DBF /* Frameworks */,
 				6A1A4E3B2F085D0200E51DBF /* Resources */,
+				6AEM0001000000000000A001 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				6ASH000B000000000000E00B /* PBXTargetDependency */,
+				6AWI000B000000000000F00B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				6A1A4E3F2F085D0200E51DBF /* AIGoodbye */,
@@ -246,11 +396,27 @@
 				6A1A4E3C2F085D0200E51DBF /* AIGoodbye */,
 				6A1A4E492F085D0400E51DBF /* AIGoodbyeTests */,
 				6A1A4E532F085D0400E51DBF /* AIGoodbyeUITests */,
+				6ASH0001000000000000E001 /* AiGoodbyeShare */,
+				6AWI0001000000000000F001 /* AiGoodbyeWidgets */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		6ASH0006000000000000E006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6AWI0006000000000000F006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		6A1A4E3B2F085D0200E51DBF /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -275,6 +441,22 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		6ASH0004000000000000E004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6ASH00D2000000000000E0D2 /* SharedInbox.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6AWI0004000000000000F004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6AWI00D3000000000000F0D3 /* SharedInbox.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		6A1A4E392F085D0200E51DBF /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -299,6 +481,16 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		6ASH000B000000000000E00B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6ASH0001000000000000E001 /* AiGoodbyeShare */;
+			targetProxy = 6ASH000A000000000000E00A /* PBXContainerItemProxy */;
+		};
+		6AWI000B000000000000F00B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6AWI0001000000000000F001 /* AiGoodbyeWidgets */;
+			targetProxy = 6AWI000A000000000000F00A /* PBXContainerItemProxy */;
+		};
 		6A1A4E4C2F085D0400E51DBF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 6A1A4E3C2F085D0200E51DBF /* AIGoodbye */;
@@ -312,6 +504,116 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		6ASH0008000000000000E008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AiGoodbyeShare/AiGoodbyeShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 14;
+				DEVELOPMENT_TEAM = W7P6DN65A8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AiGoodbyeShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Ask AiGoodbye";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 3.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbye.Share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		6ASH0009000000000000E009 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AiGoodbyeShare/AiGoodbyeShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 14;
+				DEVELOPMENT_TEAM = W7P6DN65A8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AiGoodbyeShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Ask AiGoodbye";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 3.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbye.Share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		6AWI0008000000000000F008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AiGoodbyeWidgets/AiGoodbyeWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 14;
+				DEVELOPMENT_TEAM = W7P6DN65A8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AiGoodbyeWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "AiGoodbye";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 3.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbye.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		6AWI0009000000000000F009 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AiGoodbyeWidgets/AiGoodbyeWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 14;
+				DEVELOPMENT_TEAM = W7P6DN65A8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AiGoodbyeWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "AiGoodbye";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 3.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbye.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		6A1A4E5C2F085D0400E51DBF /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -443,7 +745,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = AIGoodbye/AIGoodbye.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -454,6 +756,7 @@
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "AiGoodbye converts your speech to text on this device only. Nothing is sent anywhere.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "AIGoodbye uses your photo library to select images for analysis";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_FILE = AIGoodbye/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsMultipleScenes = NO;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -464,7 +767,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.1.0;
+				MARKETING_VERSION = 3.2.0;
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = "-Wl,-U,_MTLIOErrorDomain -Wl,-U,_MTLTensorDomain";
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbye;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -486,7 +789,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = AIGoodbye/AIGoodbye.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -497,6 +800,7 @@
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "AiGoodbye converts your speech to text on this device only. Nothing is sent anywhere.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "AIGoodbye uses your photo library to select images for analysis";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_FILE = AIGoodbye/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsMultipleScenes = NO;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -507,7 +811,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.1.0;
+				MARKETING_VERSION = 3.2.0;
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = "-Wl,-U,_MTLIOErrorDomain -Wl,-U,_MTLTensorDomain";
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbye;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -526,11 +830,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 3.1.0;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbyeTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -548,11 +852,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 3.1.0;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbyeTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -569,10 +873,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 3.1.0;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbyeUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -589,10 +893,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 3.1.0;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbyeUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -608,6 +912,24 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		6ASH0007000000000000E007 /* Build configuration list for PBXNativeTarget "AiGoodbyeShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6ASH0008000000000000E008 /* Debug */,
+				6ASH0009000000000000E009 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6AWI0007000000000000F007 /* Build configuration list for PBXNativeTarget "AiGoodbyeWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6AWI0008000000000000F008 /* Debug */,
+				6AWI0009000000000000F009 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		6A1A4E382F085D0200E51DBF /* Build configuration list for PBXProject "AIGoodbye" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

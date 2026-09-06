@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
@@ -14,7 +15,8 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            ModelSection(engine: appState.engine, showModelPicker: $showModelPicker)
+            ModelSection(engine: appState.engine, settings: appState.settings, showModelPicker: $showModelPicker)
+            PersonalizationSection()
             LanguageSection(settings: appState.settings)
             BehaviorSection(settings: appState.settings)
             FeedbackSection(settings: appState.settings)
@@ -38,6 +40,7 @@ struct SettingsView: View {
 private struct ModelSection: View {
     @ObservedObject var engine: ChatEngine
     @EnvironmentObject var appState: AppState
+    @ObservedObject var settings: SettingsManager
     @Binding var showModelPicker: Bool
 
     var body: some View {
@@ -71,8 +74,62 @@ private struct ModelSection: View {
             NavigationLink("Manage Storage") {
                 ModelsSettingsView()
             }
+
+            Toggle(isOn: $settings.wifiOnlyDownloads) {
+                Label("Download over Wi-Fi only", systemImage: "wifi")
+            }
         } header: {
             Text("AI Model")
+        } footer: {
+            Text("Models are 1-6 GB, so downloading over Wi-Fi is recommended.")
+        }
+    }
+}
+
+// MARK: - Personalization Section
+
+private struct PersonalizationSection: View {
+    @ObservedObject private var personas = PersonaStore.shared
+    @ObservedObject private var memory = MemoryStore.shared
+
+    var body: some View {
+        Section {
+            NavigationLink {
+                PersonasView()
+            } label: {
+                HStack {
+                    Label("Personas", systemImage: "theatermasks")
+                    Spacer()
+                    Text(personas.selected?.name ?? L10n.text("General Assistant"))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            NavigationLink {
+                MemoryView()
+            } label: {
+                HStack {
+                    Label("Memory", systemImage: "brain.head.profile")
+                    Spacer()
+                    Text(memory.isEnabled
+                         ? L10n.text("\(String(memory.facts.count)) remembered")
+                         : L10n.text("Off"))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            NavigationLink {
+                KnowledgeLibraryView()
+            } label: {
+                Label("Knowledge Library", systemImage: "books.vertical")
+            }
+        } header: {
+            Text("Personalization")
+        } footer: {
+            Text("Personas change how the AI answers. Memory and your library stay on this device.")
         }
     }
 }
@@ -215,17 +272,31 @@ private struct FeedbackSection: View {
 // MARK: - Privacy Section
 
 private struct PrivacySection: View {
+    @ObservedObject private var lock = AppLock.shared
+
     var body: some View {
         Section {
-            Label("All AI runs on your device", systemImage: "iphone")
+            NavigationLink {
+                PrivacyCenterView()
+            } label: {
+                Label("Privacy Center", systemImage: "checkmark.shield")
+            }
 
-            Label("No data collection, no tracking", systemImage: "hand.raised.fill")
+            if lock.isAvailable {
+                Toggle(isOn: $lock.isEnabled) {
+                    Label(L10n.text("Lock with \(lock.biometryName)"), systemImage: "lock")
+                }
+            }
 
             NavigationLink("About & Legal") {
                 AboutView()
             }
         } header: {
             Text("Privacy")
+        } footer: {
+            if lock.isAvailable {
+                Text("When locked, your conversations are hidden until you unlock the app.")
+            }
         }
     }
 }

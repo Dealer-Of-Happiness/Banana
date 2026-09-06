@@ -33,6 +33,7 @@ struct ChatView: View {
     @State private var showingModelPicker = false
     @State private var showingVoiceMode = false
     @State private var showingLiveCamera = false
+    @State private var showingTranslate = false
 
     var body: some View {
         NavigationStack {
@@ -46,6 +47,35 @@ struct ChatView: View {
                 // Inline error banner with Retry
                 if let error = viewModel.errorBanner {
                     errorBanner(error)
+                }
+
+                // Confirmation that something was saved to private memory.
+                if let notice = viewModel.memoryNotice {
+                    HStack(spacing: 10) {
+                        Image(systemName: "brain.head.profile")
+                            .foregroundStyle(.blue)
+                        Text(notice)
+                            .font(.caption)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                        Button {
+                            withAnimation { viewModel.memoryNotice = nil }
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .frame(minWidth: 44, minHeight: 44)
+                        }
+                        .accessibilityLabel(Text("Dismiss"))
+                    }
+                    .padding(.horizontal, 10)
+                    .background(Color.blue.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal)
+                    .task {
+                        try? await Task.sleep(nanoseconds: 6_000_000_000)
+                        withAnimation { viewModel.memoryNotice = nil }
+                    }
                 }
 
                 // Storage failure warning: conversations aren't being saved.
@@ -99,6 +129,10 @@ struct ChatView: View {
             }
             .fullScreenCover(isPresented: $showingLiveCamera) {
                 LiveCameraView()
+                    .environmentObject(appState)
+            }
+            .sheet(isPresented: $showingTranslate) {
+                TranslateModeView()
                     .environmentObject(appState)
             }
             .fullScreenCover(isPresented: $showingCamera) {
@@ -161,9 +195,29 @@ struct ChatView: View {
         .onAppear {
             viewModel.appState = appState
             viewModel.loadConversation(appState.currentConversation)
+            // A route set before this view existed (cold launch from a
+            // widget or Control Center) would never fire onChange.
+            applyPendingRoute()
         }
         .onChange(of: appState.currentConversation) { _, newConversation in
             viewModel.loadConversation(newConversation)
+        }
+        // Widgets, Control Center and Siri can ask for a specific screen.
+        .onChange(of: appState.pendingRoute) { _, _ in
+            applyPendingRoute()
+        }
+    }
+
+    private func applyPendingRoute() {
+        guard let route = appState.pendingRoute else { return }
+        appState.pendingRoute = nil
+        switch route {
+        case .voice: showingVoiceMode = true
+        case .camera: showingLiveCamera = true
+        case .translate: showingTranslate = true
+        case .newChat:
+            appState.createNewConversation()
+            isInputFocused = true
         }
     }
 
@@ -595,6 +649,14 @@ struct ChatView: View {
                         }
                     }
                     #endif
+
+                    Divider()
+
+                    Button {
+                        showingTranslate = true
+                    } label: {
+                        Label("Translate", systemImage: "character.bubble")
+                    }
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.title)
@@ -753,6 +815,8 @@ class ChatViewModel: ObservableObject {
     @Published var consentRequest: ConsentRequest?
     @Published var showingImportError = false
     @Published private(set) var importErrorMessage = ""
+    /// Shown briefly when something is added to private memory.
+    @Published var memoryNotice: String?
 
     var appState: AppState?
     private var currentConversationId: UUID?
@@ -906,6 +970,40 @@ class ChatViewModel: ObservableObject {
         }
     }
 
+    /// Handle a file handed over by the share extension (already inside our
+    /// own container, so no security-scoped access is needed).
+    func processSharedFile(_ url: URL, displayName: String) async {
+        clearPendingDocument()
+
+        // Images become an attachment; everything else is read as a document.
+        if let data = try? Data(contentsOf: url), let image = UIImage(data: data) {
+            pendingImage = image
+            pendingImageId = UUID()
+            return
+        }
+
+        do {
+            let text: String
+            if url.pathExtension.lowercased() == "pdf" {
+                text = try await extractTextFromPDF(url)
+            } else {
+                text = try await Task.detached(priority: .userInitiated) {
+                    try String(contentsOf: url, encoding: .utf8)
+                }.value
+            }
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else {
+                presentImportError(L10n.text("No readable text was found in \(displayName)."))
+                return
+            }
+            pendingDocumentName = displayName
+            pendingDocumentContent = String(trimmed.prefix(4000))
+            pendingDocumentId = await DocumentIndex.shared.store(name: displayName, fullText: trimmed)
+        } catch {
+            presentImportError(L10n.text("Couldn't read \(displayName): \(error.localizedDescription)"))
+        }
+    }
+
     func clearPendingDocument() {
         if let id = pendingDocumentId {
             // Never sent: remove the stored text again.
@@ -967,6 +1065,10 @@ class ChatViewModel: ObservableObject {
 
         guard !text.isEmpty || image != nil || documentName != nil else { return }
 
+        // "Remember that ..." saves to private memory before answering, and
+        // always tells the user what was saved.
+        captureMemoryIfRequested(text)
+
         // Clear composer state.
         inputText = ""
         pendingImage = nil
@@ -1019,12 +1121,28 @@ class ChatViewModel: ObservableObject {
         await perform(request)
     }
 
+    /// Saves an explicit "remember that ..." request into private memory.
+    /// Returns true when something was saved, so the UI can confirm it.
+    @discardableResult
+    private func captureMemoryIfRequested(_ message: String) -> Bool {
+        guard MemoryStore.shared.isEnabled,
+              let fact = MemoryStore.requestedFact(in: message) else { return false }
+        MemoryStore.shared.add(fact)
+        // The system prompt changed, so the live session must be rebuilt.
+        appState?.engine.resetSessions()
+        // Never store something about the user silently: say what was saved
+        // and where to remove it.
+        memoryNotice = L10n.text("Saved to memory: \(fact)")
+        return true
+    }
+
     /// Voice mode entry point: sends spoken text as a normal chat turn.
     func sendVoicePrompt(_ text: String) async {
         guard !isGenerating else { return }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         errorBanner = nil
+        captureMemoryIfRequested(trimmed)
         let request = PendingRequest(
             prompt: trimmed,
             displayMessage: trimmed,
@@ -1063,13 +1181,17 @@ class ChatViewModel: ObservableObject {
         // and is used for this generation only - it is never written into
         // history, which would crowd out the conversation itself.
         var generationPrompt = request.prompt
-        if request.image == nil, let conv = conversation, !conv.attachedDocumentIds.isEmpty {
+        // Documents attached to this chat, plus anything switched on in the
+        // permanent Knowledge Library.
+        let libraryIds = KnowledgeLibrary.shared.activeDocumentIds
+        let searchableIds = Array(Set((conversation?.attachedDocumentIds ?? []) + libraryIds))
+        if request.image == nil, !searchableIds.isEmpty {
             // contextWindow is measured in tokens; the retrieval budget is in
             // characters (~3.5 per token). Spend at most ~40% of the window
             // on passages so the conversation itself still fits.
             let windowChars = Double(appState.settings.contextWindow) * 3.5
             let budget = max(2000, min(Int(windowChars * 0.4), 12000))
-            let docIds = conv.attachedDocumentIds
+            let docIds = searchableIds
             let question = request.prompt
             if let retrieved = await DocumentIndex.shared.context(
                 for: question, documentIds: docIds, budget: budget

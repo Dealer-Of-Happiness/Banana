@@ -2,6 +2,36 @@
 
 Paste-ready text for App Store Connect.
 
+## What's New (version 3.2.0, build 14) - September 5, 2026
+
+AiGoodbye is now everywhere on your device, and it can finally know you - privately.
+
+EVERYWHERE YOU ARE
+- Share sheet: send any text, link, PDF or photo from any app straight to AiGoodbye
+- Home Screen and Lock Screen widgets for instant chat, voice or camera
+- Control Center button to start a private voice conversation in one tap
+
+IT KNOWS YOU (AND ONLY YOU)
+- Personas: choose how the AI answers - Editor, Explain Simply, Translator, Code Helper, or write your own
+- Memory: tell it "Remember that..." and it will, across every chat, stored only on this device and deletable anytime
+- Knowledge Library: keep documents permanently available so the AI can consult them in any conversation
+
+PROOF, NOT PROMISES
+- New Privacy Center: a live log of every network request the app makes, an offline test you can run yourself, and a plain-English map of where your data lives
+- Lock AiGoodbye with Face ID, Touch ID or your passcode
+
+TRAVEL AND LANGUAGES
+- New Translate mode: two-way conversation translation that works with no internet at all, in 13 languages
+
+ALSO NEW
+- Search every conversation and message
+- Export any chat as Markdown or PDF
+- Download models over Wi-Fi only, with downloads that survive a lost connection
+
+Everything here runs on your device. No cloud, no accounts, no subscriptions.
+
+---
+
 ## What's New (version 3.1.0, build 12) - the feature release, September 4, 2026
 
 Four big new abilities. All of them 100% private, 100% on your device.

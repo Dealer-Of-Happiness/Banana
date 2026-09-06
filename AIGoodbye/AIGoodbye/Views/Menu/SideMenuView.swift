@@ -15,6 +15,9 @@ struct SideMenuView: View {
     @State private var showNewFolderAlert = false
     @State private var newFolderName = ""
     @State private var showSettings = false
+    @State private var showSearch = false
+    @State private var exportURL: URL?
+    @State private var exportFailed = false
     @State private var draggedConversation: Conversation?
     @State private var targetedFolderId: UUID?
     @State private var showMoveToFolder = false
@@ -82,6 +85,18 @@ struct SideMenuView: View {
                 SettingsView()
                     .environmentObject(appState)
             }
+        }
+        .sheet(isPresented: $showSearch) {
+            ChatSearchView()
+                .environmentObject(appState)
+        }
+        .sheet(item: $exportURL) { url in
+            ShareSheet(items: [url])
+        }
+        .alert("Couldn't export this chat", isPresented: $exportFailed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Please try again.")
         }
         .sheet(isPresented: $showMoveToFolder) {
             MoveToFolderSheet(
@@ -187,16 +202,29 @@ struct SideMenuView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             }
 
-            Button {
-                showNewFolderAlert = true
-            } label: {
-                Label("New Folder", systemImage: "folder.badge.plus")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color(.systemGray6))
-                    .foregroundStyle(.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            HStack(spacing: 8) {
+                Button {
+                    showNewFolderAlert = true
+                } label: {
+                    Label("New Folder", systemImage: "folder.badge.plus")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color(.systemGray6))
+                        .foregroundStyle(.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+
+                Button {
+                    showSearch = true
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                        .frame(width: 44, height: 44)
+                        .background(Color(.systemGray6))
+                        .foregroundStyle(.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .accessibilityLabel(Text("Search chats"))
             }
         }
         .padding()
@@ -322,6 +350,28 @@ struct SideMenuView: View {
 
                                     Divider()
 
+                                    Button {
+                                        if let url = ConversationExporter.markdownFile(for: chat) {
+                                            exportURL = url
+                                        } else {
+                                            exportFailed = true
+                                        }
+                                    } label: {
+                                        Label("Export as Markdown", systemImage: "doc.text")
+                                    }
+
+                                    Button {
+                                        if let url = ConversationExporter.pdfFile(for: chat) {
+                                            exportURL = url
+                                        } else {
+                                            exportFailed = true
+                                        }
+                                    } label: {
+                                        Label("Export as PDF", systemImage: "doc.richtext")
+                                    }
+
+                                    Divider()
+
                                     Button(role: .destructive) {
                                         conversationToDelete = chat
                                         showDeleteConfirmation = true
@@ -401,6 +451,23 @@ struct SideMenuView: View {
         _ = appState.conversationManager.createFolder(name: newFolderName)
         newFolderName = ""
     }
+}
+
+// MARK: - Share sheet
+
+/// URL is Identifiable so it can drive `.sheet(item:)`.
+extension URL: @retroactive Identifiable {
+    public var id: String { absoluteString }
+}
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Folder Row

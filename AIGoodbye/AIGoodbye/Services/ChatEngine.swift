@@ -199,6 +199,25 @@ final class ChatEngine: ObservableObject {
         #endif
     }
 
+    /// A clean session with no persona, memory or history - used by
+    /// translation, where personalization would corrupt the output.
+    func startTranslationSession(model: AIModel) async throws {
+        let plain = MLXService.basePrompt(for: settings.appLanguage)
+        #if targetEnvironment(simulator)
+        if model.backend == .appleIntelligence {
+            appleIntelligence.startSession(history: [], instructions: plain)
+        }
+        return
+        #else
+        if model.backend == .appleIntelligence {
+            appleIntelligence.startSession(history: [], instructions: plain)
+        } else {
+            try await mlx.loadModel(model)
+            mlx.startSession(model: model, history: [], instructions: plain)
+        }
+        #endif
+    }
+
     /// Whether a live session exists (avoids rebuilding between turns).
     func hasSession(for model: AIModel) -> Bool {
         model.backend == .appleIntelligence

@@ -61,8 +61,27 @@ final class MLXService: ObservableObject {
     When analyzing images, describe what you see clearly and answer questions about the visual content.
     """
 
-    /// Full system prompt including the response-language rule.
+    /// Full system prompt: brand and behavior, the response-language rule,
+    /// the active persona, and anything the user asked the app to remember.
+    @MainActor
     static func systemPrompt(for language: AppLanguage) -> String {
+        var prompt = basePrompt + " " + language.modelInstruction
+
+        let persona = PersonaStore.shared.activeInstructions
+        if !persona.isEmpty {
+            prompt += "\n\n" + persona
+        }
+
+        let memory = MemoryStore.shared.promptBlock
+        if !memory.isEmpty {
+            prompt += "\n\n" + memory
+        }
+        return prompt
+    }
+
+    /// Language-only prompt for contexts without user personalization
+    /// (used by tests and one-shot utilities).
+    nonisolated static func basePrompt(for language: AppLanguage) -> String {
         basePrompt + " " + language.modelInstruction
     }
 
@@ -144,7 +163,9 @@ final class MLXService: ObservableObject {
         // downloader below (which then finds whatever we already fetched).
         if !wasDownloaded, let repoDir = ModelManager.shared.modelDirectory(for: model) {
             do {
-                try await ModelPrefetcher().prefetch(hfId: hfId, into: repoDir) { [weak self] done, total in
+                let prefetcher = ModelPrefetcher()
+                prefetcher.wifiOnly = settings.wifiOnlyDownloads
+                try await prefetcher.prefetch(hfId: hfId, into: repoDir) { [weak self] done, total in
                     Task { @MainActor in
                         self?.noteDownloadProgress(done: done, total: total)
                     }
@@ -290,7 +311,11 @@ final class MLXService: ObservableObject {
     /// (regenerate, clear), or the model / context setting changes.
     /// Do NOT call between normal turns; keeping the session alive is what
     /// enables cache reuse.
-    func startSession(model: AIModel, history: [(role: String, content: String)]) {
+    func startSession(
+        model: AIModel,
+        history: [(role: String, content: String)],
+        instructions overrideInstructions: String? = nil
+    ) {
         guard let container = modelContainer, loadedModelId == model.id else {
             session = nil
             sessionModelId = nil
@@ -323,7 +348,7 @@ final class MLXService: ObservableObject {
             }
         }
 
-        let instructions = Self.systemPrompt(for: settings.appLanguage)
+        let instructions = overrideInstructions ?? Self.systemPrompt(for: settings.appLanguage)
         if chatHistory.isEmpty {
             session = ChatSession(
                 container,

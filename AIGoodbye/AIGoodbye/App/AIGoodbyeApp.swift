@@ -17,6 +17,8 @@ import Combine
 struct AIGoodbyeApp: App {
     @StateObject private var appState = AppState()
     @AppStorage("hasAcceptedTerms") private var hasAcceptedTerms = false
+    @Environment(\.scenePhase) private var scenePhase
+    @ObservedObject private var lock = AppLock.shared
 
     var body: some Scene {
         WindowGroup {
@@ -24,6 +26,28 @@ struct AIGoodbyeApp: App {
                 contentView
             }
             .environmentObject(appState)
+            // Presented at the window root so it covers sheets and
+            // full-screen covers too (a lock that any open sheet defeats
+            // is not a lock).
+            .fullScreenCover(isPresented: Binding(
+                get: { lock.isLocked },
+                set: { _ in }   // dismissed only by a successful unlock
+            )) {
+                LockScreen()
+            }
+            .onChange(of: scenePhase) { _, phase in
+                switch phase {
+                case .background:
+                    // Only on real backgrounding: `.inactive` also fires for
+                    // Control Center, banners and the biometric prompt.
+                    lock.lockIfNeeded()
+                case .active:
+                    Task { await lock.unlockOnForeground() }
+                default:
+                    break
+                }
+            }
+            .task { await lock.unlockOnForeground() }
             .task {
                 if hasAcceptedTerms {
                     await appState.initialize()
@@ -32,6 +56,15 @@ struct AIGoodbyeApp: App {
             .onChange(of: hasAcceptedTerms) { _, accepted in
                 if accepted {
                     Task { await appState.initialize() }
+                }
+            }
+            // Share sheet, widgets and Control Center all arrive here.
+            .onOpenURL { url in
+                appState.handleDeepLink(url)
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    appState.consumeSharedContent()
                 }
             }
         }
@@ -43,7 +76,52 @@ struct AIGoodbyeApp: App {
             TermsView(hasAcceptedTerms: $hasAcceptedTerms)
         } else {
             MainView()
+                // Redacted rather than blurred, and without animation, so the
+                // app-switcher snapshot can never catch readable content.
+                .redacted(reason: lock.isLocked ? .privacy : [])
+                .accessibilityHidden(lock.isLocked)
         }
+    }
+}
+
+// MARK: - App lock
+
+private struct LockScreen: View {
+    @ObservedObject private var lock = AppLock.shared
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(.ultraThickMaterial)
+                .ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 44))
+                    .foregroundStyle(.blue)
+
+                Text("Your conversations are locked")
+                    .font(.headline)
+
+                if let error = lock.lastError {
+                    Text(error)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Button {
+                    Task { await lock.unlock() }
+                } label: {
+                    Text("Unlock")
+                        .font(.headline)
+                        .padding(.horizontal, 28)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding()
+        }
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -110,6 +188,10 @@ class AppState: ObservableObject {
             .store(in: &cancellables)
 
         AppState.shared = self
+
+        // Start recording our own network requests so the Privacy Center can
+        // show the user exactly what this app does (and doesn't) send.
+        NetworkAudit.begin()
     }
 
     /// Fast, non-blocking startup: prepare storage, then show the app.
@@ -135,6 +217,60 @@ class AppState: ObservableObject {
 
     func createNewConversation() {
         currentConversation = conversationManager.createConversation()
+    }
+
+    // MARK: - Deep links and shared content
+
+    /// Set when another part of the system (widget, Control Center, share
+    /// sheet) asked for a specific screen.
+    @Published var pendingRoute: Route?
+
+    enum Route: Equatable {
+        case newChat
+        case voice
+        case camera
+        case translate
+    }
+
+    func handleDeepLink(_ url: URL) {
+        guard url.scheme == SharedInbox.urlScheme else { return }
+        switch url.host() {
+        case "voice": pendingRoute = .voice
+        case "camera": pendingRoute = .camera
+        case "translate": pendingRoute = .translate
+        case "new": pendingRoute = .newChat
+        case "shared": consumeSharedContent()
+        default: break
+        }
+    }
+
+    /// Pick up anything the share extension left for us and drop it into the
+    /// composer of a fresh chat.
+    func consumeSharedContent() {
+        if WidgetLaunchBridge.consumeVoiceRequest() {
+            pendingRoute = .voice
+        }
+        guard let item = SharedInbox.takePending() else { return }
+
+        Task { @MainActor in
+            // Switch conversations FIRST: loading a conversation clears the
+            // composer, so populating before this point would be wiped.
+            createNewConversation()
+            showSideMenu = false
+            // Let the view observe the change and run loadConversation.
+            await Task.yield()
+
+            switch item.kind {
+            case .text, .url:
+                chatViewModel.inputText = item.text ?? ""
+            case .file:
+                if let name = item.fileName, let url = SharedInbox.fileURL(named: name) {
+                    await chatViewModel.processSharedFile(url, displayName: item.displayName ?? url.lastPathComponent)
+                    SharedInbox.cleanUp(fileName: name)
+                }
+            }
+        }
+        SharedInbox.sweepStaleFiles()
     }
 
     func toggleSideMenu() {

@@ -50,7 +50,7 @@ struct PrivacyCenterView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                Text("Every answer is produced by a model running on your own hardware. The only time this app uses the internet is to download a model file you asked for.")
+                Text("Every answer is produced by a model running on your own hardware. The app only uses the internet to download a model you asked for, or to check one you asked to add. Your messages, files and recordings are never sent anywhere.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -188,8 +188,10 @@ final class Reachability: ObservableObject {
         // claims to be online.
         isOnline = monitor.currentPath.status == .satisfied
         monitor.pathUpdateHandler = { [weak self] path in
+            let owner = self
+            let online = path.status == .satisfied
             Task { @MainActor in
-                self?.isOnline = path.status == .satisfied
+                owner?.isOnline = online
             }
         }
         monitor.start(queue: DispatchQueue(label: "aig.reachability"))

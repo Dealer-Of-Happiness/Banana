@@ -11,7 +11,6 @@
 		6AWI00D3000000000000F0D3 /* SharedInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ASH00D1000000000000E0D1 /* SharedInbox.swift */; };
 		6ASH000C000000000000E00C /* AiGoodbyeShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6ASH0003000000000000E003 /* AiGoodbyeShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6AWI000C000000000000F00C /* AiGoodbyeWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6AWI0003000000000000F003 /* AiGoodbyeWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		6AFC2E132F0B5B73004CD5AA /* LLM in Frameworks */ = {isa = PBXBuildFile; productRef = 6AFC2E122F0B5B73004CD5AA /* LLM */; };
 		6AMLX001F0B5B73004CD5AA /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = 6AMLX000F0B5B73004CD5AA /* MLX */; };
 		6AMLX003F0B5B73004CD5AA /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 6AMLX002F0B5B73004CD5AA /* MLXLLM */; };
 		6AMLX005F0B5B73004CD5AA /* MLXVLM in Frameworks */ = {isa = PBXBuildFile; productRef = 6AMLX004F0B5B73004CD5AA /* MLXVLM */; };
@@ -161,7 +160,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6AFC2E132F0B5B73004CD5AA /* LLM in Frameworks */,
 				6AMLX001F0B5B73004CD5AA /* MLX in Frameworks */,
 				6AMLX003F0B5B73004CD5AA /* MLXLLM in Frameworks */,
 				6AMLX005F0B5B73004CD5AA /* MLXVLM in Frameworks */,
@@ -283,7 +281,6 @@
 			);
 			name = AIGoodbye;
 			packageProductDependencies = (
-				6AFC2E122F0B5B73004CD5AA /* LLM */,
 				6AMLX000F0B5B73004CD5AA /* MLX */,
 				6AMLX002F0B5B73004CD5AA /* MLXLLM */,
 				6AMLX004F0B5B73004CD5AA /* MLXVLM */,
@@ -384,7 +381,6 @@
 			mainGroup = 6A1A4E342F085D0200E51DBF;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				6AFC2E112F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "LLM" */,
 				6AMLX010F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift" */,
 				6AMLX020F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
 			);
@@ -507,9 +503,10 @@
 		6ASH0008000000000000E008 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = AiGoodbyeShare/AiGoodbyeShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AiGoodbyeShare/Info.plist;
@@ -520,12 +517,14 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.2.0;
+				MARKETING_VERSION = 3.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbye.Share;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -535,9 +534,10 @@
 		6ASH0009000000000000E009 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = AiGoodbyeShare/AiGoodbyeShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AiGoodbyeShare/Info.plist;
@@ -548,12 +548,14 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.2.0;
+				MARKETING_VERSION = 3.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbye.Share;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -562,9 +564,10 @@
 		6AWI0008000000000000F008 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = AiGoodbyeWidgets/AiGoodbyeWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AiGoodbyeWidgets/Info.plist;
@@ -575,12 +578,14 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.2.0;
+				MARKETING_VERSION = 3.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbye.Widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -590,9 +595,10 @@
 		6AWI0009000000000000F009 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = AiGoodbyeWidgets/AiGoodbyeWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AiGoodbyeWidgets/Info.plist;
@@ -603,12 +609,14 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.2.0;
+				MARKETING_VERSION = 3.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbye.Widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -745,7 +753,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = AIGoodbye/AIGoodbye.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -754,7 +762,8 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "AiGoodbye uses the camera so you can take photos or ask about a live view. Images are analyzed on your device and never recorded or uploaded.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AiGoodbye uses the microphone for private voice conversations. Audio is processed entirely on your device.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "AiGoodbye converts your speech to text on this device only. Nothing is sent anywhere.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "AIGoodbye uses your photo library to select images for analysis";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "AiGoodbye uses Face ID to unlock your private conversations. Nothing about your face ever leaves the device.";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_FILE = AIGoodbye/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsMultipleScenes = NO;
@@ -767,7 +776,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.2.0;
+				MARKETING_VERSION = 3.4.0;
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = "-Wl,-U,_MTLIOErrorDomain -Wl,-U,_MTLTensorDomain";
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbye;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -789,7 +798,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = AIGoodbye/AIGoodbye.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -798,7 +807,8 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "AiGoodbye uses the camera so you can take photos or ask about a live view. Images are analyzed on your device and never recorded or uploaded.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AiGoodbye uses the microphone for private voice conversations. Audio is processed entirely on your device.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "AiGoodbye converts your speech to text on this device only. Nothing is sent anywhere.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "AIGoodbye uses your photo library to select images for analysis";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "AiGoodbye uses Face ID to unlock your private conversations. Nothing about your face ever leaves the device.";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_FILE = AIGoodbye/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsMultipleScenes = NO;
@@ -811,7 +821,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.2.0;
+				MARKETING_VERSION = 3.4.0;
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = "-Wl,-U,_MTLIOErrorDomain -Wl,-U,_MTLTensorDomain";
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbye;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -830,11 +840,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 3.2.0;
+				MARKETING_VERSION = 3.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbyeTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -852,11 +862,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 3.2.0;
+				MARKETING_VERSION = 3.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbyeTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -873,10 +883,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 3.2.0;
+				MARKETING_VERSION = 3.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbyeUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -893,10 +903,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = W7P6DN65A8;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 3.2.0;
+				MARKETING_VERSION = 3.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aigoodbye.AIGoodbyeUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -969,14 +979,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		6AFC2E112F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "LLM" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/eastriverlee/LLM.swift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.0.0;
-			};
-		};
 		6AMLX010F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/ml-explore/mlx-swift";
@@ -996,11 +998,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		6AFC2E122F0B5B73004CD5AA /* LLM */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6AFC2E112F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "LLM" */;
-			productName = LLM;
-		};
 		6AMLX000F0B5B73004CD5AA /* MLX */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 6AMLX010F0B5B73004CD5AA /* XCRemoteSwiftPackageReference "mlx-swift" */;

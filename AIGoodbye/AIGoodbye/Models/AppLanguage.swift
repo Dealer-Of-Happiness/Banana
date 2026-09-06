@@ -8,7 +8,10 @@
 
 import Foundation
 
-enum AppLanguage: String, CaseIterable, Identifiable, Codable {
+/// Deliberately `nonisolated`: a language choice is read from background work
+/// too - prompt building, transcription setup, OCR language lists - and none
+/// of it touches UI state.
+nonisolated enum AppLanguage: String, CaseIterable, Identifiable, Codable {
     case automatic = "auto"
     case english = "en"
     case mandarin = "zh-Hans"

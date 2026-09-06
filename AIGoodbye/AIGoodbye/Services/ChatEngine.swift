@@ -119,6 +119,9 @@ final class ChatEngine: ObservableObject {
     }
 
     func approveDownload(for model: AIModel) {
+        // A fresh download deserves a fresh attempt: a model that failed to
+        // load once should not be written off forever.
+        failedToLoad.remove(model.id)
         var approved = UserDefaults.standard.stringArray(forKey: Self.approvedDownloadsKey) ?? []
         if !approved.contains(model.id) {
             approved.append(model.id)
@@ -130,18 +133,39 @@ final class ChatEngine: ObservableObject {
 
     /// Decide which backend will answer, given whether an image is attached.
     /// Throws RouteError when user action is needed (download consent, etc.).
-    func route(hasImage: Bool) throws -> AIModel {
+    ///
+    /// - Parameter requiresDownloaded: for the hands-free camera screens,
+    ///   where a model that is approved but not yet on disk would start a
+    ///   multi-gigabyte download inside a turn - minutes of silence for
+    ///   someone who cannot see the progress bar. They ask the user to
+    ///   download it from the chat screen instead.
+    func route(hasImage: Bool, requiresDownloaded: Bool = false) throws -> AIModel {
+        let model = try routeAny(hasImage: hasImage)
+        if requiresDownloaded, model.backend == .mlx, !model.isDownloaded {
+            throw RouteError.visionNeedsDownloadedModel(model)
+        }
+        return model
+    }
+
+    private func routeAny(hasImage: Bool) throws -> AIModel {
         if hasImage {
             // Vision always needs a downloaded model.
             if selectedModel.backend == .mlx && selectedModel.supportsVision {
                 return try routeMLX(selectedModel)
             }
-            // Apple Intelligence selected: fall back to the best downloaded
-            // vision model that this device can actually run.
-            if let downloaded = AIModel.allModels.first(where: {
-                $0.isDownloaded && $0.supportsVision && $0.fitsThisDevice()
-            }) {
-                return try routeMLX(downloaded)
+            // Apple Intelligence selected: fall back to a downloaded vision
+            // model. Deliberately the SMALLEST one that fits, not the first
+            // in the catalog - loading 5.8 GB to answer one image question,
+            // and keeping it resident afterwards, is how the app gets killed.
+            let candidates = AIModel.allModels
+                .filter { $0.isDownloaded && $0.supportsVision && $0.fitsThisDevice() }
+                .sorted { $0.sizeBytes < $1.sizeBytes }
+            if let smallest = candidates.first {
+                // Only marked once routing has actually succeeded: a throw
+                // here would otherwise leave the flag set, and some later
+                // unrelated turn would unload a model still in use.
+                let routed = try routeMLX(smallest)
+                return routed
             }
             throw RouteError.visionNeedsDownloadedModel(AIModel.recommendedDownloadModel)
         }
@@ -163,6 +187,30 @@ final class ChatEngine: ObservableObject {
             throw RouteError.needsDownloadConsent(model)
         }
         return model
+    }
+
+    /// Free a vision model that was loaded only to answer one image question.
+    ///
+    /// Without this, choosing Apple Intelligence and sending a single photo
+    /// leaves gigabytes resident for the rest of the session. Takes the model
+    /// that was actually borrowed rather than reading a shared flag, because
+    /// several screens route through this engine at once and a stale flag
+    /// would unload a model another one is still using.
+    func releaseBorrowedVisionModel(_ model: AIModel?) {
+        // Not restricted to Apple Intelligence selections: a text-only MLX
+        // model borrows a VLM too, and leaving it resident meant a full model
+        // swap - tens of seconds and a memory spike - on every alternation
+        // between a text question and a picture.
+        //
+        // Not while a one-shot utility holds the engine, either: Live Camera
+        // and Describe Surroundings loop on the same borrowed model, and
+        // unloading it under them cost a full multi-gigabyte reload on every
+        // turn.
+        guard !utilityInUse,
+              let model,
+              model.id != selectedModel.id,
+              mlx.loadedModelId == model.id else { return }
+        mlx.unload()
     }
 
     // MARK: - Session lifecycle
@@ -193,15 +241,38 @@ final class ChatEngine: ObservableObject {
         if model.backend == .appleIntelligence {
             appleIntelligence.startSession(history: history, instructions: currentInstructions)
         } else {
-            try await mlx.loadModel(model)
+            try await load(model)
             mlx.startSession(model: model, history: history)
         }
         #endif
     }
 
+    /// One-shot utilities (translation, summarization, scene description) all
+    /// replace the shared session, so only one may hold the engine at a time
+    /// - otherwise two of them interleave and each destroys the other's
+    /// session mid-answer.
+    private var utilityInUse = false
+
+    /// Take exclusive use of the engine for a one-shot utility. Returns false
+    /// when another one is already running.
+    func claimUtility() -> Bool {
+        guard !utilityInUse else { return false }
+        utilityInUse = true
+        return true
+    }
+
+    /// Release the engine and drop the utility's session, so the next chat
+    /// message rebuilds one with the conversation's own history and persona.
+    func releaseUtility() {
+        utilityInUse = false
+        resetSessions()
+    }
+
     /// A clean session with no persona, memory or history - used by
-    /// translation, where personalization would corrupt the output.
-    func startTranslationSession(model: AIModel) async throws {
+    /// translation and summarization, where personalization would corrupt the
+    /// output (a "Brainstorm Partner" persona must not answer a translation
+    /// with a discussion, or meeting minutes with opinions).
+    func startCleanSession(model: AIModel) async throws {
         let plain = MLXService.basePrompt(for: settings.appLanguage)
         #if targetEnvironment(simulator)
         if model.backend == .appleIntelligence {
@@ -212,10 +283,26 @@ final class ChatEngine: ObservableObject {
         if model.backend == .appleIntelligence {
             appleIntelligence.startSession(history: [], instructions: plain)
         } else {
-            try await mlx.loadModel(model)
+            try await load(model)
             mlx.startSession(model: model, history: [], instructions: plain)
         }
         #endif
+    }
+
+    /// Load a model, remembering whether it worked.
+    ///
+    /// A cancelled load is not a broken model - Stop during a download must
+    /// not mark a perfectly good model unusable.
+    private func load(_ model: AIModel) async throws {
+        do {
+            try await mlx.loadModel(model)
+            noteLoadSucceeded(for: model)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            noteLoadFailure(for: model)
+            throw error
+        }
     }
 
     /// Whether a live session exists (avoids rebuilding between turns).
@@ -308,6 +395,25 @@ final class ChatEngine: ObservableObject {
 
     // MARK: - Status for UI
 
+    /// Set when a memory warning forced the weights out, so the next turn's
+    /// reload is explained rather than mistaken for a hang.
+    var modelWasDroppedForMemory = false
+
+    /// Models that were downloaded but refused to load. A community model can
+    /// be perfectly present on disk and still be unusable - the wrong
+    /// architecture, an unsupported quantization - and reporting "Ready" for
+    /// one meant every message failed against a screen that said all was well.
+    private var failedToLoad: Set<String> = []
+
+    func noteLoadFailure(for model: AIModel) {
+        failedToLoad.insert(model.id)
+    }
+
+    func noteLoadSucceeded(for model: AIModel) {
+        failedToLoad.remove(model.id)
+        modelWasDroppedForMemory = false
+    }
+
     var status: Status {
         if mlx.isDownloading { return .downloading(mlx.downloadProgress) }
         if mlx.isPreparingModel { return .preparing }
@@ -316,6 +422,7 @@ final class ChatEngine: ObservableObject {
                 ? .ready(selectedModel.name)
                 : .needsSetup
         }
+        if failedToLoad.contains(selectedModel.id) { return .needsSetup }
         if selectedModel.isDownloaded || mlx.loadedModelId == selectedModel.id {
             return .ready(selectedModel.name)
         }

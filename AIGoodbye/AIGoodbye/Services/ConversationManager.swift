@@ -128,14 +128,59 @@ class ConversationManager: ObservableObject {
     // MARK: - Attachment files
 
     /// Directory holding attached images (Documents/images/<uuid>.jpg).
-    static var imagesDirectory: URL {
+    ///
+    /// Excluded from backup: these are photos the user asked the AI to look
+    /// at - medical results, documents, private things - and the app's whole
+    /// promise is that they stay on this device.
+    static let imagesDirectory: URL = {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        return documents.appendingPathComponent("images", isDirectory: true)
+        let directory = documents.appendingPathComponent("images", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        excludeFromBackup(directory)
+        return directory
+    }()
+
+    /// Applied on every launch rather than only at creation: one failed call
+    /// must not permanently break the promise the UI makes.
+    static func excludeFromBackup(_ url: URL) {
+        guard (try? url.resourceValues(forKeys: [.isExcludedFromBackupKey]))?
+            .isExcludedFromBackup != true else { return }
+        var mutable = url
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? mutable.setResourceValues(values)
     }
 
     static func imagePath(for id: UUID) -> URL {
-        try? FileManager.default.createDirectory(at: imagesDirectory, withIntermediateDirectories: true)
-        return imagesDirectory.appendingPathComponent("\(id.uuidString).jpg")
+        imagesDirectory.appendingPathComponent("\(id.uuidString).jpg")
+    }
+
+    /// Remove leftover empty conversations, keeping at most one. Every tap
+    /// of "New Chat" used to create a permanent row whether or not the user
+    /// said anything.
+    func sweepEmptyConversations() {
+        let empties = conversations.filter { $0.messages.isEmpty && $0.folderId == nil }
+        guard empties.count > 1 else { return }
+        // Keep the most recent one so the user still lands on a blank chat.
+        for conversation in empties.sorted(by: { $0.updatedAt > $1.updatedAt }).dropFirst() {
+            deleteConversation(conversation)
+        }
+    }
+
+    /// Delete image files no conversation references anymore - left behind by
+    /// Clear Chat in earlier versions, or by an interrupted send.
+    func sweepOrphanedImages() {
+        let keep = Set(conversations.flatMap { $0.attachedImageIds }.map(\.uuidString))
+        guard let names = try? FileManager.default.contentsOfDirectory(
+            atPath: Self.imagesDirectory.path
+        ) else { return }
+        for name in names where name.hasSuffix(".jpg") {
+            let id = String(name.dropLast(4))
+            guard !keep.contains(id) else { continue }
+            try? FileManager.default.removeItem(
+                at: Self.imagesDirectory.appendingPathComponent(name)
+            )
+        }
     }
 
     /// Delete this conversation's attachment files so they don't leak forever.
@@ -151,10 +196,16 @@ class ConversationManager: ObservableObject {
 
     /// Delete stored document text that no conversation references anymore
     /// (e.g. left behind by an interrupted import). Called at launch.
-    func sweepOrphanedDocuments() {
+    ///
+    /// `alsoKeep` carries ids that exist but aren't attached to a
+    /// conversation yet - a document the user has picked but not sent, or one
+    /// the share extension just handed over. Without it, the sweep races the
+    /// share handoff and can delete the file out from under the composer.
+    func sweepOrphanedDocuments(alsoKeep: Set<UUID> = []) {
         var keep = Set(conversations.flatMap { $0.attachedDocumentIds })
         // Library documents are permanent and belong to no single chat.
         keep.formUnion(KnowledgeLibrary.shared.documents.map(\.id))
+        keep.formUnion(alsoKeep)
         Task { await DocumentIndex.shared.removeDocuments(notIn: keep) }
     }
 

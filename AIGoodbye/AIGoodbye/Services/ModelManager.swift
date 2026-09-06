@@ -25,10 +25,17 @@ final class ModelManager: ObservableObject {
     // MARK: - Locations
 
     /// Root of the Hugging Face download cache used by the MLX library.
-    var hubModelsRoot: URL {
+    ///
+    /// Excluded from backup: this is up to 6 GB per model of data that can be
+    /// downloaded again at any time. Letting it into iCloud backups wastes
+    /// the user's quota and violates Apple's Data Storage Guidelines.
+    let hubModelsRoot: URL = {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        return documents.appendingPathComponent("huggingface/models", isDirectory: true)
-    }
+        let root = documents.appendingPathComponent("huggingface/models", isDirectory: true)
+        try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        ConversationManager.excludeFromBackup(root)
+        return root
+    }()
 
     func modelDirectory(for model: AIModel) -> URL? {
         guard let hfId = model.huggingFaceId else { return nil }
@@ -40,7 +47,29 @@ final class ModelManager: ObservableObject {
     /// Name of the marker file written once a download is verified complete.
     private static let completeMarkerName = ".aig_download_complete"
 
+    /// Cached answers for `isModelDownloaded` and `downloadedSizeBytes`.
+    ///
+    /// Both walk the filesystem, and both are reached from SwiftUI view
+    /// bodies - `ChatEngine.status` is read on every streamed token, and the
+    /// storage screen asks for every model on every render. Without a cache
+    /// that is dozens of syscalls a second on the main thread, and for a
+    /// model without its completion marker, a full recursive directory walk.
+    private var downloadedCache: [String: Bool] = [:]
+    private var sizeCache: [String: Int64] = [:]
+
+    private func invalidateCaches() {
+        downloadedCache.removeAll()
+        sizeCache.removeAll()
+    }
+
     func isModelDownloaded(_ model: AIModel) -> Bool {
+        if let cached = downloadedCache[model.id] { return cached }
+        let result = computeIsModelDownloaded(model)
+        downloadedCache[model.id] = result
+        return result
+    }
+
+    private func computeIsModelDownloaded(_ model: AIModel) -> Bool {
         guard let dir = modelDirectory(for: model) else { return false }
         guard let contents = try? FileManager.default.contentsOfDirectory(
             at: dir, includingPropertiesForKeys: nil
@@ -67,12 +96,30 @@ final class ModelManager: ObservableObject {
         guard let dir = modelDirectory(for: model) else { return }
         let marker = dir.appendingPathComponent(Self.completeMarkerName)
         try? Data().write(to: marker)
+        invalidateCaches()
         revision += 1
     }
 
     func downloadedSizeBytes(for model: AIModel) -> Int64 {
+        if let cached = sizeCache[model.id] { return cached }
+        let size = currentSizeOnDisk(for: model)
+        sizeCache[model.id] = size
+        return size
+    }
+
+    /// Uncached, for progress polling during a download. Reading the cached
+    /// value there would freeze the progress bar at whatever the size was
+    /// when the download started - and then trip the "stalled" warning.
+    func currentSizeOnDisk(for model: AIModel) -> Int64 {
         guard let dir = modelDirectory(for: model) else { return 0 }
         return directorySize(dir)
+    }
+
+    /// Recompute what is on disk. Call when a download finishes or the
+    /// storage screen appears - not from a view body.
+    func refreshDiskState() {
+        invalidateCaches()
+        revision += 1
     }
 
     var totalDownloadedBytes: Int64 {
@@ -88,10 +135,12 @@ final class ModelManager: ObservableObject {
     func deleteModel(_ model: AIModel) {
         guard let dir = modelDirectory(for: model) else { return }
         try? FileManager.default.removeItem(at: dir)
+        invalidateCaches()
         revision += 1
     }
 
     func noteModelInstalled(_ model: AIModel) {
+        invalidateCaches()
         revision += 1
     }
 

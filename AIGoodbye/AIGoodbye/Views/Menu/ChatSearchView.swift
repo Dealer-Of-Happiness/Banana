@@ -11,6 +11,12 @@ struct ChatSearchView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
+    /// Results are computed in a debounced task, not in `body`. As a computed
+    /// property this scanned every message of every conversation TWICE per
+    /// keystroke (once for `isEmpty`, once for the List), on the main thread,
+    /// faulting the whole store into memory each time.
+    @State private var hits: [Hit] = []
+    @State private var isSearching = false
 
     private struct Hit: Identifiable {
         let id: UUID
@@ -29,11 +35,18 @@ struct ChatSearchView: View {
                         description: Text("Find any message or conversation. Nothing is sent anywhere.")
                     )
                 } else if hits.isEmpty {
-                    ContentUnavailableView.search(text: query)
+                    if isSearching {
+                        ProgressView()
+                    } else {
+                        ContentUnavailableView.search(text: query)
+                    }
                 } else {
                     List(hits) { hit in
                         Button {
                             appState.currentConversation = hit.conversation
+                            // Close the side menu too, or the user lands back
+                            // on the drawer with their chat hidden behind it.
+                            appState.showSideMenu = false
                             dismiss()
                         } label: {
                             VStack(alignment: .leading, spacing: 4) {
@@ -62,13 +75,24 @@ struct ChatSearchView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .task(id: query) {
+                let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !needle.isEmpty else {
+                    hits = []
+                    isSearching = false
+                    return
+                }
+                isSearching = true
+                // Let typing settle before scanning everything.
+                try? await Task.sleep(nanoseconds: 200_000_000)
+                guard !Task.isCancelled else { return }
+                hits = search(needle)
+                isSearching = false
+            }
         }
     }
 
-    private var hits: [Hit] {
-        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !needle.isEmpty else { return [] }
-
+    private func search(_ needle: String) -> [Hit] {
         var results: [Hit] = []
         for conversation in appState.conversationManager.conversations {
             if conversation.title.localizedCaseInsensitiveContains(needle) {

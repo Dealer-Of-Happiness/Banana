@@ -19,6 +19,7 @@ import UIKit
 import Combine
 import MLX
 import MLXLMCommon
+import MLXLLM
 import MLXVLM
 
 @MainActor
@@ -42,7 +43,11 @@ final class MLXService: ObservableObject {
     /// Guards against concurrent loads (e.g. the launch warm-up racing a
     /// user-triggered load): the second caller awaits the first instead of
     /// loading the multi-gigabyte model twice.
-    private var inFlightLoad: (modelId: String, task: Task<Void, Error>)?
+    private var inFlightLoad: (id: Int, modelId: String, task: Task<Void, Error>)?
+    /// How many callers are waiting on `inFlightLoad`, so cancelling one
+    /// screen doesn't abort a download another screen still needs.
+    private var inFlightJoiners = 0
+    private var nextLoadId = 0
 
     // MARK: - Private state
 
@@ -53,7 +58,7 @@ final class MLXService: ObservableObject {
     private let settings: SettingsManager
 
     /// Brand and behavior instructions sent to every model.
-    static let basePrompt = """
+    nonisolated static let basePrompt = """
     You are AiGoodbye, a helpful AI assistant created by Dmitry Mikhaylov (Dealer Of Happiness). \
     Official website: aigoodbye.ai. Contact: marketing@dealerofhappiness.com. \
     You run completely offline on the user's device; no data ever leaves the phone. \
@@ -107,20 +112,61 @@ final class MLXService: ObservableObject {
 
         if modelContainer != nil && loadedModelId == model.id { return }
 
-        // Join or supersede an in-flight load.
-        if let inflight = inFlightLoad {
-            if inflight.modelId == model.id {
-                try await inflight.task.value
-                return
+        // Join an in-flight load for the same model, or supersede one for a
+        // different model. Looped, because a join can legitimately finish
+        // with nothing loaded - `unload()` may have run in between - and
+        // returning "success" then leaves every later message failing
+        // against a model that isn't there.
+        while true {
+            if modelContainer != nil && loadedModelId == model.id { return }
+
+            guard let inflight = inFlightLoad else { break }
+            guard inflight.modelId == model.id else {
+                inflight.task.cancel()
+                _ = try? await inflight.task.value
+                break
             }
-            inflight.task.cancel()
-            _ = try? await inflight.task.value
+            try await join(inflight)
+            // The join succeeded but left nothing loaded: go round and start
+            // a fresh load rather than reporting a model that isn't there.
+            if inFlightLoad?.id == inflight.id { break }
         }
 
+        nextLoadId += 1
+        let loadId = nextLoadId
         let task = Task { try await self.performLoad(model) }
-        inFlightLoad = (model.id, task)
-        defer { if inFlightLoad?.modelId == model.id { inFlightLoad = nil } }
-        try await task.value
+        let entry = (id: loadId, modelId: model.id, task: task)
+        inFlightLoad = entry
+        // Always clears its own entry, joiners or not: they hold the task
+        // directly, and leaving a finished task parked here meant a failed
+        // load replayed the same error forever and a successful one could
+        // report success with nothing loaded.
+        defer { if inFlightLoad?.id == loadId { inFlightLoad = nil } }
+
+        try await join(entry)
+    }
+
+    /// Wait for a load, letting cancellation through.
+    ///
+    /// `await task.value` is not itself a cancellation point, and the task is
+    /// unstructured so it is not a child either. Without the handler, Stop
+    /// did nothing during a multi-gigabyte download, Describe Surroundings
+    /// sat silent for minutes holding the engine claim, and every other
+    /// feature reported "the AI is busy" until it finished.
+    private func join(_ entry: (id: Int, modelId: String, task: Task<Void, Error>)) async throws {
+        inFlightJoiners += 1
+        defer { inFlightJoiners -= 1 }
+        try await withTaskCancellationHandler {
+            try await entry.task.value
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                // Only the last waiter cancels: another screen may still be
+                // waiting for the same model.
+                guard let self, self.inFlightJoiners <= 1 else { return }
+                entry.task.cancel()
+            }
+        }
+        try Task.checkCancellation()
     }
 
     private func performLoad(_ model: AIModel) async throws {
@@ -130,6 +176,18 @@ final class MLXService: ObservableObject {
 
         // Switching models: free the previous one first.
         unload()
+
+        // Memory preflight. `fitsThisDevice()` compares against physical RAM,
+        // which is not what iOS gives an app - so check the real budget here,
+        // before spending several minutes downloading something that will be
+        // killed the moment it loads.
+        let needsGB = AIModel.workingSetGB(forModelBytes: model.sizeBytes)
+        let hasGB = DeviceCapability.usableMemoryGB
+        if needsGB > hasGB {
+            throw MLXError.modelLoadFailed(
+                L10n.text("\(model.name) needs about \(needsGB) GB of memory and this device can only give the app about \(hasGB) GB. Choose a smaller model.")
+            )
+        }
 
         let wasDownloaded = ModelManager.shared.isModelDownloaded(model)
 
@@ -166,8 +224,12 @@ final class MLXService: ObservableObject {
                 let prefetcher = ModelPrefetcher()
                 prefetcher.wifiOnly = settings.wifiOnlyDownloads
                 try await prefetcher.prefetch(hfId: hfId, into: repoDir) { [weak self] done, total in
+                    // Bound to a local constant first: reaching for the
+                    // capture-list `self` from inside the nested Task is a
+                    // reference to a captured var from concurrent code.
+                    let service = self
                     Task { @MainActor in
-                        self?.noteDownloadProgress(done: done, total: total)
+                        service?.noteDownloadProgress(done: done, total: total)
                     }
                 }
                 isDownloading = false
@@ -188,16 +250,20 @@ final class MLXService: ObservableObject {
         }
 
         let configuration = ModelConfiguration(id: hfId)
+        // Text-only models (which a user can add themselves) are not VLMs and
+        // the vision factory doesn't know how to build them.
+        let factory: ModelFactory = model.supportsVision
+            ? VLMModelFactory.shared
+            : LLMModelFactory.shared
         do {
-            modelContainer = try await VLMModelFactory.shared.loadContainer(
+            modelContainer = try await factory.loadContainer(
                 configuration: configuration
             ) { [weak self] progress in
+                let service = self
                 Task { @MainActor in
-                    guard let self else { return }
-                    if progress.isFinished && self.isDownloading {
-                        self.isDownloading = false
-                        self.isPreparingModel = true
-                    }
+                    guard let service, progress.isFinished, service.isDownloading else { return }
+                    service.isDownloading = false
+                    service.isPreparingModel = true
                 }
             }
         } catch is CancellationError {
@@ -263,7 +329,9 @@ final class MLXService: ObservableObject {
         diskPollTask = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self, self.isDownloading else { break }
-                let bytes = ModelManager.shared.downloadedSizeBytes(for: model)
+                // Uncached: the cached value was taken before the download
+                // started and would never move.
+                let bytes = ModelManager.shared.currentSizeOnDisk(for: model)
                 self.noteDownloadProgress(done: bytes, total: max(model.sizeBytes, bytes))
                 try? await Task.sleep(nanoseconds: 700_000_000)
             }
@@ -280,8 +348,9 @@ final class MLXService: ObservableObject {
         beginDownloadState(expectedBytes: model.sizeBytes)
         defer { endDownloadState() }
         try await ModelPrefetcher().prefetch(hfId: hfId, into: repoDir) { [weak self] done, total in
+            let service = self
             Task { @MainActor in
-                self?.noteDownloadProgress(done: done, total: total)
+                service?.noteDownloadProgress(done: done, total: total)
             }
         }
         ModelManager.shared.noteModelInstalled(model)
@@ -326,8 +395,17 @@ final class MLXService: ObservableObject {
         // it, 2B-class models can loop the same phrases endlessly.
         // maxTokens scales with the user's context setting so long answers
         // aren't needlessly cut off when there's room for them.
+        //
+        // maxKVSize is what actually makes the Context Window setting mean
+        // something. Without it the key-value cache grows for the whole life
+        // of the conversation - roughly 147 KB per token for the 8B model, so
+        // a long chat at a high setting is several gigabytes on top of the
+        // weights, and the app is killed mid-answer. With it, MLX uses a
+        // rotating cache and memory is bounded.
+        let budget = Self.effectiveContextWindow(for: model, requested: settings.contextWindow)
         let parameters = GenerateParameters(
-            maxTokens: settings.contextWindow >= 16384 ? 2048 : 1200,
+            maxTokens: budget >= 16384 ? 2048 : 1200,
+            maxKVSize: budget,
             temperature: Float(settings.temperature),
             topP: 0.9,
             repetitionPenalty: 1.15,
@@ -373,6 +451,32 @@ final class MLXService: ObservableObject {
         session != nil && sessionModelId == model.id
     }
 
+    /// The context window we will actually honour for a model, which is the
+    /// user's setting capped by what its key-value cache can cost in memory.
+    ///
+    /// The cache grows with the model's depth, so a 32K window that is fine
+    /// on the 500 MB model is several gigabytes on the 8B one. Silently
+    /// choosing a smaller number is much better than being killed mid-answer.
+    /// Sized against the device's stable budget, not against whatever memory
+    /// happens to be free at this instant - which is measured immediately
+    /// after the weights load, and so gave the same setting a different
+    /// meaning in every session.
+    nonisolated static func effectiveContextWindow(
+        for model: AIModel,
+        requested: Int,
+        usableMemoryGB: Int = DeviceCapability.memoryBudgetGB
+    ) -> Int {
+        // Rough per-token key-value cost, scaled from the model's size.
+        let gigabytes = Double(model.sizeBytes) / 1_000_000_000
+        let kilobytesPerToken = max(8.0, gigabytes * 25.0)
+
+        // Never let the cache exceed a quarter of what the app can have.
+        let budgetKB = Double(usableMemoryGB) * 1_048_576 * 0.25
+        let affordable = Int(budgetKB / kilobytesPerToken)
+
+        return max(2048, min(requested, affordable))
+    }
+
     // MARK: - Generation
 
     /// Stream a response. Yields the FULL response text so far with each event
@@ -385,9 +489,12 @@ final class MLXService: ObservableObject {
                 return
             }
 
+            // Orientation must be applied here: `cgImage` alone is the raw
+            // sensor bitmap, so a portrait photo would reach the model
+            // rotated 90 degrees while looking upright on screen.
             let userImage: UserInput.Image?
-            if let image, let cgImage = image.cgImage {
-                userImage = .ciImage(CIImage(cgImage: cgImage))
+            if let image, let oriented = ImageNormalizer.orientedCIImage(from: image) {
+                userImage = .ciImage(oriented)
             } else {
                 userImage = nil
             }

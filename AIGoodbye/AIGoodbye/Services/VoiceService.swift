@@ -226,8 +226,9 @@ final class VoiceService: NSObject, ObservableObject {
     private func startTimers() {
         silenceTimer?.invalidate()
         let silence = Timer(timeInterval: 0.25, repeats: true) { [weak self] _ in
+            let service = self
             Task { @MainActor in
-                guard let self, self.listeningState == .listening else { return }
+                guard let self = service, self.listeningState == .listening else { return }
                 let quiet = Date().timeIntervalSince(self.lastTranscriptChange)
                 if !self.liveTranscript.isEmpty && quiet >= self.silenceEndpoint {
                     self.finishListening()
@@ -240,9 +241,10 @@ final class VoiceService: NSObject, ObservableObject {
 
         levelTimer?.invalidate()
         let level = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
+            let service = self
             Task { @MainActor in
-                guard let self else { return }
-                self.micLevel = self.levelBox.get()
+                guard let service else { return }
+                service.micLevel = service.levelBox.get()
             }
         }
         RunLoop.main.add(level, forMode: .common)
@@ -294,7 +296,7 @@ final class VoiceService: NSObject, ObservableObject {
         switch use {
         case .record:
             try session.setCategory(.playAndRecord, mode: .spokenAudio,
-                                    options: [.defaultToSpeaker, .duckOthers, .allowBluetooth])
+                                    options: [.defaultToSpeaker, .duckOthers, .allowBluetoothHFP])
         case .playback:
             try session.setCategory(.playback, mode: .spokenAudio,
                                     options: [.duckOthers])
@@ -320,20 +322,27 @@ final class VoiceService: NSObject, ObservableObject {
             forName: AVAudioSession.interruptionNotification,
             object: nil, queue: .main
         ) { [weak self] note in
-            Task { @MainActor in self?.handleInterruption(note) }
+            // A Notification is not Sendable, so the single value that
+            // matters is read here, on the delivery queue, and only that
+            // crosses into the task.
+            let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+            let service = self
+            Task { @MainActor in service?.handleInterruption(raw) }
         })
         observers.append(center.addObserver(
             forName: AVAudioSession.routeChangeNotification,
             object: nil, queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.handleRouteChange() }
+            let service = self
+            Task { @MainActor in service?.handleRouteChange() }
         })
         observers.append(center.addObserver(
             forName: AVAudioSession.mediaServicesWereResetNotification,
             object: nil, queue: .main
         ) { [weak self] _ in
             // Keep the callbacks: the screen can recover by listening again.
-            Task { @MainActor in self?.pause() }
+            let service = self
+            Task { @MainActor in service?.pause() }
         })
     }
 
@@ -344,8 +353,8 @@ final class VoiceService: NSObject, ObservableObject {
         observers.removeAll()
     }
 
-    private func handleInterruption(_ note: Notification) {
-        guard let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+    private func handleInterruption(_ rawType: UInt?) {
+        guard let raw = rawType,
               let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
         switch type {
         case .began:
@@ -368,9 +377,12 @@ final class VoiceService: NSObject, ObservableObject {
     // MARK: - Speaking
 
     /// Queue text to be spoken with the on-device voice for the language.
-    func speak(_ text: String) {
+    /// Returns false when there was nothing speakable, so a hands-free
+    /// caller waiting on `onFinishedSpeaking` doesn't wait forever.
+    @discardableResult
+    func speak(_ text: String) -> Bool {
         let spoken = Self.plainSpeech(from: text)
-        guard !spoken.isEmpty else { return }
+        guard !spoken.isEmpty else { return false }
 
         // Never let the microphone be live while the speaker is: the
         // recognizer would transcribe our own voice and loop forever.
@@ -389,6 +401,7 @@ final class VoiceService: NSObject, ObservableObject {
         isSpeaking = true
         synthesizer.speak(utterance)
         armSpeechWatchdog(for: spoken)
+        return true
     }
 
     /// Configure the speaking language without listening first (camera mode).

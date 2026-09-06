@@ -206,17 +206,25 @@ private final class FileDownload: NSObject, URLSessionDownloadDelegate, @uncheck
     func run(url: URL, resumeData: Data?, timeout: TimeInterval) async throws {
         try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-                let config = URLSessionConfiguration.default
+                // A background session, so a multi-gigabyte model keeps
+                // downloading when the user locks the phone or switches apps.
+                // With a default session the download simply stops, which is
+                // the app's very first experience for most new users.
+                let config = URLSessionConfiguration.background(
+                    withIdentifier: "com.aigoodbye.modeldownload.\(UUID().uuidString)"
+                )
+                config.sessionSendsLaunchEvents = false
+                config.isDiscretionary = false
                 config.timeoutIntervalForRequest = timeout
-                // Multi-gigabyte downloads shouldn't eat a cellular plan, and
-                // should survive the screen locking mid-download.
+                // Multi-gigabyte downloads shouldn't eat a cellular plan.
                 config.allowsCellularAccess = !wifiOnly
                 config.allowsExpensiveNetworkAccess = !wifiOnly
                 config.allowsConstrainedNetworkAccess = false
                 config.waitsForConnectivity = true
                 config.timeoutIntervalForResource = 60 * 60 * 6
-                // Record model downloads in the Privacy Center's audit log.
-                NetworkAudit.observe(config)
+                // Background sessions ignore protocolClasses, so the audit
+                // log has to be told about this request explicitly.
+                NetworkAudit.note(url)
 
                 let queue = OperationQueue()
                 queue.maxConcurrentOperationCount = 1

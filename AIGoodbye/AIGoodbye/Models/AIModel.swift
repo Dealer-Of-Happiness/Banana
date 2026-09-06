@@ -8,6 +8,7 @@
 //
 
 import Foundation
+import os
 
 // MARK: - Model Backend
 
@@ -168,8 +169,17 @@ extension AIModel {
         isLegacy: false
     ) }
 
-    /// All downloadable models (legacy ones included; pickers decide visibility).
-    static var allModels: [AIModel] { [qwen3VL8BPro, qwen3VL2B, smolVLM2, qwen2VL2B] }
+    /// The models we ship and test ourselves.
+    static var builtInModels: [AIModel] { [qwen3VL8BPro, qwen3VL2B, smolVLM2, qwen2VL2B] }
+
+    /// All downloadable models, including any the user added from Hugging
+    /// Face (legacy ones included; pickers decide visibility).
+    static var allModels: [AIModel] {
+        builtInModels + CustomModelRegistry.specs.map(AIModel.init(custom:))
+    }
+
+    /// True when this model was added by the user rather than shipped by us.
+    var isCustom: Bool { id.hasPrefix(CustomModelSpec.idPrefix) }
 
     /// True when this device can offer the model. RAM figures up to 6 GB are
     /// soft recommendations (every supported iPhone may still choose those
@@ -192,15 +202,42 @@ extension AIModel {
 
 // MARK: - Device Capability
 
+/// Deliberately `nonisolated` throughout: these read process-wide values that
+/// are safe from any thread, and they are consulted from background work -
+/// model loading, download sizing - where hopping to the main actor just to
+/// read a number would be absurd.
 enum DeviceCapability {
 
     /// Physical memory in whole gigabytes (e.g. 4, 6, 8).
-    static var physicalMemoryGB: Int {
+    nonisolated static var physicalMemoryGB: Int {
         Int((Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824.0).rounded())
     }
 
     /// True when the device has limited RAM and should prefer the light model.
-    static var isLowMemoryDevice: Bool {
+    nonisolated static var isLowMemoryDevice: Bool {
         physicalMemoryGB < 6
+    }
+
+    /// Memory this app can realistically use, in whole gigabytes. iOS gives
+    /// an app far less than the device's physical RAM, so sizing a model
+    /// against `physicalMemoryGB` is how you get killed mid-answer.
+    nonisolated static var usableMemoryGB: Int {
+        let available = Double(os_proc_available_memory()) / 1_073_741_824.0
+        guard available > 0 else {
+            return max(2, Int(Double(physicalMemoryGB) * 0.6))
+        }
+        return max(1, Int(available.rounded(.down)))
+    }
+
+    /// The app's memory budget, independent of what is resident right now.
+    ///
+    /// `usableMemoryGB` reports what is available *at this instant*, which
+    /// collapses the moment a model is loaded. Using it for sizing decisions
+    /// meant the same setting produced a different answer every session - a
+    /// context window that silently shrank once the weights were in, and a
+    /// custom model refused on a 12 GB phone with the message "this device
+    /// has 12 GB". This is the stable figure those decisions want.
+    nonisolated static var memoryBudgetGB: Int {
+        max(2, Int((Double(physicalMemoryGB) * 0.55).rounded(.down)))
     }
 }

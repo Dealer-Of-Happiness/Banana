@@ -59,12 +59,14 @@ final class KnowledgeLibrary: ObservableObject {
 
     var hasActiveDocuments: Bool { !activeDocumentIds.isEmpty }
 
-    func add(name: String, fullText: String) async {
+    @discardableResult
+    func add(name: String, fullText: String) async -> UUID {
         let id = await DocumentIndex.shared.store(name: name, fullText: fullText)
         documents.append(LibraryDocument(
             id: id, name: name, addedAt: Date(), characterCount: fullText.count
         ))
         save()
+        return id
     }
 
     /// Promote a document already stored by the chat flow into the library.

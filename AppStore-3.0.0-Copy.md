@@ -2,6 +2,95 @@
 
 Paste-ready text for App Store Connect.
 
+## What's New (version 3.4.0, build 16) - September 6, 2026
+
+A big quality release. Transcription is dramatically more accurate, recordings survive
+almost anything, scanning understands the page, and the app is faster and clearer
+everywhere.
+
+MUCH BETTER TRANSCRIPTION
+- The recorder now uses Apple's newest on-device speech engine, which is far more accurate
+  on long recordings - a one-hour meeting has roughly a quarter of the errors it used to
+- Add names, product words and jargon the recognizer should get right; they're used for
+  every recording and never leave your device
+- Automatic punctuation, and no length limit
+
+RECORDINGS THAT SURVIVE THE REAL WORLD
+- A recording is saved to disk as it goes, so if the app is ever interrupted, you're
+  offered everything captured up to that moment instead of losing it
+- Take a phone call mid-meeting and recording resumes by itself afterwards
+- AirPods drop out and it reconnects and keeps going, instead of quietly stopping
+- Closing the screen mid-recording now asks first, and offers to save
+- If transcription ever stops, recording continues and says so - it no longer freezes
+  silently for the rest of the meeting
+
+SCANNING THAT UNDERSTANDS THE PAGE
+- Scans keep reading order across columns, so two-column documents come out readable
+- Tables are recognized as tables and can be copied as a table
+- Multi-page scans no longer freeze the app, show real progress, and tell you if any
+  page couldn't be read
+
+DESCRIBE SURROUNDINGS, REBUILT AROUND SPEED
+- A fast first answer in a fraction of a second, then a fuller description
+- One clear sentence by default instead of a paragraph; switch to Detailed when you want more
+- In continuous mode it stays quiet when nothing has changed, instead of repeating itself
+- A new Repeat button, and it now always answers a deliberate tap out loud rather than
+  leaving you in silence
+- Better with VoiceOver: the description is readable on a Braille display, and the reason
+  it stopped is actually announced
+
+FIRST RUN
+- A proper setup screen that tells you what your device needs before you type anything
+- Voice, recording and translation are now offered right on the start screen
+
+FIXES AND POLISH
+- Fixed Face ID lock, which silently fell back to a passcode
+- Photos taken in the app were reaching the AI rotated; they no longer are
+- Model downloads continue when you lock your phone, and Stop now really stops one
+- Memory use is properly bounded, and a low-memory warning frees the model instead of
+  letting the app be killed
+- Added Hugging Face models are checked more carefully, and you can add one without
+  switching to it
+- Clearing a chat now deletes its photos too
+- Faster streaming, faster search, and a chat you can scroll while an answer arrives
+- Model files and photos are excluded from iCloud backups
+
+100% on device. No cloud, no accounts, no subscriptions.
+
+---
+
+## What's New (version 3.3.0, build 15) - September 5, 2026
+
+Four big new abilities, all of them completely private and completely offline.
+
+PRIVATE RECORDER
+- Record meetings, lectures and appointments, with a live transcript written on your device
+- Get a summary and a list of action items when you stop, made by the AI on your phone
+- Search, rename, play back and export any recording as Markdown or PDF
+- Keep the audio or throw it away; either way nothing is uploaded, and recordings are excluded from backups
+- Made for the people who legally cannot use cloud transcription
+
+SCAN PAPER
+- Scan any document with the camera and the text is read on your device
+- Scanned PDFs with no text layer are now read too, so you can ask questions about them
+
+DESCRIBE SURROUNDINGS
+- Point the camera and hear what's in front of you, spoken aloud, over and over, hands free
+- A Read text mode reads signs, menus and letters back word for word
+- Works with no connection at all, so it keeps working on a plane, abroad, or underground
+
+BRING YOUR OWN MODEL
+- Add any MLX model from Hugging Face by name and run it on your own phone
+- The model is checked before anything downloads: the right files, the size, and whether your device has the memory
+
+ALSO
+- Hands-free conversation translation: it listens, translates out loud, then listens again
+- Dozens of smaller fixes across audio, memory and storage
+
+100% on device. No cloud, no accounts, no subscriptions.
+
+---
+
 ## What's New (version 3.2.0, build 14) - September 5, 2026
 
 AiGoodbye is now everywhere on your device, and it can finally know you - privately.

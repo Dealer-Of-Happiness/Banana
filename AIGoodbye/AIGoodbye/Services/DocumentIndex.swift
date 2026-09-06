@@ -20,7 +20,10 @@ import Foundation
 import NaturalLanguage
 
 /// A passage of a document, with its keyword tokens precomputed once.
-struct DocumentChunk: Sendable {
+/// Plain data, deliberately `nonisolated`: it is produced inside the
+/// `DocumentIndex` actor and read from background ranking work, so isolating
+/// its stored properties to the main actor would force a hop per field.
+nonisolated struct DocumentChunk: Sendable {
     let documentName: String
     let text: String
     let position: Int
@@ -36,13 +39,31 @@ actor DocumentIndex {
 
     /// Chunk cache, bounded so a session with many documents can't grow
     /// without limit next to a multi-gigabyte model.
+    ///
+    /// Bounded by total characters rather than document count: a chat can
+    /// reference more documents than a count-based cache holds, and then
+    /// every single message re-reads and re-chunks all of them from disk.
     private var chunkCache: [UUID: [DocumentChunk]] = [:]
     private var cacheOrder: [UUID] = []
+    private var cachedCharacters = 0
     private var nameCache: [UUID: String] = [:]
-    private static let maxCachedDocuments = 3
+    private static let maxCachedCharacters = 2_000_000
 
-    /// Reused embedding models (loading one is expensive).
+    /// Reused embedding models (loading one is expensive). Each is tens of
+    /// megabytes, so only a couple are kept.
     private var embeddings: [NLLanguage: NLEmbedding] = [:]
+    private var embeddingOrder: [NLLanguage] = []
+    private static let maxCachedEmbeddings = 2
+
+    /// Release everything re-creatable. Called on a memory warning, when the
+    /// alternative is the system killing the app outright.
+    func purgeCaches() {
+        chunkCache.removeAll()
+        cacheOrder.removeAll()
+        cachedCharacters = 0
+        embeddings.removeAll()
+        embeddingOrder.removeAll()
+    }
 
     // MARK: - Storage
 
@@ -93,6 +114,9 @@ actor DocumentIndex {
     }
 
     func removeDocument(_ id: UUID) {
+        if let existing = chunkCache[id] {
+            cachedCharacters -= existing.reduce(0) { $0 + $1.text.count }
+        }
         chunkCache[id] = nil
         cacheOrder.removeAll { $0 == id }
         nameCache[id] = nil
@@ -101,22 +125,42 @@ actor DocumentIndex {
     }
 
     /// Delete stored text for documents no longer referenced by any chat.
+    ///
+    /// Anything written in the last few minutes is spared regardless. The
+    /// launch sweep races the share extension's handoff: a document stored
+    /// milliseconds earlier isn't attached to any conversation yet, and
+    /// deleting it leaves the user looking at a document chip for a file
+    /// that no longer exists.
     func removeDocuments(notIn keepIds: Set<UUID>) {
         let dir = Self.documentsDirectory()
+        let cutoff = Date().addingTimeInterval(-300)
         guard let files = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return }
         for file in files {
             let base = (file as NSString).deletingPathExtension
             guard let id = UUID(uuidString: base), !keepIds.contains(id) else { continue }
+            let url = dir.appendingPathComponent(file)
+            if let created = try? url.resourceValues(forKeys: [.creationDateKey]).creationDate,
+               created > cutoff {
+                continue
+            }
             removeDocument(id)
         }
     }
 
     private func cache(_ chunks: [DocumentChunk], for id: UUID) {
+        if let existing = chunkCache[id] {
+            cachedCharacters -= existing.reduce(0) { $0 + $1.text.count }
+        }
         chunkCache[id] = chunks
+        cachedCharacters += chunks.reduce(0) { $0 + $1.text.count }
         cacheOrder.removeAll { $0 == id }
         cacheOrder.append(id)
-        while cacheOrder.count > Self.maxCachedDocuments {
+        // Evict by size, and never evict the document just added.
+        while cachedCharacters > Self.maxCachedCharacters, cacheOrder.count > 1 {
             let evicted = cacheOrder.removeFirst()
+            if let dropped = chunkCache[evicted] {
+                cachedCharacters -= dropped.reduce(0) { $0 + $1.text.count }
+            }
             chunkCache[evicted] = nil
         }
     }
@@ -263,12 +307,22 @@ actor DocumentIndex {
             .map(\.chunk)
     }
 
-    /// Cached sentence-embedding model for the question's language.
+    /// Cached sentence-embedding model for the question's language. Bounded:
+    /// each model is tens of megabytes and they would otherwise accumulate
+    /// one per language ever seen, next to a multi-gigabyte model.
     private func embedding(for text: String) -> NLEmbedding? {
         let language = NLLanguageRecognizer.dominantLanguage(for: text) ?? .english
-        if let cached = embeddings[language] { return cached }
+        if let cached = embeddings[language] {
+            embeddingOrder.removeAll { $0 == language }
+            embeddingOrder.append(language)
+            return cached
+        }
         guard let model = NLEmbedding.sentenceEmbedding(for: language) else { return nil }
         embeddings[language] = model
+        embeddingOrder.append(language)
+        while embeddingOrder.count > Self.maxCachedEmbeddings {
+            embeddings[embeddingOrder.removeFirst()] = nil
+        }
         return model
     }
 

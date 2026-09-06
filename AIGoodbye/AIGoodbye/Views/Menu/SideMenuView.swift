@@ -12,10 +12,12 @@ import Combine
 
 struct SideMenuView: View {
     @EnvironmentObject var appState: AppState
+    @ObservedObject private var recordingStore = RecordingStore.shared
     @State private var showNewFolderAlert = false
     @State private var newFolderName = ""
     @State private var showSettings = false
     @State private var showSearch = false
+    @State private var showRecordings = false
     @State private var exportURL: URL?
     @State private var exportFailed = false
     @State private var draggedConversation: Conversation?
@@ -88,6 +90,10 @@ struct SideMenuView: View {
         }
         .sheet(isPresented: $showSearch) {
             ChatSearchView()
+                .environmentObject(appState)
+        }
+        .sheet(isPresented: $showRecordings) {
+            RecordingsView()
                 .environmentObject(appState)
         }
         .sheet(item: $exportURL) { url in
@@ -225,6 +231,26 @@ struct SideMenuView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
                 .accessibilityLabel(Text("Search chats"))
+            }
+
+            Button {
+                showRecordings = true
+            } label: {
+                HStack {
+                    Label("Recordings", systemImage: "waveform.badge.mic")
+                    Spacer()
+                    if !recordingStore.recordings.isEmpty {
+                        Text("\(recordingStore.recordings.count)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color(.systemGray6))
+                .foregroundStyle(.primary)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
             }
         }
         .padding()

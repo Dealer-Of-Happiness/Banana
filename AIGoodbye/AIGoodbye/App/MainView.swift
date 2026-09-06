@@ -12,8 +12,9 @@ import Combine
 struct MainView: View {
     @EnvironmentObject var appState: AppState
     @State private var dragOffset: CGFloat = 0
-
-    private let menuWidth: CGFloat = 300
+    /// The window can be narrower than the drawer: in iPad Slide Over a fixed
+    /// 300 pt covers almost everything and pushes the chat off-screen.
+    @State private var menuWidth: CGFloat = 300
 
     /// How far the menu is currently revealed, combining state and live drag.
     private var revealAmount: CGFloat {
@@ -83,6 +84,10 @@ struct MainView: View {
                         }
                     }
             )
+            .onChange(of: geometry.size.width, initial: true) { _, width in
+                // Leave at least 15% of the window showing the chat.
+                menuWidth = min(320, max(240, width * 0.85))
+            }
         }
     }
 }

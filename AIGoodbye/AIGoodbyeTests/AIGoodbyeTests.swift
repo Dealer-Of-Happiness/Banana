@@ -7,6 +7,7 @@
 
 import Testing
 import Foundation
+import UIKit
 @testable import AIGoodbye
 
 struct HistoryTrimmingTests {
@@ -232,6 +233,311 @@ struct SpeechCleanupTests {
     @Test func emptyAndPlainTextSurvive() {
         #expect(VoiceService.plainSpeech(from: "").isEmpty)
         #expect(VoiceService.plainSpeech(from: "Hello there.").contains("Hello there"))
+    }
+}
+
+struct HandsFreeTranslationTests {
+
+    /// Hands-free alternates turns, but must recover when someone speaks out
+    /// of order - the words decide, not the schedule.
+    @Test @MainActor func detectsWhichSideIsSpeaking() {
+        let mine = AppLanguage.english
+        let theirs = AppLanguage.spanish
+
+        #expect(TranslateModeView.detectedSide(
+            of: "Could you tell me where the train station is, please?",
+            mine: mine, theirs: theirs) == true)
+
+        #expect(TranslateModeView.detectedSide(
+            of: "Buenos días, ¿dónde está la estación de tren por favor?",
+            mine: mine, theirs: theirs) == false)
+    }
+
+    @Test @MainActor func staysUndecidedOnShortOrForeignInput() {
+        // Too short to judge: keep the scheduled turn.
+        #expect(TranslateModeView.detectedSide(of: "Ok", mine: .english, theirs: .spanish) == nil)
+        // Neither configured language: don't guess.
+        #expect(TranslateModeView.detectedSide(
+            of: "これは日本語の文章です。駅はどこですか。",
+            mine: .english, theirs: .spanish) == nil)
+    }
+
+    @Test @MainActor func cleanTranslationKeepsTimesAndRatios() {
+        #expect(TranslateModeView.cleanTranslation("Il est 10:30 du matin") == "Il est 10:30 du matin")
+        #expect(TranslateModeView.cleanTranslation("Translation: Hola amigo") == "Hola amigo")
+        #expect(TranslateModeView.cleanTranslation("\"Hola amigo\"") == "Hola amigo")
+    }
+}
+
+struct RecordingSummarizerTests {
+
+    /// A meeting transcript is far longer than any small model's context, so
+    /// it is sliced - and not one word may be lost on the way.
+    @Test func slicesCoverTheWholeTranscript() {
+        let sentences = (0..<200).map { "This is sentence number \($0) of the meeting." }
+        let transcript = sentences.joined(separator: " ")
+        let slices = RecordingSummarizer.slices(of: transcript, maxCharacters: 500)
+
+        #expect(slices.count > 1)
+        for slice in slices {
+            #expect(slice.count <= 500)
+            #expect(!slice.isEmpty)
+        }
+        let rejoined = slices.joined(separator: " ")
+        for sentence in [sentences[0], sentences[97], sentences[199]] {
+            #expect(rejoined.contains(sentence), "Lost: \(sentence)")
+        }
+    }
+
+    @Test func shortTranscriptIsOneSlice() {
+        let slices = RecordingSummarizer.slices(of: "We agreed to ship on Friday.")
+        #expect(slices == ["We agreed to ship on Friday."])
+        #expect(RecordingSummarizer.slices(of: "   ").isEmpty)
+    }
+
+    /// Some recognizers return a wall of words with no punctuation at all;
+    /// that must still be sliced rather than sent whole or dropped.
+    @Test func splitsUnpunctuatedSpeech() {
+        let wall = String(repeating: "word ", count: 500)   // 2,500 chars, no periods
+        let slices = RecordingSummarizer.slices(of: wall, maxCharacters: 400)
+        #expect(slices.count >= 6)
+        for slice in slices { #expect(slice.count <= 400) }
+    }
+
+    @Test func cleanTitleStripsLabelsQuotesAndExtraLines() {
+        #expect(RecordingSummarizer.cleanTitle("\"Budget review meeting\"") == "Budget review meeting")
+        #expect(RecordingSummarizer.cleanTitle("Title: Budget review") == "Budget review")
+        #expect(RecordingSummarizer.cleanTitle("## Budget review\n\nHere is why...") == "Budget review")
+    }
+
+    @Test @MainActor func fallbackTitleUsesTheOpeningWords() {
+        let title = RecordingSummarizer.fallbackTitle(
+            from: "Okay so today we are reviewing the quarterly budget and the hiring plan."
+        )
+        #expect(title.hasPrefix("Okay so today"))
+        #expect(title.count <= 60)
+        #expect(!RecordingSummarizer.fallbackTitle(from: "").isEmpty)
+    }
+}
+
+struct RecordingExportTests {
+
+    @Test @MainActor func durationIsReadable() {
+        #expect(ConversationExporter.durationText(0) == "0:00")
+        #expect(ConversationExporter.durationText(65) == "1:05")
+        #expect(ConversationExporter.durationText(3725) == "1:02:05")
+    }
+
+    @Test @MainActor func markdownKeepsSummaryAndTranscript() {
+        let recording = Recording(
+            title: "Budget review",
+            duration: 125,
+            transcript: "We agreed to ship on Friday.",
+            summary: "## Summary\nA budget review.",
+            audioFileName: nil,
+            languageCode: "en-US"
+        )
+        let markdown = ConversationExporter.markdown(for: recording)
+        #expect(markdown.contains("# Budget review"))
+        #expect(markdown.contains("A budget review."))
+        #expect(markdown.contains("We agreed to ship on Friday."))
+        #expect(markdown.contains("2:05"))
+    }
+}
+
+struct ContextWindowTests {
+
+    /// The context slider promises a bound on memory. Without a cap the
+    /// key-value cache grows for the whole conversation and the app is
+    /// killed mid-answer, so a big model must get a smaller window than the
+    /// user asked for.
+    /// A fixed budget, so the result doesn't depend on whatever machine the
+    /// test happens to run on.
+    private let budgetGB = 6
+
+    @Test @MainActor func bigModelsGetASmallerWindowThanRequested() {
+        let bigWindow = MLXService.effectiveContextWindow(
+            for: .qwen3VL8BPro, requested: 32_768, usableMemoryGB: budgetGB
+        )
+        let smallWindow = MLXService.effectiveContextWindow(
+            for: .smolVLM2, requested: 32_768, usableMemoryGB: budgetGB
+        )
+
+        #expect(bigWindow < 32_768, "A 5.8 GB model must not get the full 32K window")
+        #expect(bigWindow < smallWindow, "A 5.8 GB model must not get the same window as a 500 MB one")
+        // Never so small that a conversation is impossible.
+        #expect(bigWindow >= 2048)
+    }
+
+    @Test @MainActor func aModestRequestIsHonoured() {
+        let window = MLXService.effectiveContextWindow(
+            for: .smolVLM2, requested: 4096, usableMemoryGB: budgetGB
+        )
+        #expect(window == 4096)
+    }
+}
+
+struct SceneDescriptionRepetitionTests {
+
+    /// Continuous mode must not say the same thing every two seconds while
+    /// the user stands still - that is the fastest way to get switched off.
+    @Test @MainActor func nearIdenticalDescriptionsAreSuppressed() {
+        let first = "A kitchen counter with a white mug and a kettle."
+        let reworded = "A white mug and a kettle sitting on a kitchen counter."
+        #expect(SceneDescriptionView.isSubstantiallySame(reworded, as: first))
+    }
+
+    @Test @MainActor func genuinelyNewScenesAreSpoken() {
+        let first = "A kitchen counter with a white mug and a kettle."
+        let different = "A busy pavement with cars passing and a bicycle leaning on a railing."
+        #expect(!SceneDescriptionView.isSubstantiallySame(different, as: first))
+        // Nothing said yet is never a repeat.
+        #expect(!SceneDescriptionView.isSubstantiallySame(first, as: ""))
+    }
+
+    /// The fast first impression is a subset of the fuller description that
+    /// follows it. Suppressing the fuller one would silence the answer the
+    /// user was actually waiting for.
+    @Test @MainActor func aFullerDescriptionIsNotTreatedAsARepeat() {
+        let impression = "A kitchen counter."
+        let fuller = "A kitchen counter with a white mug, a kettle, a wooden bowl of fruit and a window behind."
+        #expect(!SceneDescriptionView.isSubstantiallySame(fuller, as: impression))
+    }
+
+    /// Chinese and Japanese have no spaces, so word-splitting on whitespace
+    /// makes a whole description one token and suppression never fires.
+    @Test @MainActor func chineseRepetitionIsAlsoSuppressed() {
+        let first = "厨房台面上有一个白色杯子和一个水壶。"
+        let reworded = "台面上有一个水壶和一个白色杯子。"
+        let different = "繁忙的人行道上有汽车经过和一辆自行车。"
+        #expect(SceneDescriptionView.isSubstantiallySame(reworded, as: first))
+        #expect(!SceneDescriptionView.isSubstantiallySame(different, as: first))
+    }
+}
+
+struct ImageOrientationTests {
+
+    /// A portrait photo carries `.right`; handing its raw `cgImage` to a
+    /// vision model feeds the model a picture rotated 90 degrees while the
+    /// user sees it upright on screen.
+    @Test @MainActor func rotatedImagesAreMadeUpright() {
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        let size = CGSize(width: 40, height: 20)
+        let base = UIGraphicsImageRenderer(size: size, format: format).image { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+        }
+        guard let cgImage = base.cgImage else { return }
+        let rotated = UIImage(cgImage: cgImage, scale: 1, orientation: .right)
+
+        // A portrait capture reports swapped dimensions but keeps the raw
+        // landscape bitmap - which is exactly what used to reach the model.
+        #expect(rotated.imageOrientation == .right)
+        #expect(rotated.size.width < rotated.size.height)
+        #expect(cgImage.width > cgImage.height)
+
+        let upright = ImageNormalizer.upright(rotated)
+        #expect(upright.imageOrientation == .up)
+        #expect(upright.size == rotated.size)
+        // The pixels themselves are now portrait, so `cgImage` is safe to use.
+        #expect(upright.cgImage.map { $0.width < $0.height } == true)
+    }
+
+    @Test @MainActor func alreadyUprightImagesAreUntouched() {
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 10, height: 10)).image { _ in }
+        #expect(ImageNormalizer.upright(image) === image)
+        #expect(ImageNormalizer.cgOrientation(.right) == .right)
+    }
+}
+
+struct CustomModelTests {
+
+    @Test func normalizesEveryWayPeopleWriteAModelAddress() {
+        let expected = "mlx-community/Qwen3-VL-2B-Instruct-4bit"
+        for input in [
+            "mlx-community/Qwen3-VL-2B-Instruct-4bit",
+            "  mlx-community/Qwen3-VL-2B-Instruct-4bit  ",
+            "https://huggingface.co/mlx-community/Qwen3-VL-2B-Instruct-4bit",
+            "huggingface.co/mlx-community/Qwen3-VL-2B-Instruct-4bit/tree/main",
+            "https://huggingface.co/mlx-community/Qwen3-VL-2B-Instruct-4bit?library=mlx"
+        ] {
+            #expect(HuggingFaceValidator.normalize(input) == expected, "Failed on \(input)")
+        }
+    }
+
+    /// The repo id becomes a directory name, so a path-traversal component
+    /// must never survive normalisation.
+    @Test func rejectsMalformedAndTraversingAddresses() {
+        for input in ["", "justaname", "owner/", "/name", "owner/..", "../owner/name",
+                      "https://evil.com/owner/name", "owner/na me"] {
+            #expect(HuggingFaceValidator.normalize(input) == nil, "Should reject \(input)")
+        }
+    }
+
+    @Test func detectsVisionModelsFromConfigOrName() {
+        #expect(HuggingFaceValidator.looksLikeVisionModel(
+            config: ["vision_config": ["depth": 32]], repoId: "someone/mystery-model"))
+        #expect(HuggingFaceValidator.looksLikeVisionModel(
+            config: ["architectures": ["Idefics3ForConditionalGeneration"]], repoId: "a/b"))
+        #expect(HuggingFaceValidator.looksLikeVisionModel(
+            config: [:], repoId: "mlx-community/Qwen3-VL-2B-Instruct-4bit"))
+        #expect(!HuggingFaceValidator.looksLikeVisionModel(
+            config: ["model_type": "llama"], repoId: "mlx-community/Llama-3.2-3B-Instruct-4bit"))
+    }
+
+    /// A text model sent to the vision factory can only fail to load - and
+    /// the failed load also evicts whatever model was working.
+    @Test func doesNotMistakeTextModelsForVisionModels() {
+        // Gemma 3 ships both; the text-only members say so in `model_type`.
+        #expect(!HuggingFaceValidator.looksLikeVisionModel(
+            config: ["model_type": "gemma3_text",
+                     "architectures": ["Gemma3ForCausalLM"]],
+            repoId: "mlx-community/gemma-3-1b-it-4bit"))
+        // "vl" must be a whole word, not two letters inside an owner's name.
+        #expect(!HuggingFaceValidator.looksLikeVisionModel(
+            config: ["model_type": "llama"], repoId: "vlad/Llama-3.2-3B-4bit"))
+        // ...but a real one is still recognized from the repo id alone.
+        #expect(HuggingFaceValidator.looksLikeVisionModel(
+            config: [:], repoId: "mlx-community/gemma-3-4b-it-vl-4bit"))
+    }
+
+    /// The working set is what has to fit in memory; the tier is what the
+    /// UI shows. Conflating them is how an app gets killed mid-answer.
+    @Test func memoryEstimatesAreConservativeAndOrdered() {
+        let twoB: Int64 = 1_780_000_000
+        let eightB: Int64 = 5_760_000_000
+        #expect(AIModel.workingSetGB(forModelBytes: twoB) < AIModel.workingSetGB(forModelBytes: eightB))
+        #expect(AIModel.workingSetGB(forModelBytes: eightB) >= 7)
+        #expect(AIModel.recommendedRAMGB(forModelBytes: eightB) >= 12)
+        // Never below the model's own size.
+        #expect(AIModel.workingSetGB(forModelBytes: eightB) >= 6)
+    }
+
+    @Test func customModelIdsCannotCollideWithBuiltIns() {
+        let spec = CustomModelSpec(repoId: "mlx-community/Anything-4bit",
+                                   displayName: "Anything", sizeBytes: 1_000_000_000,
+                                   supportsVision: false)
+        let model = AIModel(custom: spec)
+        #expect(model.isCustom)
+        #expect(!AIModel.builtInModels.contains { $0.id == model.id })
+        #expect(model.huggingFaceId == spec.repoId)
+        #expect(!model.supportsVision)
+    }
+}
+
+struct TextRecognizerTests {
+
+    /// More languages make Vision slower and less accurate, and English is
+    /// always worth having as a fallback for Latin script.
+    @Test @MainActor func recognitionLanguagesAreCappedAndIncludeEnglish() {
+        for language in [AppLanguage.russian, .japanese, .mandarin, .cantonese, .greek] {
+            let codes = TextRecognizer.languages(for: language).map(\.minimalIdentifier)
+            #expect(codes.count <= 3)
+            #expect(!codes.isEmpty)
+            #expect(codes.contains { $0.hasPrefix("en") })
+            #expect(Set(codes).count == codes.count, "Duplicates in \(codes)")
+        }
     }
 }
 

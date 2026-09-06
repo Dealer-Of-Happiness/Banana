@@ -170,5 +170,30 @@ final class AIGoodbyeUITests: XCTestCase {
         if agree.waitForExistence(timeout: 5) {
             agree.tap()
         }
+        dismissSetupIfNeeded(app)
+    }
+
+    /// The first-run setup sheet covers the whole screen on a fresh install,
+    /// so every test that touches the chat has to get past it first.
+    ///
+    /// `hasSeenSetup` is `@AppStorage`, so this only fires for whichever test
+    /// happens to run first against a fresh container - which is exactly the
+    /// kind of order dependence that makes a suite flaky, so it is checked
+    /// unconditionally rather than in one place.
+    @MainActor
+    private func dismissSetupIfNeeded(_ app: XCUIApplication) {
+        guard app.navigationBars["Set Up"].waitForExistence(timeout: 5) else { return }
+        for label in ["Not now", "Done"] {
+            let button = app.buttons[label].firstMatch
+            if button.exists {
+                button.tap()
+                break
+            }
+        }
+        // The sheet dismissal is animated; the next tap must not land on it.
+        XCTAssertTrue(
+            app.navigationBars["Set Up"].waitForNonExistence(timeout: 5),
+            "Setup sheet should close"
+        )
     }
 }

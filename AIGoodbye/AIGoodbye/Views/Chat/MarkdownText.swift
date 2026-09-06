@@ -10,15 +10,61 @@
 
 import SwiftUI
 
+/// Small memo cache for parsed Markdown, keyed by the exact source text.
+///
+/// A streaming answer produces a new, slightly longer string dozens of times
+/// a second; without this, each one re-parses everything before it.
+@MainActor
+final class MarkdownCache {
+    static let shared = MarkdownCache()
+
+    private var blockCache: [String: [MarkdownText.Block]] = [:]
+    private var inlineCache: [String: AttributedString] = [:]
+    private var blockOrder: [String] = []
+    private var inlineOrder: [String] = []
+    private let limit = 60
+
+    func blocks(for content: String) -> [MarkdownText.Block] {
+        if let cached = blockCache[content] { return cached }
+        let parsed = MarkdownText.parseBlocks(content)
+        blockCache[content] = parsed
+        blockOrder.append(content)
+        trim(&blockOrder) { self.blockCache[$0] = nil }
+        return parsed
+    }
+
+    func attributed(for text: String) -> AttributedString {
+        if let cached = inlineCache[text] { return cached }
+        let parsed = MarkdownText.parseInline(text)
+        inlineCache[text] = parsed
+        inlineOrder.append(text)
+        trim(&inlineOrder) { self.inlineCache[$0] = nil }
+        return parsed
+    }
+
+    private func trim(_ order: inout [String], remove: (String) -> Void) {
+        while order.count > limit {
+            remove(order.removeFirst())
+        }
+    }
+}
+
 struct MarkdownText: View {
     let content: String
+
+    /// Parsing is done once per distinct string and cached. `blocks` used to
+    /// be a computed property read from `body`, so a streaming answer
+    /// re-parsed the entire accumulated text - regex and Markdown parsing -
+    /// on every single token. That is quadratic in the answer length and is
+    /// the main reason streaming felt slow on older devices.
+    private var blocks: [Block] { MarkdownCache.shared.blocks(for: content) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
                 switch block {
                 case .text(let text):
-                    Text(inlineAttributed(text))
+                    Text(MarkdownCache.shared.attributed(for: text))
                         .textSelection(.enabled)
                 case .code(let code, let language):
                     CodeBlockView(code: code, language: language)
@@ -29,12 +75,20 @@ struct MarkdownText: View {
 
     // MARK: - Block parsing
 
-    private enum Block {
+    enum Block {
         case text(String)
         case code(String, language: String?)
     }
 
-    private var blocks: [Block] {
+    static func parseBlocks(_ content: String) -> [Block] {
+        MarkdownText(content: content).parsedBlocks
+    }
+
+    static func parseInline(_ text: String) -> AttributedString {
+        MarkdownText(content: text).inlineAttributed(text)
+    }
+
+    private var parsedBlocks: [Block] {
         var result: [Block] = []
         var currentText: [String] = []
         var currentCode: [String] = []
@@ -84,7 +138,7 @@ struct MarkdownText: View {
 
     // MARK: - Inline formatting
 
-    private func inlineAttributed(_ text: String) -> AttributedString {
+    fileprivate func inlineAttributed(_ text: String) -> AttributedString {
         // Pre-process line starts that inline Markdown ignores.
         let processedLines = text.components(separatedBy: "\n").map { line -> String in
             let trimmed = line.trimmingCharacters(in: .whitespaces)

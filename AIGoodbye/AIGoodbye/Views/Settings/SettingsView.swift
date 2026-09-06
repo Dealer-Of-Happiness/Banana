@@ -12,6 +12,7 @@ import UIKit
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @State private var showModelPicker = false
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         Form {
@@ -25,6 +26,13 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        // Every other sheet in the app has one; this is the deepest screen
+        // and the only one that could be left by swipe alone.
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") { dismiss() }
+            }
+        }
         // Presented from the Form level: presenting from a Section inside an
         // already-presented sheet can grab the wrong presentation context and
         // dismiss the whole Settings sheet on some devices.

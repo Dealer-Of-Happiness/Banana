@@ -15,6 +15,7 @@ import UIKit
 import PhotosUI
 import UniformTypeIdentifiers
 import PDFKit
+import VisionKit
 
 struct ChatView: View {
     @EnvironmentObject var appState: AppState
@@ -34,6 +35,16 @@ struct ChatView: View {
     @State private var showingVoiceMode = false
     @State private var showingLiveCamera = false
     @State private var showingTranslate = false
+    @State private var showingRecorder = false
+    @State private var showingScanner = false
+    @State private var showingSceneDescription = false
+    /// Whether the transcript is scrolled to the bottom, so a streaming
+    /// answer follows along without stealing the scroll from the user.
+    @State private var isPinnedToBottom = true
+    @State private var showingSetup = false
+    /// Shown once, right after the terms, so a new user knows where they
+    /// stand before typing anything.
+    @AppStorage("hasSeenSetup") private var hasSeenSetup = false
 
     var body: some View {
         NavigationStack {
@@ -107,6 +118,24 @@ struct ChatView: View {
                     documentPreview(name: docName)
                 }
 
+                if viewModel.isRecognizingText {
+                    HStack(spacing: 8) {
+                        if viewModel.scanProgress > 0 {
+                            ProgressView(value: viewModel.scanProgress)
+                                .frame(width: 90)
+                        } else {
+                            ProgressView()
+                        }
+                        Text("Reading the text on this device...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.vertical, 6)
+                    .accessibilityElement(children: .combine)
+                }
+
                 inputArea
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -135,6 +164,24 @@ struct ChatView: View {
                 TranslateModeView()
                     .environmentObject(appState)
             }
+            .fullScreenCover(isPresented: $showingRecorder) {
+                RecorderView()
+                    .environmentObject(appState)
+            }
+            .fullScreenCover(isPresented: $showingSceneDescription) {
+                SceneDescriptionView()
+                    .environmentObject(appState)
+            }
+            .fullScreenCover(isPresented: $showingScanner) {
+                DocumentScannerView(
+                    onFinish: { scan in
+                        showingScanner = false
+                        Task { await viewModel.processScan(scan) }
+                    },
+                    onCancel: { showingScanner = false }
+                )
+                .ignoresSafeArea()
+            }
             .fullScreenCover(isPresented: $showingCamera) {
                 // Full screen per Apple guidance for the camera (a sheet
                 // letterboxes on iPad).
@@ -157,7 +204,20 @@ struct ChatView: View {
                 ModelSelectionView()
                     .environmentObject(appState)
             }
-            .sheet(item: $viewModel.consentRequest) { request in
+            .sheet(isPresented: $showingSetup) {
+                SetupView()
+                    .environmentObject(appState)
+            }
+            // onDismiss matters: swiping the sheet away nils the binding
+            // without running "Not Now", which used to leave the message
+            // sitting unanswered with no banner and no explanation.
+            //
+            // Suppressed while voice mode is up: that screen presents this
+            // same sheet itself, and two presentations of one binding means
+            // UIKit silently drops one and both onDismiss handlers run.
+            .sheet(item: showingVoiceMode ? .constant(nil) : $viewModel.consentRequest, onDismiss: {
+                viewModel.consentSheetDismissed()
+            }) { request in
                 ModelDownloadConsentSheet(
                     model: request.model,
                     reason: request.reason,
@@ -180,6 +240,20 @@ struct ChatView: View {
             } message: {
                 Text(viewModel.importErrorMessage)
             }
+            // Separate from the error alert above: the scan succeeded, it
+            // just didn't include everything, and "Couldn't Add Attachment"
+            // over a document that was added reads as a failure.
+            .alert(
+                "Scan finished",
+                isPresented: Binding(
+                    get: { viewModel.scanNotice != nil },
+                    set: { if !$0 { viewModel.scanNotice = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(viewModel.scanNotice ?? "")
+            }
             .alert(
                 "Clear this chat?",
                 isPresented: $showingClearConfirmation
@@ -198,6 +272,16 @@ struct ChatView: View {
             // A route set before this view existed (cold launch from a
             // widget or Control Center) would never fire onChange.
             applyPendingRoute()
+            // First run: say what's needed before the user types, not after.
+            if !hasSeenSetup {
+                hasSeenSetup = true
+                if case .needsSetup = appState.engine.status {
+                    showingSetup = true
+                } else if appState.engine.appleIntelligence.isAvailable,
+                          !AIModel.builtInModels.contains(where: { $0.isDownloaded }) {
+                    showingSetup = true
+                }
+            }
         }
         .onChange(of: appState.currentConversation) { _, newConversation in
             viewModel.loadConversation(newConversation)
@@ -289,6 +373,9 @@ struct ChatView: View {
     private var messagesScrollView: some View {
         ScrollViewReader { proxy in
             ScrollView {
+                // Capped reading width: on an iPad in landscape an uncapped
+                // bubble is ~200 characters per line, which is unreadable.
+                // Every other screen already caps; the chat did not.
                 LazyVStack(spacing: 16) {
                     ForEach(viewModel.messages, id: \.id) { message in
                         MessageBubble(
@@ -331,20 +418,62 @@ struct ChatView: View {
                     }
                 }
                 .padding()
+                .frame(maxWidth: 760)
+                .frame(maxWidth: .infinity)
+            }
+            // Scrolling up while an answer streams used to be impossible:
+            // every token yanked the view back down. Follow the answer only
+            // while the user is still at the bottom.
+            //
+            // Unpin only on a deliberate upward drag. Deriving it from
+            // position alone unlatches on any large layout jump - a code
+            // block or table appearing - and the answer stops following for
+            // no reason the user can see.
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 12)
+                    .onChanged { value in
+                        if value.translation.height > 0 { isPinnedToBottom = false }
+                    }
+            )
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                let bottom = geometry.contentOffset.y + geometry.containerSize.height
+                return bottom >= geometry.contentSize.height - 120
+            } action: { _, atBottom in
+                // Re-pin as soon as the user comes back to the bottom.
+                if atBottom { isPinnedToBottom = true }
             }
             .onChange(of: viewModel.messages.count) { _, _ in
+                // A new message the user just sent always scrolls.
+                isPinnedToBottom = true
                 withAnimation {
                     proxy.scrollTo(viewModel.messages.last?.id.uuidString, anchor: .bottom)
                 }
             }
             .onChange(of: viewModel.streamingText) { _, newValue in
-                if newValue != nil {
+                if newValue != nil, isPinnedToBottom {
                     proxy.scrollTo("streaming", anchor: .bottom)
                 }
             }
             .onChange(of: viewModel.isGenerating) { _, generating in
                 if generating {
+                    isPinnedToBottom = true
                     withAnimation { proxy.scrollTo("typing", anchor: .bottom) }
+                }
+            }
+            .overlay(alignment: .bottomTrailing) {
+                if !isPinnedToBottom, viewModel.isGenerating {
+                    Button {
+                        isPinnedToBottom = true
+                        withAnimation { proxy.scrollTo("streaming", anchor: .bottom) }
+                    } label: {
+                        Label("Jump to latest", systemImage: "arrow.down")
+                            .font(.caption.weight(.medium))
+                            .padding(.horizontal, 12)
+                            .frame(minHeight: 44)
+                            .background(Capsule().fill(.ultraThinMaterial))
+                    }
+                    .padding(.trailing, 14)
+                    .padding(.bottom, 8)
                 }
             }
         }
@@ -387,6 +516,28 @@ struct ChatView: View {
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity)
             .background(Color(.systemGray6))
+        case .needsSetup:
+            // This state was computed and never rendered, so on a device
+            // without Apple Intelligence the app looked completely ready and
+            // only demanded a 1.8 GB download after the user's first message.
+            Button {
+                showingSetup = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .foregroundStyle(.blue)
+                    Text("Set up your AI model to start chatting")
+                        .font(.caption.weight(.medium))
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(Color.blue.opacity(0.1))
+            }
+            .buttonStyle(.plain)
         default:
             EmptyView()
         }
@@ -480,7 +631,43 @@ struct ChatView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
+                // These are the app's actual capabilities, not just
+                // "attach something". Nine features had been living behind a
+                // "+" button labelled "Add photo or document", where nobody
+                // would ever find them.
                 VStack(spacing: 12) {
+                    QuickActionButton(
+                        icon: "text.bubble.fill",
+                        title: L10n.text("Just Chat"),
+                        subtitle: L10n.text("Ask anything")
+                    ) {
+                        isInputFocused = true
+                    }
+
+                    QuickActionButton(
+                        icon: "waveform",
+                        title: L10n.text("Talk out loud"),
+                        subtitle: L10n.text("A hands-free voice conversation")
+                    ) {
+                        showingVoiceMode = true
+                    }
+
+                    QuickActionButton(
+                        icon: "waveform.badge.mic",
+                        title: L10n.text("Record a meeting"),
+                        subtitle: L10n.text("Transcript, summary and action items")
+                    ) {
+                        showingRecorder = true
+                    }
+
+                    QuickActionButton(
+                        icon: "character.bubble",
+                        title: L10n.text("Translate a conversation"),
+                        subtitle: L10n.text("Two-way, out loud, with no internet")
+                    ) {
+                        showingTranslate = true
+                    }
+
                     QuickActionButton(
                         icon: "photo.fill",
                         title: L10n.text("Analyze an Image"),
@@ -495,14 +682,6 @@ struct ChatView: View {
                         subtitle: L10n.text("Upload PDF or text files")
                     ) {
                         showingDocumentPicker = true
-                    }
-
-                    QuickActionButton(
-                        icon: "text.bubble.fill",
-                        title: L10n.text("Just Chat"),
-                        subtitle: L10n.text("Ask anything")
-                    ) {
-                        isInputFocused = true
                     }
                 }
                 .padding(.top, 8)
@@ -640,12 +819,26 @@ struct ChatView: View {
                         Label("Document", systemImage: "doc")
                     }
 
+                    if DocumentScannerView.isAvailable {
+                        Button {
+                            showingScanner = true
+                        } label: {
+                            Label("Scan Document", systemImage: "doc.viewfinder")
+                        }
+                    }
+
                     #if !targetEnvironment(simulator)
                     if UIImagePickerController.isSourceTypeAvailable(.camera) {
                         Button {
                             showingLiveCamera = true
                         } label: {
                             Label("Live Camera", systemImage: "camera.viewfinder")
+                        }
+
+                        Button {
+                            showingSceneDescription = true
+                        } label: {
+                            Label("Describe Surroundings", systemImage: "eye")
                         }
                     }
                     #endif
@@ -657,6 +850,12 @@ struct ChatView: View {
                     } label: {
                         Label("Translate", systemImage: "character.bubble")
                     }
+
+                    Button {
+                        showingRecorder = true
+                    } label: {
+                        Label("Record", systemImage: "waveform.badge.mic")
+                    }
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.title)
@@ -664,7 +863,12 @@ struct ChatView: View {
                         .frame(minWidth: 44, minHeight: 44)
                 }
                 .disabled(viewModel.isGenerating)
-                .accessibilityLabel(Text("Add photo or document"))
+                // Not "Add photo or document": this menu is where voice,
+                // live camera, Describe Surroundings, translate, record and
+                // scan live. A blind user looking for Describe Surroundings
+                // has to be able to find it from its name.
+                .accessibilityLabel(Text("Tools and attachments"))
+                .accessibilityHint(Text("Photos, documents, scanning, live camera, describe surroundings, translate and record"))
 
                 TextField(
                     viewModel.pendingImage != nil
@@ -796,7 +1000,7 @@ class ChatViewModel: ObservableObject {
         let image: UIImage?
         let imageId: UUID?
         let attachmentType: AttachmentType?
-        let persistUserMessage: Bool
+        var persistUserMessage: Bool
         var documentId: UUID? = nil
         /// Extra material for THIS generation only (never persisted).
         var transientContext: String? = nil
@@ -817,6 +1021,18 @@ class ChatViewModel: ObservableObject {
     @Published private(set) var importErrorMessage = ""
     /// Shown briefly when something is added to private memory.
     @Published var memoryNotice: String?
+    /// True while Vision is reading a scan or an image-only PDF.
+    @Published var isRecognizingText = false
+    /// 0...1 through a multi-page scan.
+    @Published var scanProgress: Double = 0
+    /// A scan that worked but left something out.
+    @Published var scanNotice: String?
+    /// Set when the consent sheet is closing because the user approved, so
+    /// its dismissal isn't mistaken for a decline.
+    private var consentApproved = false
+    /// Guards against two overlapping Clear Chat runs, the second of which
+    /// would delete already-deleted objects.
+    private var isClearing = false
 
     var appState: AppState?
     private var currentConversationId: UUID?
@@ -864,7 +1080,16 @@ class ChatViewModel: ObservableObject {
     }
 
     func getImage(for id: UUID) -> UIImage? {
-        imageCache[id]
+        if let cached = imageCache[id] { return cached }
+        // Fall back to disk. Without this, dropping the cache on a memory
+        // warning left every image bubble in the open chat permanently
+        // blank, because the cache is only refilled when a DIFFERENT
+        // conversation is loaded.
+        guard let image = UIImage(contentsOfFile: ConversationManager.imagePath(for: id).path) else {
+            return nil
+        }
+        imageCache[id] = image
+        return image
     }
 
     /// History as the model should see it: user/assistant turns only,
@@ -1016,7 +1241,7 @@ class ChatViewModel: ObservableObject {
 
     private func extractTextFromPDF(_ url: URL) async throws -> String {
         // PDF parsing happens off the main thread.
-        try await Task.detached(priority: .userInitiated) {
+        let embedded = try await Task.detached(priority: .userInitiated) {
             guard let document = PDFDocument(url: url) else {
                 throw DocumentError.invalidDocument
             }
@@ -1030,6 +1255,89 @@ class ChatViewModel: ObservableObject {
             }
             return fullText
         }.value
+
+        // A scanned PDF is images with no text layer: PDFKit returns nothing
+        // useful, so read the pages with on-device OCR instead.
+        let meaningful = embedded
+            .replacingOccurrences(of: "[Page ", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if meaningful.count >= 40 { return embedded }
+
+        isRecognizingText = true
+        defer { isRecognizingText = false }
+        let languages = TextRecognizer.languages(for: appState?.settings.appLanguage ?? .automatic)
+        let recognized = await TextRecognizer.text(inScannedPDF: url, languages: languages)
+        return recognized.isEmpty ? embedded : recognized
+    }
+
+    // MARK: - Scanning
+
+    /// Read a scan with on-device OCR and attach the text as a document, so
+    /// the AI can answer questions about a piece of paper.
+    ///
+    /// One page is decoded at a time and released before the next, and the
+    /// loop yields between pages so the screen keeps drawing its progress.
+    /// Nothing is written to disk on the way: these are people's contracts
+    /// and medical letters.
+    func processScan(_ scan: VNDocumentCameraScan) async {
+        let totalScanned = scan.pageCount
+        guard totalScanned > 0 else { return }
+        clearPendingDocument()
+
+        isRecognizingText = true
+        scanProgress = 0
+        defer {
+            isRecognizingText = false
+            scanProgress = 0
+        }
+
+        let languages = TextRecognizer.languages(for: appState?.settings.appLanguage ?? .automatic)
+        let readable = min(totalScanned, DocumentScannerView.maximumPages)
+        var pages: [String] = []
+        var failed = 0
+
+        for index in 0..<readable {
+            if Task.isCancelled { break }
+            let image: UIImage? = autoreleasepool { scan.imageOfPage(at: index) }
+            scanProgress = Double(index) / Double(readable)
+            guard let image else {
+                failed += 1
+                continue
+            }
+            let page = await TextRecognizer.text(in: image, languages: languages)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            // Numbered by its true position in the scan. Numbering by
+            // position in the surviving array meant that losing page 1 quietly
+            // relabelled page 2 as "Page 1", and the document then
+            // misrepresented itself.
+            if page.isEmpty {
+                failed += 1
+            } else {
+                pages.append(readable > 1 ? "\(L10n.text("Page \(index + 1)"))\n\n\(page)" : page)
+            }
+            scanProgress = Double(index + 1) / Double(readable)
+            await Task.yield()
+        }
+
+        let trimmed = pages.joined(separator: "\n\n").trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmed.isEmpty else {
+            presentImportError(L10n.text("No readable text was found in this scan. Try again with more light, or hold the camera steady."))
+            return
+        }
+
+        let name = L10n.text("Scan \(Date().formatted(date: .abbreviated, time: .shortened))")
+        pendingDocumentName = name
+        pendingDocumentContent = String(trimmed.prefix(4000))
+        pendingDocumentId = await DocumentIndex.shared.store(name: name, fullText: trimmed)
+
+        // Say what was left out rather than quietly handing over a document
+        // with pages missing from it.
+        if totalScanned > readable {
+            scanNotice = L10n.text("Only the first \(readable) pages were read. Scan the rest separately.")
+        } else if failed > 0 {
+            scanNotice = L10n.text("\(failed) of \(readable) pages had no readable text and were left out.")
+        }
     }
 
     private func presentImportError(_ message: String) {
@@ -1160,6 +1468,13 @@ class ChatViewModel: ObservableObject {
     private func perform(_ request: PendingRequest) async {
         guard let appState else { return }
 
+        // Claim the engine synchronously, before any suspension point. The
+        // callers that spawn `Task { await perform(...) }` return to the UI
+        // first, so without this a second tap on Send or Regenerate starts a
+        // concurrent run that orphans the first one's task.
+        guard !isGenerating else { return }
+        isGenerating = true
+
         // Ensure a conversation exists.
         var conversation = appState.currentConversation
         if conversation == nil {
@@ -1176,36 +1491,11 @@ class ChatViewModel: ObservableObject {
             appState.conversationManager.updateConversation(conv)
         }
 
-        // The document brain: pull the passages relevant to THIS question
-        // out of the attached documents. Retrieval runs off the main actor
-        // and is used for this generation only - it is never written into
-        // history, which would crowd out the conversation itself.
-        var generationPrompt = request.prompt
-        // Documents attached to this chat, plus anything switched on in the
-        // permanent Knowledge Library.
-        let libraryIds = KnowledgeLibrary.shared.activeDocumentIds
-        let searchableIds = Array(Set((conversation?.attachedDocumentIds ?? []) + libraryIds))
-        if request.image == nil, !searchableIds.isEmpty {
-            // contextWindow is measured in tokens; the retrieval budget is in
-            // characters (~3.5 per token). Spend at most ~40% of the window
-            // on passages so the conversation itself still fits.
-            let windowChars = Double(appState.settings.contextWindow) * 3.5
-            let budget = max(2000, min(Int(windowChars * 0.4), 12000))
-            let docIds = searchableIds
-            let question = request.prompt
-            if let retrieved = await DocumentIndex.shared.context(
-                for: question, documentIds: docIds, budget: budget
-            ) {
-                generationPrompt = "\(retrieved)\n\nUsing the passages above when they're relevant, answer:\n\(question)"
-            } else if let seed = request.transientContext {
-                generationPrompt = "\(seed)\n\n\(question)"
-            }
-        } else if let seed = request.transientContext {
-            generationPrompt = "\(seed)\n\n\(request.prompt)"
-        }
-
-        // Persist and show the user message FIRST, so it is never lost when
-        // routing needs user action (e.g. download consent).
+        // Persist and show the user message FIRST - before any await. On a
+        // document chat, retrieval takes seconds; doing it first meant the
+        // user's message simply vanished for that whole window, Stop did
+        // nothing because there was no task yet, and switching conversations
+        // mid-retrieval dropped the message into the wrong chat.
         if request.persistUserMessage, let conv = conversation {
             let userMessage = appState.conversationManager.addMessage(
                 to: conv,
@@ -1224,38 +1514,66 @@ class ChatViewModel: ObservableObject {
             }
         }
 
-        // Remember the request for retry/consent flows. The user message is
-        // persisted by now, so any re-run must not persist it again.
-        lastRequest = PendingRequest(
-            prompt: request.prompt,
-            displayMessage: request.displayMessage,
-            hiddenContext: request.hiddenContext,
-            image: request.image,
-            imageId: request.imageId,
-            attachmentType: request.attachmentType,
-            persistUserMessage: false
-        )
+        // Remember the request for retry/consent flows. Every field is
+        // carried over - a retry that quietly dropped the document id or the
+        // summary seed would answer a different question.
+        var retryable = request
+        retryable.persistUserMessage = false
+        lastRequest = retryable
 
         // Route to a backend; may require download consent.
         let routedModel: AIModel
         do {
             routedModel = try appState.engine.route(hasImage: request.image != nil)
         } catch let error as ChatEngine.RouteError {
+            isGenerating = false
             handleRouteError(error)
             return
         } catch {
+            isGenerating = false
             errorBanner = ErrorBanner(message: error.localizedDescription, canRetry: true)
             return
         }
 
-        isGenerating = true
         streamingText = nil
+
+        // Whether this turn had to fetch the model first, so a cancellation
+        // can be explained accurately.
+        let wasDownloading = routedModel.backend == .mlx && !routedModel.isDownloaded
 
         generationTask = Task {
             var finalText = ""
             var failure: String?
+            var cancelledDownload = false
 
             do {
+                // The document brain: pull the passages relevant to THIS
+                // question out of the attached documents. Runs inside the
+                // cancellable task, and off the main actor, so Stop works and
+                // the UI stays responsive while it searches. Used for this
+                // generation only - never written into history, which would
+                // crowd out the conversation itself.
+                var generationPrompt = request.prompt
+                let libraryIds = KnowledgeLibrary.shared.activeDocumentIds
+                let searchableIds = Array(Set((conversation?.attachedDocumentIds ?? []) + libraryIds))
+                if request.image == nil, !searchableIds.isEmpty {
+                    // contextWindow is in tokens; the retrieval budget is in
+                    // characters (~3.5 per token). Spend at most ~40% of the
+                    // window on passages so the conversation still fits.
+                    let windowChars = Double(appState.settings.contextWindow) * 3.5
+                    let budget = max(2000, min(Int(windowChars * 0.4), 12000))
+                    if let retrieved = await DocumentIndex.shared.context(
+                        for: request.prompt, documentIds: searchableIds, budget: budget
+                    ) {
+                        generationPrompt = "\(retrieved)\n\nUsing the passages above when they're relevant, answer:\n\(request.prompt)"
+                    } else if let seed = request.transientContext {
+                        generationPrompt = "\(seed)\n\n\(request.prompt)"
+                    }
+                } else if let seed = request.transientContext {
+                    generationPrompt = "\(seed)\n\n\(request.prompt)"
+                }
+                try Task.checkCancellation()
+
                 // Build the session once per conversation; reuse it between turns.
                 // History must end after an assistant turn: trailing user turns
                 // are pending questions (including the one being asked now) and
@@ -1283,12 +1601,22 @@ class ChatViewModel: ObservableObject {
                     finalText = snapshot
                 }
             } catch is CancellationError {
-                // User tapped Stop (possibly mid-download); not an error.
+                // Stop during generation is self-explanatory: the partial
+                // answer is on screen. Stop during a multi-gigabyte DOWNLOAD
+                // leaves nothing at all - no answer, no error, no chip - so
+                // say what happened and offer a way back.
+                if wasDownloading && finalText.isEmpty {
+                    cancelledDownload = true
+                }
             } catch {
                 if !Task.isCancelled {
                     failure = error.localizedDescription
                 }
             }
+
+            // A vision model borrowed for one image question is released as
+            // soon as the answer is done, rather than staying resident.
+            appState.engine.releaseBorrowedVisionModel(routedModel)
 
             // Finalize on the main actor.
             let cleaned = finalText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1314,6 +1642,11 @@ class ChatViewModel: ObservableObject {
                 errorBanner = ErrorBanner(message: failure, canRetry: true)
                 // The session may be mid-turn; rebuild next time.
                 appState.engine.resetSessions()
+            } else if cancelledDownload, currentConversationId == conversation?.id {
+                errorBanner = ErrorBanner(
+                    message: L10n.text("Download cancelled, so your message wasn't answered. What was already downloaded is kept - tap Try Again to continue."),
+                    canRetry: true
+                )
             }
 
             streamingText = nil
@@ -1347,16 +1680,32 @@ class ChatViewModel: ObservableObject {
     /// unanswered with no affordance. Offer a retry.
     func declineConsent() {
         consentRequest = nil
-        if lastRequest != nil {
-            errorBanner = ErrorBanner(
-                message: L10n.text("The model isn't downloaded yet, so your message wasn't answered."),
-                canRetry: true
-            )
+        showDeclinedBanner()
+    }
+
+    /// The sheet went away by any route - button, swipe, or a system
+    /// dismissal. Approving sets `consentApproved` first, so this only fires
+    /// for a genuine decline.
+    func consentSheetDismissed() {
+        guard !consentApproved else {
+            consentApproved = false
+            return
         }
+        showDeclinedBanner()
+    }
+
+    private func showDeclinedBanner() {
+        guard lastRequest != nil, errorBanner == nil, !isGenerating else { return }
+        errorBanner = ErrorBanner(
+            message: L10n.text("The model isn't downloaded yet, so your message wasn't answered."),
+            canRetry: true
+        )
     }
 
     func approveConsentAndResend() {
         guard let request = consentRequest else { return }
+        // Tell `consentSheetDismissed` this was an approval, not a decline.
+        consentApproved = true
         appState?.engine.approveDownload(for: request.model)
         // If the user was on Apple Intelligence and needed a vision model,
         // keep their engine selection; the router picks the vision model
@@ -1387,6 +1736,15 @@ class ChatViewModel: ObservableObject {
 
     func stopGeneration() {
         generationTask?.cancel()
+    }
+
+    /// Cancel and WAIT. `cancel()` alone only requests cancellation - the
+    /// task's finalizer still runs and will happily re-append the partial
+    /// answer to a chat the user just cleared.
+    func stopGenerationAndWait() async {
+        let task = generationTask
+        task?.cancel()
+        await task?.value
     }
 
     func retryLastRequest() {
@@ -1444,18 +1802,41 @@ class ChatViewModel: ObservableObject {
     // MARK: - Clear
 
     func clearConversation() {
-        stopGeneration()
+        guard !isClearing, let target = appState?.currentConversation else { return }
+        isClearing = true
+        let targetId = target.id
+        // Wait for any in-flight answer to actually finish unwinding first.
+        // Cancelling alone let the finalizer append a partial answer a
+        // second after the user watched the chat empty.
+        Task { @MainActor in
+            await stopGenerationAndWait()
+            defer { isClearing = false }
+            // The user may have switched chats during that await. Clearing
+            // whatever is on screen NOW would delete a different
+            // conversation's messages, images and documents.
+            guard appState?.currentConversation?.id == targetId else { return }
+            performClear(target)
+        }
+    }
 
+    private func performClear(_ target: Conversation) {
         // Actually delete the saved messages so the chat stays cleared -
         // including the extracted text of any attached documents, which the
         // user reasonably expects to be gone too.
-        if let conversation = appState?.currentConversation {
+        do {
+            let conversation = target
             for message in conversation.messages {
                 appState?.conversationManager.deleteMessage(message)
             }
             let docIds = conversation.attachedDocumentIds
             Task {
                 for id in docIds { await DocumentIndex.shared.removeDocument(id) }
+            }
+            // Delete the photo files too. Forgetting them left every image
+            // the user ever attached sitting on disk forever, which is not
+            // what "clear this chat" means in an app about privacy.
+            for imageId in conversation.attachedImageIds {
+                try? FileManager.default.removeItem(at: ConversationManager.imagePath(for: imageId))
             }
             conversation.attachedDocumentIds.removeAll()
             conversation.attachedImageIds.removeAll()
@@ -1470,14 +1851,32 @@ class ChatViewModel: ObservableObject {
         pendingDocumentContent = nil
         errorBanner = nil
         imageCache.removeAll()
+        // Otherwise "Try Again" - or approving a consent sheet that is still
+        // open - regenerates an answer into the chat just emptied.
+        lastRequest = nil
+        consentRequest = nil
         appState?.engine.resetSessions()
+    }
+
+    // MARK: - Memory
+
+    /// Drop the decoded-image cache. Bitmaps are the largest thing this view
+    /// model holds and they can all be read back from disk.
+    func releaseMemory() {
+        let keep = pendingImageId
+        imageCache = imageCache.filter { $0.key == keep }
     }
 
     // MARK: - Image Storage
 
     private func saveImage(_ image: UIImage, withId id: UUID) {
-        guard let data = image.jpegData(compressionQuality: 0.8) else { return }
-        try? data.write(to: ConversationManager.imagePath(for: id))
+        guard let data = ImageNormalizer.upright(image).jpegData(compressionQuality: 0.8) else { return }
+        // Protected at rest: an attached photo can be a medical result or a
+        // document, and should not be readable while the device is locked.
+        try? data.write(
+            to: ConversationManager.imagePath(for: id),
+            options: [.atomic, .completeFileProtectionUnlessOpen]
+        )
     }
 
     private func getImagePath(for id: UUID) -> URL? {
@@ -1541,8 +1940,11 @@ struct MessageBubble: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(
             (message.role == .user
-                ? L10n.text("You said: \(message.content)")
-                : L10n.text("Assistant said: \(message.content)"))
+                // Markdown stripped first, or VoiceOver announces "asterisk
+                // asterisk important asterisk asterisk" and reads entire
+                // code blocks aloud as character soup.
+                ? L10n.text("You said: \(VoiceService.plainSpeech(from: message.content))")
+                : L10n.text("Assistant said: \(VoiceService.plainSpeech(from: message.content))"))
             + " " + message.timestamp.formatted(date: .omitted, time: .shortened)
         ))
     }
@@ -1575,7 +1977,10 @@ struct StreamingBubble: View {
             }
             Spacer(minLength: 60)
         }
-        .accessibilityLabel(Text("Assistant is responding: \(text)"))
+        // Spoken without its Markdown: VoiceOver reading "asterisk asterisk
+        // important asterisk asterisk" is the single most reported complaint
+        // about AI chat apps from screen reader users.
+        .accessibilityLabel(Text("Assistant is responding: \(VoiceService.plainSpeech(from: text))"))
     }
 }
 
@@ -1693,7 +2098,9 @@ struct CameraView: UIViewControllerRepresentable {
 
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
             if let image = info[.originalImage] as? UIImage {
-                onImageCaptured(image)
+                // A portrait capture carries `.right`; bake it in now so
+                // every downstream consumer sees the picture the user saw.
+                onImageCaptured(ImageNormalizer.upright(image))
             }
             picker.dismiss(animated: true)
         }
@@ -1753,6 +2160,9 @@ struct DocumentPickerView: UIViewControllerRepresentable {
 
 struct TypingIndicator: View {
     @State private var animating = false
+    /// An infinite repeating animation is exactly what Reduce Motion asks
+    /// apps not to do.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack {
@@ -1761,11 +2171,13 @@ struct TypingIndicator: View {
                     Circle()
                         .fill(.gray)
                         .frame(width: 8, height: 8)
-                        .scaleEffect(animating ? 1 : 0.5)
+                        .scaleEffect(animating && !reduceMotion ? 1 : 0.5)
                         .animation(
-                            .easeInOut(duration: 0.6)
-                            .repeatForever()
-                            .delay(Double(i) * 0.2),
+                            reduceMotion
+                                ? nil
+                                : .easeInOut(duration: 0.6)
+                                    .repeatForever()
+                                    .delay(Double(i) * 0.2),
                             value: animating
                         )
                 }

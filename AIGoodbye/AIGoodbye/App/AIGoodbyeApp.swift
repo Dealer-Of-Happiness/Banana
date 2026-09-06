@@ -63,9 +63,23 @@ struct AIGoodbyeApp: App {
                 appState.handleDeepLink(url)
             }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active {
+                // Don't hand shared content to a screen the user can't see:
+                // behind the terms wall or the lock it would be consumed and
+                // silently dropped into an invisible chat.
+                if phase == .active, hasAcceptedTerms, !lock.isLocked {
                     appState.consumeSharedContent()
                 }
+            }
+            .onChange(of: lock.isLocked) { _, locked in
+                if !locked, hasAcceptedTerms {
+                    appState.consumeSharedContent()
+                }
+            }
+            // Give memory back before the system takes the whole app.
+            .onReceive(NotificationCenter.default.publisher(
+                for: UIApplication.didReceiveMemoryWarningNotification
+            )) { _ in
+                appState.releaseMemory()
             }
         }
     }
@@ -156,8 +170,16 @@ class AppState: ObservableObject {
     static weak var shared: AppState?
 
     @Published var showSideMenu = false
-    @Published var currentConversation: Conversation?
+    @Published var currentConversation: Conversation? {
+        didSet {
+            guard let id = currentConversation?.id else { return }
+            UserDefaults.standard.set(id.uuidString, forKey: Self.lastConversationKey)
+        }
+    }
     @Published var isInitialized = false
+
+    /// Which conversation to reopen on the next launch.
+    fileprivate static let lastConversationKey = "lastConversationId"
 
     // Services
     let settings: SettingsManager
@@ -194,13 +216,55 @@ class AppState: ObservableObject {
         NetworkAudit.begin()
     }
 
+    /// When the last memory warning arrived, so a repeat can escalate.
+    private var lastMemoryWarning: Date?
+
+    /// Give back everything re-creatable when the system warns us. Without
+    /// this, a multi-gigabyte model plus caches means the app is simply
+    /// killed - which, mid-recording or mid-answer, costs the user real work.
+    func releaseMemory() {
+        chatViewModel.releaseMemory()
+        Task { await DocumentIndex.shared.purgeCaches() }
+        // Drop the chat session (and its key-value cache) but keep the model
+        // itself loaded: rebuilding the session is fast, reloading is not.
+        engine.mlx.dropSession()
+        engine.appleIntelligence.dropSession()
+
+        // Escalate. Dropping the same caches on the second and third warning
+        // achieves nothing while the weights - 1.8 to 5.8 GB of them - stay
+        // resident, and the app is then killed mid-answer or mid-recording.
+        // The weights are the only thing large enough to matter.
+        let now = Date()
+        if let last = lastMemoryWarning, now.timeIntervalSince(last) < 30 {
+            engine.mlx.unload()
+            engine.modelWasDroppedForMemory = true
+        }
+        lastMemoryWarning = now
+    }
+
     /// Fast, non-blocking startup: prepare storage, then show the app.
     /// Models load lazily on first use, with progress shown inside the chat.
     func initialize() async {
         guard !isInitialized else { return }
         await conversationManager.initialize()
-        conversationManager.sweepOrphanedDocuments()
+        // Anything the share extension already handed over is attached to no
+        // conversation yet, so the sweep must be told to spare it.
+        conversationManager.sweepOrphanedDocuments(
+            alsoKeep: Set([chatViewModel.pendingDocumentId].compactMap { $0 })
+        )
+        conversationManager.sweepOrphanedImages()
+        conversationManager.sweepEmptyConversations()
         engine.appleIntelligence.refreshAvailability()
+
+        // Come back to the conversation the user was actually in. Always
+        // cold-starting on a blank chat meant re-opening the drawer and
+        // hunting for your own conversation on every single launch.
+        if currentConversation == nil,
+           let lastId = UserDefaults.standard.string(forKey: Self.lastConversationKey),
+           let uuid = UUID(uuidString: lastId),
+           let restored = conversationManager.conversations.first(where: { $0.id == uuid }) {
+            currentConversation = restored
+        }
         isInitialized = true
 
         // Warm up a ready engine in the background so the first answer is quick.
@@ -216,6 +280,18 @@ class AppState: ObservableObject {
     }
 
     func createNewConversation() {
+        // Reuse an empty chat rather than stacking up identical "New Chat /
+        // No messages" rows. Tapping New Chat five times used to leave five
+        // permanent empty conversations in the sidebar.
+        if let current = currentConversation, current.messages.isEmpty {
+            return
+        }
+        if let existingEmpty = conversationManager.conversations.first(where: {
+            $0.messages.isEmpty && $0.folderId == nil
+        }) {
+            currentConversation = existingEmpty
+            return
+        }
         currentConversation = conversationManager.createConversation()
     }
 

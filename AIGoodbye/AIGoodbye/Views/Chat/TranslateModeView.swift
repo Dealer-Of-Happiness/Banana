@@ -9,6 +9,7 @@
 //
 
 import SwiftUI
+import NaturalLanguage
 
 struct TranslateModeView: View {
     @EnvironmentObject var appState: AppState
@@ -32,6 +33,12 @@ struct TranslateModeView: View {
     @State private var permissionDenied = false
     @State private var isActive = true
 
+    /// Hands-free: keep listening, translating and speaking, alternating
+    /// sides automatically so nobody has to touch the phone.
+    @State private var isHandsFree = false
+    /// Whose turn hands-free mode expects next.
+    @State private var handsFreeExpectsMine = true
+
     private var languageChoices: [AppLanguage] {
         AppLanguage.pickerOrder.filter { $0 != .automatic }
     }
@@ -53,6 +60,8 @@ struct TranslateModeView: View {
             if phase != .active {
                 voice.pause()
                 listeningForMine = nil
+                // Don't keep the microphone running in the background.
+                isHandsFree = false
             }
         }
     }
@@ -129,7 +138,7 @@ struct TranslateModeView: View {
                             Image(systemName: "character.bubble")
                                 .font(.system(size: 40))
                                 .foregroundStyle(.secondary)
-                            Text("Tap a language button and start speaking. The translation is spoken back automatically.")
+                            Text("Start hands-free and just talk: it listens, translates out loud, then listens again. Or tap a language to take one turn at a time.")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
@@ -194,9 +203,34 @@ struct TranslateModeView: View {
     }
 
     private var controls: some View {
-        HStack(spacing: 12) {
-            talkButton(mine: true, language: myLanguage)
-            talkButton(mine: false, language: theirLanguage)
+        VStack(spacing: 10) {
+            // Hands-free: the phone can sit on the table between two people.
+            Button {
+                toggleHandsFree()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: isHandsFree ? "stop.circle.fill" : "infinity.circle.fill")
+                        .font(.title3)
+                    Text(isHandsFree ? "Stop hands-free" : "Hands-free conversation")
+                        .font(.subheadline.weight(.medium))
+                }
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(isHandsFree ? Color.red.opacity(0.15) : Color.blue.opacity(0.15))
+                )
+                .foregroundStyle(isHandsFree ? .red : .blue)
+            }
+            .buttonStyle(.plain)
+            .disabled(permissionDenied)
+            .accessibilityHint(Text("Listens, translates and speaks continuously, switching languages automatically"))
+
+            if !isHandsFree {
+                HStack(spacing: 12) {
+                    talkButton(mine: true, language: myLanguage)
+                    talkButton(mine: false, language: theirLanguage)
+                }
+            }
         }
         .padding()
         .background(.bar)
@@ -244,14 +278,34 @@ struct TranslateModeView: View {
         voice.onFinalTranscript = { text in
             Task { @MainActor in
                 guard isActive else { return }
-                let wasMine = listeningForMine ?? true
+                var wasMine = listeningForMine ?? true
                 listeningForMine = nil
+
+                // Hands-free alternates automatically, but people don't take
+                // perfect turns - if what was actually said looks like the
+                // other language, believe the words, not the schedule.
+                if isHandsFree, let detected = Self.detectedSide(
+                    of: text, mine: myLanguage, theirs: theirLanguage
+                ) {
+                    wasMine = detected
+                }
                 await translate(text, fromMine: wasMine)
             }
         }
         voice.onListeningEnded = {
             Task { @MainActor in
                 if listeningForMine != nil { listeningForMine = nil }
+                // Nothing was said (silence timeout): keep the conversation
+                // alive by listening again.
+                if isHandsFree, isActive, !isTranslating, !voice.isSpeaking {
+                    beginListening(mine: handsFreeExpectsMine)
+                }
+            }
+        }
+        voice.onFinishedSpeaking = {
+            Task { @MainActor in
+                guard isHandsFree, isActive, !isTranslating else { return }
+                beginListening(mine: handsFreeExpectsMine)
             }
         }
 
@@ -289,9 +343,16 @@ struct TranslateModeView: View {
             let model = try engine.route(hasImage: false)
             // A dedicated, throwaway session: translation must not inherit
             // the chat's persona, memory or history - a "Brainstorm Partner"
-            // persona would turn a translation into a discussion.
-            defer { engine.resetSessions() }
-            try await engine.startTranslationSession(model: model)
+            // persona would turn a translation into a discussion. Claiming
+            // the engine also keeps a summary running elsewhere from tearing
+            // this session down mid-sentence.
+            guard engine.claimUtility() else {
+                turns.removeAll { $0.id == turn.id }
+                notice = L10n.text("The AI is busy with another task. Try again in a moment.")
+                return
+            }
+            defer { engine.releaseUtility() }
+            try await engine.startCleanSession(model: model)
 
             let prompt = """
             Translate the following text from \(source.englishName) into \(target.englishName).
@@ -316,14 +377,56 @@ struct TranslateModeView: View {
 
             // Speak the result in the target language.
             voice.setSpeechLanguage(target)
+            // In hands-free mode the next speaker is whoever DIDN'T just
+            // talk, so listening resumes in the right language.
+            handsFreeExpectsMine = !fromMine
             voice.speak(cleaned)
         } catch let error as ChatEngine.RouteError {
             turns.removeAll { $0.id == turn.id }
             notice = error.errorDescription
+            isHandsFree = false
         } catch {
             turns.removeAll { $0.id == turn.id }
             notice = error.localizedDescription
+            isHandsFree = false
         }
+    }
+
+    // MARK: - Hands-free
+
+    private func toggleHandsFree() {
+        isHandsFree.toggle()
+        if isHandsFree {
+            notice = nil
+            handsFreeExpectsMine = true
+            beginListening(mine: true)
+        } else {
+            voice.stopListening(notify: false)
+            voice.stopSpeaking()
+            listeningForMine = nil
+        }
+    }
+
+    /// Which side a transcript sounds like, or nil when it's inconclusive.
+    /// Lets hands-free mode recover when people speak out of turn.
+    static func detectedSide(of text: String, mine: AppLanguage, theirs: AppLanguage) -> Bool? {
+        guard text.count >= 12, mine != theirs else { return nil }
+        let recognizer = NLLanguageRecognizer()
+        recognizer.processString(text)
+        guard let dominant = recognizer.dominantLanguage else { return nil }
+
+        let hypotheses = recognizer.languageHypotheses(withMaximum: 3)
+        guard (hypotheses[dominant] ?? 0) > 0.75 else { return nil }
+
+        let code = dominant.rawValue          // e.g. "en", "es", "zh-Hans"
+        func matches(_ language: AppLanguage) -> Bool {
+            let raw = language.rawValue
+            return raw == code
+                || raw.split(separator: "-").first.map(String.init) == code.split(separator: "-").first.map(String.init)
+        }
+        if matches(mine) { return true }
+        if matches(theirs) { return false }
+        return nil
     }
 
     /// Models sometimes wrap translations in quotes or add a preamble.

@@ -96,15 +96,17 @@ struct QuickAskWidgetView: View {
             Spacer(minLength: 0)
 
             HStack(spacing: 10) {
-                shortcut(symbol: "bubble.left.fill", label: L10n.widgetText("Chat"), url: chatURL)
-                shortcut(symbol: "waveform", label: L10n.widgetText("Voice"), url: voiceURL)
-                shortcut(symbol: "camera.viewfinder", label: L10n.widgetText("Camera"), url: cameraURL)
+                shortcut(symbol: "bubble.left.fill", label: "Chat", url: chatURL)
+                shortcut(symbol: "waveform", label: "Voice", url: voiceURL)
+                shortcut(symbol: "camera.viewfinder", label: "Camera", url: cameraURL)
             }
         }
         .padding(.vertical, 4)
+        // Tapping anywhere outside the three shortcuts still opens the app.
+        .widgetURL(chatURL)
     }
 
-    private func shortcut(symbol: String, label: String, url: URL) -> some View {
+    private func shortcut(symbol: String, label: LocalizedStringKey, url: URL) -> some View {
         Link(destination: url) {
             VStack(spacing: 4) {
                 Image(systemName: symbol)
@@ -134,7 +136,6 @@ struct QuickAskWidget: Widget {
 
 // MARK: - Control Center
 
-@available(iOS 18.0, *)
 struct VoiceControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: "AiGoodbyeVoiceControl") {
@@ -166,18 +167,6 @@ struct OpenVoiceModeIntent: AppIntent {
 struct AiGoodbyeWidgetBundle: WidgetBundle {
     var body: some Widget {
         QuickAskWidget()
-        if #available(iOS 18.0, *) {
-            VoiceControl()
-        }
-    }
-}
-
-// MARK: - Localization helper
-
-/// The widget target doesn't link the app's L10n router, so widget strings
-/// use the standard bundle lookup.
-enum L10n {
-    static func widgetText(_ key: String) -> String {
-        NSLocalizedString(key, comment: "")
+        VoiceControl()
     }
 }

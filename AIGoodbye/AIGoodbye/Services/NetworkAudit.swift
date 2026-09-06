@@ -24,6 +24,11 @@ struct NetworkEvent: Identifiable, Equatable {
     /// Human explanation of what this request was for.
     var purpose: String {
         if host.contains("huggingface") || host.contains("hf.co") {
+            // Checking a model the user typed in is a few kilobytes of JSON,
+            // not a download; the log should say which one this was.
+            if path.contains("/api/models/") || path.hasSuffix("config.json") {
+                return L10n.text("Checking a model you asked to add")
+            }
             return L10n.text("Downloading AI model files")
         }
         return L10n.text("Other")
@@ -57,6 +62,19 @@ final class NetworkAudit: ObservableObject {
         var classes = configuration.protocolClasses ?? []
         classes.insert(LoggingURLProtocol.self, at: 0)
         configuration.protocolClasses = classes
+    }
+
+    /// Log a request we are about to make on a session that a URLProtocol
+    /// cannot observe. Background sessions ignore `protocolClasses` entirely,
+    /// and model downloads run on one - so without this the single most
+    /// important entry would be missing from the log the Privacy Center
+    /// presents as complete.
+    nonisolated static func note(_ url: URL, method: String = "GET") {
+        Task { @MainActor in
+            var request = URLRequest(url: url)
+            request.httpMethod = method
+            shared.record(request)
+        }
     }
 
     fileprivate func record(_ request: URLRequest) {

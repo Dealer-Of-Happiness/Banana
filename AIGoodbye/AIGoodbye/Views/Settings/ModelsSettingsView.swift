@@ -10,6 +10,7 @@ import SwiftUI
 
 struct ModelsSettingsView: View {
     @ObservedObject var modelManager = ModelManager.shared
+    @ObservedObject private var customStore = CustomModelStore.shared
     @EnvironmentObject var appState: AppState
 
     @State private var showDeleteConfirmation = false
@@ -19,9 +20,13 @@ struct ModelsSettingsView: View {
         List {
             storageSection
             modelsSection
+            customSection
             builtInSection
         }
         .navigationTitle("AI Models")
+        // Sizes come from cached values; refresh them once on appear rather
+        // than walking gigabytes of directories on every render.
+        .task { modelManager.refreshDiskState() }
         .alert(
             deleteDialogTitle,
             isPresented: $showDeleteConfirmation,
@@ -59,13 +64,44 @@ struct ModelsSettingsView: View {
 
     private var modelsSection: some View {
         Section {
-            ForEach(AIModel.allModels) { model in
+            ForEach(AIModel.builtInModels) { model in
                 modelRow(for: model)
             }
         } header: {
             Text("Downloadable Models")
         } footer: {
             Text("Deleting a model frees space immediately. It will be downloaded again the next time you use it.")
+        }
+    }
+
+    private var customSection: some View {
+        Section {
+            // Rows and specs must line up one to one, or a swipe could
+            // delete the wrong model.
+            ForEach(customStore.specs) { spec in
+                modelRow(for: AIModel(custom: spec))
+            }
+            .onDelete { offsets in
+                // Map first: removing shifts the indices underneath. Bounds
+                // checked too - the array can change between the render that
+                // produced these offsets and this callback.
+                let doomed = offsets.compactMap { index in
+                    customStore.specs.indices.contains(index) ? customStore.specs[index] : nil
+                }
+                for spec in doomed {
+                    customStore.remove(spec, engine: appState.engine)
+                }
+            }
+
+            NavigationLink {
+                AddCustomModelView()
+            } label: {
+                Label("Add a model from Hugging Face", systemImage: "plus.circle")
+            }
+        } header: {
+            Text("Your Models")
+        } footer: {
+            Text("Run any MLX model from Hugging Face on your device. Community models aren't tested by us, and swipe to remove deletes the download too.")
         }
     }
 
@@ -120,12 +156,17 @@ struct ModelsSettingsView: View {
             Spacer(minLength: 8)
 
             if isDownloaded || bytesOnDisk > 0 {
+                // Deleting the directory while the prefetcher is writing into
+                // it leaves a half-model that later looks complete.
+                let isBusy = appState.engine.mlx.isDownloading
+                    && appState.engine.selectedModel.id == model.id
                 Button(isDownloaded ? "Delete" : "Remove", role: .destructive) {
                     modelToDelete = model
                     showDeleteConfirmation = true
                 }
                 .buttonStyle(.borderless)
                 .frame(minHeight: 44)
+                .disabled(isBusy)
                 .accessibilityLabel("Delete \(model.name)")
             }
         }

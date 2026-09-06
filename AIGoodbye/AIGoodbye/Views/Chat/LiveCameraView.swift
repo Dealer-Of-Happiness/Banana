@@ -9,7 +9,10 @@
 //
 
 import SwiftUI
-import AVFoundation
+// `@preconcurrency`: `AVCaptureSession` is not `Sendable`, but every touch of
+// it here is funnelled through one serial queue (`sessionQueue`), which is
+// the guarantee the annotation would be asking for.
+@preconcurrency import AVFoundation
 import UIKit
 import Combine
 
@@ -17,17 +20,52 @@ import Combine
 
 /// Thread-safe holder for the newest camera frame (written from the capture
 /// queue, read from the main actor).
-final class FrameStore: @unchecked Sendable {
+/// Deliberately `nonisolated`: everything here is called from `captureOutput`
+/// on the capture queue, and the lock - not an actor - is what makes it safe.
+nonisolated final class FrameStore: @unchecked Sendable {
     private let lock = NSLock()
-    private var frame: UIImage?
+    private var frame: (image: UIImage, at: Date)?
+    private var lastAccepted = Date.distantPast
+
+    /// One shared Core Image context; building one per frame is expensive.
+    private let context = CIContext(options: nil)
 
     func set(_ image: UIImage) {
-        lock.lock(); frame = image; lock.unlock()
+        lock.lock(); frame = (image, Date()); lock.unlock()
     }
 
-    func get() -> UIImage? {
+    /// The newest frame, if it is recent enough to still describe the world.
+    ///
+    /// Age matters. The capture session takes a moment to restart after the
+    /// app returns from the background, and the stored frame is whatever was
+    /// in view before the interruption - so without this the app would
+    /// confidently describe a room the user has already walked out of, which
+    /// for someone navigating by these descriptions is worse than silence.
+    func get(maxAge: TimeInterval = 2.0) -> UIImage? {
         lock.lock(); defer { lock.unlock() }
-        return frame
+        guard let frame, Date().timeIntervalSince(frame.at) <= maxAge else { return nil }
+        return frame.image
+    }
+
+    func clear() {
+        lock.lock(); frame = nil; lastAccepted = .distantPast; lock.unlock()
+    }
+
+    /// True at most once every 400 ms.
+    ///
+    /// A question only ever uses the single latest snapshot, so converting
+    /// thirty frames a second would just heat the phone and take the GPU away
+    /// from the vision model that is about to want it.
+    func shouldAcceptFrame(at now: Date = Date()) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard now.timeIntervalSince(lastAccepted) >= 0.4 else { return false }
+        lastAccepted = now
+        return true
+    }
+
+    func render(_ image: CIImage) -> CGImage? {
+        context.createCGImage(image, from: image.extent)
     }
 }
 
@@ -39,28 +77,62 @@ final class CameraController: NSObject, ObservableObject {
 
     private let videoOutput = AVCaptureVideoDataOutput()
     private let sampleQueue = DispatchQueue(label: "aig.camera.frames")
+    /// Serializes start and stop against each other. Two detached tasks
+    /// racing meant a fast background/foreground bounce could leave the
+    /// session stopped while `isReady` was true - a black viewfinder and a
+    /// snapshot that is nil forever.
+    private static let sessionQueue = DispatchQueue(label: "aig.camera.session")
     private let frameStore = FrameStore()
     private var configureTask: Task<Void, Never>?
+    /// Identifies the current start attempt. Bumped by every `stop()` and
+    /// every `retry()`, so a superseded attempt can neither clear the live
+    /// task nor stop a session a newer attempt has already started.
+    private var epoch = 0
     /// Inputs/outputs are wired once; restarts only need startRunning().
     private var isConfigured = false
 
     func start() {
         guard configureTask == nil, !isReady, !failed else { return }
+        epoch += 1
+        let attempt = epoch
         configureTask = Task { [weak self] in
-            await self?.configureAndRun()
-            await MainActor.run { self?.configureTask = nil }
+            await self?.configureAndRun(attempt: attempt)
+            await MainActor.run {
+                // Identity-checked: clearing unconditionally let a cancelled
+                // attempt nil out a live one, after which a third `start()`
+                // ran the configuration block a second time, `canAddOutput`
+                // returned false, and the camera was dead until the screen
+                // was reopened.
+                guard let self, self.epoch == attempt else { return }
+                self.configureTask = nil
+            }
         }
     }
 
-    private func configureAndRun() async {
+    /// Try again after a failure.
+    ///
+    /// `failed` used to be a one-way latch, so "the camera is busy" - another
+    /// app, Control Center, a transient device error - left the screen dead
+    /// permanently no matter what the user did.
+    func retry() {
+        guard !isReady else { return }
+        configureTask?.cancel()
+        configureTask = nil
+        epoch += 1
+        failed = false
+        start()
+    }
+
+    private func configureAndRun(attempt: Int) async {
         let granted = await AVCaptureDevice.requestAccess(for: .video)
+        // The user may have closed the screen while the permission alert or
+        // configuration was pending: never light up the camera afterwards,
+        // and never latch `failed` on a turn nobody is waiting for.
+        guard !Task.isCancelled, epoch == attempt else { return }
         guard granted else {
             failed = true
             return
         }
-        // The user may have closed the screen while the permission alert or
-        // configuration was pending: never light up the camera afterwards.
-        guard !Task.isCancelled else { return }
 
         let session = self.session
         let videoOutput = self.videoOutput
@@ -68,18 +140,24 @@ final class CameraController: NSObject, ObservableObject {
         let queue = sampleQueue
 
         // Returning from the background: inputs/outputs are already wired,
-        // so just start the session again.
+        // so just start the session again - reattaching the delegate, which
+        // `stop()` detaches to break the output's strong hold on us.
         if isConfigured {
-            await Task.detached { session.startRunning() }.value
-            guard !Task.isCancelled else {
-                await Task.detached { session.stopRunning() }.value
+            videoOutput.setSampleBufferDelegate(delegate, queue: queue)
+            await Self.onSessionQueue { session.startRunning() }
+            // Epoch-checked, not just cancellation-checked: a stop cannot
+            // interrupt `startRunning`, so without this a superseded attempt
+            // resumed afterwards and stopped the session a newer attempt had
+            // already started - a black viewfinder with `isReady` true.
+            guard !Task.isCancelled, epoch == attempt else {
+                if epoch == attempt { await Self.onSessionQueue { session.stopRunning() } }
                 return
             }
             isReady = true
             return
         }
 
-        let ok = await Task.detached { () -> Bool in
+        let ok = await Self.onSessionQueue { () -> Bool in
             session.beginConfiguration()
             defer { session.commitConfiguration() }
 
@@ -106,29 +184,52 @@ final class CameraController: NSObject, ObservableObject {
                 connection.videoRotationAngle = 90 // portrait
             }
             return true
-        }.value
+        }
 
         guard ok else {
             failed = true
             return
         }
         isConfigured = true
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled, epoch == attempt else { return }
 
-        await Task.detached { session.startRunning() }.value
-        guard !Task.isCancelled else {
-            await Task.detached { session.stopRunning() }.value
+        await Self.onSessionQueue { session.startRunning() }
+        guard !Task.isCancelled, epoch == attempt else {
+            if epoch == attempt { await Self.onSessionQueue { session.stopRunning() } }
             return
         }
         isReady = true
     }
 
+    /// Run `work` on the shared session queue, so starts and stops can never
+    /// overtake one another.
+    ///
+    /// `AVCaptureSession` is not `Sendable`, but every use of it in this file
+    /// goes through this one queue, which is exactly the guarantee `Sendable`
+    /// would be asking for.
+    private static func onSessionQueue<T: Sendable>(_ work: @escaping @Sendable () -> T) async -> T {
+        await withCheckedContinuation { continuation in
+            sessionQueue.async { continuation.resume(returning: work()) }
+        }
+    }
+
     func stop() {
         configureTask?.cancel()
         configureTask = nil
+        epoch += 1
         isReady = false
+        // `AVCaptureVideoDataOutput` holds its delegate strongly, and the
+        // delegate is this object, which owns the output: a cycle that
+        // `deinit` can never break because `deinit` never runs. Detaching
+        // here is the only place it can be broken, so every open of Live
+        // Camera or Describe Surroundings no longer leaks a controller, a
+        // capture session, a device input and a Core Image context.
+        videoOutput.setSampleBufferDelegate(nil, queue: nil)
+        // The last frame must go with the session. Keeping it meant the next
+        // presentation described whatever was in view when this one closed.
+        frameStore.clear()
         let session = self.session
-        Task.detached {
+        Self.sessionQueue.async {
             if session.isRunning { session.stopRunning() }
         }
     }
@@ -141,41 +242,27 @@ final class CameraController: NSObject, ObservableObject {
     fileprivate nonisolated var frames: FrameStore { frameStore }
 }
 
-/// One shared Core Image context (creating one per frame is expensive).
-private nonisolated(unsafe) let sharedCIContext = CIContext(options: nil)
-/// Last time a frame was converted, so we don't render 30 images a second
-/// while the vision model wants the GPU (and the battery).
-private nonisolated(unsafe) var lastFrameConversion = Date.distantPast
-private let frameConversionLock = NSLock()
-
 extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
     nonisolated func captureOutput(
         _ output: AVCaptureOutput,
         didOutput sampleBuffer: CMSampleBuffer,
         from connection: AVCaptureConnection
     ) {
-        // Only one frame every 400 ms is ever needed: a question uses the
-        // single latest snapshot.
-        frameConversionLock.lock()
-        let now = Date()
-        let due = now.timeIntervalSince(lastFrameConversion) >= 0.4
-        if due { lastFrameConversion = now }
-        frameConversionLock.unlock()
-        guard due else { return }
-
+        let store = frames
+        guard store.shouldAcceptFrame() else { return }
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
         // Downscale to ~768 on the long edge for the vision encoder.
         let scale = 768 / max(ciImage.extent.width, ciImage.extent.height)
         let scaled = ciImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-        guard let cgImage = sharedCIContext.createCGImage(scaled, from: scaled.extent) else { return }
-        frames.set(UIImage(cgImage: cgImage))
+        guard let cgImage = store.render(scaled) else { return }
+        store.set(UIImage(cgImage: cgImage))
     }
 }
 
 // MARK: - Preview layer
 
-private struct CameraPreview: UIViewRepresentable {
+struct CameraPreview: UIViewRepresentable {
     let session: AVCaptureSession
 
     final class PreviewView: UIView {
@@ -382,11 +469,17 @@ struct LiveCameraView: View {
         generationTask = Task {
             defer { isAnswering = false }
             do {
-                let model = try engine.route(hasImage: true)
+                let model = try engine.route(hasImage: true, requiresDownloaded: true)
                 // Camera Q&A must never leak into (or erase) the chat
-                // session - clean up on EVERY exit path, including errors.
-                defer { engine.resetSessions() }
-                try await engine.startConversation(model: model, history: [])
+                // session - and must not be torn down by a summary or
+                // translation running elsewhere, so it claims the engine
+                // like every other one-shot mode.
+                guard engine.claimUtility() else {
+                    notice = L10n.text("The AI is busy with another task. Try again in a moment.")
+                    return
+                }
+                defer { engine.releaseUtility() }
+                try await engine.startCleanSession(model: model)
 
                 var final = ""
                 let stream = engine.respondStream(model: model, prompt: text, image: frame)
@@ -419,11 +512,14 @@ struct LiveCameraView: View {
     }
 
     private func speakNewSentences(in text: String) {
-        guard speakAnswers else { return }
         let start = text.index(text.startIndex, offsetBy: min(spokenOffset, text.count))
         guard let range = SpeechChunker.speakableSlice(of: text, from: start) else { return }
         let slice = String(text[range])
+        // The offset advances even while muted. Returning early left it
+        // behind, so unmuting halfway through an answer replayed the whole
+        // thing from the first word.
         spokenOffset += slice.count
+        guard speakAnswers else { return }
         voice.speak(slice)
     }
 

@@ -79,12 +79,25 @@ struct VoiceModeView: View {
             }
         }
         .onChange(of: viewModel.errorBanner) { _, banner in
-            // Errors are surfaced in the chat screen behind this cover.
-            if banner != nil { dismiss() }
+            // Say it here rather than dismissing to a banner the user has to
+            // go and find.
+            if let banner { turn = .blocked(banner.message) }
         }
-        .onChange(of: viewModel.consentRequest?.id) { _, request in
-            // A model download needs the consent sheet in the chat screen.
-            if request != nil { dismiss() }
+        // Presented HERE, not by dismissing to the chat screen. Dismissing a
+        // cover and presenting a sheet in the same transaction means UIKit
+        // drops the sheet, so a new user without a model spoke and voice mode
+        // simply closed with no explanation.
+        .sheet(item: $viewModel.consentRequest, onDismiss: {
+            viewModel.consentSheetDismissed()
+            if isActive, case .thinking = turn { turn = .idle }
+        }) { request in
+            ModelDownloadConsentSheet(
+                model: request.model,
+                reason: request.reason,
+                onApprove: { viewModel.approveConsentAndResend() },
+                onCancel: { viewModel.declineConsent() }
+            )
+            .presentationDetents([.medium, .large])
         }
     }
 

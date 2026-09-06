@@ -165,88 +165,6 @@
         }
       }
     },
-    "NSPhotoLibraryUsageDescription": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye verwendet Ihre Fotomediathek, um Bilder für die Analyse auszuwählen"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Το AIGoodbye χρησιμοποιεί τη βιβλιοθήκη φωτογραφιών σας για την επιλογή εικόνων προς ανάλυση"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye uses your photo library to select images for analysis"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye usa tu fototeca para seleccionar imágenes y analizarlas"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye utilise votre photothèque pour sélectionner des images à analyser"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye usa la tua libreria foto per selezionare immagini da analizzare"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbyeは分析する画像を選択するためにフォトライブラリを使用します"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye는 분석할 이미지를 선택하기 위해 사진 보관함을 사용합니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O AIGoodbye usa sua fototeca para selecionar imagens para análise"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye использует вашу медиатеку для выбора изображений для анализа"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye використовує вашу медіатеку для вибору зображень для аналізу"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye 使用你的相片圖庫選擇要分析的圖像"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIGoodbye 使用您的照片图库来选择要分析的图像"
-          }
-        }
-      }
-    },
     "NSSpeechRecognitionUsageDescription": {
       "localizations": {
         "de": {
@@ -325,6 +243,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "AiGoodbye 仅在本设备上将您的语音转换为文字。不会发送任何内容。"
+          }
+        }
+      }
+    },
+    "NSFaceIDUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye uses Face ID to unlock your private conversations. Nothing about your face ever leaves the device."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye verwendet Face ID, um deine privaten Unterhaltungen zu entsperren. Nichts über dein Gesicht verlässt jemals das Gerät."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το AiGoodbye χρησιμοποιεί το Face ID για να ξεκλειδώνει τις ιδιωτικές σας συνομιλίες. Τίποτα σχετικό με το πρόσωπό σας δεν φεύγει ποτέ από τη συσκευή."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye usa Face ID para desbloquear tus conversaciones privadas. Nada sobre tu rostro sale nunca del dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye utilise Face ID pour déverrouiller vos conversations privées. Rien concernant votre visage ne quitte jamais l'appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye usa Face ID per sbloccare le tue conversazioni private. Nulla del tuo volto lascia mai il dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye は Face ID を使って、プライベートな会話のロックを解除します。顔に関する情報が端末の外に出ることはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye는 Face ID로 비공개 대화의 잠금을 해제합니다. 얼굴에 관한 정보는 기기 밖으로 나가지 않습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O AiGoodbye usa o Face ID para desbloquear suas conversas privadas. Nada sobre o seu rosto sai do dispositivo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye использует Face ID, чтобы разблокировать ваши личные переписки. Данные о вашем лице никогда не покидают устройство."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye використовує Face ID, щоб розблокувати ваші приватні розмови. Дані про ваше обличчя ніколи не залишають пристрій."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye 使用面容 ID 解锁你的私人对话。有关你面容的任何信息都不会离开本设备。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye 使用 Face ID 解鎖你的私人對話。有關你面容的任何資訊都不會離開本裝置。"
           }
         }
       }

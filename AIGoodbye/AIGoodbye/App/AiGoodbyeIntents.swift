@@ -64,6 +64,8 @@ struct SummarizeWithAiGoodbyeIntent: AppIntent {
 enum IntentAnsweringError: Error, CustomLocalizedStringResourceConvertible {
     case noEngine
     case timedOut
+    case locked
+    case busy
 
     var localizedStringResource: LocalizedStringResource {
         switch self {
@@ -71,6 +73,10 @@ enum IntentAnsweringError: Error, CustomLocalizedStringResourceConvertible {
             return "Open AiGoodbye once to set up an AI model, then try again."
         case .timedOut:
             return "That took too long to answer. Try a shorter question, or ask in the app."
+        case .locked:
+            return "AiGoodbye is locked. Open the app and unlock it first."
+        case .busy:
+            return "AiGoodbye is busy with another task. Try again in a moment."
         }
     }
 }
@@ -83,6 +89,14 @@ enum IntentAnswering {
     /// because the engine lives in EngineHost, not in the view tree.
     static func answer(prompt: String) async throws -> String {
         let engine = EngineHost.shared.engine
+
+        // App Lock has to cover Siri too. Otherwise anyone holding the phone
+        // can ask a question and get an answer shaped by the locked user's
+        // saved memory facts - which is precisely what the lock exists to
+        // prevent.
+        guard !AppLock.shared.isLocked else {
+            throw IntentAnsweringError.locked
+        }
 
         // Choose a backend. Apple Intelligence is instant and memory-light,
         // so it's strongly preferred here: loading a multi-gigabyte MLX
@@ -102,12 +116,20 @@ enum IntentAnswering {
             throw IntentAnsweringError.noEngine
         }
 
+        // Take exclusive use of the engine: a Siri answer that tore down a
+        // running summary's or translation's session (or had its own torn
+        // down) would fail in a way neither side could explain.
+        guard engine.claimUtility() else {
+            throw IntentAnsweringError.busy
+        }
         // Always hand the chat UI a clean slate afterwards: leaving this
         // one-shot session behind would erase the user's conversation
         // memory on their next message.
-        defer { engine.resetSessions() }
+        defer { engine.releaseUtility() }
 
-        try await engine.startConversation(model: model, history: [])
+        // A base prompt, not the personalized one: a Siri answer must not be
+        // shaped by private memory facts.
+        try await engine.startCleanSession(model: model)
 
         // Siri has a limited response budget; don't hang forever.
         return try await withThrowingTaskGroup(of: String.self) { group in

@@ -22471,154 +22471,154 @@
         }
       }
     },
-    "Offline transcription isn't available for this language, so this recording will be audio only.": {
+    "Offline transcription isn't available for this language, so this recording will be audio only. Adding the language under Settings > General > Keyboard > Dictation Languages usually enables it.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Offline-Transkription ist für diese Sprache nicht verfügbar, deshalb enthält diese Aufnahme nur Audio."
+            "value": "Offline-Transkription ist für diese Sprache nicht verfügbar, deshalb enthält diese Aufnahme nur Audio. Wenn du die Sprache unter Einstellungen > Allgemein > Tastatur > Diktiersprachen hinzufügst, wird sie meist verfügbar."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Η απομαγνητοφώνηση εκτός σύνδεσης δεν είναι διαθέσιμη για αυτή τη γλώσσα, οπότε αυτή η ηχογράφηση θα έχει μόνο ήχο."
+            "value": "Η απομαγνητοφώνηση εκτός σύνδεσης δεν είναι διαθέσιμη για αυτή τη γλώσσα, οπότε αυτή η ηχογράφηση θα έχει μόνο ήχο. Αν προσθέσεις τη γλώσσα στις Ρυθμίσεις > Γενικά > Πληκτρολόγιο > Γλώσσες υπαγόρευσης, συνήθως ενεργοποιείται."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "La transcripción sin conexión no está disponible para este idioma, así que esta grabación será solo de audio."
+            "value": "La transcripción sin conexión no está disponible para este idioma, así que esta grabación será solo de audio. Añadir el idioma en Ajustes > General > Teclado > Idiomas de dictado suele activarlo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "La transcription hors ligne n'est pas disponible pour cette langue : cet enregistrement contiendra uniquement l'audio."
+            "value": "La transcription hors ligne n'est pas disponible pour cette langue : cet enregistrement contiendra uniquement l'audio. L'ajout de la langue dans Réglages > Général > Clavier > Langues de dictée l'active généralement."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La trascrizione offline non è disponibile per questa lingua, quindi questa registrazione sarà solo audio."
+            "value": "La trascrizione offline non è disponibile per questa lingua, quindi questa registrazione sarà solo audio. Aggiungere la lingua in Impostazioni > Generali > Tastiera > Lingue di dettatura di solito la attiva."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "この言語ではオフラインの文字起こしを利用できないため、この録音は音声のみになります。"
+            "value": "この言語ではオフラインの文字起こしを利用できないため、この録音は音声のみになります。「設定」>「一般」>「キーボード」>「音声入力の言語」でその言語を追加すると、通常は使えるようになります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 언어는 오프라인 텍스트 변환을 지원하지 않아 이 녹음은 오디오만 저장됩니다."
+            "value": "이 언어는 오프라인 텍스트 변환을 지원하지 않아 이 녹음은 오디오만 저장됩니다. 설정 > 일반 > 키보드 > 받아쓰기 언어에서 해당 언어를 추가하면 대개 사용할 수 있게 됩니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "A transcrição off-line não está disponível para este idioma, então esta gravação terá apenas áudio."
+            "value": "A transcrição off-line não está disponível para este idioma, então esta gravação terá apenas áudio. Adicionar o idioma em Ajustes > Geral > Teclado > Idiomas de Ditado costuma ativá-lo."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Офлайн-расшифровка недоступна для этого языка, поэтому запись будет только звуковой."
+            "value": "Офлайн-расшифровка недоступна для этого языка, поэтому запись будет только звуковой. Обычно помогает добавить язык в «Настройки» > «Основные» > «Клавиатура» > «Языки диктовки»."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Офлайн-розшифровка недоступна для цієї мови, тож запис буде лише звуковим."
+            "value": "Офлайн-розшифровка недоступна для цієї мови, тож запис буде лише звуковим. Зазвичай допомагає додати мову в «Параметри» > «Загальні» > «Клавіатура» > «Мови диктування»."
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "此語言不支援離線轉寫，因此本次錄音僅保存音訊。"
+            "value": "此語言不支援離線轉寫，因此本次錄音僅保存音訊。喺「設定」>「一般」>「鍵盤」>「聽寫語言」加入呢種語言，通常就可以用。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "此语言不支持离线转写，因此本次录音仅保存音频。"
+            "value": "此语言不支持离线转写，因此本次录音仅保存音频。在“设置”>“通用”>“键盘”>“听写语言”中添加该语言，通常即可启用。"
           }
         }
       }
     },
-    "Offline voice recognition isn't available for this language yet.": {
+    "Offline voice recognition isn't available for this language yet. Adding the language under Settings > General > Keyboard > Dictation Languages usually enables it.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Offline-Spracherkennung ist für diese Sprache noch nicht verfügbar."
+            "value": "Offline-Spracherkennung ist für diese Sprache noch nicht verfügbar. Wenn du die Sprache unter Einstellungen > Allgemein > Tastatur > Diktiersprachen hinzufügst, wird sie meist verfügbar."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Η αναγνώριση ομιλίας εκτός σύνδεσης δεν είναι ακόμη διαθέσιμη για αυτήν τη γλώσσα."
+            "value": "Η αναγνώριση ομιλίας εκτός σύνδεσης δεν είναι ακόμη διαθέσιμη για αυτήν τη γλώσσα. Αν προσθέσεις τη γλώσσα στις Ρυθμίσεις > Γενικά > Πληκτρολόγιο > Γλώσσες υπαγόρευσης, συνήθως ενεργοποιείται."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El reconocimiento de voz sin conexión aún no está disponible para este idioma."
+            "value": "El reconocimiento de voz sin conexión aún no está disponible para este idioma. Añadir el idioma en Ajustes > General > Teclado > Idiomas de dictado suele activarlo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "La reconnaissance vocale hors ligne n'est pas encore disponible pour cette langue."
+            "value": "La reconnaissance vocale hors ligne n'est pas encore disponible pour cette langue. L'ajout de la langue dans Réglages > Général > Clavier > Langues de dictée l'active généralement."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Il riconoscimento vocale offline non è ancora disponibile per questa lingua."
+            "value": "Il riconoscimento vocale offline non è ancora disponibile per questa lingua. Aggiungere la lingua in Impostazioni > Generali > Tastiera > Lingue di dettatura di solito la attiva."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "この言語のオフライン音声認識はまだ利用できません。"
+            "value": "この言語のオフライン音声認識はまだ利用できません。「設定」>「一般」>「キーボード」>「音声入力の言語」でその言語を追加すると、通常は使えるようになります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 언어의 오프라인 음성 인식은 아직 지원되지 않습니다."
+            "value": "이 언어의 오프라인 음성 인식은 아직 지원되지 않습니다. 설정 > 일반 > 키보드 > 받아쓰기 언어에서 해당 언어를 추가하면 대개 사용할 수 있게 됩니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O reconhecimento de fala offline ainda não está disponível para este idioma."
+            "value": "O reconhecimento de fala offline ainda não está disponível para este idioma. Adicionar o idioma em Ajustes > Geral > Teclado > Idiomas de Ditado costuma ativá-lo."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Офлайн-распознавание речи для этого языка пока недоступно."
+            "value": "Офлайн-распознавание речи для этого языка пока недоступно. Обычно помогает добавить язык в «Настройки» > «Основные» > «Клавиатура» > «Языки диктовки»."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Офлайн-розпізнавання мовлення для цієї мови поки недоступне."
+            "value": "Офлайн-розпізнавання мовлення для цієї мови поки недоступне. Зазвичай допомагає додати мову в «Параметри» > «Загальні» > «Клавіатура» > «Мови диктування»."
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "呢種語言暫時未支援離線語音識別。"
+            "value": "呢種語言暫時未支援離線語音識別。喺「設定」>「一般」>「鍵盤」>「聽寫語言」加入呢種語言，通常就可以用。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "该语言暂不支持离线语音识别。"
+            "value": "该语言暂不支持离线语音识别。在“设置”>“通用”>“键盘”>“听写语言”中添加该语言，通常即可启用。"
           }
         }
       }

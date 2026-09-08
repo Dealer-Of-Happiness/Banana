@@ -17,6 +17,7 @@
 //  downloader, so this is a pure fast-path: correctness never depends on it.
 //
 
+import CryptoKit
 import Foundation
 
 enum PrefetchError: Error {
@@ -215,8 +216,15 @@ private final class FileDownload: NSObject, URLSessionDownloadDelegate, @uncheck
                 // downloading when the user locks the phone or switches apps.
                 // With a default session the download simply stops, which is
                 // the app's very first experience for most new users.
+                // One stable identifier per URL, rather than a fresh UUID
+                // per attempt. A background session outlives the app: if
+                // the app is killed mid-transfer (memory pressure while it
+                // sits suspended behind another app, say), the system keeps
+                // downloading. With a random identifier nothing ever
+                // reconnected to that transfer, and the next launch started
+                // the 1.8 GB weights file again from zero.
                 let config = URLSessionConfiguration.background(
-                    withIdentifier: "com.aigoodbye.modeldownload.\(UUID().uuidString)"
+                    withIdentifier: Self.sessionIdentifier(for: url)
                 )
                 config.sessionSendsLaunchEvents = false
                 config.isDiscretionary = false
@@ -247,13 +255,30 @@ private final class FileDownload: NSObject, URLSessionDownloadDelegate, @uncheck
                 self.session = session
                 lock.unlock()
 
-                let task: URLSessionDownloadTask
-                if let resumeData {
-                    task = session.downloadTask(withResumeData: resumeData)
-                } else {
-                    task = session.downloadTask(with: url)
+                // Adopt a transfer the system is still running for this
+                // URL from a previous life of the app; otherwise start one.
+                // A transfer that finished while the app was gone delivers
+                // its `didFinishDownloadingTo` on this session by itself.
+                session.getAllTasks { [self] tasks in
+                    lock.lock()
+                    let cancelled = self.cancelled
+                    lock.unlock()
+                    if cancelled { return }   // `didBecomeInvalidWithError` settles the wait
+
+                    if let existing = tasks.first(where: {
+                        $0.originalRequest?.url == url || $0.currentRequest?.url == url
+                    }) {
+                        existing.resume()
+                        return
+                    }
+                    let task: URLSessionDownloadTask
+                    if let resumeData {
+                        task = session.downloadTask(withResumeData: resumeData)
+                    } else {
+                        task = session.downloadTask(with: url)
+                    }
+                    task.resume()
                 }
-                task.resume()
             }
         } onCancel: {
             lock.lock()
@@ -302,6 +327,23 @@ private final class FileDownload: NSObject, URLSessionDownloadDelegate, @uncheck
             moveError = error
             lock.unlock()
         }
+    }
+
+    /// The session was torn down with the wait still pending - which can
+    /// happen if cancellation lands before a task exists. Nothing else
+    /// would ever resume the continuation.
+    func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
+        lock.lock()
+        let cont = continuation
+        continuation = nil
+        lock.unlock()
+        cont?.resume(throwing: error ?? CancellationError())
+    }
+
+    private static func sessionIdentifier(for url: URL) -> String {
+        let digest = SHA256.hash(data: Data(url.absoluteString.utf8))
+        let hex = digest.prefix(12).map { String(format: "%02x", $0) }.joined()
+        return "com.aigoodbye.modeldownload." + hex
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {

@@ -182,7 +182,7 @@ final class VoiceService: NSObject, ObservableObject {
         guard engine != .none else {
             let reason = Transcriber.legacyRecognitionDenied
                 ? L10n.text("Speech recognition is turned off for AiGoodbye. You can turn it on in the Settings app.")
-                : L10n.text("Offline voice recognition isn't available for this language yet.")
+                : L10n.text("Offline voice recognition isn't available for this language yet. Adding the language under Settings > General > Keyboard > Dictation Languages usually enables it.")
             listeningState = .unavailable(reason)
             return
         }

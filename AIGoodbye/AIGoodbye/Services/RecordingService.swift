@@ -416,7 +416,7 @@ final class RecordingService: NSObject, ObservableObject {
         if !transcribes && notice == nil {
             notice = Transcriber.legacyRecognitionDenied
                 ? L10n.text("Speech recognition is turned off for AiGoodbye, so this recording will be audio only. You can turn it on in the Settings app.")
-                : L10n.text("Offline transcription isn't available for this language, so this recording will be audio only.")
+                : L10n.text("Offline transcription isn't available for this language, so this recording will be audio only. Adding the language under Settings > General > Keyboard > Dictation Languages usually enables it.")
         }
 
         startedAt = ProcessInfo.processInfo.systemUptime

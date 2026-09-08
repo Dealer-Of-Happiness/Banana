@@ -353,7 +353,11 @@ private final class FileDownload: NSObject, URLSessionDownloadDelegate, @uncheck
         let moveError = self.moveError
         lock.unlock()
 
-        session.finishTasksAndInvalidate()
+        // Cancel, not finish: this session exists for one file. If a
+        // transfer completed by the system while the app was away was
+        // delivered here alongside a fresh task for the same URL, the fresh
+        // one must not go on downloading a second copy in the background.
+        session.invalidateAndCancel()
 
         if let error {
             cont?.resume(throwing: error)

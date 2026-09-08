@@ -394,18 +394,32 @@ final class MLXService: ObservableObject {
     /// the full download UX can be exercised in the iOS Simulator.
     /// Launch with AIG_SIM_TEST_DOWNLOAD=1 to activate.
     func debugDownloadOnly(_ model: AIModel) async throws {
-        guard let hfId = model.huggingFaceId,
-              let repoDir = ModelManager.shared.modelDirectory(for: model) else { return }
-        beginDownloadState(expectedBytes: model.sizeBytes)
-        defer { endDownloadState() }
-        try await ModelPrefetcher().prefetch(hfId: hfId, into: repoDir) { [weak self] done, total in
-            let service = self
-            Task { @MainActor in
-                service?.noteDownloadProgress(done: done, total: total)
-            }
+        // Joined like the real load is: the setup screen and the first
+        // message both arrive here, and two prefetches of one file would
+        // open two background sessions under the same identifier.
+        if let inflight = debugDownloadTask {
+            try await inflight.value
+            return
         }
-        ModelManager.shared.noteModelInstalled(model)
+        let task = Task { [self] in
+            guard let hfId = model.huggingFaceId,
+                  let repoDir = ModelManager.shared.modelDirectory(for: model) else { return }
+            beginDownloadState(expectedBytes: model.sizeBytes)
+            defer { endDownloadState() }
+            try await ModelPrefetcher().prefetch(hfId: hfId, into: repoDir) { [weak self] done, total in
+                let service = self
+                Task { @MainActor in
+                    service?.noteDownloadProgress(done: done, total: total)
+                }
+            }
+            ModelManager.shared.noteModelInstalled(model)
+        }
+        debugDownloadTask = task
+        defer { debugDownloadTask = nil }
+        try await task.value
     }
+
+    private var debugDownloadTask: Task<Void, Error>?
     #endif
 
     func unload() {

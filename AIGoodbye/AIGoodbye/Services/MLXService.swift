@@ -157,7 +157,11 @@ final class MLXService: ObservableObject {
         inFlightJoiners += 1
         defer { inFlightJoiners -= 1 }
         try await withTaskCancellationHandler {
-            try await entry.task.value
+            // A cancellable wait, not `entry.task.value`: with two waiters
+            // (the setup screen's download and the first message), the one
+            // that was cancelled used to keep waiting until the whole load
+            // finished, so Stop did nothing and the composer stayed locked.
+            try await Timeout.awaitCancellable(entry.task)
         } onCancel: {
             Task { @MainActor [weak self] in
                 // Only the last waiter cancels: another screen may still be
@@ -219,6 +223,7 @@ final class MLXService: ObservableObject {
         // Fast path: download the files ourselves at full network speed with
         // real byte progress. On any failure fall back to the library's own
         // downloader below (which then finds whatever we already fetched).
+        var filesOnDisk = wasDownloaded
         if !wasDownloaded, let repoDir = ModelManager.shared.modelDirectory(for: model) {
             do {
                 let prefetcher = ModelPrefetcher()
@@ -235,6 +240,7 @@ final class MLXService: ObservableObject {
                 isDownloading = false
                 isDownloadStalled = false
                 isPreparingModel = true
+                filesOnDisk = true
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
@@ -244,24 +250,48 @@ final class MLXService: ObservableObject {
                         L10n.text("Not enough free space. \(model.name) needs about \(model.size) free. Free up space and try again.")
                     )
                 }
+                // The library's downloader knows nothing of the Wi-Fi-only
+                // setting: falling through to it here would put gigabytes
+                // on a cellular plan the user explicitly protected. Stop
+                // instead and say so.
+                if settings.wifiOnlyDownloads {
+                    throw MLXError.modelLoadFailed(
+                        L10n.text("The download couldn't be completed. Check that Wi-Fi is connected and try again.")
+                    )
+                }
                 // Library fallback still runs; show byte progress from disk.
                 startDiskPollProgress(for: model)
             }
         }
 
-        let configuration = ModelConfiguration(id: hfId)
         // Text-only models (which a user can add themselves) are not VLMs and
         // the vision factory doesn't know how to build them.
         let factory: ModelFactory = model.supportsVision
             ? VLMModelFactory.shared
             : LLMModelFactory.shared
-        do {
-            // `hub:` is not optional in practice. The library's own default
-            // points at Library/Caches, a different folder from the one the
-            // prefetcher fills, so leaving it out made the loader download
-            // the whole model a second time - or fail offline - after the
-            // app had already said the model was installed.
-            modelContainer = try await factory.loadContainer(
+
+        // Two ways to describe the model to the library:
+        //
+        // By directory, when the files are on disk. This reads only disk.
+        // Identified by Hub id, the library first re-lists the repository
+        // and checks every file against huggingface.co, and consults the
+        // local copy only when the network is entirely absent - so on a
+        // captive portal, a filtered network, or an outage, a fully
+        // installed model failed with "Download failed" and the app then
+        // offered to download it again. It could also quietly re-download
+        // 1.8 GB behind "Preparing" if the repository had been re-pushed.
+        //
+        // By Hub id, for the download itself, and as the one retry if a
+        // local load fails on a file an older download never fetched: that
+        // path fetches only what is missing, into the same folder.
+        //
+        // `hub:` is not optional in either case. The library's own default
+        // points at Library/Caches, a different folder from the one the
+        // prefetcher fills, so leaving it out made the loader download the
+        // whole model a second time after the app had already said the
+        // model was installed.
+        func load(_ configuration: ModelConfiguration) async throws -> ModelContainer {
+            try await factory.loadContainer(
                 hub: ModelManager.shared.hub,
                 configuration: configuration
             ) { [weak self] progress in
@@ -271,6 +301,21 @@ final class MLXService: ObservableObject {
                     service.isDownloading = false
                     service.isPreparingModel = true
                 }
+            }
+        }
+
+        let hubConfiguration = ModelConfiguration(id: hfId)
+        do {
+            if filesOnDisk, let repoDir = ModelManager.shared.modelDirectory(for: model) {
+                do {
+                    modelContainer = try await load(ModelConfiguration(directory: repoDir))
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch {
+                    modelContainer = try await load(hubConfiguration)
+                }
+            } else {
+                modelContainer = try await load(hubConfiguration)
             }
         } catch is CancellationError {
             throw CancellationError()
@@ -425,7 +470,6 @@ final class MLXService: ObservableObject {
         // trimmed history with a fresh cache.
         let budget = Self.effectiveContextWindow(for: model, requested: settings.contextWindow)
         sessionTokenBudget = budget
-        sessionTokenEstimate = 0
         let parameters = GenerateParameters(
             maxTokens: budget >= 16384 ? 2048 : 1200,
             temperature: Float(settings.temperature),
@@ -439,7 +483,10 @@ final class MLXService: ObservableObject {
             resize: CGSize(width: edge, height: edge)
         )
 
-        let trimmed = Self.trimHistory(history, tokenBudget: settings.contextWindow)
+        // Trimmed against the window we will honour, not the one the user
+        // asked for: on a 6 GB phone those differ, and history sized to the
+        // larger number arrived in a cache budgeted for the smaller one.
+        let trimmed = Self.trimHistory(history, tokenBudget: budget)
         let chatHistory: [Chat.Message] = trimmed.compactMap { entry in
             switch entry.role.lowercased() {
             case "user": return .user(entry.content)
@@ -449,6 +496,16 @@ final class MLXService: ObservableObject {
         }
 
         let instructions = overrideInstructions ?? Self.systemPrompt(for: settings.appLanguage)
+
+        // What the cache starts out holding. Seeding this with the history
+        // matters: a reopened conversation used to start its count at zero
+        // with thousands of tokens already in the cache, and the retirement
+        // below then fired far too late. The instructions are counted here
+        // and again on every turn, because the session re-sends them with
+        // each prompt and the model attends to every copy.
+        sessionInstructionTokens = Self.weightedLength(of: instructions) / 3
+        sessionTokenEstimate = sessionInstructionTokens
+            + trimmed.reduce(0) { $0 + Self.weightedLength(of: $1.content) / 3 }
         if chatHistory.isEmpty {
             session = ChatSession(
                 container,
@@ -483,9 +540,10 @@ final class MLXService: ObservableObject {
     /// trimmed history, which is a few seconds of prefill.
     private var sessionTokenEstimate = 0
     private var sessionTokenBudget = 8192
+    private var sessionInstructionTokens = 0
 
     private func noteTurnCompleted(tokens: Int) {
-        sessionTokenEstimate += max(0, tokens)
+        sessionTokenEstimate += max(0, tokens) + sessionInstructionTokens
         guard sessionTokenEstimate > sessionTokenBudget else { return }
         dropSession()
     }

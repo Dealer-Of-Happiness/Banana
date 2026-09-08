@@ -209,8 +209,14 @@ extension AIModel {
 enum DeviceCapability {
 
     /// Physical memory in whole gigabytes (e.g. 4, 6, 8).
+    ///
+    /// Decimal gigabytes, deliberately. iOS reports somewhat less than the
+    /// nominal figure (a "6 GB" phone shows about 5.5 GiB), and dividing by
+    /// 2^30 put such a phone on the wrong side of the rounding: it became a
+    /// 5 GB, "low memory" device, was steered to the smallest model, and had
+    /// its budget cut - on hardware that runs the recommended one fine.
     nonisolated static var physicalMemoryGB: Int {
-        Int((Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824.0).rounded())
+        Int((Double(ProcessInfo.processInfo.physicalMemory) / 1_000_000_000.0).rounded())
     }
 
     /// True when the device has limited RAM and should prefer the light model.

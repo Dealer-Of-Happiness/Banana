@@ -58,9 +58,14 @@ final class ModelPrefetcher {
             throw PrefetchError.listingFailed
         }
         let allEntries = try JSONDecoder().decode([RepoFile].self, from: treeData)
+        // `.jinja` too: newer repositories ship the chat template as a
+        // standalone file that the library prefers over the JSON copy, and
+        // a purely local load can only use what is on disk.
         let files = allEntries.filter { entry in
             entry.type == "file"
-                && (entry.path.hasSuffix(".safetensors") || entry.path.hasSuffix(".json"))
+                && (entry.path.hasSuffix(".safetensors")
+                    || entry.path.hasSuffix(".json")
+                    || entry.path.hasSuffix(".jinja"))
         }
         guard !files.isEmpty else { throw PrefetchError.noFiles }
 

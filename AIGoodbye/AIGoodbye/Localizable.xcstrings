@@ -20039,6 +20039,82 @@
         }
       }
     },
+    "No answer was produced. Tap Try Again, or rephrase the question.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es wurde keine Antwort erzeugt. Tippe auf „Erneut versuchen“ oder formuliere die Frage anders."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δεν παράχθηκε απάντηση. Πάτησε «Δοκίμασε ξανά» ή διατύπωσε την ερώτηση διαφορετικά."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se generó ninguna respuesta. Toca Reintentar o reformula la pregunta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune réponse n'a été produite. Touchez Réessayer ou reformulez la question."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è stata prodotta alcuna risposta. Tocca Riprova oppure riformula la domanda."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回答が生成されませんでした。「もう一度試す」をタップするか、質問を言い換えてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "답변이 생성되지 않았습니다. 다시 시도를 탭하거나 질문을 바꿔 보세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma resposta foi produzida. Toque em Tentar de novo ou reformule a pergunta."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ответ не был получен. Нажмите «Повторить» или переформулируйте вопрос."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Відповідь не було створено. Торкніться «Спробувати ще раз» або переформулюйте запитання."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "冇產生到答案。㩒「再試一次」，或者換個方式問。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未生成回答。请轻点“重试”或换个方式提问。"
+          }
+        }
+      }
+    },
     "No camera image yet. Give the camera a moment and try again.": {
       "localizations": {
         "de": {
@@ -34253,6 +34329,82 @@
           "stringUnit": {
             "state": "translated",
             "value": "连接超时。请重试。"
+          }
+        }
+      }
+    },
+    "The download couldn't be completed. Check that Wi-Fi is connected and try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Download konnte nicht abgeschlossen werden. Prüfe, ob WLAN verbunden ist, und versuche es erneut."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Η λήψη δεν ολοκληρώθηκε. Έλεγξε ότι είσαι συνδεδεμένος σε Wi-Fi και δοκίμασε ξανά."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo completar la descarga. Comprueba que el Wi-Fi esté conectado e inténtalo de nuevo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le téléchargement n'a pas pu être terminé. Vérifiez que le Wi-Fi est connecté et réessayez."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il download non è stato completato. Controlla che il Wi-Fi sia connesso e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードを完了できませんでした。Wi-Fiに接続されているか確認して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다운로드를 완료할 수 없습니다. Wi-Fi가 연결되어 있는지 확인하고 다시 시도하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O download não pôde ser concluído. Verifique se o Wi-Fi está conectado e tente de novo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось завершить загрузку. Проверьте подключение к Wi-Fi и попробуйте снова."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не вдалося завершити завантаження. Перевірте підключення до Wi-Fi і спробуйте ще раз."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載未能完成。請檢查 Wi-Fi 有冇連接，然後再試一次。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载未能完成。请检查 Wi-Fi 是否已连接，然后重试。"
           }
         }
       }

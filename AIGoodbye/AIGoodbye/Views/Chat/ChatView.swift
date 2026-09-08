@@ -1545,6 +1545,7 @@ class ChatViewModel: ObservableObject {
             var finalText = ""
             var failure: String?
             var cancelledDownload = false
+            var wasCancelled = false
 
             do {
                 // The document brain: pull the passages relevant to THIS
@@ -1608,6 +1609,12 @@ class ChatViewModel: ObservableObject {
                 if wasDownloading && finalText.isEmpty {
                     cancelledDownload = true
                 }
+                // The session was cut off mid-answer. Its cache now ends in
+                // an unterminated assistant turn, and the next question
+                // would be appended straight after it - the model then
+                // tends to continue the answer it was stopped from giving.
+                // Rebuild from the saved history instead.
+                wasCancelled = true
             } catch {
                 if !Task.isCancelled {
                     failure = error.localizedDescription
@@ -1638,6 +1645,10 @@ class ChatViewModel: ObservableObject {
                 }
             }
 
+            if wasCancelled {
+                appState.engine.resetSessions()
+            }
+
             if let failure, currentConversationId == conversation?.id {
                 errorBanner = ErrorBanner(message: failure, canRetry: true)
                 // The session may be mid-turn; rebuild next time.
@@ -1647,6 +1658,15 @@ class ChatViewModel: ObservableObject {
                     message: L10n.text("Download cancelled, so your message wasn't answered. What was already downloaded is kept - tap Try Again to continue."),
                     canRetry: true
                 )
+            } else if cleaned.isEmpty, !wasCancelled, currentConversationId == conversation?.id {
+                // The stream ended cleanly with nothing in it. Without this
+                // the question simply sat there unanswered, with no bubble
+                // and no error, which reads as the app having ignored it.
+                errorBanner = ErrorBanner(
+                    message: L10n.text("No answer was produced. Tap Try Again, or rephrase the question."),
+                    canRetry: true
+                )
+                appState.engine.resetSessions()
             }
 
             streamingText = nil

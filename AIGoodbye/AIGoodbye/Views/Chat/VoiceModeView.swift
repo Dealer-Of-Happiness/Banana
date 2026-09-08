@@ -64,6 +64,9 @@ struct VoiceModeView: View {
                 if isActive { turn = .idle }
             }
         }
+        .onChange(of: voice.listeningState) { _, state in
+            listeningStateChanged(state)
+        }
         .onChange(of: viewModel.streamingText) { _, text in
             if let text, !text.isEmpty {
                 lastStreamed = text
@@ -181,7 +184,7 @@ struct VoiceModeView: View {
     private var statusText: some View {
         Group {
             if permissionDenied {
-                Text("AiGoodbye needs microphone and speech access for voice conversations. You can enable both in the Settings app.")
+                Text("AiGoodbye needs microphone access for voice conversations. You can enable it in the Settings app.")
             } else if case .blocked(let reason) = turn {
                 Text(reason)
             } else {
@@ -190,6 +193,16 @@ struct VoiceModeView: View {
                     Text("Speaking · tap the circle to interrupt")
                 case .thinking:
                     Text("Thinking...")
+                case .listening where voice.listeningState == .preparing:
+                    if voice.preparingProgress > 0 {
+                        VStack(spacing: 6) {
+                            Text("Downloading the speech model for this language...")
+                            ProgressView(value: voice.preparingProgress)
+                                .frame(maxWidth: 220)
+                        }
+                    } else {
+                        Text("Getting ready to listen...")
+                    }
                 case .listening:
                     Text("Listening · pause to send")
                 default:
@@ -282,11 +295,20 @@ struct VoiceModeView: View {
 
     private func beginListening() {
         guard isActive, !permissionDenied else { return }
+        // Asynchronous: the engine may need a moment (or, once per
+        // language, a model download). The outcome arrives through
+        // `voice.listeningState`, handled in `listeningStateChanged`.
         voice.startListening(language: appState.settings.appLanguage)
-        if case .unavailable(let reason) = voice.listeningState {
+        turn = .listening
+    }
+
+    private func listeningStateChanged(_ state: VoiceService.ListeningState) {
+        guard isActive else { return }
+        if case .unavailable(let reason) = state {
+            // Said here, on the screen, in place of the old behaviour of
+            // silently dropping back to "Tap to talk" as if nothing were
+            // wrong.
             turn = .blocked(reason)
-        } else {
-            turn = .listening
         }
     }
 

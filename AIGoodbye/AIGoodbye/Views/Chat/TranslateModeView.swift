@@ -64,6 +64,9 @@ struct TranslateModeView: View {
                 isHandsFree = false
             }
         }
+        .onChange(of: voice.listeningState) { _, state in
+            listeningStateChanged(state)
+        }
     }
 
     // MARK: - Pieces
@@ -167,6 +170,19 @@ struct TranslateModeView: View {
                             .frame(maxWidth: .infinity,
                                    alignment: listeningForMine == true ? .trailing : .leading)
                             .padding(.horizontal)
+                    } else if voice.listeningState == .preparing {
+                        VStack(spacing: 6) {
+                            if voice.preparingProgress > 0 {
+                                Text("Downloading the speech model for this language...")
+                                ProgressView(value: voice.preparingProgress)
+                                    .frame(maxWidth: 220)
+                            } else {
+                                Text("Getting ready to listen...")
+                            }
+                        }
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal)
                     }
                 }
                 .padding(.vertical)
@@ -313,7 +329,7 @@ struct TranslateModeView: View {
             let granted = await VoiceService.requestPermissions()
             if !granted {
                 permissionDenied = true
-                notice = L10n.text("AiGoodbye needs microphone and speech access for voice conversations. You can enable both in the Settings app.")
+                notice = L10n.text("AiGoodbye needs microphone access for voice conversations. You can enable it in the Settings app.")
             }
         }
     }
@@ -322,10 +338,20 @@ struct TranslateModeView: View {
         voice.stopSpeaking()
         notice = nil
         listeningForMine = mine
+        // Asynchronous: the outcome arrives through `voice.listeningState`,
+        // handled in `listeningStateChanged`.
         voice.startListening(language: mine ? myLanguage : theirLanguage)
-        if case .unavailable(let reason) = voice.listeningState {
+    }
+
+    private func listeningStateChanged(_ state: VoiceService.ListeningState) {
+        guard isActive else { return }
+        if case .unavailable(let reason) = state {
+            // Shown, rather than the old silent return to idle that made
+            // the translator look broken. Hands-free can't continue without
+            // a working recognizer, so it stops too.
             notice = reason
             listeningForMine = nil
+            isHandsFree = false
         }
     }
 

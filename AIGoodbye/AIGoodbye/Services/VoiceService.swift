@@ -2,11 +2,13 @@
 //  VoiceService.swift
 //  AIGoodbye
 //
-//  Fully offline voice: on-device speech recognition (Apple Speech with
-//  on-device mode) in, on-device text-to-speech out. Powers hands-free
-//  voice conversations and spoken answers in live camera mode.
+//  Fully offline voice: on-device speech recognition in (the same
+//  `Transcriber` the recorder uses: SpeechAnalyzer on iOS 26, the older
+//  on-device recognizer where it isn't available), on-device text-to-speech
+//  out. Powers hands-free voice conversations, the translator, and spoken
+//  answers in live camera mode.
 //
-//  Nothing here touches the network: recognition is forced on-device, and
+//  Nothing here touches the network: recognition is on-device only, and
 //  when a language's on-device recognizer isn't available, the feature says
 //  so instead of quietly using a server.
 //
@@ -29,6 +31,9 @@ final class VoiceService: NSObject, ObservableObject {
 
     enum ListeningState: Equatable {
         case idle
+        /// The speech engine is being readied. On the first use of a
+        /// language this can include downloading its model.
+        case preparing
         case listening
         case unavailable(String)
     }
@@ -38,6 +43,8 @@ final class VoiceService: NSObject, ObservableObject {
     @Published private(set) var isSpeaking = false
     /// Audio level 0...1 for the listening indicator.
     @Published private(set) var micLevel: Double = 0
+    /// 0...1 while a speech model downloads during `.preparing`.
+    @Published private(set) var preparingProgress: Double = 0
 
     /// Called when the user stops talking (silence endpoint) with final text.
     var onFinalTranscript: ((String) -> Void)?
@@ -48,12 +55,18 @@ final class VoiceService: NSObject, ObservableObject {
     var onListeningEnded: (() -> Void)?
 
     private let audioEngine = AVAudioEngine()
-    private var recognizer: SFSpeechRecognizer?
-    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
-    private var recognitionTask: SFSpeechRecognitionTask?
+    /// The same engine the recorder uses: SpeechAnalyzer on iOS 26, the
+    /// older recognizer for languages it doesn't cover. One speech stack,
+    /// one set of fixes.
+    private let transcriber = Transcriber()
+    /// Identifies the current `startListening`. A start that was stopped or
+    /// superseded while it was still preparing must not go live later.
+    private var listenGeneration = 0
+    private var startTask: Task<Void, Never>?
     private var silenceTimer: Timer?
     private var levelTimer: Timer?
     private var lastTranscriptChange = Date()
+    private var listenStartedAt = Date()
     private var didInstallTap = false
     private var sessionIsActive = false
 
@@ -67,6 +80,8 @@ final class VoiceService: NSObject, ObservableObject {
 
     /// How long a pause ends the user's turn.
     private let silenceEndpoint: TimeInterval = 1.4
+    /// How long to listen to silence before ending an empty turn.
+    private let emptyListenLimit: TimeInterval = 30
 
     override init() {
         super.init()
@@ -76,15 +91,12 @@ final class VoiceService: NSObject, ObservableObject {
 
     // MARK: - Permissions
 
+    /// Only the microphone is asked for here. Where the speech engine in use
+    /// needs the older recognizer's authorization, the transcriber asks for
+    /// it itself, at the moment it is needed - and never on the modern
+    /// engine, whose system dialog would claim speech is sent to Apple.
     static func requestPermissions() async -> Bool {
-        let mic = await AVAudioApplication.requestRecordPermission()
-        guard mic else { return false }
-        let speech = await withCheckedContinuation { cont in
-            SFSpeechRecognizer.requestAuthorization { status in
-                cont.resume(returning: status == .authorized)
-            }
-        }
-        return speech
+        await AVAudioApplication.requestRecordPermission()
     }
 
     // MARK: - Language
@@ -123,43 +135,67 @@ final class VoiceService: NSObject, ObservableObject {
         return AVSpeechSynthesisVoice.currentLanguageCode()
     }
 
-    /// Whether fully offline recognition is possible for this locale.
-    static func supportsOfflineRecognition(locale: Locale) -> Bool {
-        guard let recognizer = SFSpeechRecognizer(locale: locale) else { return false }
-        return recognizer.isAvailable && recognizer.supportsOnDeviceRecognition
-    }
-
     // MARK: - Listening
 
+    /// Whether a listen is under way in any form: readying the engine or
+    /// actually hearing the user.
+    var isListeningOrPreparing: Bool {
+        listeningState == .listening || listeningState == .preparing
+    }
+
+    /// Start listening for one turn. Asynchronous by nature - the first use
+    /// of a language may download its speech model - so the result arrives
+    /// through `listeningState`: `.listening` when the microphone is live,
+    /// `.unavailable` with a reason the screen can show when it is not.
     func startListening(language: AppLanguage) {
         stopSpeaking()
         stopListening(notify: false)
 
+        listenGeneration += 1
+        let generation = listenGeneration
         let locale = Self.voiceLocale(for: language)
-        guard let recognizer = SFSpeechRecognizer(locale: locale) else {
-            listeningState = .unavailable(L10n.text("Voice recognition isn't available on this device."))
-            return
-        }
-        guard recognizer.isAvailable else {
-            listeningState = .unavailable(L10n.text("Voice recognition isn't available right now."))
-            return
-        }
-        guard recognizer.supportsOnDeviceRecognition else {
-            listeningState = .unavailable(L10n.text("Offline voice recognition isn't available for this language yet."))
-            return
-        }
-        self.recognizer = recognizer
         // Speak back in the app's language (recognition locale may differ if
         // the requested one is unsupported).
         voiceLanguageCode = Self.speechCode(for: language)
+        liveTranscript = ""
+        preparingProgress = 0
+        listeningState = .preparing
+
+        // Starts are serialized. Two overlapping starts on one transcriber
+        // would race for its input stream; the second waits for the first to
+        // settle, and by then the generation check makes the first a no-op.
+        let previous = startTask
+        startTask = Task { [weak self] in
+            await previous?.value
+            guard let self, generation == self.listenGeneration else { return }
+            await self.goLive(locale: locale, generation: generation)
+        }
+    }
+
+    private func goLive(locale: Locale, generation: Int) async {
+        transcriber.onInstallProgress = { [weak self] fraction in
+            self?.preparingProgress = fraction
+        }
+        let engine = await transcriber.prepare(locale: locale)
+        guard generation == listenGeneration, listeningState == .preparing else { return }
+
+        guard engine != .none else {
+            let reason = Transcriber.legacyRecognitionDenied
+                ? L10n.text("Speech recognition is turned off for AiGoodbye. You can turn it on in the Settings app.")
+                : L10n.text("Offline voice recognition isn't available for this language yet.")
+            listeningState = .unavailable(reason)
+            return
+        }
+
+        transcriber.onText = { [weak self] text in
+            self?.transcriptChanged(text, generation: generation)
+        }
+        transcriber.onRecognitionFailed = { [weak self] in
+            self?.recognitionFailed(generation: generation)
+        }
 
         do {
             try activateSession(for: .record)
-
-            let request = SFSpeechAudioBufferRecognitionRequest()
-            request.shouldReportPartialResults = true
-            request.requiresOnDeviceRecognition = true   // privacy: never a server
-            recognitionRequest = request
 
             let inputNode = audioEngine.inputNode
             let format = inputNode.outputFormat(forBus: 0)
@@ -168,18 +204,21 @@ final class VoiceService: NSObject, ObservableObject {
             // the Simulator, or when another app holds the mic). Installing a
             // tap with it raises an exception - bail out gracefully instead.
             guard format.sampleRate > 0, format.channelCount > 0 else {
-                recognitionRequest = nil
+                transcriber.cancel()
                 deactivateSession()
                 listeningState = .unavailable(L10n.text("The microphone couldn't be started. Check that another app isn't using it."))
                 return
             }
 
             // The tap runs on the real-time audio thread: it must NOT touch
-            // main-actor state. Capture the request and a lock-protected
-            // level box directly instead of `self`.
+            // main-actor state. It hands the buffer straight to the
+            // transcriber (which converts and queues it there and then, as
+            // the buffer dies with the callback) and to a lock-protected
+            // level box.
             let levelBox = self.levelBox
-            inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [request] buffer, _ in
-                request.append(buffer)
+            let transcriber = self.transcriber
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+                transcriber.append(buffer)
                 if let channel = buffer.floatChannelData?[0] {
                     let frames = Int(buffer.frameLength)
                     var sum: Float = 0
@@ -190,37 +229,47 @@ final class VoiceService: NSObject, ObservableObject {
             }
             didInstallTap = true
 
+            try await transcriber.start(locale: locale)
+            // Stopped or restarted while the engine was starting: whoever did
+            // that owns the audio graph now.
+            guard generation == listenGeneration, listeningState == .preparing else { return }
+
             audioEngine.prepare()
             try audioEngine.start()
 
-            liveTranscript = ""
             lastTranscriptChange = Date()
+            listenStartedAt = Date()
             listeningState = .listening
             startTimers()
-
-            recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
-                Task { @MainActor in
-                    guard let self else { return }
-                    if let result {
-                        let text = result.bestTranscription.formattedString
-                        if text != self.liveTranscript {
-                            self.liveTranscript = text
-                            self.lastTranscriptChange = Date()
-                        }
-                        if result.isFinal {
-                            self.finishListening()
-                        }
-                    }
-                    if error != nil, self.listeningState == .listening {
-                        // Recognizer gave up (e.g. long silence); treat as endpoint.
-                        self.finishListening()
-                    }
-                }
-            }
         } catch {
+            guard generation == listenGeneration else { return }
             cleanUpAudio()
             listeningState = .unavailable(L10n.text("The microphone couldn't be started. Check that another app isn't using it."))
         }
+    }
+
+    private func transcriptChanged(_ text: String, generation: Int) {
+        guard generation == listenGeneration, listeningState == .listening else { return }
+        if text != liveTranscript {
+            liveTranscript = text
+            lastTranscriptChange = Date()
+        }
+    }
+
+    /// The engine died mid-turn. With words in hand, that is simply the end
+    /// of the turn; with none, it is an error the user must see. It used to
+    /// be treated as "the user stopped talking" either way, which sent voice
+    /// mode and the translator quietly back to idle with no explanation -
+    /// the whole feature looked dead.
+    private func recognitionFailed(generation: Int) {
+        guard generation == listenGeneration, listeningState == .listening else { return }
+        let text = liveTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !text.isEmpty {
+            finishListening()
+            return
+        }
+        cleanUpAudio()
+        listeningState = .unavailable(L10n.text("Speech recognition stopped before anything was heard. Tap to try again."))
     }
 
     private func startTimers() {
@@ -231,6 +280,12 @@ final class VoiceService: NSObject, ObservableObject {
                 guard let self = service, self.listeningState == .listening else { return }
                 let quiet = Date().timeIntervalSince(self.lastTranscriptChange)
                 if !self.liveTranscript.isEmpty && quiet >= self.silenceEndpoint {
+                    self.finishListening()
+                } else if self.liveTranscript.isEmpty,
+                          Date().timeIntervalSince(self.listenStartedAt) >= self.emptyListenLimit {
+                    // Nothing said at all. The old recognizer used to give
+                    // up on its own after a while; the modern engine will
+                    // listen to silence forever, so the turn is ended here.
                     self.finishListening()
                 }
             }
@@ -265,7 +320,9 @@ final class VoiceService: NSObject, ObservableObject {
     }
 
     func stopListening(notify: Bool = true) {
-        let wasListening = listeningState == .listening
+        let wasListening = isListeningOrPreparing
+        // Any start still in flight must not go live after this.
+        listenGeneration += 1
         cleanUpAudio()
         if wasListening {
             listeningState = .idle
@@ -277,8 +334,7 @@ final class VoiceService: NSObject, ObservableObject {
     private func cleanUpAudio() {
         silenceTimer?.invalidate(); silenceTimer = nil
         levelTimer?.invalidate(); levelTimer = nil
-        recognitionTask?.cancel(); recognitionTask = nil
-        recognitionRequest?.endAudio(); recognitionRequest = nil
+        transcriber.cancel()
         if audioEngine.isRunning { audioEngine.stop() }
         if didInstallTap {
             audioEngine.inputNode.removeTap(onBus: 0)
@@ -286,6 +342,7 @@ final class VoiceService: NSObject, ObservableObject {
         }
         micLevel = 0
         levelBox.set(0)
+        preparingProgress = 0
         if !isSpeaking { deactivateSession() }
     }
 
@@ -369,7 +426,7 @@ final class VoiceService: NSObject, ObservableObject {
     private func handleRouteChange() {
         // The tap format is tied to the previous route; restart cleanly and
         // let the UI decide whether to listen again.
-        if listeningState == .listening {
+        if isListeningOrPreparing {
             stopListening()
         }
     }
@@ -386,7 +443,7 @@ final class VoiceService: NSObject, ObservableObject {
 
         // Never let the microphone be live while the speaker is: the
         // recognizer would transcribe our own voice and loop forever.
-        if listeningState == .listening {
+        if isListeningOrPreparing {
             stopListening(notify: false)
         }
 
@@ -444,6 +501,7 @@ final class VoiceService: NSObject, ObservableObject {
         pendingUtterances = 0
         if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
         isSpeaking = false
+        listenGeneration += 1
         cleanUpAudio()
         listeningState = .idle
         deactivateSession()

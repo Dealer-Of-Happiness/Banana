@@ -222,11 +222,27 @@ enum DeviceCapability {
     /// an app far less than the device's physical RAM, so sizing a model
     /// against `physicalMemoryGB` is how you get killed mid-answer.
     nonisolated static var usableMemoryGB: Int {
+        Int(usableMemoryGBExact.rounded(.down))
+    }
+
+    /// The same figure without rounding. Whole-gigabyte comparisons are a
+    /// cliff: a phone reporting 2.99 GB free floored to 2 and was refused a
+    /// model whose working set is 3, when it would have run fine.
+    nonisolated static var usableMemoryGBExact: Double {
         let available = Double(os_proc_available_memory()) / 1_073_741_824.0
         guard available > 0 else {
-            return max(2, Int(Double(physicalMemoryGB) * 0.6))
+            return max(2, Double(physicalMemoryGB) * 0.6)
         }
-        return max(1, Int(available.rounded(.down)))
+        return max(1, available)
+    }
+
+    /// Whether a model with this working set can be loaded right now.
+    ///
+    /// Allows a small shortfall: the working-set estimate is deliberately
+    /// conservative, and iOS reclaims caches under pressure, so a model that
+    /// is 10% over what is free at this instant still loads in practice.
+    nonisolated static func canLoad(workingSetGB: Int) -> Bool {
+        Double(workingSetGB) <= usableMemoryGBExact * 1.1
     }
 
     /// The app's memory budget, independent of what is resident right now.

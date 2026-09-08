@@ -395,10 +395,6 @@ final class ChatEngine: ObservableObject {
 
     // MARK: - Status for UI
 
-    /// Set when a memory warning forced the weights out, so the next turn's
-    /// reload is explained rather than mistaken for a hang.
-    var modelWasDroppedForMemory = false
-
     /// Models that were downloaded but refused to load. A community model can
     /// be perfectly present on disk and still be unusable - the wrong
     /// architecture, an unsupported quantization - and reporting "Ready" for
@@ -411,7 +407,6 @@ final class ChatEngine: ObservableObject {
 
     func noteLoadSucceeded(for model: AIModel) {
         failedToLoad.remove(model.id)
-        modelWasDroppedForMemory = false
     }
 
     var status: Status {

@@ -30,6 +30,7 @@ final class AudioCaptureSink: @unchecked Sendable {
     /// behind the recognizer.
     private let levelLock = NSLock()
     private var level: Double = 0
+    private var peakLevel: Double = 0
 
     /// File writing happens off the render thread: AAC encoding and disk I/O
     /// there would glitch the audio. The audio thread only ever reads the
@@ -69,6 +70,17 @@ final class AudioCaptureSink: @unchecked Sendable {
         levelLock.lock(); defer { levelLock.unlock() }; return level
     }
 
+    /// The loudest moment so far. Distinguishes "the microphone gave us
+    /// silence" from "we heard plenty but recognized none of it" - two very
+    /// different problems that used to get the same message.
+    func peakLevelSoFar() -> Double {
+        levelLock.lock(); defer { levelLock.unlock() }; return peakLevel
+    }
+
+    func resetPeakLevel() {
+        levelLock.lock(); peakLevel = 0; levelLock.unlock()
+    }
+
     func fileWriteFailed() -> Bool {
         stateLock.lock(); defer { stateLock.unlock() }; return writeFailed
     }
@@ -98,7 +110,10 @@ final class AudioCaptureSink: @unchecked Sendable {
                 sum += channel[index] * channel[index]
             }
             let rms = sqrt(sum / Float(max(frames / 16, 1)))
-            levelLock.lock(); level = min(Double(rms) * 12, 1); levelLock.unlock()
+            levelLock.lock()
+            level = min(Double(rms) * 12, 1)
+            peakLevel = max(peakLevel, level)
+            levelLock.unlock()
         }
 
         stateLock.lock()
@@ -245,6 +260,12 @@ final class RecordingService: NSObject, ObservableObject {
     /// crash checkpoint can be turned back into a real recording.
     private var recordingId: UUID?
     private var recordingStartedAtWallClock: Date?
+    /// What the user asked for. Audio is captured regardless; this decides
+    /// whether it survives `finish()`.
+    private var userWantsAudio = false
+    /// Whether the microphone delivered any sound at all during the last
+    /// recording, so the screen can tell "silence" from "words not recognized".
+    private(set) var heardAudio = true
 
     override init() {
         super.init()
@@ -339,6 +360,9 @@ final class RecordingService: NSObject, ObservableObject {
                         transcriber.cancel()
                         return false
                     }
+                    // The transcriber may have dropped to its fallback
+                    // engine while starting; the screen should say which.
+                    engine = transcriber.engine
                     sink.setTranscriber(transcriber)
                 } catch {
                     // A speech engine that won't start is no reason to refuse
@@ -352,14 +376,19 @@ final class RecordingService: NSObject, ObservableObject {
                 }
             }
 
-            // Without a transcript the audio is the only record, so it must
-            // be kept whatever the preference says.
-            if keepAudio || !transcribes {
-                prepareAudioFile(format: format)
-                if audioFileURL == nil {
-                    notice = L10n.text("The audio file couldn't be created, so only the transcript will be saved.")
-                }
+            // The audio is ALWAYS captured while recording, whatever the
+            // preference says. It is the insurance policy: a recognizer can
+            // report itself available and then produce nothing (measured
+            // live - three minutes of clear speech, an empty transcript, and
+            // the user told to check their microphone), and by then it is
+            // far too late to start recording. If the user didn't want the
+            // audio and the transcript comes out fine, `finish()` deletes it.
+            userWantsAudio = keepAudio
+            prepareAudioFile(format: format)
+            if audioFileURL == nil {
+                notice = L10n.text("The audio file couldn't be created, so only the transcript will be saved.")
             }
+            sink.resetPeakLevel()
 
             audioEngine.prepare()
             try audioEngine.start()
@@ -385,7 +414,9 @@ final class RecordingService: NSObject, ObservableObject {
         }
 
         if !transcribes && notice == nil {
-            notice = L10n.text("Offline transcription isn't available for this language, so this recording will be audio only.")
+            notice = Transcriber.legacyRecognitionDenied
+                ? L10n.text("Speech recognition is turned off for AiGoodbye, so this recording will be audio only. You can turn it on in the Settings app.")
+                : L10n.text("Offline transcription isn't available for this language, so this recording will be audio only.")
         }
 
         startedAt = ProcessInfo.processInfo.systemUptime
@@ -445,15 +476,14 @@ final class RecordingService: NSObject, ObservableObject {
         guard phase == .recording || phase == .paused else { return }
         guard transcribes else { return }
         transcribes = false
+        // Audio is already being captured (it always is), so this is now
+        // purely about being honest with the user.
+        userWantsAudio = true
         engine = .none
         sink.setTranscriber(nil)
-        // The transcript is now the only record of what was said before this
-        // point, and the audio the only record of what comes after - so the
-        // audio has to start being kept even if the user didn't want it.
-        if audioFileName == nil, let format = tapFormat {
-            prepareAudioFile(format: format)
-        }
-        notice = L10n.text("Transcription stopped, but recording is continuing. The audio is being saved.")
+        notice = transcript.isEmpty
+            ? L10n.text("Speech couldn't be recognized for this language right now, so this recording is audio only. It is being saved.")
+            : L10n.text("Transcription stopped, but recording is continuing. The audio is being saved.")
     }
 
     func pause() {
@@ -565,6 +595,26 @@ final class RecordingService: NSObject, ObservableObject {
 
         transcript = text
         elapsed = duration
+
+        // Decide what to keep, now that the outcome is known.
+        //
+        // - Words recognized and the user didn't want audio: delete it, as
+        //   asked. Transcription proved itself, so it was only insurance.
+        // - No words and no sound ever reached the microphone: nothing to
+        //   keep, and "check the microphone" is now a true statement.
+        // - No words but there WAS sound: keep the audio whatever the
+        //   preference. Deleting a three-minute meeting because the
+        //   recognizer failed - and then telling the user their microphone
+        //   was covered - is the one outcome this must never produce.
+        let heardSomething = sink.peakLevelSoFar() > 0.03
+        heardAudio = heardSomething
+        if !text.isEmpty && !userWantsAudio {
+            discardAudioFile()
+        } else if text.isEmpty && !heardSomething {
+            discardAudioFile()
+        } else if text.isEmpty, audioFileName != nil, notice == nil {
+            notice = L10n.text("No words were recognized, so the audio was saved instead.")
+        }
         let fileName = audioFileName
 
         // One last checkpoint, deliberately left on disk. If the save that

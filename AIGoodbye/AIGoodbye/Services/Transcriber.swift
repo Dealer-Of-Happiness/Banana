@@ -102,8 +102,46 @@ final class Transcriber {
                 resolvedLocale = nil
             }
         }
-        engine = legacy.isAvailable(for: locale) ? .legacy : .none
+        engine = await prepareLegacy(locale: locale)
         return engine
+    }
+
+    /// The legacy recognizer, if it exists for this language and the user
+    /// allows it. Its authorization is asked for here, lazily, and never on
+    /// the SpeechAnalyzer path: Apple's dialog for it says speech data will
+    /// be sent to Apple, which is untrue of either engine as this app uses
+    /// them, and flatly contradicts the promise on the screen behind it.
+    /// The modern engine needs only the microphone.
+    private func prepareLegacy(locale: Locale) async -> Engine {
+        guard legacy.isAvailable(for: locale) else { return .none }
+        guard await Self.legacyRecognitionAuthorized() else { return .none }
+        return .legacy
+    }
+
+    /// Whether `SFSpeechRecognizer` may be used, asking once if undecided.
+    static func legacyRecognitionAuthorized() async -> Bool {
+        switch SFSpeechRecognizer.authorizationStatus() {
+        case .authorized:
+            return true
+        case .notDetermined:
+            return await withCheckedContinuation { continuation in
+                SFSpeechRecognizer.requestAuthorization { status in
+                    continuation.resume(returning: status == .authorized)
+                }
+            }
+        default:
+            return false
+        }
+    }
+
+    /// True when the only reason there is no engine is that the user said no
+    /// to the legacy recognizer, so a screen can point at Settings instead of
+    /// claiming the language is unsupported.
+    static var legacyRecognitionDenied: Bool {
+        switch SFSpeechRecognizer.authorizationStatus() {
+        case .denied, .restricted: return true
+        default: return false
+        }
     }
 
     private func installAssetsIfNeeded(for locale: Locale) async throws {
@@ -142,15 +180,33 @@ final class Transcriber {
 
         switch engine {
         case .analyzer:
-            try await startAnalyzer()
-        case .legacy:
-            legacy.onText = { [weak self] text in
-                Task { @MainActor in self?.onText?(text) }
+            do {
+                try await startAnalyzer()
+            } catch {
+                // The modern engine reported its assets installed and then
+                // refused to start. Rather than record with no transcript
+                // at all, drop to the older recognizer if this language has
+                // one; only if that is missing too does the failure surface.
+                discardAnalyzer()
+                guard await prepareLegacy(locale: locale) == .legacy else { throw error }
+                engine = .legacy
+                try startLegacy(locale: locale)
             }
-            try legacy.start(locale: locale)
+        case .legacy:
+            try startLegacy(locale: locale)
         case .none:
             break
         }
+    }
+
+    private func startLegacy(locale: Locale) throws {
+        legacy.onText = { [weak self] text in
+            Task { @MainActor in self?.onText?(text) }
+        }
+        legacy.onFailure = { [weak self] _ in
+            Task { @MainActor in self?.onRecognitionFailed?() }
+        }
+        try legacy.start(locale: locale)
     }
 
     private func startAnalyzer() async throws {
@@ -205,11 +261,15 @@ final class Transcriber {
         let (stream, continuation) = AsyncStream<AnalyzerInput>.makeStream(
             bufferingPolicy: .bufferingNewest(96)
         )
-        feed.open(continuation: continuation, format: analyzerFormat)
+        let epoch = feed.open(continuation: continuation, format: analyzerFormat)
         try await analyzer.start(inputSequence: stream)
-        // A `cancel()` or a newer `start()` during that await wins.
+        // A `cancel()` or a newer `start()` during that await wins. Only
+        // this session's own stream is closed - a newer session may already
+        // have reopened the feed for itself, and closing that would silence
+        // the session that replaced us.
         guard currentGeneration == generation else {
-            feed.close()
+            feed.close(epoch: epoch)
+            Task { await analyzer.cancelAndFinishNow() }
             return
         }
 
@@ -330,6 +390,17 @@ final class Transcriber {
         currentGeneration = UUID()
         onText = nil
         onRecognitionFailed = nil
+        discardAnalyzer()
+        legacy.cancel()
+        finalizedText = ""
+        volatileText = ""
+    }
+
+    /// Tear the modern session down without waiting for it. Whatever it was
+    /// holding - the input stream, the results task, the speech model - is
+    /// released; nothing it says afterwards is heard.
+    private func discardAnalyzer() {
+        currentGeneration = UUID()
         feed.close()
         resultsTask?.cancel()
         resultsTask = nil
@@ -337,9 +408,6 @@ final class Transcriber {
         self.analyzer = nil
         speechTranscriber = nil
         Task { await analyzer?.cancelAndFinishNow() }
-        legacy.cancel()
-        finalizedText = ""
-        volatileText = ""
     }
 }
 
@@ -356,8 +424,12 @@ private nonisolated final class AnalyzerFeed: @unchecked Sendable {
     private var continuation: AsyncStream<AnalyzerInput>.Continuation?
     private var converter: AVAudioConverter?
     private var target: AVAudioFormat?
+    /// Counts `open` calls, so a session can close its own stream without
+    /// risk of closing a newer one that has taken its place.
+    private var epoch = 0
 
-    func open(continuation: AsyncStream<AnalyzerInput>.Continuation, format: AVAudioFormat?) {
+    @discardableResult
+    func open(continuation: AsyncStream<AnalyzerInput>.Continuation, format: AVAudioFormat?) -> Int {
         lock.lock()
         // Finish any previous stream rather than dropping its continuation on
         // the floor, which would leave a consumer waiting forever.
@@ -365,12 +437,26 @@ private nonisolated final class AnalyzerFeed: @unchecked Sendable {
         self.continuation = continuation
         self.target = format
         self.converter = nil
+        epoch += 1
+        let opened = epoch
         lock.unlock()
         previous?.finish()
+        return opened
     }
 
     func close() {
         lock.lock()
+        let continuation = self.continuation
+        self.continuation = nil
+        self.converter = nil
+        lock.unlock()
+        continuation?.finish()
+    }
+
+    /// Close only if the stream opened as `epoch` is still the live one.
+    func close(epoch: Int) {
+        lock.lock()
+        guard self.epoch == epoch else { lock.unlock(); return }
         let continuation = self.continuation
         self.continuation = nil
         self.converter = nil
@@ -440,6 +526,8 @@ nonisolated final class LegacyTranscriber: @unchecked Sendable {
     }
 
     var onText: ((String) -> Void)?
+    /// The recognizer has given up. Called at most once per `start`.
+    var onFailure: ((String) -> Void)?
 
     private let lock = NSLock()
     private var recognizer: SFSpeechRecognizer?
@@ -454,6 +542,16 @@ nonisolated final class LegacyTranscriber: @unchecked Sendable {
     private var cachedText = ""
     private var rotationTimer: Timer?
     private var isRunning = false
+
+    /// Segments that ended in an error without ever producing a word, in a
+    /// row. This is the guard against the failure that was measured live: a
+    /// recognizer that errors the instant a task starts was being restarted
+    /// with no delay, about a thousand times a second, for as long as the
+    /// recording ran - the CPU pegged, the battery draining, the screen
+    /// saying "Transcribing on this device", and not one word appearing.
+    private var consecutiveFailures = 0
+    private var hasReportedFailure = false
+    private let maximumConsecutiveFailures = 5
 
     private let segmentSeconds: TimeInterval = 45
 
@@ -482,6 +580,8 @@ nonisolated final class LegacyTranscriber: @unchecked Sendable {
         cachedText = ""
         segmentIndex = 0
         isRunning = true
+        consecutiveFailures = 0
+        hasReportedFailure = false
         lock.unlock()
         beginSegment()
 
@@ -520,21 +620,51 @@ nonisolated final class LegacyTranscriber: @unchecked Sendable {
 
         let task = recognizer.recognitionTask(with: request) { [weak self] result, error in
             guard let self else { return }
+            var producedWords = false
             if let result {
                 self.lock.lock()
                 self.segments[index] = result.bestTranscription.formattedString
+                producedWords = !(self.segments[index] ?? "").isEmpty
                 self.rebuildCachedTextLocked()
                 let text = self.cachedText
                 self.lock.unlock()
                 self.onText?(text)
             }
             guard error != nil || result?.isFinal == true else { return }
+
             self.lock.lock()
             self.requests[index] = nil
             self.tasks[index] = nil
             let shouldRestart = self.isRunning && index == self.segmentIndex - 1
+            // A segment that produced words and then ended is normal; one
+            // that ended in an error having produced nothing is a strike.
+            if error != nil && !producedWords {
+                self.consecutiveFailures += 1
+            } else if producedWords {
+                self.consecutiveFailures = 0
+            }
+            let strikes = self.consecutiveFailures
+            let giveUp = strikes >= self.maximumConsecutiveFailures && !self.hasReportedFailure
+            if giveUp { self.hasReportedFailure = true; self.isRunning = false }
             self.lock.unlock()
-            if shouldRestart { self.beginSegment() }
+
+            if giveUp {
+                self.onFailure?(error?.localizedDescription ?? "")
+                return
+            }
+            guard shouldRestart else { return }
+
+            // Back off after a failure. An immediate restart of a recognizer
+            // that fails instantly is a hot loop; a short, growing pause is
+            // what turns "retry" into something a phone can survive.
+            if strikes > 0 {
+                let delay = min(0.5 * pow(2.0, Double(strikes - 1)), 4.0)
+                DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delay) { [weak self] in
+                    self?.beginSegment()
+                }
+            } else {
+                self.beginSegment()
+            }
         }
         lock.lock()
         tasks[index] = task

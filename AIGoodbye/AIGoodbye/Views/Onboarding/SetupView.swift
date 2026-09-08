@@ -36,7 +36,7 @@ struct SetupView: View {
         AIModel.builtInModels.filter {
             !$0.isLegacy
                 && $0.fitsThisDevice()
-                && AIModel.workingSetGB(forModelBytes: $0.sizeBytes) <= DeviceCapability.usableMemoryGB
+                && DeviceCapability.canLoad(workingSetGB: AIModel.workingSetGB(forModelBytes: $0.sizeBytes))
         }
     }
 
@@ -169,7 +169,21 @@ struct SetupView: View {
             Button {
                 appState.engine.select(chosen)
                 appState.engine.approveDownload(for: chosen)
-                Task { try? await appState.engine.startConversation(model: chosen, history: []) }
+                let engine = appState.engine
+                let chat = appState.chatViewModel
+                Task {
+                    do {
+                        try await engine.startConversation(model: chosen, history: [])
+                    } catch is CancellationError {
+                        // The user stopped it; nothing to explain.
+                    } catch {
+                        // Never swallowed. A download or load that fails
+                        // here used to leave only a "Set up your AI model"
+                        // chip with no reason, which reads as "the app is
+                        // broken" - and is exactly how it was described.
+                        chat.errorBanner = .init(message: error.localizedDescription, canRetry: false)
+                    }
+                }
                 dismiss()
             } label: {
                 Label("Download \(chosen.name) · \(chosen.size)", systemImage: "arrow.down.circle.fill")

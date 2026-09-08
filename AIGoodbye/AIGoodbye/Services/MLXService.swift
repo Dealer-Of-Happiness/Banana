@@ -182,10 +182,10 @@ final class MLXService: ObservableObject {
         // before spending several minutes downloading something that will be
         // killed the moment it loads.
         let needsGB = AIModel.workingSetGB(forModelBytes: model.sizeBytes)
-        let hasGB = DeviceCapability.usableMemoryGB
-        if needsGB > hasGB {
+        if !DeviceCapability.canLoad(workingSetGB: needsGB) {
+            let hasGB = DeviceCapability.usableMemoryGBExact
             throw MLXError.modelLoadFailed(
-                L10n.text("\(model.name) needs about \(needsGB) GB of memory and this device can only give the app about \(hasGB) GB. Choose a smaller model.")
+                L10n.text("\(model.name) needs about \(needsGB) GB of memory and this device can only give the app about \(String(format: "%.1f", hasGB)) GB right now. Close other apps and try again, or choose a smaller model.")
             )
         }
 
@@ -256,7 +256,13 @@ final class MLXService: ObservableObject {
             ? VLMModelFactory.shared
             : LLMModelFactory.shared
         do {
+            // `hub:` is not optional in practice. The library's own default
+            // points at Library/Caches, a different folder from the one the
+            // prefetcher fills, so leaving it out made the loader download
+            // the whole model a second time - or fail offline - after the
+            // app had already said the model was installed.
             modelContainer = try await factory.loadContainer(
+                hub: ModelManager.shared.hub,
                 configuration: configuration
             ) { [weak self] progress in
                 let service = self
@@ -372,6 +378,15 @@ final class MLXService: ObservableObject {
 
     var isModelLoaded: Bool { modelContainer != nil }
 
+    /// Generations currently streaming. Memory-warning handling must not
+    /// touch the model while this is non-zero.
+    private var activeGenerations = 0
+
+    /// True while weights are loading or an answer is being produced.
+    var isBusy: Bool {
+        inFlightLoad != nil || isDownloading || isPreparingModel || activeGenerations > 0
+    }
+
     // MARK: - Conversation session
 
     /// Start (or restart) the chat session for a conversation.
@@ -396,16 +411,23 @@ final class MLXService: ObservableObject {
         // maxTokens scales with the user's context setting so long answers
         // aren't needlessly cut off when there's room for them.
         //
-        // maxKVSize is what actually makes the Context Window setting mean
-        // something. Without it the key-value cache grows for the whole life
-        // of the conversation - roughly 147 KB per token for the 8B model, so
-        // a long chat at a high setting is several gigabytes on top of the
-        // weights, and the app is killed mid-answer. With it, MLX uses a
-        // rotating cache and memory is bounded.
+        // Deliberately NO `maxKVSize`. It makes MLX use a rotating KV cache,
+        // and Qwen3-VL's attention builds its mask without consulting the
+        // cache's rotation (unlike the text-only models). Once a session
+        // passed the cap, the mask and the keys disagreed in shape and MLX's
+        // C++ core threw - which the Swift wrapper turns into `fatalError`.
+        // A process crash roughly ten image turns into a conversation, and
+        // silent loss of the system prompt before that.
+        //
+        // Memory is bounded another way: `sessionTokenEstimate` tracks what
+        // the session has accumulated, and once it crosses `budget` the
+        // session is dropped after the turn so the next one is rebuilt from
+        // trimmed history with a fresh cache.
         let budget = Self.effectiveContextWindow(for: model, requested: settings.contextWindow)
+        sessionTokenBudget = budget
+        sessionTokenEstimate = 0
         let parameters = GenerateParameters(
             maxTokens: budget >= 16384 ? 2048 : 1200,
-            maxKVSize: budget,
             temperature: Float(settings.temperature),
             topP: 0.9,
             repetitionPenalty: 1.15,
@@ -451,6 +473,23 @@ final class MLXService: ObservableObject {
         session != nil && sessionModelId == model.id
     }
 
+    /// Roughly how many tokens the live session's cache holds, and the cap.
+    ///
+    /// The cache is what makes a long conversation eat memory: about 112 KB
+    /// per token for the 2B model, so 8K tokens is close to a gigabyte on top
+    /// of the weights. Rather than a rotating cache (which crashes Qwen3-VL,
+    /// see `startSession`), the session is simply retired once it has
+    /// accumulated more than it should hold; the next turn rebuilds it from
+    /// trimmed history, which is a few seconds of prefill.
+    private var sessionTokenEstimate = 0
+    private var sessionTokenBudget = 8192
+
+    private func noteTurnCompleted(tokens: Int) {
+        sessionTokenEstimate += max(0, tokens)
+        guard sessionTokenEstimate > sessionTokenBudget else { return }
+        dropSession()
+    }
+
     /// The context window we will actually honour for a model, which is the
     /// user's setting capped by what its key-value cache can cost in memory.
     ///
@@ -466,9 +505,13 @@ final class MLXService: ObservableObject {
         requested: Int,
         usableMemoryGB: Int = DeviceCapability.memoryBudgetGB
     ) -> Int {
-        // Rough per-token key-value cost, scaled from the model's size.
+        // Per-token key-value cost, from the models' actual configs:
+        // Qwen3-VL-2B is 28 layers x 8 KV heads x 128 dims x 2 (K and V)
+        // x 2 bytes = 112 KiB; the 8B is 36 layers = 144 KiB. The earlier
+        // estimate of 25 KB per GB of weights was 2.5x too low, which let an
+        // "8K" window cost nearly a gigabyte on a 6 GB phone.
         let gigabytes = Double(model.sizeBytes) / 1_000_000_000
-        let kilobytesPerToken = max(8.0, gigabytes * 25.0)
+        let kilobytesPerToken: Double = gigabytes < 3 ? 112 : 144
 
         // Never let the cache exceed a quarter of what the app can have.
         let budgetKB = Double(usableMemoryGB) * 1_048_576 * 0.25
@@ -499,7 +542,13 @@ final class MLXService: ObservableObject {
                 userImage = nil
             }
 
+            // Estimated cost of this turn: the prompt, plus a picture, which
+            // Qwen3-VL turns into roughly 430-580 tokens at this edge size.
+            let promptTokens = Self.weightedLength(of: prompt) / 3 + (userImage == nil ? 0 : 600)
+            self.activeGenerations += 1
+
             let task = Task {
+                defer { Task { @MainActor in self.activeGenerations = max(0, self.activeGenerations - 1) } }
                 var accumulated = ""
                 do {
                     let stream = session.streamResponse(to: prompt, image: userImage)
@@ -511,6 +560,9 @@ final class MLXService: ObservableObject {
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: MLXError.generationFailed(self.friendlyMessage(for: error)))
+                }
+                await MainActor.run {
+                    self.noteTurnCompleted(tokens: promptTokens + Self.weightedLength(of: accumulated) / 3)
                 }
             }
 

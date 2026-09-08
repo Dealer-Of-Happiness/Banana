@@ -83,84 +83,84 @@
         }
       }
     },
-    "%@ needs about %lld GB of memory and this device can only give the app about %lld GB. Choose a smaller model.": {
+    "%@ needs about %lld GB of memory and this device can only give the app about %@ GB right now. Close other apps and try again, or choose a smaller model.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ benötigt etwa %lld GB Arbeitsspeicher, und dieses Gerät kann der App nur etwa %lld GB geben. Wähle ein kleineres Modell."
+            "value": "%1$@ benötigt etwa %2$lld GB Speicher, dieses Gerät kann der App derzeit aber nur etwa %3$@ GB geben. Schließe andere Apps und versuche es erneut, oder wähle ein kleineres Modell."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Το %@ χρειάζεται περίπου %lld GB μνήμης και αυτή η συσκευή μπορεί να δώσει στην εφαρμογή μόνο περίπου %lld GB. Διάλεξε μικρότερο μοντέλο."
+            "value": "Το %1$@ χρειάζεται περίπου %2$lld GB μνήμης, αλλά αυτή η συσκευή μπορεί να δώσει στην εφαρμογή μόνο περίπου %3$@ GB αυτή τη στιγμή. Κλείσε άλλες εφαρμογές και δοκίμασε ξανά, ή διάλεξε ένα μικρότερο μοντέλο."
           }
         },
         "en": {
           "stringUnit": {
             "state": "new",
-            "value": "%1$@ needs about %2$lld GB of memory and this device can only give the app about %3$lld GB. Choose a smaller model."
+            "value": "%1$@ needs about %2$lld GB of memory and this device can only give the app about %3$@ GB right now. Close other apps and try again, or choose a smaller model."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ necesita unos %lld GB de memoria y este dispositivo solo puede dar a la app unos %lld GB. Elige un modelo más pequeño."
+            "value": "%1$@ necesita unos %2$lld GB de memoria y este dispositivo solo puede darle a la app unos %3$@ GB ahora mismo. Cierra otras apps e inténtalo de nuevo, o elige un modelo más pequeño."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ nécessite environ %lld Go de mémoire alors que cet appareil ne peut en donner qu'environ %lld Go à l'app. Choisissez un modèle plus petit."
+            "value": "%1$@ a besoin d'environ %2$lld Go de mémoire, mais cet appareil ne peut en donner à l'app qu'environ %3$@ Go pour le moment. Fermez d'autres apps et réessayez, ou choisissez un modèle plus petit."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ richiede circa %lld GB di memoria e questo dispositivo può darne all'app solo circa %lld GB. Scegli un modello più piccolo."
+            "value": "%1$@ richiede circa %2$lld GB di memoria e al momento questo dispositivo può darne all'app solo circa %3$@ GB. Chiudi altre app e riprova, oppure scegli un modello più piccolo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ には約 %lld GB のメモリが必要ですが、この端末がアプリに割り当てられるのは約 %lld GB です。より小さいモデルを選んでください。"
+            "value": "%1$@には約%2$lld GBのメモリが必要ですが、このデバイスが現在アプリに割り当てられるのは約%3$@ GBです。他のアプリを閉じてやり直すか、より小さいモデルを選んでください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@에는 약 %lld GB의 메모리가 필요하지만 이 기기가 앱에 줄 수 있는 것은 약 %lld GB입니다. 더 작은 모델을 선택하세요."
+            "value": "%1$@에는 약 %2$lld GB의 메모리가 필요하지만, 이 기기가 지금 앱에 줄 수 있는 메모리는 약 %3$@ GB입니다. 다른 앱을 닫고 다시 시도하거나 더 작은 모델을 선택하세요."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O %@ precisa de cerca de %lld GB de memória e este dispositivo só pode dar ao app cerca de %lld GB. Escolha um modelo menor."
+            "value": "%1$@ precisa de cerca de %2$lld GB de memória, e este dispositivo só pode dar ao app cerca de %3$@ GB agora. Feche outros apps e tente de novo, ou escolha um modelo menor."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ требуется около %lld ГБ памяти, а это устройство может дать приложению лишь около %lld ГБ. Выберите модель поменьше."
+            "value": "%1$@ требует около %2$lld ГБ памяти, а это устройство сейчас может выделить приложению лишь около %3$@ ГБ. Закройте другие приложения и попробуйте снова или выберите модель поменьше."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ потребує близько %lld ГБ пам'яті, а цей пристрій може дати застосунку лише близько %lld ГБ. Виберіть меншу модель."
+            "value": "%1$@ потребує близько %2$lld ГБ пам'яті, а цей пристрій зараз може виділити застосунку лише близько %3$@ ГБ. Закрийте інші застосунки й спробуйте ще раз або виберіть меншу модель."
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 約需 %lld GB 記憶體，而本裝置最多只能給 App 約 %lld GB。請選擇更小的模型。"
+            "value": "%1$@ 需要大約 %2$lld GB 記憶體，但呢部裝置而家只可以畀 App 大約 %3$@ GB。閂咗其他 App 再試，或者揀個細啲嘅模型。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 约需 %lld GB 内存，而本设备最多只能给 App 约 %lld GB。请选择更小的模型。"
+            "value": "%1$@ 需要约 %2$lld GB 内存，而此设备目前只能为 App 提供约 %3$@ GB。请关闭其他 App 后重试，或选择更小的模型。"
           }
         }
       }
@@ -561,83 +561,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "运行时占用 1.5 GB RAM"
-          }
-        }
-      }
-    },
-    "100% Private, 100% Offline": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100 % privat, 100 % offline"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100% ιδιωτικό, 100% εκτός σύνδεσης"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100 % privado, 100 % sin conexión"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100 % privé, 100 % hors ligne"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100% privato, 100% offline"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100%プライベート、100%オフライン"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100% 프라이빗, 100% 오프라인"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100% privado, 100% offline"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100% приватно, 100% офлайн"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100% приватно, 100% офлайн"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100% 私隱，100% 離線"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100% 私密，100% 离线"
           }
         }
       }
@@ -1404,83 +1327,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "AI 的回答可能不准确或不完整，请务必核实重要信息。AiGoodbye 不能替代专业的医疗、法律或财务建议。"
-          }
-        }
-      }
-    },
-    "AI models are downloaded once from Hugging Face - about 1 to 6 GB depending on the model, so Wi-Fi is recommended. After the download, everything works fully offline. You can delete models anytime in Settings.": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "KI-Modelle werden einmalig von Hugging Face geladen – je nach Modell etwa 1 bis 6 GB, daher wird WLAN empfohlen. Nach dem Download funktioniert alles vollständig offline. Modelle kannst du jederzeit in den Einstellungen löschen."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Τα μοντέλα AI κατεβαίνουν μία φορά από το Hugging Face — περίπου 1 έως 6 GB ανάλογα με το μοντέλο, γι' αυτό συνιστάται Wi-Fi. Μετά τη λήψη, όλα λειτουργούν πλήρως εκτός σύνδεσης. Μπορείτε να διαγράψετε τα μοντέλα οποιαδήποτε στιγμή στις Ρυθμίσεις."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los modelos de IA se descargan una vez desde Hugging Face: entre 1 y 6 GB según el modelo, por lo que se recomienda Wi-Fi. Tras la descarga, todo funciona completamente sin conexión. Puedes eliminar los modelos cuando quieras en Ajustes."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les modèles d'IA sont téléchargés une seule fois depuis Hugging Face — environ 1 à 6 Go selon le modèle, le Wi-Fi est donc recommandé. Après le téléchargement, tout fonctionne entièrement hors ligne. Vous pouvez supprimer les modèles à tout moment dans Réglages."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "I modelli di IA si scaricano una sola volta da Hugging Face: da 1 a 6 GB circa a seconda del modello, quindi è consigliato il Wi-Fi. Dopo il download tutto funziona completamente offline. Puoi eliminare i modelli quando vuoi nelle Impostazioni."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIモデルはHugging Faceから一度だけダウンロードされます。モデルにより約1〜6GBのため、Wi-Fiを推奨します。ダウンロード後はすべて完全オフラインで動作します。モデルは設定からいつでも削除できます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI 모델은 Hugging Face에서 한 번만 다운로드됩니다. 모델에 따라 약 1~6GB이므로 Wi-Fi를 권장합니다. 다운로드 후에는 모든 것이 완전히 오프라인으로 작동합니다. 설정에서 언제든지 모델을 삭제할 수 있습니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Os modelos de IA são baixados uma única vez do Hugging Face: de 1 a 6 GB dependendo do modelo, então recomendamos Wi-Fi. Após o download, tudo funciona totalmente offline. Você pode excluir os modelos a qualquer momento nos Ajustes."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Модели ИИ загружаются один раз с Hugging Face — примерно от 1 до 6 ГБ в зависимости от модели, поэтому рекомендуется Wi-Fi. После загрузки всё работает полностью офлайн. Модели можно удалить в настройках в любой момент."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Моделі ШІ завантажуються один раз із Hugging Face — приблизно від 1 до 6 ГБ залежно від моделі, тому радимо Wi-Fi. Після завантаження все працює повністю офлайн. Моделі можна будь-коли видалити в налаштуваннях."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI 模型由 Hugging Face 一次過下載——視乎型號大約 1 至 6 GB，建議用 Wi-Fi。下載之後一切完全離線運作。你可以隨時喺設定度刪除模型。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI 模型从 Hugging Face 一次性下载——视模型而定约 1 到 6 GB，建议使用 Wi-Fi。下载后一切完全离线运行。您可以随时在设置中删除模型。"
           }
         }
       }
@@ -3005,83 +2851,6 @@
         }
       }
     },
-    "Add photo or document": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Foto oder Dokument hinzufügen"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Προσθήκη φωτογραφίας ή εγγράφου"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Añadir foto o documento"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajouter une photo ou un document"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aggiungi foto o documento"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "写真または書類を追加"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "사진 또는 문서 추가"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adicionar foto ou documento"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Добавить фото или документ"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Додати фото або документ"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加入相片或文件"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加照片或文稿"
-          }
-        }
-      }
-    },
     "Add something to remember...": {
       "localizations": {
         "de": {
@@ -3154,83 +2923,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "添加想让 AI 记住的内容…"
-          }
-        }
-      }
-    },
-    "Add this model": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dieses Modell hinzufügen"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Προσθήκη αυτού του μοντέλου"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Añadir este modelo"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajouter ce modèle"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aggiungi questo modello"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このモデルを追加"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 모델 추가"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adicionar este modelo"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Добавить эту модель"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Додати цю модель"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加入此模型"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加此模型"
           }
         }
       }
@@ -3922,6 +3614,82 @@
         }
       }
     },
+    "AiGoodbye needs microphone access for voice conversations. You can enable it in the Settings app.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye braucht Zugriff auf das Mikrofon für Sprachgespräche. Du kannst ihn in der Einstellungen-App erlauben."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το AiGoodbye χρειάζεται πρόσβαση στο μικρόφωνο για φωνητικές συνομιλίες. Μπορείς να την ενεργοποιήσεις στην εφαρμογή Ρυθμίσεις."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye necesita acceso al micrófono para las conversaciones por voz. Puedes activarlo en la app Ajustes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye a besoin d'accéder au micro pour les conversations vocales. Vous pouvez l'autoriser dans l'app Réglages."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye ha bisogno dell'accesso al microfono per le conversazioni vocali. Puoi attivarlo nell'app Impostazioni."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音声会話にはAiGoodbyeがマイクにアクセスする必要があります。設定アプリで許可できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음성 대화를 하려면 AiGoodbye에 마이크 접근 권한이 필요합니다. 설정 앱에서 켤 수 있습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O AiGoodbye precisa de acesso ao microfone para conversas por voz. Você pode ativá-lo no app Ajustes."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Для голосовых разговоров AiGoodbye нужен доступ к микрофону. Его можно включить в приложении «Настройки»."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Для голосових розмов AiGoodbye потрібен доступ до мікрофона. Його можна увімкнути в застосунку «Параметри»."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "語音對話需要 AiGoodbye 取用麥克風。你可以喺「設定」App 入面開啟。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语音对话需要 AiGoodbye 访问麦克风。你可以在“设置”App 中开启。"
+          }
+        }
+      }
+    },
     "AiGoodbye needs microphone access to record. You can enable it in the Settings app.": {
       "localizations": {
         "de": {
@@ -3994,159 +3762,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "AiGoodbye 需要麦克风权限才能录音。你可以在“设置”中开启。"
-          }
-        }
-      }
-    },
-    "AiGoodbye needs microphone and speech access for voice conversations. You can enable both in the Settings app.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye braucht für Sprachunterhaltungen Zugriff auf Mikrofon und Spracherkennung. Beides kannst du in der Einstellungen-App aktivieren."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Το AiGoodbye χρειάζεται πρόσβαση στο μικρόφωνο και στην αναγνώριση ομιλίας για φωνητικές συνομιλίες. Ενεργοποιήστε τα στις Ρυθμίσεις."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye necesita acceso al micrófono y al reconocimiento de voz para las conversaciones de voz. Puedes activar ambos en la app Ajustes."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye a besoin du micro et de la reconnaissance vocale pour les conversations vocales. Activez les deux dans l'app Réglages."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye ha bisogno dell'accesso a microfono e riconoscimento vocale per le conversazioni vocali. Puoi attivarli nell'app Impostazioni."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音声会話にはマイクと音声認識へのアクセスが必要です。設定アプリで両方を有効にできます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "음성 대화에는 마이크와 음성 인식 권한이 필요합니다. 설정 앱에서 둘 다 켤 수 있습니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O AiGoodbye precisa de acesso ao microfone e ao reconhecimento de fala para conversas de voz. Você pode ativar ambos no app Ajustes."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Для голосовых бесед AiGoodbye нужен доступ к микрофону и распознаванию речи. Включите оба в приложении «Настройки»."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Для голосових розмов AiGoodbye потрібен доступ до мікрофона та розпізнавання мовлення. Увімкніть обидва в застосунку «Налаштування»."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "語音對話需要麥克風同語音識別權限。你可以喺「設定」App度開啟。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "语音对话需要麦克风和语音识别权限。您可以在「设置」应用中开启。"
-          }
-        }
-      }
-    },
-    "AiGoodbye needs microphone and speech access to record. You can enable both in the Settings app.": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye benötigt Zugriff auf Mikrofon und Spracherkennung, um aufzunehmen. Beides kannst du in der App „Einstellungen“ aktivieren."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Το AiGoodbye χρειάζεται πρόσβαση στο μικρόφωνο και στην αναγνώριση ομιλίας για να ηχογραφεί. Μπορείς να τα ενεργοποιήσεις και τα δύο στις Ρυθμίσεις."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye necesita acceso al micrófono y al reconocimiento de voz para grabar. Puedes activar ambos en la app Ajustes."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye a besoin d'accéder au micro et à la reconnaissance vocale pour enregistrer. Vous pouvez activer les deux dans Réglages."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye ha bisogno dell'accesso a microfono e riconoscimento vocale per registrare. Puoi attivarli entrambi in Impostazioni."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "録音するには、AiGoodbye にマイクと音声認識へのアクセスが必要です。「設定」アプリで両方を許可できます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "녹음하려면 AiGoodbye에 마이크와 음성 인식 권한이 필요합니다. 설정 앱에서 둘 다 켤 수 있습니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O AiGoodbye precisa de acesso ao microfone e ao reconhecimento de fala para gravar. Você pode ativar os dois nos Ajustes."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Для записи AiGoodbye нужен доступ к микрофону и распознаванию речи. Включить оба можно в приложении «Настройки»."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Для запису AiGoodbye потрібен доступ до мікрофона й розпізнавання мовлення. Увімкнути обидва можна в застосунку «Параметри»."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye 需要麥克風和語音辨識權限才能錄音。你可以在「設定」中開啟這兩項。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye 需要麦克风和语音识别权限才能录音。你可以在“设置”中开启这两项。"
           }
         }
       }
@@ -4299,83 +3914,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "所有 AI 都直接在您的设备上运行，对话绝不离开设备。没有服务器、没有账号、没有跟踪、没有数据收集。您聊的内容只属于您。"
-          }
-        }
-      }
-    },
-    "All AI runs on your device": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die gesamte KI läuft auf Ihrem Gerät"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Όλη η AI εκτελείται στη συσκευή σας"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Toda la IA se ejecuta en tu dispositivo"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Toute l'IA fonctionne sur votre appareil"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tutta l'IA funziona sul tuo dispositivo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "すべてのAIはデバイス上で動作します"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "모든 AI가 기기에서 직접 실행됩니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Toda a IA roda no seu dispositivo"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Весь ИИ работает на вашем устройстве"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Увесь ШІ працює на вашому пристрої"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "所有 AI 都在你的裝置上運行"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "所有 AI 都在您的设备上运行"
           }
         }
       }
@@ -14497,6 +14035,82 @@
         }
       }
     },
+    "Downloading the speech model for this language...": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprachmodell für diese Sprache wird geladen ..."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Λήψη του μοντέλου ομιλίας για αυτή τη γλώσσα..."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descargando el modelo de voz para este idioma..."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléchargement du modèle vocal pour cette langue..."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download del modello vocale per questa lingua..."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この言語の音声モデルをダウンロード中..."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 언어의 음성 모델을 다운로드하는 중..."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baixando o modelo de fala para este idioma..."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Загрузка речевой модели для этого языка..."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Завантаження мовленнєвої моделі для цієї мови..."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下載呢種語言嘅語音模型..."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下载此语言的语音模型..."
+          }
+        }
+      }
+    },
     "Downloads on first use": {
       "localizations": {
         "de": {
@@ -15025,83 +14639,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "每个回答都由运行在你自己设备上的模型生成。App 只会在下载你请求的模型、或检查你想添加的模型时使用网络。你的消息、文件和录音永远不会被发送到任何地方。"
-          }
-        }
-      }
-    },
-    "Every answer is produced by a model running on your own hardware. The only time this app uses the internet is to download a model file you asked for.": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jede Antwort stammt von einem Modell, das auf Ihrer eigenen Hardware läuft. Internet nutzt die App nur, um eine Modelldatei zu laden, die Sie angefordert haben."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Κάθε απάντηση παράγεται από ένα μοντέλο που τρέχει στη δική σας συσκευή. Η εφαρμογή χρησιμοποιεί το ίντερνετ μόνο για να κατεβάσει ένα αρχείο μοντέλου που ζητήσατε."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cada respuesta la genera un modelo que se ejecuta en tu propio hardware. La app solo usa internet para descargar un archivo de modelo que hayas pedido."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chaque réponse est produite par un modèle qui tourne sur votre propre matériel. La seule fois où l'app utilise internet, c'est pour télécharger un fichier de modèle que vous avez demandé."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ogni risposta è prodotta da un modello che gira sul tuo hardware. L'app usa internet solo per scaricare un file di modello che hai richiesto."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "すべての回答は、あなた自身のデバイスで動くモデルが生成しています。このアプリがインターネットを使うのは、あなたが求めたモデルファイルをダウンロードするときだけです。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "모든 답변은 사용자의 기기에서 직접 실행되는 모델이 만들어 냅니다. 이 앱이 인터넷을 쓰는 순간은 사용자가 요청한 모델 파일을 내려받을 때뿐입니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cada resposta é gerada por um modelo que roda no seu próprio hardware. O app só usa a internet para baixar um arquivo de modelo que você pediu."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Каждый ответ создаёт модель, которая работает на вашем собственном устройстве. Приложение выходит в интернет только для того, чтобы скачать файл модели, который вы сами запросили."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Кожну відповідь створює модель, яка працює на вашому власному пристрої. Інтернет застосунок використовує лише для того, щоб завантажити файл моделі, який ви попросили."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "每個答案都係由喺你自己部機上運行嘅模型產生。呢個應用程式唯一會上網嘅時候，就係下載你要求嘅模型檔案。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "每一个回答都来自运行在您自己硬件上的模型。这个应用唯一联网的时候，就是下载您要求的模型文件。"
           }
         }
       }
@@ -16242,6 +15779,82 @@
           "stringUnit": {
             "state": "translated",
             "value": "要准确识别的词"
+          }
+        }
+      }
+    },
+    "Getting ready to listen...": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuhören wird vorbereitet ..."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Προετοιμασία για ακρόαση..."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparándose para escuchar..."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Préparation de l'écoute..."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparazione all'ascolto..."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聞き取りの準備中..."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "듣기 준비 중..."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparando para ouvir..."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подготовка к прослушиванию..."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Підготовка до прослуховування..."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "準備聆聽中..."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在准备聆听..."
           }
         }
       }
@@ -20578,83 +20191,6 @@
         }
       }
     },
-    "No data collection, no tracking": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keine Datenerfassung, kein Tracking"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Χωρίς συλλογή δεδομένων, χωρίς παρακολούθηση"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sin recopilación de datos ni rastreo"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucune collecte de données, aucun suivi"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nessuna raccolta di dati, nessun tracciamento"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "データ収集も追跡もありません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "데이터 수집 없음, 추적 없음"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sem coleta de dados, sem rastreamento"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Без сбора данных и отслеживания"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Без збору даних і відстеження"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不收集資料，不追蹤"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不收集数据，不跟踪"
-          }
-        }
-      }
-    },
     "No documents yet.": {
       "localizations": {
         "de": {
@@ -21567,78 +21103,78 @@
         }
       }
     },
-    "No speech was picked up, so nothing was saved. Check that the microphone isn't covered or in use by another app.": {
+    "No sound reached the microphone, so nothing was saved. Check that it isn't covered or in use by another app.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Es wurde keine Sprache erfasst, daher wurde nichts gesichert. Prüfe, ob das Mikrofon verdeckt ist oder von einer anderen App benutzt wird."
+            "value": "Das Mikrofon hat keinen Ton empfangen, daher wurde nichts gespeichert. Prüfe, ob es verdeckt ist oder von einer anderen App verwendet wird."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Δεν καταγράφηκε ομιλία, οπότε δεν αποθηκεύτηκε τίποτα. Έλεγξε αν το μικρόφωνο είναι καλυμμένο ή αν το χρησιμοποιεί άλλη εφαρμογή."
+            "value": "Κανένας ήχος δεν έφτασε στο μικρόφωνο, οπότε δεν αποθηκεύτηκε τίποτα. Έλεγξε ότι δεν είναι καλυμμένο ή σε χρήση από άλλη εφαρμογή."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No se captó ninguna voz, así que no se guardó nada. Comprueba que el micrófono no esté tapado ni lo esté usando otra app."
+            "value": "No llegó ningún sonido al micrófono, así que no se guardó nada. Comprueba que no esté tapado ni en uso por otra app."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aucune parole n'a été captée, rien n'a donc été enregistré. Vérifiez que le micro n'est pas couvert ni utilisé par une autre app."
+            "value": "Aucun son n'a atteint le micro, rien n'a donc été enregistré. Vérifiez qu'il n'est pas couvert ni utilisé par une autre app."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Non è stata rilevata alcuna voce, quindi non è stato salvato nulla. Controlla che il microfono non sia coperto o usato da un'altra app."
+            "value": "Nessun suono ha raggiunto il microfono, quindi non è stato salvato nulla. Controlla che non sia coperto o in uso da un'altra app."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "音声が検出されなかったため、何も保存されませんでした。マイクがふさがれていないか、他のアプリが使用していないか確認してください。"
+            "value": "マイクに音が届かなかったため、何も保存されませんでした。マイクが覆われていないか、他のアプリが使用していないか確認してください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "음성이 감지되지 않아 아무것도 저장되지 않았습니다. 마이크가 가려져 있거나 다른 앱이 사용 중인지 확인하세요."
+            "value": "마이크에 소리가 전혀 들어오지 않아 아무것도 저장되지 않았습니다. 마이크가 가려져 있거나 다른 앱이 사용 중이지 않은지 확인하세요."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nenhuma fala foi captada, então nada foi salvo. Verifique se o microfone não está coberto ou em uso por outro app."
+            "value": "Nenhum som chegou ao microfone, então nada foi salvo. Verifique se ele não está coberto nem em uso por outro app."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Речь не была распознана, поэтому ничего не сохранено. Проверьте, не закрыт ли микрофон и не используется ли он другим приложением."
+            "value": "Микрофон не уловил ни звука, поэтому ничего не сохранено. Проверьте, не закрыт ли он и не использует ли его другое приложение."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Мовлення не було розпізнано, тому нічого не збережено. Перевірте, чи не закритий мікрофон і чи не використовує його інший застосунок."
+            "value": "Мікрофон не вловив жодного звуку, тому нічого не збережено. Перевірте, чи він не закритий і чи не використовує його інший застосунок."
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "沒有擷取到任何語音，因此未保存任何內容。請檢查麥克風是否被遮擋或被其他 App 佔用。"
+            "value": "麥克風收唔到任何聲音，所以乜嘢都冇儲存。請檢查麥克風有冇被遮住，或者有冇畀其他 App 使用緊。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "没有采集到任何语音，因此未保存任何内容。请检查麦克风是否被遮挡或被其他 App 占用。"
+            "value": "麦克风没有收到任何声音，因此未保存任何内容。请检查麦克风是否被遮挡或正被其他 App 使用。"
           }
         }
       }
@@ -21791,6 +21327,82 @@
           "stringUnit": {
             "state": "translated",
             "value": "画面中没有文字。"
+          }
+        }
+      }
+    },
+    "No words were recognized, so the audio was saved instead.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es wurden keine Wörter erkannt, daher wurde stattdessen die Audioaufnahme gespeichert."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δεν αναγνωρίστηκαν λέξεις, οπότε αποθηκεύτηκε ο ήχος αντί για κείμενο."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se reconoció ninguna palabra, así que se guardó el audio en su lugar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun mot n'a été reconnu, l'audio a donc été enregistré à la place."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è stata riconosciuta alcuna parola, quindi è stato salvato l'audio."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "言葉を認識できなかったため、代わりに音声を保存しました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인식된 단어가 없어 대신 오디오를 저장했습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma palavra foi reconhecida, então o áudio foi salvo no lugar."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Слова не распознаны, поэтому вместо текста сохранена аудиозапись."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Слова не розпізнано, тому замість тексту збережено аудіозапис."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "辨認唔到任何字詞，所以改為儲存咗錄音。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未识别到任何文字，因此改为保存了录音。"
           }
         }
       }
@@ -25063,83 +24675,6 @@
         }
       }
     },
-    "Private, on-device AI. No internet needed, no subscriptions, no data leaving your device.": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Private KI direkt auf dem Gerät. Kein Internet nötig, keine Abos, keine Daten verlassen dein Gerät."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ιδιωτικό AI στη συσκευή. Χωρίς ίντερνετ, χωρίς συνδρομές, κανένα δεδομένο δεν φεύγει από τη συσκευή σας."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IA privada en tu dispositivo. Sin internet, sin suscripciones, sin datos que salgan de tu dispositivo."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IA privée, sur l'appareil. Pas d'internet requis, pas d'abonnement, aucune donnée ne quitte votre appareil."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IA privata sul dispositivo. Niente internet, niente abbonamenti, nessun dato lascia il tuo dispositivo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "プライベートなオンデバイスAI。インターネット不要、サブスクなし、データはデバイスから出ません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "프라이빗 온디바이스 AI. 인터넷 불필요, 구독 없음, 데이터는 기기를 떠나지 않습니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IA privada, no dispositivo. Sem internet, sem assinaturas, nenhum dado sai do seu dispositivo."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Приватный ИИ на устройстве. Не нужен интернет, нет подписок, данные не покидают ваше устройство."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Приватний ШІ на пристрої. Без інтернету, без підписок, дані не залишають ваш пристрій."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "私密嘅裝置端 AI。唔使上網，冇訂閱，數據唔會離開你部裝置。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "私密的设备端 AI。无需网络，无订阅，数据不离开您的设备。"
-          }
-        }
-      }
-    },
     "Private, on-device AI. Works offline, no subscriptions, your conversations never leave your device.": {
       "localizations": {
         "de": {
@@ -27042,83 +26577,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "另一个 App 占用了麦克风，录音已暂停，稍后会自动继续。"
-          }
-        }
-      }
-    },
-    "Recording paused because another app needed the microphone. Tap resume to continue.": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Aufnahme wurde pausiert, weil eine andere App das Mikrofon benötigt hat. Tippe auf „Fortsetzen“."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Η εγγραφή τέθηκε σε παύση επειδή μια άλλη εφαρμογή χρειάστηκε το μικρόφωνο. Πάτησε «Συνέχεια»."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La grabación se pausó porque otra app necesitaba el micrófono. Toca «Reanudar» para continuar."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "L'enregistrement a été mis en pause car une autre app avait besoin du micro. Touchez « Reprendre »."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La registrazione è stata messa in pausa perché un'altra app aveva bisogno del microfono. Tocca «Riprendi»."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "別のアプリがマイクを使用したため録音を一時停止しました。「再開」をタップしてください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다른 앱이 마이크를 사용해 녹음을 일시정지했습니다. ‘계속’을 눌러 이어가세요."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A gravação foi pausada porque outro app precisou do microfone. Toque em «Retomar»."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Запись приостановлена: микрофон понадобился другому приложению. Нажмите «Продолжить»."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Запис призупинено: мікрофон знадобився іншому застосунку. Натисніть «Продовжити»."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "另一個 App 需要使用麥克風，錄音已暫停。點一下「繼續」以繼續錄音。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "另一个 App 需要使用麦克风，录音已暂停。点按“继续”以继续录音。"
           }
         }
       }
@@ -30999,6 +30457,310 @@
         }
       }
     },
+    "Speech couldn't be recognized for this language right now, so this recording is audio only. It is being saved.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprache konnte für diese Sprache gerade nicht erkannt werden, daher ist diese Aufnahme nur Audio. Sie wird gespeichert."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Η ομιλία δεν μπόρεσε να αναγνωριστεί για αυτή τη γλώσσα αυτή τη στιγμή, οπότε αυτή η εγγραφή είναι μόνο ήχος. Αποθηκεύεται."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo reconocer la voz en este idioma ahora mismo, así que esta grabación es solo de audio. Se está guardando."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La parole n'a pas pu être reconnue pour cette langue pour le moment, cet enregistrement est donc audio uniquement. Il est en cours de sauvegarde."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al momento non è stato possibile riconoscere il parlato in questa lingua, quindi questa registrazione è solo audio. Viene salvata."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在この言語の音声を認識できないため、この録音は音声のみです。保存されています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금은 이 언어의 음성을 인식할 수 없어 이 녹음은 오디오만 저장됩니다. 저장되는 중입니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A fala não pôde ser reconhecida neste idioma agora, então esta gravação é somente áudio. Ela está sendo salva."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Речь на этом языке сейчас не удалось распознать, поэтому эта запись только аудио. Она сохраняется."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Мовлення цією мовою зараз не вдалося розпізнати, тому цей запис лише аудіо. Він зберігається."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "而家辨認唔到呢種語言嘅語音，所以呢個錄音只有聲音。錄音正在儲存。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前无法识别此语言的语音，因此本次录音仅包含音频。录音正在保存。"
+          }
+        }
+      }
+    },
+    "Speech recognition is turned off for AiGoodbye, so this recording will be audio only. You can turn it on in the Settings app.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Spracherkennung ist für AiGoodbye deaktiviert, daher wird diese Aufnahme nur Audio sein. Du kannst sie in der Einstellungen-App aktivieren."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Η αναγνώριση ομιλίας είναι απενεργοποιημένη για το AiGoodbye, οπότε αυτή η εγγραφή θα είναι μόνο ήχος. Μπορείς να την ενεργοποιήσεις στην εφαρμογή Ρυθμίσεις."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El reconocimiento de voz está desactivado para AiGoodbye, así que esta grabación será solo de audio. Puedes activarlo en la app Ajustes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La reconnaissance vocale est désactivée pour AiGoodbye, cet enregistrement sera donc audio uniquement. Vous pouvez l'activer dans l'app Réglages."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il riconoscimento vocale è disattivato per AiGoodbye, quindi questa registrazione sarà solo audio. Puoi attivarlo nell'app Impostazioni."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbyeの音声認識がオフになっているため、この録音は音声のみになります。設定アプリでオンにできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye의 음성 인식이 꺼져 있어 이 녹음은 오디오만 저장됩니다. 설정 앱에서 켤 수 있습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O reconhecimento de fala está desativado para o AiGoodbye, então esta gravação será somente áudio. Você pode ativá-lo no app Ajustes."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Распознавание речи для AiGoodbye отключено, поэтому эта запись будет только аудио. Его можно включить в приложении «Настройки»."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Розпізнавання мовлення для AiGoodbye вимкнено, тому цей запис буде лише аудіо. Його можна увімкнути в застосунку «Параметри»."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye 嘅語音辨識已經關閉，所以呢個錄音只會有聲音。你可以喺「設定」App 入面開啟。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye 的语音识别已关闭，因此本次录音将仅包含音频。你可以在“设置”App 中开启。"
+          }
+        }
+      }
+    },
+    "Speech recognition is turned off for AiGoodbye. You can turn it on in the Settings app.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Spracherkennung ist für AiGoodbye deaktiviert. Du kannst sie in der Einstellungen-App aktivieren."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Η αναγνώριση ομιλίας είναι απενεργοποιημένη για το AiGoodbye. Μπορείς να την ενεργοποιήσεις στην εφαρμογή Ρυθμίσεις."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El reconocimiento de voz está desactivado para AiGoodbye. Puedes activarlo en la app Ajustes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La reconnaissance vocale est désactivée pour AiGoodbye. Vous pouvez l'activer dans l'app Réglages."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il riconoscimento vocale è disattivato per AiGoodbye. Puoi attivarlo nell'app Impostazioni."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbyeの音声認識がオフになっています。設定アプリでオンにできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye의 음성 인식이 꺼져 있습니다. 설정 앱에서 켤 수 있습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O reconhecimento de fala está desativado para o AiGoodbye. Você pode ativá-lo no app Ajustes."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Распознавание речи для AiGoodbye отключено. Его можно включить в приложении «Настройки»."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Розпізнавання мовлення для AiGoodbye вимкнено. Його можна увімкнути в застосунку «Параметри»."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye 嘅語音辨識已經關閉。你可以喺「設定」App 入面開啟。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye 的语音识别已关闭。你可以在“设置”App 中开启。"
+          }
+        }
+      }
+    },
+    "Speech recognition stopped before anything was heard. Tap to try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Spracherkennung wurde beendet, bevor etwas gehört wurde. Tippe, um es erneut zu versuchen."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Η αναγνώριση ομιλίας σταμάτησε πριν ακουστεί οτιδήποτε. Πάτησε για να δοκιμάσεις ξανά."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El reconocimiento de voz se detuvo antes de oír nada. Toca para intentarlo de nuevo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La reconnaissance vocale s'est arrêtée avant d'avoir rien entendu. Touchez pour réessayer."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il riconoscimento vocale si è interrotto prima di sentire qualcosa. Tocca per riprovare."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "何も聞き取る前に音声認識が停止しました。タップしてやり直してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아무것도 듣기 전에 음성 인식이 중단되었습니다. 탭하여 다시 시도하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O reconhecimento de fala parou antes de ouvir qualquer coisa. Toque para tentar de novo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Распознавание речи остановилось, ничего не услышав. Нажмите, чтобы попробовать снова."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Розпізнавання мовлення зупинилося, нічого не почувши. Торкніться, щоб спробувати ще раз."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "語音辨識喺聽到任何嘢之前就停咗。㩒一下再試。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语音识别在听到任何内容之前就停止了。轻点以重试。"
+          }
+        }
+      }
+    },
     "Spoken aloud · 100% on-device": {
       "localizations": {
         "de": {
@@ -33731,83 +33493,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "只有在您使用相机、麦克风和语音识别这些功能时，应用才会请求相应权限；没有它们，应用也能完整使用。"
-          }
-        }
-      }
-    },
-    "The audio couldn't be saved (the device may be out of space), but the transcript is safe.": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Das Audio konnte nicht gesichert werden (möglicherweise ist der Speicher voll), das Transkript ist aber sicher."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Δεν ήταν δυνατή η αποθήκευση του ήχου (ίσως δεν υπάρχει χώρος στη συσκευή), αλλά η απομαγνητοφώνηση είναι ασφαλής."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo guardar el audio (puede que el dispositivo no tenga espacio), pero la transcripción está a salvo."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "L'audio n'a pas pu être enregistré (l'appareil manque peut-être d'espace), mais la transcription est intacte."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Non è stato possibile salvare l'audio (il dispositivo potrebbe non avere spazio), ma la trascrizione è al sicuro."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音声を保存できませんでした（端末の空き容量が不足している可能性があります）。文字起こしは保存されています。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오디오를 저장하지 못했습니다(기기 저장 공간이 부족할 수 있습니다). 텍스트 기록은 안전합니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Não foi possível salvar o áudio (o dispositivo pode estar sem espaço), mas a transcrição está salva."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Не удалось сохранить звук (возможно, на устройстве нет места), но расшифровка сохранена."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Не вдалося зберегти звук (можливо, на пристрої немає місця), але розшифровка збережена."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "無法保存音訊（裝置可能空間不足），但文字記錄已保存。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法保存音频（设备可能空间不足），但文字记录已保存。"
           }
         }
       }
@@ -36788,83 +36473,6 @@
         }
       }
     },
-    "This recording reached the four hour limit and was paused.": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diese Aufnahme hat das Limit von vier Stunden erreicht und wurde pausiert."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Αυτή η ηχογράφηση έφτασε το όριο των τεσσάρων ωρών και τέθηκε σε παύση."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esta grabación alcanzó el límite de cuatro horas y se puso en pausa."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cet enregistrement a atteint la limite de quatre heures et a été mis en pause."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Questa registrazione ha raggiunto il limite di quattro ore ed è stata messa in pausa."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この録音は 4 時間の上限に達したため一時停止しました。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 녹음은 4시간 한도에 도달하여 일시정지되었습니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esta gravação atingiu o limite de quatro horas e foi pausada."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Запись достигла предела в четыре часа и была приостановлена."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Запис досяг межі в чотири години й був призупинений."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "本次錄音已達到四小時上限，已暫停。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "本次录音已达到四小时上限，已暂停。"
-          }
-        }
-      }
-    },
     "This recording reached the four hour limit and was saved.": {
       "localizations": {
         "de": {
@@ -37697,160 +37305,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "目前无法进行文字转录，因此这次只会录制音频。"
-          }
-        }
-      }
-    },
-    "Transcription stopped working, so the rest of this recording is audio only.": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Transkription funktioniert nicht mehr, der Rest dieser Aufnahme enthält daher nur Audio."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Η απομαγνητοφώνηση σταμάτησε να λειτουργεί, οπότε το υπόλοιπο της ηχογράφησης έχει μόνο ήχο."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La transcripción dejó de funcionar, así que el resto de esta grabación será solo audio."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La transcription ne fonctionne plus : la suite de cet enregistrement sera uniquement audio."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La trascrizione ha smesso di funzionare, quindi il resto di questa registrazione sarà solo audio."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "文字起こしが動作しなくなったため、この録音の残りは音声のみになります。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "텍스트 변환이 작동을 멈춰 이 녹음의 나머지는 오디오만 저장됩니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A transcrição parou de funcionar, então o restante desta gravação terá apenas áudio."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Расшифровка перестала работать, поэтому дальше сохраняется только звук."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Розшифровка перестала працювати, тому далі зберігається лише звук."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "轉寫已停止運作，本次錄音的其餘部分僅保存音訊。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "转写已停止工作，本次录音的其余部分仅保存音频。"
-          }
-        }
-      }
-    },
-    "Transcription stopped working. Tap stop to keep what was transcribed so far.": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Transkription funktioniert nicht mehr. Tippe auf „Stoppen“, um das bisher Transkribierte zu behalten."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Η απομαγνητοφώνηση σταμάτησε να λειτουργεί. Πάτησε «Διακοπή» για να κρατήσεις όσα έχουν καταγραφεί."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La transcripción dejó de funcionar. Toca «Detener» para conservar lo transcrito hasta ahora."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La transcription ne fonctionne plus. Touchez « Arrêter » pour conserver ce qui a été transcrit."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La trascrizione ha smesso di funzionare. Tocca «Ferma» per conservare quanto trascritto finora."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "文字起こしが動作しなくなりました。「停止」をタップすると、ここまでの内容を保存できます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "텍스트 변환이 작동을 멈췄습니다. ‘중지’를 눌러 지금까지 변환된 내용을 저장하세요."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A transcrição parou de funcionar. Toque em «Parar» para manter o que já foi transcrito."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Расшифровка перестала работать. Нажмите «Остановить», чтобы сохранить уже распознанное."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Розшифровка перестала працювати. Натисніть «Зупинити», щоб зберегти вже розпізнане."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "轉寫已停止運作。點一下「停止」以保留目前已轉寫的內容。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "转写已停止工作。点按“停止”以保留目前已转写的内容。"
           }
         }
       }
@@ -38767,83 +38221,6 @@
         }
       }
     },
-    "Up to %@ documents can be switched on at once, so answers stay fast.": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Es können bis zu %@ Dokumente gleichzeitig aktiv sein, damit Antworten schnell bleiben."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Μπορούν να είναι ενεργά έως %@ έγγραφα ταυτόχρονα, ώστε οι απαντήσεις να παραμένουν γρήγορες."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Puedes activar hasta %@ documentos a la vez para que las respuestas sigan siendo rápidas."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jusqu'à %@ documents peuvent être activés à la fois, pour que les réponses restent rapides."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Puoi attivare fino a %@ documenti alla volta, così le risposte restano veloci."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "回答を速く保つため、同時に有効にできる書類は最大%@件です。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "답변 속도를 유지하기 위해 한 번에 최대 %@개의 문서를 켤 수 있습니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Você pode ativar até %@ documentos por vez, para as respostas continuarem rápidas."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Одновременно можно включить до %@ документов, чтобы ответы оставались быстрыми."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Одночасно можна увімкнути до %@ документів, щоб відповіді залишалися швидкими."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最多可以同時開啟 %@ 份文件，咁回應先夠快。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最多可同时启用 %@ 个文稿，以保持回答速度。"
-          }
-        }
-      }
-    },
     "Up to %lld documents can be switched on at once, so answers stay fast.": {
       "localizations": {
         "de": {
@@ -39296,158 +38673,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "语音对话"
-          }
-        }
-      }
-    },
-    "Voice recognition isn't available on this device.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spracherkennung ist auf diesem Gerät nicht verfügbar."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Η αναγνώριση ομιλίας δεν είναι διαθέσιμη σε αυτήν τη συσκευή."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El reconocimiento de voz no está disponible en este dispositivo."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La reconnaissance vocale n'est pas disponible sur cet appareil."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Il riconoscimento vocale non è disponibile su questo dispositivo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このデバイスでは音声認識を利用できません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 기기에서는 음성 인식을 사용할 수 없습니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O reconhecimento de fala não está disponível neste dispositivo."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Распознавание речи недоступно на этом устройстве."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Розпізнавання мовлення недоступне на цьому пристрої."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "呢部裝置唔支援語音識別。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此设备不支持语音识别。"
-          }
-        }
-      }
-    },
-    "Voice recognition isn't available right now.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spracherkennung ist gerade nicht verfügbar."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Η αναγνώριση ομιλίας δεν είναι διαθέσιμη αυτήν τη στιγμή."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El reconocimiento de voz no está disponible ahora mismo."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La reconnaissance vocale n'est pas disponible pour le moment."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Il riconoscimento vocale non è disponibile al momento."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音声認識は現在利用できません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "음성 인식을 지금 사용할 수 없습니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O reconhecimento de fala não está disponível agora."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Распознавание речи сейчас недоступно."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Розпізнавання мовлення зараз недоступне."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "語音識別而家用唔到。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "语音识别当前不可用。"
           }
         }
       }

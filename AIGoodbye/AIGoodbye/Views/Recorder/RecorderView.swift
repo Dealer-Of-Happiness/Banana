@@ -69,7 +69,10 @@ struct RecorderView: View {
             .alert("Nothing was recorded", isPresented: $nothingCaptured) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("No speech was picked up, so nothing was saved. Check that the microphone isn't covered or in use by another app.")
+                // Only ever reached when the microphone delivered silence, so
+                // the advice is true. Sound that couldn't be recognized is
+                // saved as audio instead and never lands here.
+                Text("No sound reached the microphone, so nothing was saved. Check that it isn't covered or in use by another app.")
             }
             .alert(
                 "Couldn't save this recording",
@@ -433,21 +436,19 @@ struct RecorderView: View {
         isStarting = true
         Task {
             defer { isStarting = false }
-            // The microphone is required; speech recognition is not. Someone
-            // who only wants an audio record shouldn't be blocked by it.
+            // The microphone is the only permission asked for here. The
+            // speech engine itself decides whether it needs the older
+            // recognizer's authorization, and asks for it only then: the
+            // system dialog for it claims speech is sent to Apple, which is
+            // untrue of this app and contradicts the screen behind it. On
+            // iOS 26 the modern engine needs nothing beyond the microphone.
             let mic = await AVAudioApplication.requestRecordPermission()
             guard mic else {
                 permissionDenied = true
                 return
             }
-            let speech = await withCheckedContinuation { continuation in
-                SFSpeechRecognizer.requestAuthorization { status in
-                    continuation.resume(returning: status == .authorized)
-                }
-            }
             if await recorder.start(language: appState.settings.appLanguage,
                                     keepAudio: store.keepsAudio,
-                                    transcriptionAllowed: speech,
                                     customVocabulary: store.customVocabulary) {
                 stage = .capturing
             }
@@ -473,6 +474,9 @@ struct RecorderView: View {
         // Nothing captured: don't leave an empty entry behind, and say so.
         guard !result.transcript.isEmpty || result.audioFileName != nil else {
             store.clearCheckpoint()
+            // Back to a clean slate: the timer used to keep showing the
+            // failed recording's duration over a "Start recording" button.
+            recorder.cancel()
             stage = .ready
             nothingCaptured = true
             return

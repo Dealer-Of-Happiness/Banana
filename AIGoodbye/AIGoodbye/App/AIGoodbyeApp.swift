@@ -225,19 +225,29 @@ class AppState: ObservableObject {
     func releaseMemory() {
         chatViewModel.releaseMemory()
         Task { await DocumentIndex.shared.purgeCaches() }
-        // Drop the chat session (and its key-value cache) but keep the model
-        // itself loaded: rebuilding the session is fast, reloading is not.
-        engine.mlx.dropSession()
         engine.appleIntelligence.dropSession()
 
-        // Escalate. Dropping the same caches on the second and third warning
-        // achieves nothing while the weights - 1.8 to 5.8 GB of them - stay
-        // resident, and the app is then killed mid-answer or mid-recording.
-        // The weights are the only thing large enough to matter.
+        // A 6 GB phone sends memory warnings routinely while a 1.8 GB model
+        // is loading or answering - that is normal, not an emergency. Acting
+        // on them at that moment achieved nothing useful (the weights are
+        // retained by the running generation anyway) and cost a great deal:
+        // every warning threw the session away, so the next turn re-read the
+        // whole conversation, and a pair of warnings unloaded the weights,
+        // so the next turn also reloaded 1.8 GB. From the user's side the
+        // first answer simply never came. So: only ever act while idle.
+        guard !engine.mlx.isBusy else {
+            lastMemoryWarning = Date()
+            return
+        }
+
+        // Idle: the key-value cache is the cheap thing to give back.
+        engine.mlx.dropSession()
+
+        // Escalate only for a genuinely repeated warning while idle, which
+        // means something else on the phone needs the memory more.
         let now = Date()
         if let last = lastMemoryWarning, now.timeIntervalSince(last) < 30 {
             engine.mlx.unload()
-            engine.modelWasDroppedForMemory = true
         }
         lastMemoryWarning = now
     }
@@ -267,16 +277,31 @@ class AppState: ObservableObject {
         }
         isInitialized = true
 
-        // Warm up a ready engine in the background so the first answer is quick.
-        // Never blocks the UI and never surfaces launch errors.
+        // Warm up the weights in the background so the first answer is quick.
+        //
+        // Only the weights - deliberately not a session. A session built here
+        // has empty history, and if the restored conversation finished
+        // loading a moment later, the first message found a session already
+        // waiting and answered as if the conversation had never happened.
+        // The first message builds its own session with the right history.
+        //
+        // Failures are left to that first message too: it retries the load
+        // through the normal path and shows the real reason. Recording a
+        // failure here turned a transient launch-time memory squeeze into a
+        // permanent "Set up your AI model" chip on a phone with the model
+        // fully installed.
+        // Never in the Simulator: MLX has no Metal device there and aborts
+        // the process the moment it touches one, so this warm-up took the
+        // whole app down about twenty seconds after every launch with a
+        // downloaded model. The chat path already knows this and echoes.
+        #if !targetEnvironment(simulator)
         let model = engine.selectedModel
-        if model.backend == .appleIntelligence && engine.appleIntelligence.isAvailable {
-            try? await engine.startConversation(model: model, history: [])
-        } else if model.backend == .mlx && model.isDownloaded {
+        if model.backend == .mlx && model.isDownloaded {
             Task { [engine] in
-                try? await engine.startConversation(model: model, history: [])
+                try? await engine.mlx.loadModel(model)
             }
         }
+        #endif
     }
 
     func createNewConversation() {

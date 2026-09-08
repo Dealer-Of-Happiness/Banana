@@ -12,6 +12,7 @@
 
 import Foundation
 import Combine
+import Hub
 
 @MainActor
 final class ModelManager: ObservableObject {
@@ -40,6 +41,23 @@ final class ModelManager: ObservableObject {
     func modelDirectory(for model: AIModel) -> URL? {
         guard let hfId = model.huggingFaceId else { return nil }
         return hubModelsRoot.appendingPathComponent(hfId, isDirectory: true)
+    }
+
+    /// The Hub client the loader MUST be given.
+    ///
+    /// `HubApi` resolves a repository at `<downloadBase>/models/<id>`, and
+    /// `hubModelsRoot` is exactly `<Documents>/huggingface/models`, so this
+    /// points the library at the files the prefetcher wrote.
+    ///
+    /// Without it the library uses its own default, which moved to
+    /// `Library/Caches` in mlx-swift-lm 2.25.5. The app then reported a model
+    /// as downloaded, and the loader - looking in a different folder - quietly
+    /// downloaded all 1.8 GB a second time behind "Preparing...", ignoring
+    /// the Wi-Fi-only setting and the free-space check, and failed outright
+    /// when offline with "Repository not available locally". That is what
+    /// "the AI never answers" looked like from the user's side.
+    nonisolated var hub: HubApi {
+        HubApi(downloadBase: hubModelsRoot.deletingLastPathComponent())
     }
 
     // MARK: - State

@@ -2,6 +2,27 @@
 
 Paste-ready text for App Store Connect.
 
+## What's New (version 3.4.1, build 17) - September 7, 2026
+
+A fix release for everyone on 3.4.0. If the app wasn't answering, this is the one.
+
+- Fixed: a downloaded model could go unrecognized, so chat waited forever on
+  "Preparing" or asked you to download it again. It now loads straight from
+  your phone, even on Wi-Fi with no internet
+- Fixed: voice conversation and Translate quietly gave up instead of saying
+  what went wrong. They now tell you, and let you try again
+- Fixed: the recorder could spin at full CPU and then throw away your recording
+  with a false "check your microphone" message. The audio is always kept
+- Fixed: a crash after a number of photo questions in one conversation
+- Fixed: Stop didn't work while a model was still loading
+- Model downloads now continue if the app is closed, and pick up where they left off
+- Only the microphone permission is asked for; speech is never sent anywhere
+- Memory use on 6 GB phones is measured correctly, so the recommended model is offered
+
+100% on device. No cloud, no accounts, no subscriptions.
+
+---
+
 ## What's New (version 3.4.0, build 16) - September 6, 2026
 
 A big quality release. Transcription is dramatically more accurate, recordings survive

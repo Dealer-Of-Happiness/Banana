@@ -398,7 +398,7 @@ final class MLXService: ObservableObject {
         // message both arrive here, and two prefetches of one file would
         // open two background sessions under the same identifier.
         if let inflight = debugDownloadTask {
-            try await inflight.value
+            try await Timeout.awaitCancellable(inflight)
             return
         }
         let task = Task { [self] in
@@ -416,7 +416,14 @@ final class MLXService: ObservableObject {
         }
         debugDownloadTask = task
         defer { debugDownloadTask = nil }
-        try await task.value
+        // Cancellable, like the real load: `task.value` on an unstructured
+        // task is not a cancellation point, so Stop would otherwise wait
+        // for the whole download.
+        try await withTaskCancellationHandler {
+            try await Timeout.awaitCancellable(task)
+        } onCancel: {
+            task.cancel()
+        }
     }
 
     private var debugDownloadTask: Task<Void, Error>?

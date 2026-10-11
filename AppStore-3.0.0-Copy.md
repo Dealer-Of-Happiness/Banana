@@ -2,9 +2,9 @@
 
 Paste-ready text for App Store Connect.
 
-## What's New (version 3.5.0, build 19) - October 10, 2026
+## What's New (version 3.5.0, build 20) - October 11, 2026
 
-Ready for iPhone Duo, plus everything from 3.4.1.
+Ready for iPhone Duo, a top-to-bottom quality pass, plus everything from 3.4.1.
 
 MADE FOR IPHONE DUO
 - Opens up with you: open it like a book and your conversations sit in a
@@ -18,6 +18,23 @@ MADE FOR IPHONE DUO
 
 ROTATES NOW
 - Every screen works on its side on any iPhone, not just upright
+
+MORE RELIABLE EVERYWHERE
+- Photo questions on Apple Intelligence now download the vision model once
+  instead of asking again and again
+- Stop really stops: the next answer no longer continues the one you stopped
+- Downloads keep what they fetched when you stop them, say when they are
+  waiting for Wi-Fi, and explain the real reason when something goes wrong
+- "Remember that..." works in all 13 languages, not just English
+- The Face ID lock now covers every screen, including open settings
+- Voice conversations stop talking and listening the moment you leave the app;
+  tapping to interrupt no longer gets talked over
+- The recorder keeps your transcript if recognition drops mid-meeting, and
+  never overwrites an interrupted recording
+- Photos you attach stay with the chat and come back after a restore
+- Conversations open at the newest message; the keyboard no longer hides the
+  last answer
+- Text files in older encodings import; Siri phrases in 12 more languages
 
 FIXES (from 3.4.1)
 - A downloaded model could go unrecognized, so chat waited forever or asked you

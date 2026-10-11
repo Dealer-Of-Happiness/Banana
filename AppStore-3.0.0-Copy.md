@@ -2,6 +2,38 @@
 
 Paste-ready text for App Store Connect.
 
+## What's New (version 3.5.0, build 18) - October 10, 2026
+
+Ready for iPhone Duo, plus everything from 3.4.1.
+
+MADE FOR IPHONE DUO
+- Opens up with you: on the inner display your conversations sit in a sidebar
+  beside the chat, and the app keeps whatever you were doing when you fold or
+  unfold - a recording in progress included
+- Buttons move to the side bar beside the display, where iPhone Duo keeps them
+- Half open, voice conversations, the live camera and Describe Surroundings
+  put their content on one side of the fold and the controls on the other
+- Take Photo is new: it follows the way you hold the phone and offers the
+  camera facing you on either display
+
+ROTATES NOW
+- Every screen works on its side on any iPhone, not just upright
+
+FIXES (from 3.4.1)
+- A downloaded model could go unrecognized, so chat waited forever or asked you
+  to download it again. It now loads straight from your phone, even on Wi-Fi
+  with no internet
+- Voice conversation and Translate now say what went wrong instead of quietly
+  giving up
+- The recorder no longer spins at full CPU or throws away a recording with a
+  false "check your microphone"
+- A crash after a number of photo questions in one conversation
+- Model downloads continue if the app is closed and pick up where they left off
+
+100% on device. No cloud, no accounts, no subscriptions.
+
+---
+
 ## What's New (version 3.4.1, build 17) - September 7, 2026
 
 A fix release for everyone on 3.4.0. If the app wasn't answering, this is the one.

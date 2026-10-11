@@ -268,6 +268,11 @@ struct VoiceModeView: View {
         .font(.subheadline)
         .foregroundStyle(.secondary)
         .multilineTextAlignment(.center)
+        // Claims its full height at the width it is given. Inside an
+        // arrangement view the parts are measured first and the status
+        // was being measured as one line, then truncated to "…" once it
+        // had to wrap.
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal)
     }
 

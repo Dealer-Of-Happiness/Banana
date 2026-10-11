@@ -81,26 +81,30 @@ struct SceneDescriptionView: View {
     /// display, which hears nothing at all - could never read it.
     private var isSpeakingAloud: Bool { voice.isSpeaking }
 
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-
-            if !camera.failed {
-                CameraPreview(session: camera.session)
-                    .ignoresSafeArea()
-                    .accessibilityHidden(true)
-                // Dim the viewfinder: this screen is meant to be listened to,
-                // and a dimmer preview saves battery on a long walk.
-                Color.black.opacity(0.35).ignoresSafeArea()
-            }
-
-            VStack(spacing: 14) {
-                topBar
-                Spacer(minLength: 0)
-                transcriptPanel
-                controls
+        NavigationStack {
+            stage
+                .background(Color.black.ignoresSafeArea())
+            .navigationTitle("Describe Surroundings")
+            .navigationSubtitle("Spoken aloud · 100% on-device")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", systemImage: "xmark") {
+                        dismiss()
+                    }
+                    .accessibilityLabel(Text("Close describe surroundings"))
+                }
             }
         }
+        // The system toolbar item is a smaller target than the old 56 pt
+        // X; the two-finger scrub gesture still closes the screen for
+        // anyone who finds it by feel.
+        .accessibilityAction(.escape) { dismiss() }
         .onAppear(perform: start)
         .onDisappear {
             isActive = false
@@ -157,29 +161,69 @@ struct SceneDescriptionView: View {
 
     // MARK: - Pieces
 
-    private var topBar: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Describe Surroundings")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                Text("Spoken aloud · 100% on-device")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.75))
+    /// The viewfinder with the description and controls over it - or, on
+    /// an iPhone Duo folded half open, the viewfinder in one half and the
+    /// controls in the other, clear of the hinge.
+    @ViewBuilder
+    private var stage: some View {
+        if #available(iOS 27.1, *) {
+            ArrangementView {
+                layout
+            } secondary: {
+                viewfinder
             }
-            Spacer()
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 30))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .frame(minWidth: 56, minHeight: 56)
+            .arrangementViewStyle(.overlay)
+        } else {
+            ZStack {
+                viewfinder
+                layout
             }
-            .accessibilityLabel(Text("Close describe surroundings"))
         }
-        .padding(.horizontal)
-        .padding(.top, 8)
+    }
+
+    @ViewBuilder
+    private var viewfinder: some View {
+        if !camera.failed {
+            ZStack {
+                CameraPreview(camera: camera)
+                    .ignoresSafeArea()
+                    .accessibilityHidden(true)
+                // Dim the viewfinder: this screen is meant to be listened to,
+                // and a dimmer preview saves battery on a long walk.
+                Color.black.opacity(0.35).ignoresSafeArea()
+            }
+        } else {
+            Color.black.ignoresSafeArea()
+        }
+    }
+
+    /// Upright: the description above the controls. Short and wide (a
+    /// landscape phone, an iPhone Duo on its side): description beside the
+    /// controls, which scroll if they must. Stacked, the controls alone
+    /// took most of a landscape phone's height and the toggle fell off the
+    /// bottom of the screen.
+    @ViewBuilder
+    private var layout: some View {
+        if verticalSizeClass == .compact {
+            HStack(alignment: .bottom, spacing: 0) {
+                VStack {
+                    Spacer(minLength: 0)
+                    transcriptPanel
+                }
+                .frame(maxWidth: .infinity)
+
+                ScrollView {
+                    controls
+                }
+                .frame(width: 300)
+            }
+        } else {
+            VStack(spacing: 14) {
+                Spacer(minLength: 0)
+                transcriptPanel
+                controls
+            }
+        }
     }
 
     @ViewBuilder
@@ -201,7 +245,7 @@ struct SceneDescriptionView: View {
                     .padding(14)
                     .textSelection(.enabled)
             }
-            .frame(maxHeight: 260)
+            .frame(maxHeight: verticalSizeClass == .compact ? .infinity : 260)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
             .padding(.horizontal)
             .defaultScrollAnchor(.bottom)
@@ -237,7 +281,7 @@ struct SceneDescriptionView: View {
                     Text(isDescribing ? "Looking..." : "Describe now")
                         .font(.title3.weight(.semibold))
                 }
-                .frame(maxWidth: .infinity, minHeight: 68)
+                .frame(maxWidth: .infinity, minHeight: verticalSizeClass == .compact ? 52 : 68)
                 .background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial))
                 .foregroundStyle(.white)
             }

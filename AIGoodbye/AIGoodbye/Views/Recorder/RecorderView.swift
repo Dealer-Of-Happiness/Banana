@@ -19,6 +19,7 @@ struct RecorderView: View {
     @ObservedObject private var store = RecordingStore.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     enum Stage: Equatable { case ready, capturing, saving, finished }
 
@@ -56,14 +57,43 @@ struct RecorderView: View {
             .navigationTitle(Text("Record"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
+                // Icon and title both: on iPhone Duo the system shows only
+                // the icon in its vertical bar, and a text-only button
+                // would vanish from the closed phone entirely.
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(
+                        stage == .finished ? "Done" : "Close",
+                        systemImage: stage == .finished ? "checkmark" : "xmark"
+                    ) {
                         close()
-                    } label: {
-                        Text(stage == .finished ? "Done" : "Close")
                     }
                     .accessibilityLabel(Text("Close recorder"))
                     .disabled(isStopping)
+                    // Anchored to the button it belongs to. Attached to the
+                    // whole screen, the popover a wide window turns this
+                    // into pointed at the middle of the display - on an
+                    // iPhone Duo folded like a book, that is the hinge.
+                    .confirmationDialog(
+                        "Discard this recording?",
+                        isPresented: $confirmingDiscard,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Save and close") {
+                            Task {
+                                await stopRecording()
+                                // Only leave if it actually saved. Dismissing
+                                // here regardless took the failure alert - and
+                                // the only in-memory copy of the transcript -
+                                // away with the sheet.
+                                guard saveFailed == nil, unsaved == nil, !nothingCaptured else { return }
+                                close(force: true)
+                            }
+                        }
+                        Button("Discard recording", role: .destructive) { close(force: true) }
+                        Button("Keep recording", role: .cancel) {}
+                    } message: {
+                        Text("This recording hasn't been saved yet.")
+                    }
                 }
             }
             .alert("Nothing was recorded", isPresented: $nothingCaptured) {
@@ -96,27 +126,6 @@ struct RecorderView: View {
                 Button("Keep trying later", role: .cancel) { saveFailed = nil }
             } message: {
                 Text(saveFailed ?? "")
-            }
-            .confirmationDialog(
-                "Discard this recording?",
-                isPresented: $confirmingDiscard,
-                titleVisibility: .visible
-            ) {
-                Button("Save and close") {
-                    Task {
-                        await stopRecording()
-                        // Only leave if it actually saved. Dismissing here
-                        // regardless took the failure alert - and the only
-                        // in-memory copy of the transcript - away with the
-                        // sheet.
-                        guard saveFailed == nil, unsaved == nil, !nothingCaptured else { return }
-                        close(force: true)
-                    }
-                }
-                Button("Discard recording", role: .destructive) { close(force: true) }
-                Button("Keep recording", role: .cancel) {}
-            } message: {
-                Text("This recording hasn't been saved yet.")
             }
             .alert("Recover the interrupted recording?", isPresented: $showingRecovery) {
                 Button("Recover") {
@@ -163,17 +172,40 @@ struct RecorderView: View {
 
     // MARK: - Capture
 
+    /// Upright: timer, transcript, controls, top to bottom. Short and wide
+    /// (a landscape phone, an iPhone Duo on its side): timer and controls in
+    /// a column beside the transcript. Stacked, the fixed parts alone took
+    /// about 330 of a landscape phone's 350 pt, and the speech-model
+    /// download notice pushed Start recording off the bottom of the screen.
+    @ViewBuilder
     private var captureScreen: some View {
-        VStack(spacing: 0) {
-            statusBlock
+        Group {
+            if verticalSizeClass == .compact {
+                HStack(spacing: 0) {
+                    VStack(spacing: 0) {
+                        statusBlock
+                        Spacer(minLength: 0)
+                        controlBlock
+                    }
+                    .frame(maxWidth: 360)
 
-            Divider()
+                    Divider()
 
-            transcriptBlock
+                    transcriptBlock
+                }
+            } else {
+                VStack(spacing: 0) {
+                    statusBlock
 
-            Divider()
+                    Divider()
 
-            controlBlock
+                    transcriptBlock
+
+                    Divider()
+
+                    controlBlock
+                }
+            }
         }
         .background(Color(.systemGroupedBackground))
     }
@@ -181,7 +213,7 @@ struct RecorderView: View {
     private var statusBlock: some View {
         VStack(spacing: 10) {
             Text(ConversationExporter.durationText(recorder.elapsed))
-                .font(.system(size: 46, weight: .light, design: .rounded))
+                .font(.system(size: verticalSizeClass == .compact ? 34 : 46, weight: .light, design: .rounded))
                 .monospacedDigit()
                 .contentTransition(.numericText())
                 .accessibilityLabel(Text("Recorded so far: \(ConversationExporter.durationText(recorder.elapsed))"))
@@ -228,7 +260,7 @@ struct RecorderView: View {
                 .foregroundStyle(.secondary)
             }
         }
-        .padding(.vertical, 20)
+        .padding(.vertical, verticalSizeClass == .compact ? 10 : 20)
         .frame(maxWidth: .infinity)
     }
 
@@ -270,7 +302,7 @@ struct RecorderView: View {
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
-                    .padding(.top, 50)
+                    .padding(.top, verticalSizeClass == .compact ? 16 : 50)
                     .padding(.horizontal, 32)
                 } else {
                     // Only the tail is rendered while capturing. Laying out a
@@ -355,9 +387,11 @@ struct RecorderView: View {
                 )) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Keep the audio")
-                        Text("Off by default. The transcript is kept either way.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        if verticalSizeClass != .compact {
+                            Text("Off by default. The transcript is kept either way.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
                 .font(.subheadline)

@@ -31,12 +31,14 @@ final class AIGoodbyeUITests: XCTestCase {
 
         acceptTermsIfNeeded(app)
 
-        // Open the side menu and Settings.
+        // Open the conversation list (a drawer on a phone, a sidebar that
+        // may already be showing on a wide window) and Settings.
         let menuButton = app.buttons["Conversations menu"]
         XCTAssertTrue(menuButton.waitForExistence(timeout: 10), "Chat screen should show")
-        menuButton.tap()
-
         let settingsButton = app.buttons["Settings"].firstMatch
+        if !(settingsButton.exists && settingsButton.isHittable) {
+            menuButton.tap()
+        }
         XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
         settingsButton.tap()
 
@@ -160,6 +162,70 @@ final class AIGoodbyeUITests: XCTestCase {
 
         XCTAssertTrue(voiceButton.waitForExistence(timeout: 10),
                       "Chat should return after closing voice mode")
+    }
+
+    /// The app now rotates on iPhone (it has to: an iPhone Duo is held and
+    /// stood up in every orientation). Every control a user needs must stay
+    /// on screen in a short, wide window: the chat's composer and menu, and
+    /// voice mode's only button, which the old stacked layout pushed off the
+    /// bottom of a landscape phone.
+    @MainActor
+    func testLandscapeKeepsControlsOnScreen() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["AIG_FORCE_NO_AI"] = "1"
+        app.launch()
+        acceptTermsIfNeeded(app)
+
+        addUIInterruptionMonitor(withDescription: "Permissions") { alert in
+            for label in ["OK", "Allow", "Allow While Using App"] {
+                let button = alert.buttons[label]
+                if button.exists { button.tap(); return true }
+            }
+            return false
+        }
+
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+
+        let menuButton = app.buttons["Conversations menu"]
+        XCTAssertTrue(menuButton.waitForExistence(timeout: 10), "Chat toolbar should show in landscape")
+        XCTAssertTrue(menuButton.isHittable, "Menu button must be tappable in landscape")
+
+        let voiceButton = app.buttons["Start a voice conversation"]
+        XCTAssertTrue(voiceButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(voiceButton.isHittable, "Composer must be on screen in landscape")
+
+        // The list still opens in a landscape window: a drawer on a phone,
+        // a sidebar on a wide one (where it may already be showing).
+        let settings = app.buttons["Settings"].firstMatch
+        if !(settings.exists && settings.isHittable) {
+            menuButton.tap()
+        }
+        XCTAssertTrue(settings.waitForExistence(timeout: 5), "List should open in landscape")
+        XCTAssertTrue(settings.isHittable)
+        let closeMenu = app.buttons["Close menu"].firstMatch
+        if closeMenu.exists && closeMenu.isHittable {
+            closeMenu.tap()
+        }
+
+        // Voice mode: its one control must be reachable.
+        XCTAssertTrue(voiceButton.waitForExistence(timeout: 5))
+        voiceButton.tap()
+        let talk = app.buttons["Tap to talk"]
+        var presented = false
+        for _ in 0..<10 {
+            if talk.exists { presented = true; break }
+            app.swipeUp()
+            usleep(700_000)
+        }
+        XCTAssertTrue(presented || talk.waitForExistence(timeout: 5), "Voice mode should present in landscape")
+        XCTAssertTrue(talk.isHittable, "Tap to talk must be on screen in landscape")
+
+        let close = app.buttons["Close voice mode"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        XCTAssertTrue(close.isHittable, "Close must be on screen in landscape")
+        close.tap()
+        XCTAssertTrue(voiceButton.waitForExistence(timeout: 10))
     }
 
     // MARK: - Helpers

@@ -71,14 +71,12 @@ struct RecordingsView: View {
             .navigationTitle(Text("Recordings"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Done") { dismiss() }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done", systemImage: "checkmark") { dismiss() }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("New Recording", systemImage: "mic.badge.plus") {
                         showingRecorder = true
-                    } label: {
-                        Image(systemName: "mic.badge.plus")
                     }
                     .accessibilityLabel(Text("New recording"))
                 }

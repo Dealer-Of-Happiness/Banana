@@ -42,6 +42,8 @@ struct ChatView: View {
     /// answer follows along without stealing the scroll from the user.
     @State private var isPinnedToBottom = true
     @State private var showingSetup = false
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     /// Shown once, right after the terms, so a new user knows where they
     /// stand before typing anything.
     @AppStorage("hasSeenSetup") private var hasSeenSetup = false
@@ -138,6 +140,11 @@ struct ChatView: View {
 
                 inputArea
             }
+            .navigationTitle(chatTitle)
+            // The model is the one thing worth knowing about a chat at a
+            // glance; it used to live in a custom title view, which the
+            // iPhone Duo vertical bar cannot show at all.
+            .navigationSubtitle(appState.engine.selectedModel.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .photosPicker(
@@ -185,12 +192,11 @@ struct ChatView: View {
             .fullScreenCover(isPresented: $showingCamera) {
                 // Full screen per Apple guidance for the camera (a sheet
                 // letterboxes on iPad).
-                CameraView { image in
+                PhotoCaptureView { image in
                     viewModel.pendingImage = image
                     viewModel.pendingImageId = UUID()
                     showingCamera = false
                 }
-                .ignoresSafeArea()
             }
             .sheet(isPresented: $showingDocumentPicker) {
                 DocumentPickerView { urls in
@@ -307,64 +313,62 @@ struct ChatView: View {
 
     // MARK: - Toolbar
 
+    private var chatTitle: String {
+        appState.currentConversation?.displayTitle ?? L10n.text("New Chat")
+    }
+
+    /// Every item has an icon and a title. On iPhone Duo the system lays
+    /// these out vertically beside the display when the device is closed,
+    /// and only items with a symbol make it into that bar; an item that is
+    /// a custom view simply disappears. Titles feed the overflow menu.
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
-            Button {
-                appState.toggleSideMenu()
-            } label: {
-                Image(systemName: "line.3.horizontal")
-                    .frame(minWidth: 44, minHeight: 44)
+            Button("Conversations", systemImage: "line.3.horizontal") {
+                appState.toggleSideMenu(twoPane: horizontalSizeClass == .regular)
             }
             .accessibilityLabel(Text("Conversations menu"))
         }
 
-        ToolbarItem(placement: .principal) {
-            Button {
-                showingModelPicker = true
-            } label: {
-                VStack(spacing: 1) {
-                    Text(appState.currentConversation?.displayTitle ?? L10n.text("New Chat"))
-                        .font(.headline)
-                        .lineLimit(1)
-                    HStack(spacing: 3) {
-                        Text(appState.engine.selectedModel.name)
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 8, weight: .bold))
-                    }
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+        if #available(iOS 27, *) {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Choose Model", systemImage: "cpu") {
+                    showingModelPicker = true
                 }
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Current chat: \(appState.currentConversation?.displayTitle ?? L10n.text("New Chat")). Model: \(appState.engine.selectedModel.name). Tap to change model."))
-        }
+            .visibilityPriority(.high)
 
-        ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                Button {
+            // The system's own overflow menu, so people find everything in
+            // one place when space is tight, rather than an app-specific
+            // ellipsis beside the system's.
+            ToolbarOverflowMenu {
+                Button("Regenerate", systemImage: "arrow.clockwise") {
                     viewModel.regenerateLastResponse()
-                } label: {
-                    Label("Regenerate", systemImage: "arrow.clockwise")
                 }
                 .disabled(viewModel.isGenerating)
 
-                Button {
-                    showingModelPicker = true
-                } label: {
-                    Label("Choose Model", systemImage: "cpu")
-                }
-
-                Button(role: .destructive) {
+                Button("Clear Chat", systemImage: "trash", role: .destructive) {
                     showingClearConfirmation = true
-                } label: {
-                    Label("Clear Chat", systemImage: "trash")
                 }
-            } label: {
-                Image(systemName: "ellipsis.circle")
-                    .frame(minWidth: 44, minHeight: 44)
             }
-            .accessibilityLabel(Text("Chat options"))
+        } else {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu("Chat Options", systemImage: "ellipsis.circle") {
+                    Button("Regenerate", systemImage: "arrow.clockwise") {
+                        viewModel.regenerateLastResponse()
+                    }
+                    .disabled(viewModel.isGenerating)
+
+                    Button("Choose Model", systemImage: "cpu") {
+                        showingModelPicker = true
+                    }
+
+                    Button("Clear Chat", systemImage: "trash", role: .destructive) {
+                        showingClearConfirmation = true
+                    }
+                }
+                .accessibilityLabel(Text("Chat options"))
+            }
         }
     }
 
@@ -603,7 +607,10 @@ struct ChatView: View {
     private var emptyStateView: some View {
         ScrollView {
             VStack(spacing: 24) {
-                Spacer(minLength: 60)
+                // A landscape phone has about 350 pt to work with; the
+                // generous top space of the portrait layout would push the
+                // quick actions out of view.
+                Spacer(minLength: verticalSizeClass == .compact ? 12 : 60)
 
                 ZStack {
                     Image(systemName: "bubble.left.and.bubble.right.fill")
@@ -635,7 +642,11 @@ struct ChatView: View {
                 // "attach something". Nine features had been living behind a
                 // "+" button labelled "Add photo or document", where nobody
                 // would ever find them.
-                VStack(spacing: 12) {
+                //
+                // An adaptive grid: one column on a phone, two on a wide
+                // window. On an iPhone Duo folded like a book, two columns
+                // put the gutter on the hinge rather than every row across it.
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: 12)], spacing: 12) {
                     QuickActionButton(
                         icon: "text.bubble.fill",
                         title: L10n.text("Just Chat"),
@@ -689,6 +700,8 @@ struct ChatView: View {
                 Spacer()
             }
             .padding()
+            .frame(maxWidth: 640)
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -878,7 +891,10 @@ struct ChatView: View {
                     axis: .vertical
                 )
                 .textFieldStyle(.plain)
-                .lineLimit(1...5)
+                // Two lines when the window is short: a five-line composer
+                // over the keyboard on a landscape phone leaves no room to
+                // read the answer being typed about.
+                .lineLimit(verticalSizeClass == .compact ? 1...2 : 1...5)
                 .focused($isInputFocused)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
@@ -923,6 +939,10 @@ struct ChatView: View {
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
+            // Same reading width as the transcript, so the composer sits
+            // under the bubbles rather than stretching across a wide display.
+            .frame(maxWidth: 760)
+            .frame(maxWidth: .infinity)
         }
         .background(.bar)
     }
@@ -2014,11 +2034,6 @@ struct ModelDownloadConsentSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Capsule()
-                .fill(Color(.systemGray4))
-                .frame(width: 36, height: 5)
-                .padding(.top, 8)
-
             // Scrollable content so the buttons below stay reachable at
             // large Dynamic Type sizes.
             ScrollView {
@@ -2064,7 +2079,7 @@ struct ModelDownloadConsentSheet: View {
                     .font(.subheadline)
                     .padding(.horizontal)
                 }
-                .padding(.top, 12)
+                .padding(.top, 24)
                 .frame(maxWidth: 500)
                 .frame(maxWidth: .infinity)
             }
@@ -2088,46 +2103,10 @@ struct ModelDownloadConsentSheet: View {
             .padding(.bottom, 16)
             .frame(maxWidth: 500)
         }
-    }
-}
-
-// MARK: - Camera View
-
-struct CameraView: UIViewControllerRepresentable {
-    let onImageCaptured: (UIImage) -> Void
-
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = .camera
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onImageCaptured: onImageCaptured)
-    }
-
-    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let onImageCaptured: (UIImage) -> Void
-
-        init(onImageCaptured: @escaping (UIImage) -> Void) {
-            self.onImageCaptured = onImageCaptured
-        }
-
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            if let image = info[.originalImage] as? UIImage {
-                // A portrait capture carries `.right`; bake it in now so
-                // every downstream consumer sees the picture the user saw.
-                onImageCaptured(ImageNormalizer.upright(image))
-            }
-            picker.dismiss(animated: true)
-        }
-
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            picker.dismiss(animated: true)
-        }
+        // The system's grabber, not a drawn one: this sheet is a bottom
+        // sheet on a phone, but a centered form on a wide window and a
+        // full-height one in landscape, where a painted capsule would lie.
+        .presentationDragIndicator(.visible)
     }
 }
 

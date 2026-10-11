@@ -23,10 +23,11 @@ struct ModelSelectionView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    // Icon and title: iPhone Duo shows only icons in its
+                    // vertical bar, so a text-only Done would not appear.
+                    Button("Done", systemImage: "checkmark") {
                         dismiss()
                     }
-                    .accessibilityLabel("Done")
                 }
             }
         }

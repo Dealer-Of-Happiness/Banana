@@ -11,6 +11,10 @@ import UniformTypeIdentifiers
 import Combine
 
 struct SideMenuView: View {
+    /// True when shown beside the chat (regular width) rather than sliding
+    /// over it. A sidebar has no close button and stays put after a choice.
+    var isSidebar = false
+
     @EnvironmentObject var appState: AppState
     @ObservedObject private var recordingStore = RecordingStore.shared
     @State private var showNewFolderAlert = false
@@ -72,7 +76,9 @@ struct SideMenuView: View {
             // Settings button
             settingsButton
         }
-        .background(Color(.systemBackground))
+        // Under the status bar and the leading safe area too, so a landscape
+        // phone doesn't show a bare strip beside the Dynamic Island.
+        .background(Color(.systemBackground).ignoresSafeArea())
         .alert("New Folder", isPresented: $showNewFolderAlert) {
             TextField("Folder name", text: $newFolderName)
             Button("Cancel", role: .cancel) {
@@ -145,7 +151,7 @@ struct SideMenuView: View {
                     onSelectChat: { chat in
                         appState.currentConversation = chat
                         folderToView = nil
-                        appState.toggleSideMenu()
+                        if !isSidebar { appState.dismissSideMenuAfterSelection() }
                     },
                     onRemoveFromFolder: { chat in
                         appState.conversationManager.moveConversation(chat, to: nil)
@@ -177,16 +183,18 @@ struct SideMenuView: View {
 
             Spacer()
 
-            Button {
-                appState.toggleSideMenu()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
+            if !isSidebar {
+                Button {
+                    appState.toggleSideMenu()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("Close menu")
             }
-            .accessibilityLabel("Close menu")
         }
         .padding()
     }
@@ -197,7 +205,7 @@ struct SideMenuView: View {
         VStack(spacing: 8) {
             Button {
                 appState.createNewConversation()
-                appState.toggleSideMenu()
+                if !isSidebar { appState.dismissSideMenuAfterSelection() }
             } label: {
                 Label("New Chat", systemImage: "plus.bubble.fill")
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -352,9 +360,13 @@ struct SideMenuView: View {
                         ForEach(appState.conversationManager.conversations) { chat in
                             Button {
                                 appState.currentConversation = chat
-                                appState.toggleSideMenu()
+                                if !isSidebar { appState.dismissSideMenuAfterSelection() }
                             } label: {
-                                ChatRow(conversation: chat, isDragging: draggedConversation?.id == chat.id)
+                                ChatRow(
+                                    conversation: chat,
+                                    isDragging: draggedConversation?.id == chat.id,
+                                    isSelected: isSidebar && appState.currentConversation?.id == chat.id
+                                )
                             }
                             .buttonStyle(.plain)
                                 .contextMenu {
@@ -568,6 +580,9 @@ struct FolderRow: View {
 struct ChatRow: View {
     let conversation: Conversation
     var isDragging: Bool = false
+    /// Highlighted in the sidebar, where the chat it opens is visible
+    /// beside it and the list needs to say which one that is.
+    var isSelected: Bool = false
 
     var body: some View {
         HStack {
@@ -601,8 +616,14 @@ struct ChatRow: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
+                .padding(.horizontal, 6)
+        )
         .contentShape(Rectangle())
         .opacity(isDragging ? 0.5 : 1.0)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

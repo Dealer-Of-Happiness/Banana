@@ -30,7 +30,7 @@ struct SettingsView: View {
         // and the only one that could be left by swipe alone.
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("Done") { dismiss() }
+                Button("Done", systemImage: "checkmark") { dismiss() }
             }
         }
         // Presented from the Form level: presenting from a Section inside an

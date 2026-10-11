@@ -169,7 +169,16 @@ class AppState: ObservableObject {
     /// engines instead of building a second copy of everything.
     static weak var shared: AppState?
 
+    /// The conversation drawer, in compact width: slides over the chat.
     @Published var showSideMenu = false
+    /// The conversation sidebar, in regular width (iPad, iPhone Duo open,
+    /// a wide iPhone Mirroring window): sits beside the chat. Separate from
+    /// the drawer on purpose. The two states must not be one flag, or
+    /// closing a half-open iPhone Duo with the sidebar showing would land
+    /// on the outer display with the drawer thrown open over the chat.
+    @Published var showSidebar: Bool = UserDefaults.standard.object(forKey: "showSidebar") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(showSidebar, forKey: "showSidebar") }
+    }
     @Published var currentConversation: Conversation? {
         didSet {
             guard let id = currentConversation?.id else { return }
@@ -374,9 +383,28 @@ class AppState: ObservableObject {
         SharedInbox.sweepStaleFiles()
     }
 
-    func toggleSideMenu() {
+    /// The chat toolbar's menu button. In compact width it opens and closes
+    /// the drawer; in regular width it shows and hides the sidebar. The
+    /// caller passes its own size class: the view that is tapped knows
+    /// which layout it is in, and a flag stored here could only ever
+    /// describe one window.
+    func toggleSideMenu(twoPane: Bool = false) {
         withAnimation(.spring(response: 0.3)) {
-            showSideMenu.toggle()
+            if twoPane {
+                showSidebar.toggle()
+            } else {
+                showSideMenu.toggle()
+            }
+        }
+    }
+
+    /// Called by the drawer after a choice is made, so it gets out of the
+    /// way. The sidebar never calls this; staying put is what a sidebar
+    /// is for.
+    func dismissSideMenuAfterSelection() {
+        guard showSideMenu else { return }
+        withAnimation(.spring(response: 0.3)) {
+            showSideMenu = false
         }
     }
 }

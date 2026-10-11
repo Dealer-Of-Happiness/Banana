@@ -21,7 +21,10 @@ enum ImageNormalizer {
     /// A `UIImage` whose pixels are already in the orientation people see,
     /// so `.cgImage` is safe to use downstream. Returns the original when it
     /// is already upright.
-    static func upright(_ image: UIImage) -> UIImage {
+    /// Safe off the main thread: a renderer and a draw, nothing shared.
+    /// It is called from the camera's photo callback, which arrives on a
+    /// capture queue.
+    nonisolated static func upright(_ image: UIImage) -> UIImage {
         guard image.imageOrientation != .up else { return image }
         let format = UIGraphicsImageRendererFormat.default()
         format.scale = image.scale

@@ -43,14 +43,28 @@ struct TranslateModeView: View {
         AppLanguage.pickerOrder.filter { $0 != .automatic }
     }
 
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            languageBar
-            transcript
-            controls
+        NavigationStack {
+            VStack(spacing: 0) {
+                languageBar
+                transcript
+                controls
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Translate")
+            .navigationSubtitle("Works with no internet")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", systemImage: "xmark") {
+                        dismiss()
+                    }
+                    .accessibilityLabel(Text("Close translate"))
+                }
+            }
         }
-        .background(Color(.systemGroupedBackground))
         .onAppear(perform: start)
         .onDisappear {
             isActive = false
@@ -71,30 +85,6 @@ struct TranslateModeView: View {
 
     // MARK: - Pieces
 
-    private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Translate")
-                    .font(.headline)
-                Text("Works with no internet")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title)
-                    .foregroundStyle(.secondary)
-                    .frame(minWidth: 44, minHeight: 44)
-            }
-            .accessibilityLabel(Text("Close translate"))
-        }
-        .padding(.horizontal)
-        .padding(.top, 8)
-    }
-
     private var languageBar: some View {
         HStack(spacing: 12) {
             picker(for: $myLanguage, label: L10n.text("You"))
@@ -114,6 +104,8 @@ struct TranslateModeView: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
+        .frame(maxWidth: 760)
+        .frame(maxWidth: .infinity)
     }
 
     private func picker(for binding: Binding<AppLanguage>, label: String) -> some View {
@@ -146,7 +138,7 @@ struct TranslateModeView: View {
                                 .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
                         }
-                        .padding(.top, 60)
+                        .padding(.top, verticalSizeClass == .compact ? 12 : 60)
                         .padding(.horizontal, 32)
                     }
 
@@ -218,38 +210,62 @@ struct TranslateModeView: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// Stacked on a phone held upright; one row when the window is short
+    /// (a landscape phone, an iPhone Duo on its side), where two rows of
+    /// buttons left almost no room for the conversation itself.
+    @ViewBuilder
     private var controls: some View {
-        VStack(spacing: 10) {
-            // Hands-free: the phone can sit on the table between two people.
-            Button {
-                toggleHandsFree()
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: isHandsFree ? "stop.circle.fill" : "infinity.circle.fill")
-                        .font(.title3)
-                    Text(isHandsFree ? "Stop hands-free" : "Hands-free conversation")
-                        .font(.subheadline.weight(.medium))
+        let compact = verticalSizeClass == .compact
+        Group {
+            if compact {
+                HStack(spacing: 10) {
+                    handsFreeButton
+                    if !isHandsFree {
+                        talkButton(mine: true, language: myLanguage)
+                        talkButton(mine: false, language: theirLanguage)
+                    }
                 }
-                .frame(maxWidth: .infinity, minHeight: 48)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(isHandsFree ? Color.red.opacity(0.15) : Color.blue.opacity(0.15))
-                )
-                .foregroundStyle(isHandsFree ? .red : .blue)
-            }
-            .buttonStyle(.plain)
-            .disabled(permissionDenied)
-            .accessibilityHint(Text("Listens, translates and speaks continuously, switching languages automatically"))
-
-            if !isHandsFree {
-                HStack(spacing: 12) {
-                    talkButton(mine: true, language: myLanguage)
-                    talkButton(mine: false, language: theirLanguage)
+            } else {
+                VStack(spacing: 10) {
+                    handsFreeButton
+                    if !isHandsFree {
+                        HStack(spacing: 12) {
+                            talkButton(mine: true, language: myLanguage)
+                            talkButton(mine: false, language: theirLanguage)
+                        }
+                    }
                 }
             }
         }
-        .padding()
+        .padding(compact ? 10 : 16)
+        .frame(maxWidth: 760)
+        .frame(maxWidth: .infinity)
         .background(.bar)
+    }
+
+    private var handsFreeButton: some View {
+        // Hands-free: the phone can sit on the table between two people.
+        Button {
+            toggleHandsFree()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: isHandsFree ? "stop.circle.fill" : "infinity.circle.fill")
+                    .font(.title3)
+                Text(isHandsFree ? "Stop hands-free" : "Hands-free conversation")
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity, minHeight: 48)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(isHandsFree ? Color.red.opacity(0.15) : Color.blue.opacity(0.15))
+            )
+            .foregroundStyle(isHandsFree ? .red : .blue)
+        }
+        .buttonStyle(.plain)
+        .disabled(permissionDenied)
+        .accessibilityHint(Text("Listens, translates and speaks continuously, switching languages automatically"))
     }
 
     private func talkButton(mine: Bool, language: AppLanguage) -> some View {
@@ -269,7 +285,7 @@ struct TranslateModeView: View {
                     .font(.caption)
                     .lineLimit(1)
             }
-            .frame(maxWidth: .infinity, minHeight: 62)
+            .frame(maxWidth: .infinity, minHeight: verticalSizeClass == .compact ? 48 : 62)
             .background(
                 RoundedRectangle(cornerRadius: 14)
                     .fill(isListening ? Color.blue.opacity(0.25) : Color(.secondarySystemGroupedBackground))

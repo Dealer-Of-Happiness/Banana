@@ -34,25 +34,34 @@ struct VoiceModeView: View {
     @State private var spokenOffset = 0
     @State private var lastStreamed = ""
     @State private var isActive = true
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [Color(.systemBackground), Color.blue.opacity(0.12)],
-                startPoint: .top, endPoint: .bottom
-            )
-            .ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                LinearGradient(
+                    colors: [Color(.systemBackground), Color.blue.opacity(0.12)],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .ignoresSafeArea()
 
-            VStack(spacing: 24) {
-                header
-                Spacer()
-                statusIndicator
-                statusText
-                Spacer()
-                transcriptArea
-                controls
+                layout
             }
-            .padding()
+            .navigationTitle("Voice Conversation")
+            .navigationSubtitle("100% on your device")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar {
+                // A real toolbar item, not a drawn X: on iPhone Duo the
+                // system moves it into the vertical bar beside the display
+                // and keeps it where every other app's Close lives.
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", systemImage: "xmark") {
+                        dismiss()
+                    }
+                    .accessibilityLabel(Text("Close voice mode"))
+                }
+            }
         }
         .onAppear(perform: start)
         .onDisappear(perform: teardown)
@@ -106,42 +115,88 @@ struct VoiceModeView: View {
 
     // MARK: - Pieces
 
-    private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Voice Conversation")
-                    .font(.headline)
-                Text("100% on your device")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+    /// Two arrangements of the same parts. Upright: the indicator above the
+    /// transcript, as on any phone. Short and wide (a landscape phone, an
+    /// iPhone Duo on its side): the indicator beside the transcript, because
+    /// stacking a 190 pt circle, the status, the transcript and the button
+    /// needs more height than a landscape phone has, and the old layout
+    /// pushed Tap to talk off the bottom of the screen.
+    @ViewBuilder
+    private var layout: some View {
+        if #available(iOS 27.1, *) {
+            // An arrangement view: side by side when the window is wider
+            // than tall, stacked when taller than wide, and on iPhone Duo
+            // it keeps both halves clear of the hinge when the phone is
+            // half open - the indicator on one side of the fold, the
+            // transcript and the button on the other.
+            ArrangementView {
+                VStack(spacing: 14) {
+                    Spacer(minLength: 0)
+                    statusIndicator
+                    statusText
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding()
+            } secondary: {
+                VStack(spacing: 12) {
+                    transcriptArea
+                    controls
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding()
             }
-            Spacer()
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title)
-                    .foregroundStyle(.secondary)
-                    .frame(minWidth: 44, minHeight: 44)
+            .arrangementViewStyle(.split)
+        } else if verticalSizeClass == .compact {
+            HStack(spacing: 20) {
+                VStack(spacing: 14) {
+                    Spacer(minLength: 0)
+                    statusIndicator
+                    statusText
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(spacing: 12) {
+                    transcriptArea
+                    controls
+                }
+                .frame(maxWidth: .infinity)
             }
-            .accessibilityLabel(Text("Close voice mode"))
+            .padding()
+        } else {
+            VStack(spacing: 24) {
+                Spacer()
+                statusIndicator
+                statusText
+                Spacer()
+                transcriptArea
+                controls
+            }
+            .padding()
         }
+    }
+
+    /// The indicator shrinks with the window; a fixed 190 pt circle is a
+    /// third of a landscape phone's height.
+    private var indicatorSize: CGFloat {
+        verticalSizeClass == .compact ? 120 : 190
     }
 
     private var statusIndicator: some View {
         ZStack {
             Circle()
                 .fill(indicatorColor.opacity(0.15))
-                .frame(width: 190, height: 190)
+                .frame(width: indicatorSize, height: indicatorSize)
                 .scaleEffect(1 + voice.micLevel * 0.5)
                 .animation(.easeOut(duration: 0.12), value: voice.micLevel)
 
             Circle()
                 .fill(indicatorColor.opacity(0.25))
-                .frame(width: 140, height: 140)
+                .frame(width: indicatorSize * 0.74, height: indicatorSize * 0.74)
 
             Image(systemName: indicatorSymbol)
-                .font(.system(size: 52, weight: .medium))
+                .font(.system(size: indicatorSize * 0.27, weight: .medium))
                 .foregroundStyle(indicatorColor)
                 .contentTransition(.symbolEffect(.replace))
         }
@@ -235,7 +290,7 @@ struct VoiceModeView: View {
             }
             .padding(.horizontal, 4)
         }
-        .frame(maxHeight: 220)
+        .frame(maxHeight: verticalSizeClass == .compact ? .infinity : 220)
         .defaultScrollAnchor(.bottom)
     }
 

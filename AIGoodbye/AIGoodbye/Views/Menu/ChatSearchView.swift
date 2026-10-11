@@ -69,10 +69,13 @@ struct ChatSearchView: View {
             }
             .navigationTitle("Search")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always))
+            // `.automatic`, not pinned to the navigation bar drawer: on
+            // iPhone Duo the bar can be vertical, and the system places the
+            // field where it fits.
+            .searchable(text: $query, placement: .automatic, prompt: Text("Search chats"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done", systemImage: "checkmark") { dismiss() }
                 }
             }
             .task(id: query) {

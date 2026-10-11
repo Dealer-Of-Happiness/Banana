@@ -317,6 +317,11 @@ class AppState: ObservableObject {
         conversationManager.sweepOrphanedImages()
         conversationManager.sweepEmptyConversations()
         engine.appleIntelligence.refreshAvailability()
+        #if DEBUG
+        // Sample content for store screenshots (AIG_DEMO=1), before the
+        // last-conversation restore so a launch argument can pick the chat.
+        if DemoContent.isEnabled { DemoContent.seed(into: conversationManager) }
+        #endif
 
         // Come back to the conversation the user was actually in. Always
         // cold-starting on a blank chat meant re-opening the drawer and

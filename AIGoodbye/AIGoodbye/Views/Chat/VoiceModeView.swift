@@ -39,6 +39,11 @@ struct VoiceModeView: View {
     /// `pause()` within milliseconds, and the phone then read the answer out
     /// from the lock screen and opened the microphone with no screen.
     @State private var inForeground = true
+    #if DEBUG
+    /// Store-screenshot stand-in for a spoken question (AIG_DEMO_VOICE=1):
+    /// the Simulator has no microphone, so a real turn can't be staged.
+    @State private var demoTranscript = ""
+    #endif
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -304,11 +309,18 @@ struct VoiceModeView: View {
         .padding(.horizontal)
     }
 
+    private var shownTranscript: String {
+        #if DEBUG
+        if !demoTranscript.isEmpty { return demoTranscript }
+        #endif
+        return voice.liveTranscript
+    }
+
     private var transcriptArea: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
-                if !voice.liveTranscript.isEmpty {
-                    Text(voice.liveTranscript)
+                if !shownTranscript.isEmpty {
+                    Text(shownTranscript)
                         .font(.body)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .multilineTextAlignment(.trailing)
@@ -371,6 +383,15 @@ struct VoiceModeView: View {
                 turn = .idle
             }
         }
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["AIG_DEMO_VOICE"] == "1" {
+            // A finished turn, frozen for a screenshot. No microphone.
+            demoTranscript = "What can I cook tonight with eggs, spinach and feta?"
+            lastStreamed = "A spinach and feta frittata. Sauté the spinach with a little garlic, pour over six beaten eggs, crumble the feta on top and bake at 200 degrees for about fifteen minutes. Serve with crusty bread. Want a side salad to go with it?"
+            turn = .speaking
+            return
+        }
+        #endif
         Task {
             let granted = await VoiceService.requestPermissions()
             if granted {

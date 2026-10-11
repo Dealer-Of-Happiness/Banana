@@ -660,6 +660,14 @@ struct ConversationTitleTests {
     @Test func shortMessageIsItsOwnTitle() {
         #expect(Conversation.title(from: "Hello there") == "Hello there")
     }
+
+    @Test func previewDropsMarkdownMarkers() {
+        let markdown = "## Summary\n\n**Key terms**\n- 12-month lease from **November 1**\n1. First `step`\n> quoted *word*"
+        let preview = Conversation.plainPreview(markdown)
+        #expect(preview == "Summary Key terms 12-month lease from November 1 First step quoted word")
+        #expect(Conversation.plainPreview("a 2*3 product_name x_y").contains("2*3"))
+        #expect(Conversation.plainPreview(String(repeating: "word ", count: 50)).count <= 100)
+    }
 }
 
 struct DocumentTextTests {

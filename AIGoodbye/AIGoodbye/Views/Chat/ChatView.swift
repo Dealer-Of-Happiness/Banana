@@ -44,6 +44,17 @@ struct ChatView: View {
     /// Whether the transcript is taller than its viewport (a drag on a
     /// short chat is a rubber-band, not a request to stop following).
     @State private var isScrollable = false
+
+    /// Store screenshots want the question at the top of the chat, not the
+    /// end of the answer (AIG_DEMO_TOP=1). Debug builds only; always false
+    /// in the app people install.
+    private var demoOpensAtTop: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.environment["AIG_DEMO_TOP"] == "1"
+        #else
+        return false
+        #endif
+    }
     @State private var showingSetup = false
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.scenePhase) private var scenePhase
@@ -484,9 +495,10 @@ struct ChatView: View {
             // fired on a cold launch or when coming back from an empty New
             // Chat: the scroll view was created in the same update the
             // messages arrived, so there was no change to observe.
-            .defaultScrollAnchor(.bottom)
+            .defaultScrollAnchor(demoOpensAtTop ? .top : .bottom)
             .onChange(of: appState.currentConversation?.id, initial: true) { _, _ in
                 isPinnedToBottom = true
+                guard !demoOpensAtTop else { return }
                 proxy.scrollTo(viewModel.messages.last?.id.uuidString, anchor: .bottom)
             }
             .onChange(of: viewModel.messages.count) { _, _ in

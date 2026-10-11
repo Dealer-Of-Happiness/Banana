@@ -44,7 +44,33 @@ final class Conversation {
     }
 
     var previewText: String {
-        lastMessage?.content.prefix(100).description ?? L10n.text("No messages")
+        guard let content = lastMessage?.content else { return L10n.text("No messages") }
+        return Self.plainPreview(content)
+    }
+
+    /// One line of readable text for list rows: answers are Markdown, and
+    /// the sidebar used to show "**Key terms**" and "## Summary" verbatim.
+    nonisolated static func plainPreview(_ markdown: String) -> String {
+        var lines: [String] = []
+        for rawLine in markdown.prefix(400).split(separator: "\n", omittingEmptySubsequences: true) {
+            var line = rawLine.trimmingCharacters(in: .whitespaces)
+            // Headings, bullets, numbered lists, block quotes.
+            while let first = line.first, "#>-*+ ".contains(first) {
+                line.removeFirst()
+            }
+            if let match = line.range(of: #"^\d+[.)]\s+"#, options: .regularExpression) {
+                line.removeSubrange(match)
+            }
+            // Emphasis and code markers.
+            line = line.replacingOccurrences(of: "**", with: "")
+                .replacingOccurrences(of: "__", with: "")
+                .replacingOccurrences(of: "`", with: "")
+            line = line.replacingOccurrences(of: #"(?<!\w)[*_](?=\S)|(?<=\S)[*_](?!\w)"#, with: "", options: .regularExpression)
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty { lines.append(trimmed) }
+            if lines.joined(separator: " ").count >= 100 { break }
+        }
+        return String(lines.joined(separator: " ").prefix(100))
     }
 
     /// Title for display: the stored default localizes at render time, so

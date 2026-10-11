@@ -8,6 +8,7 @@
 import Testing
 import Foundation
 import UIKit
+import SwiftUI
 @testable import AIGoodbye
 
 struct HistoryTrimmingTests {
@@ -577,5 +578,38 @@ struct WeightedLengthTests {
         // Same visual length, but CJK carries more tokens per character, so
         // fewer messages must fit.
         #expect(cjkTrimmed.count < latinTrimmed.count)
+    }
+}
+
+struct ConversationListLayoutTests {
+    /// The sidebar needs regular width AND room for a usable chat beside it.
+    @Test func sidebarNeedsRegularWidthAndRoom() {
+        // iPad landscape, iPhone Duo open like a book.
+        #expect(MainView.usesSidebar(sizeClass: .regular, width: 1024))
+        #expect(MainView.usesSidebar(sizeClass: .regular, width: 951))
+        // iPad mini held upright: just wide enough.
+        #expect(MainView.usesSidebar(sizeClass: .regular, width: 744))
+        // iPhone Duo inner display held upright: regular, but too narrow.
+        #expect(!MainView.usesSidebar(sizeClass: .regular, width: 669))
+        // Half of a 13-inch iPad in landscape.
+        #expect(!MainView.usesSidebar(sizeClass: .regular, width: 678))
+        // Any compact window, however wide (iPhone landscape).
+        #expect(!MainView.usesSidebar(sizeClass: .compact, width: 852))
+        #expect(!MainView.usesSidebar(sizeClass: nil, width: 1024))
+    }
+
+    @Test func sidebarWidthStaysWithinReason() {
+        #expect(MainView.sidebarWidth(for: 744) == 280)
+        #expect(MainView.sidebarWidth(for: 1024) == 1024 * 0.34)
+        #expect(MainView.sidebarWidth(for: 1366) == 360)
+    }
+
+    @Test func hiddenListClearsTheLeadingInset() {
+        // Parked fully off-screen, including the inset beside the Dynamic Island.
+        #expect(MainView.listOffset(reveal: 0, listWidth: 300, leadingInset: 59) == -359)
+        // Fully revealed: flush with the window's leading edge.
+        #expect(MainView.listOffset(reveal: 300, listWidth: 300, leadingInset: 59) == 0)
+        // Half way through a drag.
+        #expect(MainView.listOffset(reveal: 150, listWidth: 300, leadingInset: 0) == -150)
     }
 }

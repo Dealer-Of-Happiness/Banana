@@ -192,7 +192,13 @@ final class AIGoodbyeScreenshotTour: XCTestCase {
 
     @MainActor
     private func snap(_ app: XCUIApplication, _ name: String) {
-        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        // The app's own windows, not `XCUIScreen.main`: on an iPhone Duo
+        // the main screen is the outer display, which is dark while the
+        // device is open, so a screen capture there is a black rectangle.
+        let shot = app.windows.firstMatch.exists
+            ? app.windows.firstMatch.screenshot()
+            : app.screenshot()
+        let attachment = XCTAttachment(screenshot: shot)
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)

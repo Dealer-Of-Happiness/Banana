@@ -43,7 +43,8 @@ struct ChatView: View {
     @State private var isPinnedToBottom = true
     @State private var showingSetup = false
     @Environment(\.verticalSizeClass) private var verticalSizeClass
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    /// Drawer or sidebar, decided by `MainView` for this window.
+    @Environment(\.conversationListStyle) private var listStyle
     /// Shown once, right after the terms, so a new user knows where they
     /// stand before typing anything.
     @AppStorage("hasSeenSetup") private var hasSeenSetup = false
@@ -325,12 +326,17 @@ struct ChatView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button("Conversations", systemImage: "line.3.horizontal") {
-                appState.toggleSideMenu(twoPane: horizontalSizeClass == .regular)
+                appState.toggleSideMenu(twoPane: listStyle == .sidebar)
             }
             .accessibilityLabel(Text("Conversations menu"))
         }
 
         if #available(iOS 27, *) {
+            // Kept out of the overflow menu: switching models is the one
+            // thing people do from this bar. (When the bar is too narrow
+            // for the title the system hides the title rather than fold
+            // items away, so priority is not what keeps the title on
+            // screen; `MainView` leaves the chat wide enough instead.)
             ToolbarItem(placement: .primaryAction) {
                 Button("Choose Model", systemImage: "cpu") {
                     showingModelPicker = true

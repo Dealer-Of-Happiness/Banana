@@ -15,6 +15,15 @@
 //    Notes, so the larger display shows one more level of the hierarchy
 //    instead of the same single column with wider margins.
 //
+//  Regular width alone is not enough for the sidebar: the window also has
+//  to be wide enough that what is left for the chat is a comfortable
+//  column. The inner display of iPhone Duo held upright is regular width
+//  at 669 pt, and a sidebar there left a 389 pt chat whose toolbar - which
+//  on that display shares its row with the status bar - had no room for
+//  the title. Below the threshold the drawer is used, as it is on any
+//  iPhone, the way NavigationSplitView collapses its sidebar on an iPad
+//  held upright.
+//
 //  The chat is the SAME view in both, in the same place in the hierarchy.
 //  That matters more than it looks: an iPhone Duo resizes the window every
 //  time it folds, and if the two layouts were two branches of an `if`, a
@@ -24,6 +33,19 @@
 
 import SwiftUI
 import Combine
+
+/// How the conversation list is presented beside a chat: a drawer that
+/// slides over it, or a sidebar that sits next to it. `MainView` decides
+/// per window and hands the answer down, so the chat's toolbar button
+/// toggles the right one without guessing from its size class.
+enum ConversationListStyle {
+    case drawer
+    case sidebar
+}
+
+extension EnvironmentValues {
+    @Entry var conversationListStyle: ConversationListStyle = .drawer
+}
 
 struct MainView: View {
     @EnvironmentObject var appState: AppState
@@ -36,7 +58,17 @@ struct MainView: View {
     /// Sidebar width, in regular width.
     @State private var sidebarWidth: CGFloat = 320
 
-    private var isTwoPane: Bool { horizontalSizeClass == .regular }
+    /// Narrowest window that gets a sidebar. Leaves the chat at least an
+    /// iPhone's width beside a 280 pt sidebar. Just under it: the inner
+    /// display of iPhone Duo held upright (669 pt) and half of a 13-inch
+    /// iPad in landscape (678 pt); just over: an iPad mini held upright
+    /// (744 pt).
+    nonisolated static let sidebarMinimumWidth: CGFloat = 700
+
+    /// Whether a window of this size class and width shows the sidebar.
+    nonisolated static func usesSidebar(sizeClass: UserInterfaceSizeClass?, width: CGFloat) -> Bool {
+        sizeClass == .regular && width >= sidebarMinimumWidth
+    }
 
     /// How far the drawer is currently revealed, combining state and live drag.
     private var drawerReveal: CGFloat {
@@ -46,7 +78,7 @@ struct MainView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let twoPane = isTwoPane
+            let twoPane = Self.usesSidebar(sizeClass: horizontalSizeClass, width: geometry.size.width)
             // On an iPhone Duo folded like a book, the inner display is
             // divided at the hinge. Put the list in one half and the chat
             // in the other, so the divider sits on the fold instead of a
@@ -67,6 +99,7 @@ struct MainView: View {
                 // disabled anyway. Same modifiers in both modes, with
                 // different values, so the view's identity never changes.
                 ChatView(viewModel: appState.chatViewModel)
+                    .environment(\.conversationListStyle, twoPane ? .sidebar : .drawer)
                     .frame(width: chatWidth)
                     .frame(maxWidth: .infinity, alignment: twoPane ? .trailing : .leading)
                     .offset(x: twoPane ? 0 : reveal)

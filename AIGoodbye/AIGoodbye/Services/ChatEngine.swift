@@ -376,12 +376,16 @@ final class ChatEngine: ObservableObject {
 
                 On a real iPhone this text comes from the on-device model.
                 """
+                // UI tests that exercise Stop need the answer to take a
+                // while; the default pace finishes in two seconds.
+                let pace: UInt64 = ProcessInfo.processInfo.environment["AIG_SIM_SLOW_ECHO"] == "1"
+                    ? 160_000_000 : 40_000_000
                 var shown = ""
                 for word in reply.split(separator: " ", omittingEmptySubsequences: false) {
                     if Task.isCancelled { break }
                     shown += (shown.isEmpty ? "" : " ") + word
                     continuation.yield(shown)
-                    try? await Task.sleep(nanoseconds: 40_000_000)
+                    try? await Task.sleep(nanoseconds: pace)
                 }
                 continuation.finish()
             }

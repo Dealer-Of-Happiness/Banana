@@ -29,6 +29,11 @@ final class AIGoodbyeScreenshotTour: XCTestCase {
     func testTour() throws {
         let app = XCUIApplication()
         app.launchEnvironment["AIG_FORCE_NO_AI"] = "1"
+        // AIG_CONTENT_SIZE=UICTContentSizeCategoryAccessibilityXXL (etc.)
+        // runs the whole tour at that Dynamic Type size.
+        if let size = ProcessInfo.processInfo.environment["AIG_CONTENT_SIZE"], !size.isEmpty {
+            app.launchArguments += ["-UIPreferredContentSizeCategoryName", size]
+        }
         app.launch()
 
         addUIInterruptionMonitor(withDescription: "Permissions") { alert in

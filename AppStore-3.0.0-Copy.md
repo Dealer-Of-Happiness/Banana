@@ -2,14 +2,14 @@
 
 Paste-ready text for App Store Connect.
 
-## What's New (version 3.5.0, build 18) - October 10, 2026
+## What's New (version 3.5.0, build 19) - October 10, 2026
 
 Ready for iPhone Duo, plus everything from 3.4.1.
 
 MADE FOR IPHONE DUO
-- Opens up with you: on the inner display your conversations sit in a sidebar
-  beside the chat, and the app keeps whatever you were doing when you fold or
-  unfold - a recording in progress included
+- Opens up with you: open it like a book and your conversations sit in a
+  sidebar beside the chat, with the fold between them; the app keeps whatever
+  you were doing when you fold or unfold - a recording in progress included
 - Buttons move to the side bar beside the display, where iPhone Duo keeps them
 - Half open, voice conversations, the live camera and Describe Surroundings
   put their content on one side of the fold and the controls on the other

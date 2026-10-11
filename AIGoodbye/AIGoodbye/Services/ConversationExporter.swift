@@ -26,9 +26,16 @@ enum ConversationExporter {
             let who = message.role == .user
                 ? L10n.text("You")
                 : LegalText.appName
-            out += "## \(who)\n\n\(message.content)\n\n"
+            out += "## \(who)\n\n\(exportBody(of: message))\n\n"
         }
         return out
+    }
+
+    /// The message text, with a note where a picture was attached (the
+    /// export used to show only the question, as if no picture existed).
+    private static func exportBody(of message: Message) -> String {
+        guard message.attachmentType == .image else { return message.content }
+        return "[" + L10n.text("Image attached") + "]\n\n" + message.content
     }
 
     /// Writes Markdown to a temporary file for the share sheet.
@@ -38,6 +45,8 @@ enum ConversationExporter {
 
     private static func write(_ text: String, name: String) -> URL? {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+        // Previous exports with the same name are replaced, not accumulated.
+        try? FileManager.default.removeItem(at: url)
         do {
             try text.write(to: url, atomically: true, encoding: .utf8)
             return url
@@ -99,7 +108,7 @@ enum ConversationExporter {
         var blocks: [(String?, String)] = []
         for message in conversation.messages.sorted(by: { $0.timestamp < $1.timestamp }) {
             let who = message.role == .user ? L10n.text("You") : LegalText.appName
-            blocks.append((who, message.content))
+            blocks.append((who, exportBody(of: message)))
         }
         return pdfFile(title: conversation.displayTitle, blocks: blocks,
                        fileName: safeFileName(conversation.displayTitle) + ".pdf")

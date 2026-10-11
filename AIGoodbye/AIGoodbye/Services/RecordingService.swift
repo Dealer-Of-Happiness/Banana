@@ -343,11 +343,19 @@ final class RecordingService: NSObject, ObservableObject {
         do {
             try activateSession()
 
-            let format = try installTap()
+            // Checked now so a dead microphone fails fast, before a speech
+            // engine start that can take seconds; checked again when the tap
+            // is installed below.
+            _ = try currentInputFormat()
 
-            // Recognition is started before the file is created, because
-            // whether the file is needed depends on whether recognition
-            // actually works.
+            // Recognition is started before the tap and the file are created.
+            // Partly because whether the file is needed depends on whether
+            // recognition works - and partly because starting the speech
+            // engine suspends for hundreds of milliseconds (seconds on a
+            // language's first use), and AirPods connecting in that window
+            // change the hardware format. An engine started with a tap in the
+            // old format raises an AVFoundation exception, which is a crash
+            // on the Start button, not a Swift error.
             if transcribes {
                 do {
                     try await transcriber.start(locale: locale)
@@ -375,6 +383,10 @@ final class RecordingService: NSObject, ObservableObject {
                     notice = L10n.text("Transcription isn't available right now, so this recording will be audio only.")
                 }
             }
+
+            // The tap and the file are built from the format read NOW,
+            // immediately before the engine starts (see above).
+            let format = try installTap()
 
             // The audio is ALWAYS captured while recording, whatever the
             // preference says. It is the insurance policy: a recognizer can
@@ -420,8 +432,15 @@ final class RecordingService: NSObject, ObservableObject {
         }
 
         startedAt = ProcessInfo.processInfo.systemUptime
-        recordingId = UUID()
+        let id = UUID()
+        recordingId = id
         recordingStartedAtWallClock = Date()
+        // An interrupted recording the user chose to "decide later" about is
+        // saved now, before this one can touch the checkpoint file. (The
+        // first checkpoint would do the same; doing it here means the
+        // recovered recording is in the list before this one is ten seconds
+        // old, and never depends on getting that far.)
+        RecordingStore.shared.recoverForeignCheckpoint(before: id)
         phase = .recording
         preparingProgress = 0
         startTimers()
@@ -459,7 +478,8 @@ final class RecordingService: NSObject, ObservableObject {
                 transcript: transcript,
                 duration: elapsed,
                 audioFileName: audioFileName,
-                languageCode: language.rawValue
+                languageCode: language.rawValue,
+                keepAudio: userWantsAudio
             )
         )
     }
@@ -551,10 +571,12 @@ final class RecordingService: NSObject, ObservableObject {
     }
 
     /// Stop capture and wait briefly for the last words to be recognized.
-    /// Ownership of the audio file passes to the caller.
-    func finish() async -> (transcript: String, duration: TimeInterval, audioFileName: String?) {
+    /// Ownership of the audio file passes to the caller. `id` identifies the
+    /// recording's crash checkpoint, which the caller clears once the
+    /// recording is safely stored.
+    func finish() async -> (id: UUID, transcript: String, duration: TimeInterval, audioFileName: String?) {
         guard !isFinishing else {
-            return (transcript, accumulated, audioFileName)
+            return (recordingId ?? UUID(), transcript, accumulated, audioFileName)
         }
         isFinishing = true
         systemResumeTask?.cancel()
@@ -571,9 +593,17 @@ final class RecordingService: NSObject, ObservableObject {
 
         // Finalize the recognition session and wait for the tail. Ending the
         // audio input alone does not commit it.
-        var text = ""
+        //
+        // Starts from the transcript already published, not from "". When
+        // recognition died mid-recording (`handleRecognitionFailure`), the
+        // words recognized before it stopped are still here and are all the
+        // transcript this recording will have; starting empty threw forty
+        // minutes of text away on the Stop button, in exactly the case the
+        // notice promised was being handled.
+        var text = transcript
         if transcribes {
-            text = await transcriber.finish()
+            let finished = await transcriber.finish()
+            if !finished.isEmpty { text = finished }
         }
 
         let dropped = sink.droppedBufferCount()
@@ -590,7 +620,12 @@ final class RecordingService: NSObject, ObservableObject {
             // A stall dropped some audio. That is a gap, not a dead file, and
             // saying so is better than an ominous silence.
             let seconds = max(1, Int((Double(dropped) * 4096 / 48_000).rounded()))
-            notice = L10n.text("About \(seconds) seconds of audio were dropped because the device couldn't keep up. The transcript is unaffected.")
+            // Two keys rather than one plural rule: not every catalog
+            // language has the rule filled in, and "1 seconds" is wrong in
+            // all of them.
+            notice = seconds == 1
+                ? L10n.text("About 1 second of audio was dropped because the device couldn't keep up. The transcript is unaffected.")
+                : L10n.text("About \(seconds) seconds of audio were dropped because the device couldn't keep up. The transcript is unaffected.")
         }
 
         transcript = text
@@ -626,7 +661,7 @@ final class RecordingService: NSObject, ObservableObject {
         audioFileName = nil
         audioFileURL = nil
         isFinishing = false
-        return (text, duration, fileName)
+        return (recordingId ?? UUID(), text, duration, fileName)
     }
 
     /// Throw the recording away without saving anything. Refused while
@@ -636,7 +671,12 @@ final class RecordingService: NSObject, ObservableObject {
         guard !isFinishing else { return }
         systemResumeTask?.cancel()
         stopCheckpointing()
-        RecordingStore.shared.clearCheckpoint()
+        // Only this recording's checkpoint. A start that never went live has
+        // no id and nothing on disk - and the file may then belong to an
+        // interrupted recording the user has yet to decide about.
+        if let id = recordingId {
+            RecordingStore.shared.clearCheckpoint(id: id)
+        }
         stopTimers()
         sink.setTranscriber(nil)
         transcriber.cancel()
@@ -702,18 +742,23 @@ final class RecordingService: NSObject, ObservableObject {
 
     // MARK: - Audio plumbing
 
-    @discardableResult
-    private func installTap() throws -> AVAudioFormat {
-        removeTap()
-        let input = audioEngine.inputNode
-        let format = input.outputFormat(forBus: 0)
+    /// The microphone's format right now, or `noMicrophone`.
+    private func currentInputFormat() throws -> AVAudioFormat {
+        let format = audioEngine.inputNode.outputFormat(forBus: 0)
         // A 0 Hz/0-channel format means no usable microphone (common in the
         // Simulator, or when another app holds the mic). Installing a tap
         // with it raises an exception.
         guard format.sampleRate > 0, format.channelCount > 0 else {
             throw RecordingError.noMicrophone
         }
-        input.installTap(onBus: 0, bufferSize: 4096, format: format) { [sink] buffer, _ in
+        return format
+    }
+
+    @discardableResult
+    private func installTap() throws -> AVAudioFormat {
+        removeTap()
+        let format = try currentInputFormat()
+        audioEngine.inputNode.installTap(onBus: 0, bufferSize: 4096, format: format) { [sink] buffer, _ in
             sink.append(buffer)
         }
         didInstallTap = true

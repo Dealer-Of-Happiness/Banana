@@ -55,7 +55,16 @@ final class ShareViewController: UIViewController {
 
     /// Pull the most useful representation out of the shared attachment.
     private func extract(from provider: NSItemProvider) async -> SharedInbox.Item? {
-        // A URL (web page link)
+        // Selected text first: a browser shares the selection AND the page
+        // URL, and the text is what the user meant. (The URL alone is
+        // useless to an offline model, which then invents the page.)
+        if provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier),
+           let text = await loadItem(provider, type: UTType.plainText.identifier) as? String,
+           !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return SharedInbox.Item(kind: .text, text: text)
+        }
+
+        // A file URL, or a web link (kept as text to paste into the composer)
         if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier),
            let url = await loadItem(provider, type: UTType.url.identifier) as? URL {
             if url.isFileURL {
@@ -67,16 +76,12 @@ final class ShareViewController: UIViewController {
             }
         }
 
-        // Plain text / selected text
-        if provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier),
-           let text = await loadItem(provider, type: UTType.plainText.identifier) as? String {
-            return SharedInbox.Item(kind: .text, text: text)
-        }
-
-        // PDFs, documents and images. `loadFileRepresentation` gives a
-        // temporary file that is deleted as soon as the handler returns, so
-        // the copy has to happen INSIDE the handler.
-        for type in [UTType.pdf, UTType.image, UTType.text, UTType.item]
+        // PDFs, documents and images - only kinds the app can read. The
+        // catch-all `UTType.item` used to copy anything (a video, a zip) and
+        // the app then tried to read it whole. `loadFileRepresentation`
+        // gives a temporary file that is deleted as soon as the handler
+        // returns, so the copy has to happen INSIDE the handler.
+        for type in [UTType.pdf, UTType.image, UTType.text, UTType.json, UTType.commaSeparatedText, UTType.rtf]
         where provider.hasItemConformingToTypeIdentifier(type.identifier) {
             if let copied = await copyFileRepresentation(provider, type: type.identifier) {
                 return copied

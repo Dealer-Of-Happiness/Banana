@@ -129,20 +129,32 @@ class ConversationManager: ObservableObject {
 
     /// Directory holding attached images (Documents/images/<uuid>.jpg).
     ///
-    /// Excluded from backup: these are photos the user asked the AI to look
-    /// at - medical results, documents, private things - and the app's whole
-    /// promise is that they stay on this device.
+    /// Backed up along with the conversations that reference them. They
+    /// used to be excluded while the message store was not, so restoring a
+    /// phone from a backup brought every chat back with blank image bubbles
+    /// and silently document-less document chats. The backup is the user's
+    /// own, encrypted, and the Privacy Center says what is in it.
     static let imagesDirectory: URL = {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let directory = documents.appendingPathComponent("images", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        excludeFromBackup(directory)
+        includeInBackup(directory)
         return directory
     }()
 
+    /// Undo the exclusion earlier versions applied.
+    nonisolated static func includeInBackup(_ url: URL) {
+        guard (try? url.resourceValues(forKeys: [.isExcludedFromBackupKey]))?
+            .isExcludedFromBackup == true else { return }
+        var mutable = url
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = false
+        try? mutable.setResourceValues(values)
+    }
+
     /// Applied on every launch rather than only at creation: one failed call
     /// must not permanently break the promise the UI makes.
-    static func excludeFromBackup(_ url: URL) {
+    nonisolated static func excludeFromBackup(_ url: URL) {
         guard (try? url.resourceValues(forKeys: [.isExcludedFromBackupKey]))?
             .isExcludedFromBackup != true else { return }
         var mutable = url
@@ -249,6 +261,17 @@ class ConversationManager: ObservableObject {
         save()
     }
 
+    /// Delete many messages with one save: Clear Chat on a long
+    /// conversation used to issue one transaction per message and freeze
+    /// the app for seconds.
+    func deleteMessages(_ messages: [Message]) {
+        guard !messages.isEmpty else { return }
+        for message in messages {
+            modelContext?.delete(message)
+        }
+        save()
+    }
+
     // MARK: - Folder CRUD
 
     func createFolder(name: String) -> Folder {
@@ -256,12 +279,20 @@ class ConversationManager: ObservableObject {
         modelContext?.insert(folder)
         save()
         folders.append(folder)
+        sortFolders()
         return folder
     }
 
     func renameFolder(_ folder: Folder, to name: String) {
         folder.name = name
         save()
+        sortFolders()
+    }
+
+    /// The same order at launch, after creating and after renaming: by
+    /// name. Folders used to be sorted at launch and appended afterwards.
+    private func sortFolders() {
+        folders.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
     func deleteFolder(_ folder: Folder, deleteContents: Bool = false) {
@@ -285,10 +316,10 @@ class ConversationManager: ObservableObject {
     }
 
     func moveConversation(_ conversation: Conversation, to folder: Folder?) {
+        // Filing a chat is not activity in it: bumping `updatedAt` here
+        // pushed an old chat to the top of Recent Chats.
         conversation.folderId = folder?.id
-        conversation.updatedAt = Date()
         save()
-        resortConversations()
     }
 
     // MARK: - Folder Locking
@@ -357,8 +388,14 @@ class ConversationManager: ObservableObject {
 
         save()
 
-        // Sweep any orphaned attachment files.
-        try? FileManager.default.removeItem(at: Self.imagesDirectory)
+        // Sweep any orphaned attachment files - the files, never the folder.
+        // Removing the folder (created once per process) meant every photo
+        // attached until the next launch was silently never written.
+        if let names = try? FileManager.default.contentsOfDirectory(atPath: Self.imagesDirectory.path) {
+            for name in names {
+                try? FileManager.default.removeItem(at: Self.imagesDirectory.appendingPathComponent(name))
+            }
+        }
 
         conversations.removeAll()
         folders.removeAll()

@@ -89,41 +89,57 @@ struct ChatSearchView: View {
                 // Let typing settle before scanning everything.
                 try? await Task.sleep(nanoseconds: 200_000_000)
                 guard !Task.isCancelled else { return }
-                hits = search(needle)
+                hits = await search(needle)
                 isSearching = false
             }
         }
     }
 
-    private func search(_ needle: String) -> [Hit] {
-        var results: [Hit] = []
-        for conversation in appState.conversationManager.conversations {
-            if conversation.title.localizedCaseInsensitiveContains(needle) {
-                results.append(Hit(
-                    id: conversation.id,
-                    conversation: conversation,
-                    snippet: conversation.previewText,
-                    isTitleMatch: true
-                ))
-                continue
-            }
-            if let message = conversation.messages.first(where: { $0.content.localizedCaseInsensitiveContains(needle) }) {
-                results.append(Hit(
-                    id: conversation.id,
-                    conversation: conversation,
-                    snippet: Self.excerpt(of: message.content, around: needle),
-                    isTitleMatch: false
-                ))
-            }
+    /// Plain copies of the text to search, so the comparison of every
+    /// message in every chat (the slow part) can leave the main actor.
+    private struct Haystack: Sendable {
+        let id: UUID
+        let title: String
+        let preview: String
+        let messages: [String]
+    }
+
+    private func search(_ needle: String) async -> [Hit] {
+        let conversations = appState.conversationManager.conversations
+        let haystacks = conversations.map { conversation in
+            Haystack(
+                id: conversation.id,
+                title: conversation.title,
+                preview: conversation.previewText,
+                messages: conversation.messages.map(\.content)
+            )
         }
-        return results
+        let matches = await Task.detached(priority: .userInitiated) { () -> [(UUID, String, Bool)] in
+            var results: [(UUID, String, Bool)] = []
+            for hay in haystacks {
+                if Task.isCancelled { break }
+                if hay.title.localizedCaseInsensitiveContains(needle) {
+                    results.append((hay.id, hay.preview, true))
+                    continue
+                }
+                if let message = hay.messages.first(where: { $0.localizedCaseInsensitiveContains(needle) }) {
+                    results.append((hay.id, Self.excerpt(of: message, around: needle), false))
+                }
+            }
+            return results
+        }.value
+        let byId = Dictionary(uniqueKeysWithValues: conversations.map { ($0.id, $0) })
+        return matches.compactMap { id, snippet, isTitle in
+            guard let conversation = byId[id] else { return nil }
+            return Hit(id: id, conversation: conversation, snippet: snippet, isTitleMatch: isTitle)
+        }
     }
 
     /// A short window of text around the match, so the user sees context.
     /// Searches the ORIGINAL string: indices from `lowercased()` belong to a
     /// different string and can trap on characters whose case mapping
     /// changes length.
-    private static func excerpt(of text: String, around needle: String, window: Int = 70) -> String {
+    nonisolated private static func excerpt(of text: String, around needle: String, window: Int = 70) -> String {
         guard let range = text.range(of: needle, options: [.caseInsensitive, .diacriticInsensitive]) else {
             return String(text.prefix(120))
         }

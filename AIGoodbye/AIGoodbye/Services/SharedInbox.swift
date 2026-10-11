@@ -44,9 +44,16 @@ enum SharedInbox {
 
     // MARK: - Writing (extension side)
 
+    /// Largest file the app will import; the same cap as its document
+    /// picker, applied here so the copy is never made.
+    static let maxFileBytes: Int64 = 25 * 1024 * 1024
+
     static func write(_ item: Item) {
         guard let pendingURL, let data = try? JSONEncoder().encode(item) else { return }
         try? data.write(to: pendingURL, options: .atomic)
+        // The shared text itself lives in this file; protect it like the
+        // copied files.
+        protect(pendingURL)
     }
 
     /// Copy a shared file into the group container and return its name.
@@ -54,6 +61,11 @@ enum SharedInbox {
         guard let inboxURL else { return nil }
         let scoped = source.startAccessingSecurityScopedResource()
         defer { if scoped { source.stopAccessingSecurityScopedResource() } }
+
+        if let size = try? source.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+           Int64(size) > maxFileBytes {
+            return nil
+        }
 
         let name = UUID().uuidString + "-" + source.lastPathComponent
         let destination = inboxURL.appendingPathComponent(name)
@@ -71,7 +83,7 @@ enum SharedInbox {
 
     /// Write raw bytes (a shared image, say) into the group container.
     static func writeIntoContainer(_ data: Data, suggestedName: String) -> String? {
-        guard let inboxURL else { return nil }
+        guard let inboxURL, Int64(data.count) <= maxFileBytes else { return nil }
         let name = UUID().uuidString + "-" + suggestedName
         let destination = inboxURL.appendingPathComponent(name)
         do {

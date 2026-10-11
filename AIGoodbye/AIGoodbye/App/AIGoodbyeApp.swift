@@ -26,15 +26,11 @@ struct AIGoodbyeApp: App {
                 contentView
             }
             .environmentObject(appState)
-            // Presented at the window root so it covers sheets and
-            // full-screen covers too (a lock that any open sheet defeats
-            // is not a lock).
-            .fullScreenCover(isPresented: Binding(
-                get: { lock.isLocked },
-                set: { _ in }   // dismissed only by a successful unlock
-            )) {
-                LockScreen()
-            }
+            // The lock lives in its own window above everything (see
+            // LockWindowHost). A SwiftUI cover at the root could not
+            // present while any sheet or cover was up - Settings, Search,
+            // the recorder - so the lock simply never appeared over them.
+            .background(LockWindowHost())
             .onChange(of: scenePhase) { _, phase in
                 switch phase {
                 case .background:
@@ -89,16 +85,59 @@ struct AIGoodbyeApp: App {
         if !hasAcceptedTerms {
             TermsView(hasAcceptedTerms: $hasAcceptedTerms)
         } else {
+            // Redacted (placeholder shapes, not `.privacy`, which only acts
+            // on views marked privacySensitive - there are none) while
+            // locked, and also while merely inactive when the lock is on:
+            // the app switcher shows the live window the moment it opens,
+            // before `.background` ever fires.
+            let hidden = lock.isLocked || (lock.isEnabled && scenePhase != .active)
             MainView()
-                // Redacted rather than blurred, and without animation, so the
-                // app-switcher snapshot can never catch readable content.
-                .redacted(reason: lock.isLocked ? .privacy : [])
+                .redacted(reason: hidden ? .placeholder : [])
+                .disabled(lock.isLocked)
                 .accessibilityHidden(lock.isLocked)
         }
     }
 }
 
 // MARK: - App lock
+
+/// Hosts the lock screen in a UIWindow above every other window, so it
+/// covers sheets, full-screen covers and alerts alike, and is in place
+/// synchronously when the app is backgrounded (before the snapshot).
+private struct LockWindowHost: UIViewRepresentable {
+    func makeUIView(context: Context) -> LockWindowAnchor { LockWindowAnchor() }
+    func updateUIView(_ uiView: LockWindowAnchor, context: Context) {}
+}
+
+final class LockWindowAnchor: UIView {
+    private var lockWindow: UIWindow?
+    private var subscription: AnyCancellable?
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        guard lockWindow == nil, let scene = window?.windowScene else { return }
+        let lockWindow = UIWindow(windowScene: scene)
+        lockWindow.windowLevel = .alert + 1
+        lockWindow.backgroundColor = .clear
+        lockWindow.rootViewController = UIHostingController(rootView: LockScreen())
+        lockWindow.isHidden = true
+        self.lockWindow = lockWindow
+
+        // Delivered synchronously (no `receive(on:)`): the lock engages in
+        // the `.background` transition and the window must be up before
+        // the system takes the app-switcher snapshot.
+        subscription = AppLock.shared.$isLocked
+            .sink { [weak self, weak lockWindow] locked in
+                guard let lockWindow else { return }
+                if locked {
+                    lockWindow.makeKeyAndVisible()
+                } else {
+                    lockWindow.isHidden = true
+                    self?.window?.makeKey()
+                }
+            }
+    }
+}
 
 private struct LockScreen: View {
     @ObservedObject private var lock = AppLock.shared
@@ -171,6 +210,10 @@ class AppState: ObservableObject {
 
     /// The conversation drawer, in compact width: slides over the chat.
     @Published var showSideMenu = false
+    /// The Settings sheet's presentation flag lives here, outside the view
+    /// tree that `LanguageAwareRoot` rebuilds on a language change, so
+    /// picking a language no longer throws the user out of Settings.
+    @Published var showSettings = false
     /// The conversation sidebar, in regular width (iPad, iPhone Duo open,
     /// a wide iPhone Mirroring window): sits beside the chat. Separate from
     /// the drawer on purpose. The two states must not be one flag, or
@@ -285,6 +328,10 @@ class AppState: ObservableObject {
             currentConversation = restored
         }
         isInitialized = true
+        // Library entries whose text did not survive a device restore.
+        await KnowledgeLibrary.shared.dropMissingDocuments()
+        // A share that arrived before storage was ready waited in the inbox.
+        if !AppLock.shared.isLocked { consumeSharedContent() }
 
         // Warm up the weights in the background so the first answer is quick.
         //
@@ -344,12 +391,18 @@ class AppState: ObservableObject {
 
     func handleDeepLink(_ url: URL) {
         guard url.scheme == SharedInbox.urlScheme else { return }
+        // Nothing opens behind the terms wall or the lock: a widget's Voice
+        // button is not a way around Face ID, and a share that arrives on
+        // the very first launch would be consumed into a chat that storage
+        // does not exist for yet. Shared content stays in the inbox and is
+        // delivered by the `.active` / unlock paths once the app is ready.
+        let ready = UserDefaults.standard.bool(forKey: "hasAcceptedTerms") && !AppLock.shared.isLocked
         switch url.host() {
-        case "voice": pendingRoute = .voice
-        case "camera": pendingRoute = .camera
-        case "translate": pendingRoute = .translate
-        case "new": pendingRoute = .newChat
-        case "shared": consumeSharedContent()
+        case "voice": if ready { pendingRoute = .voice }
+        case "camera": if ready { pendingRoute = .camera }
+        case "translate": if ready { pendingRoute = .translate }
+        case "new": if ready { pendingRoute = .newChat }
+        case "shared": if ready { consumeSharedContent() }
         default: break
         }
     }
@@ -357,6 +410,9 @@ class AppState: ObservableObject {
     /// Pick up anything the share extension left for us and drop it into the
     /// composer of a fresh chat.
     func consumeSharedContent() {
+        // Not before storage is ready: a conversation created with no model
+        // context is never persisted and vanishes with the shared file.
+        guard isInitialized else { return }
         if WidgetLaunchBridge.consumeVoiceRequest() {
             pendingRoute = .voice
         }
@@ -379,8 +435,11 @@ class AppState: ObservableObject {
                     SharedInbox.cleanUp(fileName: name)
                 }
             }
+            // After the handoff, never before it: the sweep deletes inbox
+            // files older than a day, and a share opened late would have
+            // lost its file before it was read.
+            SharedInbox.sweepStaleFiles()
         }
-        SharedInbox.sweepStaleFiles()
     }
 
     /// The chat toolbar's menu button. In compact width it opens and closes

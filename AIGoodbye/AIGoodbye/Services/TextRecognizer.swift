@@ -142,6 +142,43 @@ enum TextRecognizer {
         return lines.count > 1 ? lines.joined(separator: "\n") : nil
     }
 
+    /// The recognized text as it should be read aloud.
+    ///
+    /// `markdown(for:)` emits tables as Markdown so they survive copy-paste
+    /// and the model reads rows as rows. Spoken, the separator row under
+    /// the header came out as "dash dash dash dash dash..." once per column
+    /// before a single menu item was read, and every cell boundary was a
+    /// pause with no structure. Separator rows (and horizontal rules) are
+    /// dropped and table rows become comma-separated cells, so a menu reads
+    /// "Coffee, 3.50. Tea, 2.00." The displayed text keeps the Markdown.
+    nonisolated static func speakable(_ text: String) -> String {
+        let ruleCharacters = Set("-|:*_ ".unicodeScalars)
+        var lines: [String] = []
+        for line in text.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            // `| --- | --- |`, `---`, `***`: punctuation with nothing to say.
+            if trimmed.count >= 3, trimmed.unicodeScalars.allSatisfy({ ruleCharacters.contains($0) }) {
+                continue
+            }
+            guard trimmed.hasPrefix("|") else {
+                lines.append(line)
+                continue
+            }
+            // A table row. Escaped pipes are cell content, not boundaries.
+            let marker = "\u{1}"
+            let cells = trimmed
+                .replacingOccurrences(of: "\\|", with: marker)
+                .split(separator: "|", omittingEmptySubsequences: true)
+                .map {
+                    String($0).replacingOccurrences(of: marker, with: "|")
+                        .trimmingCharacters(in: .whitespaces)
+                }
+                .filter { !$0.isEmpty }
+            if !cells.isEmpty { lines.append(cells.joined(separator: ", ")) }
+        }
+        return lines.joined(separator: "\n")
+    }
+
     /// Recognize text across several scanned pages, in order.
     static func text(in images: [UIImage], languages: [Locale.Language]) async -> String {
         var pages: [String] = []

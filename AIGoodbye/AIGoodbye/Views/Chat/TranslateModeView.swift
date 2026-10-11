@@ -32,6 +32,12 @@ struct TranslateModeView: View {
     @State private var notice: String?
     @State private var permissionDenied = false
     @State private var isActive = true
+    /// False while the scene is not `.active`; nothing is spoken then.
+    @State private var inForeground = true
+    /// The translation in flight, so closing the sheet can cancel it. Left
+    /// untracked, it finished after the sheet was gone, spoke the result into
+    /// an empty room and held the engine claim until then.
+    @State private var translateTask: Task<Void, Never>?
 
     /// Hands-free: keep listening, translating and speaking, alternating
     /// sides automatically so nobody has to touch the phone.
@@ -68,19 +74,41 @@ struct TranslateModeView: View {
         .onAppear(perform: start)
         .onDisappear {
             isActive = false
+            // Cancelled, not merely orphaned: the stream ends within a token,
+            // which also releases the engine claim promptly.
+            translateTask?.cancel()
+            translateTask = nil
             voice.shutdown()
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase != .active {
+            inForeground = (phase == .active)
+            switch phase {
+            case .background:
                 voice.pause()
                 listeningForMine = nil
                 // Don't keep the microphone running in the background.
                 isHandsFree = false
+            case .inactive:
+                // Control Center, the app switcher, a system alert - including
+                // the one-time Speech Recognition prompt a first listen in
+                // some languages shows. The screen is still there: the listen
+                // and hands-free survive (switching hands-free off here turned
+                // it off the moment the user enabled it). Only the speaker is
+                // silenced, and hands-free listens again in its place.
+                if voice.isSpeaking {
+                    voice.stopSpeaking()
+                    resumeHandsFreeIfIdle()
+                }
+            default:
+                break
             }
         }
         .onChange(of: voice.listeningState) { _, state in
             listeningStateChanged(state)
         }
+        // A swipe would otherwise close the sheet under a live microphone or
+        // a translation in progress; Close still works.
+        .interactiveDismissDisabled(isHandsFree || listeningForMine != nil || isTranslating)
     }
 
     // MARK: - Pieces
@@ -308,7 +336,7 @@ struct TranslateModeView: View {
         }
 
         voice.onFinalTranscript = { text in
-            Task { @MainActor in
+            translateTask = Task { @MainActor in
                 guard isActive else { return }
                 var wasMine = listeningForMine ?? true
                 listeningForMine = nil
@@ -322,6 +350,12 @@ struct TranslateModeView: View {
                     wasMine = detected
                 }
                 await translate(text, fromMine: wasMine)
+                // Normally the spoken translation's `onFinishedSpeaking`
+                // listens again. When nothing was spoken - the model returned
+                // nothing sayable, the engine was busy, the screen was away -
+                // hands-free has to be re-armed here or it sits "on" and dead.
+                guard !Task.isCancelled else { return }
+                resumeHandsFreeIfIdle()
             }
         }
         voice.onListeningEnded = {
@@ -329,15 +363,24 @@ struct TranslateModeView: View {
                 if listeningForMine != nil { listeningForMine = nil }
                 // Nothing was said (silence timeout): keep the conversation
                 // alive by listening again.
-                if isHandsFree, isActive, !isTranslating, !voice.isSpeaking {
-                    beginListening(mine: handsFreeExpectsMine)
-                }
+                resumeHandsFreeIfIdle()
             }
         }
         voice.onFinishedSpeaking = {
             Task { @MainActor in
-                guard isHandsFree, isActive, !isTranslating else { return }
-                beginListening(mine: handsFreeExpectsMine)
+                resumeHandsFreeIfIdle()
+            }
+        }
+        voice.onSpeechInterrupted = {
+            Task { @MainActor in
+                // A phone call or Siri took the audio. The synthesizer will
+                // not finish, so hands-free would never listen again; say why
+                // it stopped rather than leaving "Stop hands-free" on a screen
+                // where nothing happens.
+                guard isActive, isHandsFree else { return }
+                isHandsFree = false
+                listeningForMine = nil
+                notice = L10n.text("Hands-free stopped because another app took over the audio.")
             }
         }
 
@@ -350,9 +393,12 @@ struct TranslateModeView: View {
         }
     }
 
-    private func beginListening(mine: Bool) {
+    /// - Parameter clearingNotice: false when hands-free re-arms itself after
+    ///   a step that produced a notice ("the AI is busy"), so the user gets
+    ///   to read why that turn went untranslated while the next one is heard.
+    private func beginListening(mine: Bool, clearingNotice: Bool = true) {
         voice.stopSpeaking()
-        notice = nil
+        if clearingNotice { notice = nil }
         listeningForMine = mine
         // Asynchronous: the outcome arrives through `voice.listeningState`,
         // handled in `listeningStateChanged`.
@@ -382,7 +428,11 @@ struct TranslateModeView: View {
 
         let engine = appState.engine
         do {
-            let model = try engine.route(hasImage: false)
+            // `requiresDownloaded`: a model that is approved but not yet on
+            // disk would otherwise begin a multi-gigabyte download behind a
+            // bubble showing "...", with no consent, progress or Wi-Fi check.
+            // The chat screen owns downloads; the notice sends the user there.
+            let model = try engine.route(hasImage: false, requiresDownloaded: true)
             // A dedicated, throwaway session: translation must not inherit
             // the chat's persona, memory or history - a "Brainstorm Partner"
             // persona would turn a translation into a discussion. Claiming
@@ -411,30 +461,65 @@ struct TranslateModeView: View {
                 }
             }
 
+            // The sheet may have been closed while the model was working;
+            // nothing is spoken into an empty room.
+            guard isActive, !Task.isCancelled else { return }
+
             let cleaned = Self.cleanTranslation(final)
             if let index = turns.firstIndex(where: { $0.id == turn.id }) {
                 turns[index].translation = cleaned
             }
             turn.translation = cleaned
+            // A translation came through, so a notice from an earlier turn
+            // ("the AI is busy") that hands-free kept on screen is done with.
+            notice = nil
 
             // Speak the result in the target language.
             voice.setSpeechLanguage(target)
             // In hands-free mode the next speaker is whoever DIDN'T just
             // talk, so listening resumes in the right language.
             handsFreeExpectsMine = !fromMine
-            voice.speak(cleaned)
+            // Not while the screen is away (Control Center, the switcher):
+            // the bubble has the text. `speak` is also false when the model
+            // produced nothing sayable; either way the caller re-arms
+            // hands-free, since no `onFinishedSpeaking` will come.
+            if inForeground { voice.speak(cleaned) }
+        } catch is CancellationError {
+            // The sheet was closed mid-translation.
+            turns.removeAll { $0.id == turn.id }
         } catch let error as ChatEngine.RouteError {
             turns.removeAll { $0.id == turn.id }
-            notice = error.errorDescription
+            notice = Self.routeNotice(for: error)
             isHandsFree = false
         } catch {
+            guard isActive, !Task.isCancelled else { return }
             turns.removeAll { $0.id == turn.id }
             notice = error.localizedDescription
             isHandsFree = false
         }
     }
 
+    private static func routeNotice(for error: ChatEngine.RouteError) -> String {
+        switch error {
+        case .needsDownloadConsent(let model), .visionNeedsDownloadedModel(let model):
+            return L10n.text("Translating needs the \(model.name) model. Download it from the chat screen first.")
+        case .nothingAvailable(let reason):
+            return reason
+        }
+    }
+
     // MARK: - Hands-free
+
+    /// Listen again if hands-free is on and nothing else is happening: no
+    /// translation running, nothing being spoken, no listen already under
+    /// way. Every path that ends a hands-free step funnels through here, so a
+    /// step that produces no speech (and therefore no `onFinishedSpeaking`)
+    /// cannot leave the mode switched on and dead.
+    private func resumeHandsFreeIfIdle() {
+        guard isHandsFree, isActive, !isTranslating,
+              !voice.isSpeaking, !voice.isListeningOrPreparing else { return }
+        beginListening(mine: handsFreeExpectsMine, clearingNotice: false)
+    }
 
     private func toggleHandsFree() {
         isHandsFree.toggle()
@@ -453,6 +538,12 @@ struct TranslateModeView: View {
     /// Lets hands-free mode recover when people speak out of turn.
     static func detectedSide(of text: String, mine: AppLanguage, theirs: AppLanguage) -> Bool? {
         guard text.count >= 12, mine != theirs else { return nil }
+        // Two varieties of one language (Mandarin and Cantonese: "zh-Hans"
+        // and "zh-HK") both match on the base code "zh", and the recognizer
+        // reports neither of those tags, so "mine" won for every Chinese
+        // utterance and the Cantonese speaker was never translated. The
+        // schedule knows whose turn it is; the words cannot tell.
+        guard baseLanguage(of: mine) != baseLanguage(of: theirs) else { return nil }
         let recognizer = NLLanguageRecognizer()
         recognizer.processString(text)
         guard let dominant = recognizer.dominantLanguage else { return nil }
@@ -464,11 +555,16 @@ struct TranslateModeView: View {
         func matches(_ language: AppLanguage) -> Bool {
             let raw = language.rawValue
             return raw == code
-                || raw.split(separator: "-").first.map(String.init) == code.split(separator: "-").first.map(String.init)
+                || baseLanguage(of: language) == code.split(separator: "-").first.map(String.init)
         }
         if matches(mine) { return true }
         if matches(theirs) { return false }
         return nil
+    }
+
+    /// "zh" for both Mandarin ("zh-Hans") and Cantonese ("zh-HK").
+    private static func baseLanguage(of language: AppLanguage) -> String? {
+        language.rawValue.split(separator: "-").first.map(String.init)
     }
 
     /// Models sometimes wrap translations in quotes or add a preamble.

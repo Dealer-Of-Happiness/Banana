@@ -67,18 +67,17 @@ actor DocumentIndex {
 
     // MARK: - Storage
 
-    /// Documents live in Application Support (not backed up: this is a
-    /// local cache of the user's own files, and the app promises the text
-    /// stays on the device).
+    /// Documents live in Application Support, backed up with the
+    /// conversations and library entries that reference them (earlier
+    /// versions excluded them, so a restored phone listed documents whose
+    /// text was gone).
     static func documentsDirectory() -> URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        var dir = base.appendingPathComponent("AiGoodbyeDocs", isDirectory: true)
+        let dir = base.appendingPathComponent("AiGoodbyeDocs", isDirectory: true)
         if !FileManager.default.fileExists(atPath: dir.path) {
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            var values = URLResourceValues()
-            values.isExcludedFromBackup = true
-            try? dir.setResourceValues(values)
         }
+        ConversationManager.includeInBackup(dir)
         return dir
     }
 
@@ -90,20 +89,34 @@ actor DocumentIndex {
         documentsDirectory().appendingPathComponent("\(id.uuidString).name")
     }
 
-    /// Store a document's full extracted text. Returns its id.
-    func store(name: String, fullText: String) -> UUID {
+    /// Store a document's full extracted text. Returns its id. Throws when
+    /// the text cannot be written (a full disk): a document that only lived
+    /// in the chunk cache worked until the next launch and then silently
+    /// contributed nothing.
+    func store(name: String, fullText: String) throws -> UUID {
         let id = UUID()
         let textURL = Self.textURL(for: id)
-        try? fullText.write(to: textURL, atomically: true, encoding: .utf8)
+        do {
+            try fullText.write(to: textURL, atomically: true, encoding: .utf8)
+            try name.write(to: Self.nameURL(for: id), atomically: true, encoding: .utf8)
+        } catch {
+            try? FileManager.default.removeItem(at: textURL)
+            try? FileManager.default.removeItem(at: Self.nameURL(for: id))
+            throw error
+        }
         // Encrypt at rest while the device is locked.
         try? FileManager.default.setAttributes(
             [.protectionKey: FileProtectionType.complete],
             ofItemAtPath: textURL.path
         )
-        try? name.write(to: Self.nameURL(for: id), atomically: true, encoding: .utf8)
         cache(Self.chunk(fullText, documentName: name), for: id)
         nameCache[id] = name
         return id
+    }
+
+    /// Whether a document's text is still on disk.
+    func hasDocument(_ id: UUID) -> Bool {
+        FileManager.default.fileExists(atPath: Self.textURL(for: id).path)
     }
 
     func documentName(for id: UUID) -> String? {
@@ -184,17 +197,33 @@ actor DocumentIndex {
     /// The most relevant document passages for a question, formatted as
     /// context for the model. Returns nil when nothing is attached or
     /// nothing matches. Runs entirely off the main actor.
-    func context(for question: String, documentIds: [UUID], budget: Int = 6000) -> String? {
-        let allChunks = documentIds.flatMap { chunks(for: $0) }
-        guard !allChunks.isEmpty else { return nil }
-
-        let ranked = rank(chunks: allChunks, question: question)
+    ///
+    /// - Parameters:
+    ///   - budget: weighted characters (CJK counted at 2.3x, like the
+    ///     session budgets), so a Chinese document cannot blow the model's
+    ///     window with "6000 characters" that are 6000 tokens.
+    ///   - libraryIds: documents the user keeps switched on in every chat.
+    ///     Unlike a document attached to this chat, they are consulted only
+    ///     when a passage actually matches the question; otherwise "what's
+    ///     the weather like" dragged five thousand characters of a contract
+    ///     into every answer.
+    func context(for question: String, documentIds: [UUID], libraryIds: Set<UUID> = [], budget: Int = 6000) -> String? {
+        var ranked: [DocumentChunk] = []
+        let attached = documentIds.filter { !libraryIds.contains($0) }
+        let attachedChunks = attached.flatMap { chunks(for: $0) }
+        if !attachedChunks.isEmpty {
+            ranked += rank(chunks: attachedChunks, question: question)
+        }
+        let libraryChunks = documentIds.filter { libraryIds.contains($0) }.flatMap { chunks(for: $0) }
+        if !libraryChunks.isEmpty {
+            ranked += rank(chunks: libraryChunks, question: question, requireMatch: true)
+        }
         guard !ranked.isEmpty else { return nil }
 
         var used = 0
         var parts: [String] = []
         for chunk in ranked {
-            let cost = chunk.text.count
+            let cost = MLXService.weightedLength(of: chunk.text)
             if used + cost > budget { break }
             parts.append("[\(chunk.documentName), part \(chunk.position + 1)]\n\(chunk.text)")
             used += cost
@@ -268,9 +297,13 @@ actor DocumentIndex {
     /// Two-stage ranking: a cheap keyword pass over every chunk, then
     /// on-device sentence embeddings over only the best candidates (running
     /// an embedding model over hundreds of chunks would take seconds).
-    func rank(chunks: [DocumentChunk], question: String, topK: Int = 6) -> [DocumentChunk] {
+    ///
+    /// - Parameter requireMatch: return nothing rather than the opening of
+    ///   the document when no passage shares a meaningful word with the
+    ///   question (library documents, which are on in every chat).
+    func rank(chunks: [DocumentChunk], question: String, topK: Int = 6, requireMatch: Bool = false) -> [DocumentChunk] {
         let questionTokens = Self.tokens(of: question)
-        guard !questionTokens.isEmpty else { return Array(chunks.prefix(topK)) }
+        guard !questionTokens.isEmpty else { return requireMatch ? [] : Array(chunks.prefix(topK)) }
         let questionWeight = Double(questionTokens.reduce(0) { $0 + $1.count })
 
         // Stage 1: keyword overlap, weighted by token length.
@@ -281,9 +314,15 @@ actor DocumentIndex {
             let score = overlap.reduce(0.0) { $0 + Double($1.count) } / max(questionWeight, 1)
             keywordScored.append((chunk, score))
         }
+        if requireMatch {
+            // Short, common words ("the", "is", "what") overlap with any
+            // passage; demand that a real share of the question's letters
+            // is found before a library document is pulled into the answer.
+            keywordScored.removeAll { $0.score < 0.25 }
+        }
         // Nothing matched by keyword: fall back to the opening of the
         // document so summaries and vague questions still have material.
-        guard !keywordScored.isEmpty else { return Array(chunks.prefix(topK)) }
+        guard !keywordScored.isEmpty else { return requireMatch ? [] : Array(chunks.prefix(topK)) }
 
         keywordScored.sort { $0.score > $1.score }
         let candidates = Array(keywordScored.prefix(30))

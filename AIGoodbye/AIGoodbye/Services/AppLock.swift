@@ -68,6 +68,16 @@ final class AppLock: ObservableObject {
         await unlock()
     }
 
+    /// Authenticate before the lock may be switched off. Without this,
+    /// anyone who reached Settings could simply disable it.
+    func authenticateToChangeSetting() async -> Bool {
+        guard isAvailable else { return true }
+        let context = LAContext()
+        context.localizedCancelTitle = L10n.text("Cancel")
+        let reason = L10n.text("Confirm it's you to change the app lock")
+        return (try? await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)) ?? false
+    }
+
     func unlock() async {
         guard isEnabled, isLocked, !authenticating else { return }
 

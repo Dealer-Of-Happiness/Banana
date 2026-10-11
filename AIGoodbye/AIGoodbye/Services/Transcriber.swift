@@ -206,6 +206,10 @@ final class Transcriber {
         legacy.onFailure = { [weak self] _ in
             Task { @MainActor in self?.onRecognitionFailed?() }
         }
+        // The same names and jargon the analyzer gets. The vocabulary screen
+        // promises the list is applied to every recording, and the languages
+        // this engine serves are exactly the ones with the weakest models.
+        legacy.setContextualStrings(customVocabulary)
         try legacy.start(locale: locale)
     }
 
@@ -552,8 +556,15 @@ nonisolated final class LegacyTranscriber: @unchecked Sendable {
     private var consecutiveFailures = 0
     private var hasReportedFailure = false
     private let maximumConsecutiveFailures = 5
+    /// Names and jargon handed to every request (`contextualStrings`).
+    /// Lock-guarded: segments begin on a background queue after a back-off.
+    private var contextualStrings: [String] = []
 
     private let segmentSeconds: TimeInterval = 45
+
+    func setContextualStrings(_ strings: [String]) {
+        lock.lock(); contextualStrings = strings; lock.unlock()
+    }
 
     func isAvailable(for locale: Locale) -> Bool {
         guard let recognizer = SFSpeechRecognizer(locale: locale) else { return false }
@@ -606,12 +617,15 @@ nonisolated final class LegacyTranscriber: @unchecked Sendable {
         guard isRunning else { lock.unlock(); return }
         let index = segmentIndex
         segmentIndex += 1
+        let vocabulary = contextualStrings
         lock.unlock()
 
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
         request.requiresOnDeviceRecognition = true
         request.addsPunctuation = true
+        // Per request, because every rotated segment is a new request.
+        if !vocabulary.isEmpty { request.contextualStrings = vocabulary }
 
         lock.lock()
         requests[index] = request

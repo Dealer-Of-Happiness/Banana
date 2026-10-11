@@ -19,11 +19,16 @@ enum ModelValidationError: LocalizedError {
     case tooLargeForDevice(neededGB: Int, deviceGB: Int)
     case notEnoughSpace(needed: String, free: String)
     case alreadyAdded
+    /// The repository is one of the models the app ships with.
+    case alreadyBuiltIn
 
     var errorDescription: String? {
         switch self {
         case .badFormat:
-            return L10n.text("That doesn't look like a model address. Use the form owner/model-name, for example mlx-community/Qwen3-VL-2B-Instruct-4bit.")
+            // The example must not be a catalog repository: users copy it
+            // verbatim, and a custom entry for a built-in's repository shares
+            // the built-in's folder (double-counted storage, cross-deletion).
+            return L10n.text("That doesn't look like a model address. Use the form owner/model-name, for example mlx-community/Llama-3.2-1B-Instruct-4bit.")
         case .notFound:
             return L10n.text("No model with that name was found on Hugging Face. Check the spelling, and note that private and gated models can't be used.")
         case .network:
@@ -36,6 +41,8 @@ enum ModelValidationError: LocalizedError {
             return L10n.text("This model needs \(needed) and only \(free) is free.")
         case .alreadyAdded:
             return L10n.text("That model has already been added.")
+        case .alreadyBuiltIn:
+            return L10n.text("That model is already built in - pick it from the model list.")
         }
     }
 }
@@ -69,6 +76,18 @@ enum HuggingFaceValidator {
         // let a delete escape the model cache.
         guard !owner.allSatisfy({ $0 == "." }), !name.allSatisfy({ $0 == "." }) else { return nil }
         return "\(owner)/\(name)"
+    }
+
+    /// True when the repository is one the app ships as a built-in model.
+    ///
+    /// Model directories are named after the repository, so a custom entry
+    /// for a built-in's repository would share its folder: the storage total
+    /// counted it twice, the picker listed it twice, and deleting either row
+    /// deleted the other's files - after which the still-approved built-in
+    /// quietly re-downloaded 1.8 GB on the next message.
+    static func isBuiltInRepo(_ repoId: String) -> Bool {
+        let wanted = repoId.lowercased()
+        return AIModel.builtInModels.contains { $0.huggingFaceId?.lowercased() == wanted }
     }
 
     /// A friendly display name derived from the repo name.
@@ -130,6 +149,7 @@ enum HuggingFaceValidator {
 
     static func validate(_ input: String) async throws -> CustomModelSpec {
         guard let repoId = normalize(input) else { throw ModelValidationError.badFormat }
+        if isBuiltInRepo(repoId) { throw ModelValidationError.alreadyBuiltIn }
 
         guard let treeURL = URL(string: "https://huggingface.co/api/models/\(repoId)/tree/main?recursive=true") else {
             throw ModelValidationError.badFormat
@@ -198,10 +218,24 @@ enum HuggingFaceValidator {
         // The config decides which MLX factory loads the model, so guessing
         // from the name alone would mean a multi-gigabyte download that then
         // refuses to load. It's a few kilobytes: insist on reading it.
-        guard let configURL = URL(string: "https://huggingface.co/\(repoId)/resolve/main/config.json"),
-              let (configData, configResponse) = try? await URLSession.shared.data(from: configURL),
-              (configResponse as? HTTPURLResponse)?.statusCode == 200,
-              let config = try? JSONSerialization.jsonObject(with: configData) as? [String: Any] else {
+        guard let configURL = URL(string: "https://huggingface.co/\(repoId)/resolve/main/config.json") else {
+            throw ModelValidationError.missingFiles
+        }
+        let configData: Data
+        do {
+            let (data, response) = try await URLSession.shared.data(from: configURL)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            // A gated repository lists its files publicly but refuses the
+            // download itself; that is "can't be used", not "isn't MLX".
+            if status == 401 || status == 403 { throw ModelValidationError.notFound }
+            guard status == 200 else { throw ModelValidationError.missingFiles }
+            configData = data
+        } catch let error as ModelValidationError {
+            throw error
+        } catch {
+            throw ModelValidationError.network
+        }
+        guard let config = try? JSONSerialization.jsonObject(with: configData) as? [String: Any] else {
             throw ModelValidationError.missingFiles
         }
         let supportsVision = looksLikeVisionModel(config: config, repoId: repoId)

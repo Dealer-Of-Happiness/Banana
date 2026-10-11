@@ -16,6 +16,9 @@ import Network
 
 struct SetupView: View {
     @EnvironmentObject var appState: AppState
+    // Observed so the button flips between "Download" and "Load" when a
+    // download completes or a model is deleted while the sheet is open.
+    @ObservedObject private var modelManager = ModelManager.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var chosen: AIModel = AIModel.recommendedDownloadModel
@@ -24,6 +27,13 @@ struct SetupView: View {
 
     private var appleIntelligenceReady: Bool {
         appState.engine.appleIntelligence.isAvailable
+    }
+
+    /// The chosen model is on disk already. This sheet is also where a model
+    /// that failed to *load* sends the user, and offering "Download X · 1.8 GB"
+    /// for files that are fully installed reads as "the app lost my download".
+    private var chosenIsInstalled: Bool {
+        modelManager.isModelDownloaded(chosen)
     }
 
     /// Models this device can actually run.
@@ -129,9 +139,16 @@ struct SetupView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                Button("Done") { dismiss() }
-                    .font(.subheadline)
-                    .frame(maxWidth: .infinity, minHeight: 44)
+                Button {
+                    dismiss()
+                } label: {
+                    // Sized inside the label: a frame on the button grew the
+                    // layout but not the tappable area.
+                    Text("Done")
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
             }
             .padding()
             .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
@@ -142,14 +159,10 @@ struct SetupView: View {
 
     private var modelChoiceSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(appleIntelligenceReady
-                 ? L10n.text("Want to analyze photos and documents?")
-                 : L10n.text("Download a model"))
+            Text(heading)
                 .font(.headline)
 
-            Text(appleIntelligenceReady
-                 ? L10n.text("Apple Intelligence handles text. A downloaded model adds image understanding and works in every language the app supports.")
-                 : L10n.text("This device doesn't have Apple Intelligence, so AiGoodbye needs one model downloaded before it can answer. It only happens once."))
+            Text(explanation)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -158,7 +171,7 @@ struct SetupView: View {
                 modelRow(model)
             }
 
-            if !isOnWiFi {
+            if !isOnWiFi && !chosenIsInstalled {
                 Label("You're not on Wi-Fi. This is a large download - it will wait until you are, unless you turn that off in Settings.",
                       systemImage: "wifi.slash")
                     .font(.footnote)
@@ -171,9 +184,13 @@ struct SetupView: View {
                 appState.engine.approveDownload(for: chosen)
                 let engine = appState.engine
                 let chat = appState.chatViewModel
+                let model = chosen
                 Task {
                     do {
-                        try await engine.startConversation(model: chosen, history: [])
+                        // Weights only. Building a chat session here on top
+                        // of the load left a stray session behind that the
+                        // first real message then had to tear down.
+                        try await engine.prepare(model)
                     } catch is CancellationError {
                         // The user stopped it; nothing to explain.
                     } catch {
@@ -186,7 +203,12 @@ struct SetupView: View {
                 }
                 dismiss()
             } label: {
-                Label("Download \(chosen.name) · \(chosen.size)", systemImage: "arrow.down.circle.fill")
+                Label(
+                    chosenIsInstalled
+                        ? L10n.text("Load \(chosen.name)")
+                        : L10n.text("Download \(chosen.name) · \(chosen.size)"),
+                    systemImage: chosenIsInstalled ? "arrow.clockwise.circle.fill" : "arrow.down.circle.fill"
+                )
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .background(RoundedRectangle(cornerRadius: 14).fill(Color.blue.opacity(0.15)))
@@ -194,12 +216,37 @@ struct SetupView: View {
             }
             .buttonStyle(.plain)
 
-            Button("Not now") { dismiss() }
-                .font(.subheadline)
-                .frame(maxWidth: .infinity, minHeight: 44)
+            Button {
+                dismiss()
+            } label: {
+                // Sized inside the label: a frame on the button grew the
+                // layout but not the tappable area.
+                Text("Not now")
+                    .font(.subheadline)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .contentShape(Rectangle())
+            }
         }
         .padding()
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+    }
+
+    private var heading: String {
+        if chosenIsInstalled { return L10n.text("Try Again") }
+        return appleIntelligenceReady
+            ? L10n.text("Want to analyze photos and documents?")
+            : L10n.text("Download a model")
+    }
+
+    /// Why the user is here. A model that is installed but failed to load
+    /// gets told so; everyone else gets the download pitch.
+    private var explanation: String {
+        if chosenIsInstalled {
+            return L10n.text("\(chosen.name) is already on this device but couldn't be loaded last time. Try again, or choose another model.")
+        }
+        return appleIntelligenceReady
+            ? L10n.text("Apple Intelligence handles text. A downloaded model adds image understanding and works in every language the app supports.")
+            : L10n.text("This device doesn't have Apple Intelligence, so AiGoodbye needs one model downloaded before it can answer. It only happens once.")
     }
 
     private func modelRow(_ model: AIModel) -> some View {

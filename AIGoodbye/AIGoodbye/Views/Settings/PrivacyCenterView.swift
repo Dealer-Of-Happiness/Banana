@@ -132,8 +132,8 @@ struct PrivacyCenterView: View {
 
     private var dataMap: some View {
         Section {
-            dataRow("Your messages", L10n.text("Stored on this device"), "bubble.left.and.text.bubble.right")
-            dataRow("Photos and documents you attach", L10n.text("Read on this device, never uploaded"), "doc.on.doc")
+            dataRow("Your messages", L10n.text("Stored on this device (included in your iCloud backup, if you use one)"), "bubble.left.and.text.bubble.right")
+            dataRow("Photos and documents you attach", L10n.text("Kept with the chat on this device, never uploaded"), "doc.on.doc")
             dataRow("Voice", L10n.text("Recognized on this device by Apple's offline engine"), "waveform")
             dataRow("Memory and library", L10n.text("Stored on this device (included in your iCloud backup, if you use one)"), "brain.head.profile")
             dataRow("Analytics", L10n.text("None collected"), "chart.bar.xaxis")

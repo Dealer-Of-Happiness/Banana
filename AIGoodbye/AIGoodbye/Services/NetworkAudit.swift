@@ -77,6 +77,24 @@ final class NetworkAudit: ObservableObject {
         }
     }
 
+    /// Log the files the library's own downloader is about to fetch.
+    ///
+    /// swift-transformers transfers file bodies on a private `URLSession` of
+    /// its own, which neither the registered URLProtocol nor `note(_:)` sees.
+    /// Whenever the app hands a download to it, call this with the file URLs
+    /// first, or the Privacy Center shows "No network requests" while
+    /// gigabytes move - the opposite of what the screen promises.
+    nonisolated static func noteLibraryDownload(files: [URL]) {
+        guard !files.isEmpty else { return }
+        Task { @MainActor in
+            for url in files {
+                var request = URLRequest(url: url)
+                request.httpMethod = "GET"
+                shared.record(request)
+            }
+        }
+    }
+
     fileprivate func record(_ request: URLRequest) {
         guard let url = request.url, let host = url.host() else { return }
         let event = NetworkEvent(

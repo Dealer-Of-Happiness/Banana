@@ -52,7 +52,12 @@ nonisolated enum AppLanguage: String, CaseIterable, Identifiable, Codable {
 
     /// Locale used for the SwiftUI environment when this language is active.
     var locale: Locale? {
-        self == .automatic ? nil : Locale(identifier: rawValue)
+        if self == .automatic {
+            // The device's language, not the app's cached preference, so
+            // Automatic takes effect immediately after an override.
+            return L10n.deviceLanguageCode.map { Locale(identifier: $0) }
+        }
+        return Locale(identifier: rawValue)
     }
 
     /// The instruction fragment that tells the model which language to answer in.

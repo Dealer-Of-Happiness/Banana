@@ -59,6 +59,13 @@ final class AppleIntelligenceService: ObservableObject {
 
     var isAvailable: Bool { availability == .available }
 
+    /// Tokens of the 4096-token window given to instructions plus seeded
+    /// history, leaving room for a few turns before the session is rebuilt.
+    nonisolated static let seedBudgetTokens = 2000
+    /// The window Apple Intelligence works in; used by callers that size
+    /// retrieved document passages to the backend.
+    nonisolated static let contextWindowTokens = 4096
+
     // MARK: - Session
 
     /// Start (or restart) a session, optionally seeding condensed history so the
@@ -68,7 +75,14 @@ final class AppleIntelligenceService: ObservableObject {
         guard isAvailable else { return }
 
         var instructions = baseInstructions
-        let trimmed = MLXService.trimHistory(history, tokenBudget: 2500)
+        // The on-device model's window is 4096 tokens for instructions,
+        // transcript and answer together. Budget the seeded history by what
+        // the instructions already cost (a long persona plus a full memory
+        // store is well over a thousand tokens), or a reopened chat fails on
+        // its first turn with "too long" and Try Again fails the same way.
+        let instructionTokens = MLXService.weightedLength(of: baseInstructions) / 3
+        let historyBudget = max(500, Self.seedBudgetTokens - instructionTokens)
+        let trimmed = MLXService.trimHistory(history, tokenBudget: historyBudget)
         if !trimmed.isEmpty {
             let transcript = trimmed
                 .map { "\($0.role == "user" ? "User" : "Assistant"): \($0.content)" }
@@ -126,6 +140,14 @@ final class AppleIntelligenceService: ObservableObject {
                     }
                     continuation.finish()
                 } catch {
+                    // Typed, so the chat can rebuild the session from
+                    // trimmed history and retry once instead of blaming
+                    // the conversation's length.
+                    if let generationError = error as? LanguageModelSession.GenerationError,
+                       case .exceededContextWindowSize = generationError {
+                        continuation.finish(throwing: AppleIntelligenceError.contextExceeded)
+                        return
+                    }
                     continuation.finish(throwing: AppleIntelligenceError.generation(Self.friendlyMessage(error)))
                 }
             }
@@ -174,6 +196,9 @@ final class AppleIntelligenceService: ObservableObject {
 enum AppleIntelligenceError: LocalizedError {
     case notReady
     case generation(String)
+    /// The session's transcript outgrew the model's window. Recoverable:
+    /// drop the session and retry the turn from trimmed history.
+    case contextExceeded
 
     var errorDescription: String? {
         switch self {
@@ -181,6 +206,8 @@ enum AppleIntelligenceError: LocalizedError {
             return L10n.text("Apple Intelligence isn't ready. Choose a downloaded model in Settings.")
         case .generation(let message):
             return message
+        case .contextExceeded:
+            return L10n.text("This conversation is too long for Apple Intelligence. Start a new chat or switch to a downloaded model.")
         }
     }
 }

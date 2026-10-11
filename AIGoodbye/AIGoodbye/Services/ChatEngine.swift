@@ -98,6 +98,11 @@ final class ChatEngine: ObservableObject {
         if model.backend == .appleIntelligence {
             mlx.unload()
         }
+        // Whatever session the other backend was holding is now stale: it
+        // never saw the turns answered since. Every caller rebuilds on the
+        // next turn, so dropping it here costs nothing and stops the
+        // assistant "forgetting" the last exchanges after a model switch.
+        resetSessions()
     }
 
     /// Models shown in pickers: built-in first (when available), then current
@@ -153,19 +158,18 @@ final class ChatEngine: ObservableObject {
             if selectedModel.backend == .mlx && selectedModel.supportsVision {
                 return try routeMLX(selectedModel)
             }
-            // Apple Intelligence selected: fall back to a downloaded vision
-            // model. Deliberately the SMALLEST one that fits, not the first
-            // in the catalog - loading 5.8 GB to answer one image question,
-            // and keeping it resident afterwards, is how the app gets killed.
+            // Apple Intelligence selected: fall back to a vision model that
+            // is downloaded, or one the user has approved for download (the
+            // consent sheet's Download button lands here next; requiring
+            // the files to already exist made that sheet reappear forever).
+            // Deliberately the SMALLEST one that fits, not the first in the
+            // catalog - loading 5.8 GB to answer one image question, and
+            // keeping it resident afterwards, is how the app gets killed.
             let candidates = AIModel.allModels
-                .filter { $0.isDownloaded && $0.supportsVision && $0.fitsThisDevice() }
-                .sorted { $0.sizeBytes < $1.sizeBytes }
-            if let smallest = candidates.first {
-                // Only marked once routing has actually succeeded: a throw
-                // here would otherwise leave the flag set, and some later
-                // unrelated turn would unload a model still in use.
-                let routed = try routeMLX(smallest)
-                return routed
+                .filter { $0.supportsVision && $0.fitsThisDevice() && ($0.isDownloaded || hasApprovedDownload(for: $0)) }
+                .sorted { ($0.isDownloaded ? 0 : 1, $0.sizeBytes) < ($1.isDownloaded ? 0 : 1, $1.sizeBytes) }
+            if let pick = candidates.first {
+                return try routeMLX(pick)
             }
             throw RouteError.visionNeedsDownloadedModel(AIModel.recommendedDownloadModel)
         }
@@ -244,6 +248,26 @@ final class ChatEngine: ObservableObject {
             try await load(model)
             mlx.startSession(model: model, history: history)
         }
+        #endif
+    }
+
+    /// Download and load a model's weights without building a chat session.
+    ///
+    /// For the setup screen and "Add and use this model": those used to call
+    /// `startConversation(history: [])`, which left a live session with no
+    /// history behind - and because `hasSession` was then true, the next
+    /// message in a conversation full of context was answered as if it were
+    /// the first.
+    func prepare(_ model: AIModel) async throws {
+        guard model.backend == .mlx else { return }
+        #if targetEnvironment(simulator)
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["AIG_SIM_TEST_DOWNLOAD"] == "1", !model.isDownloaded {
+            try await mlx.debugDownloadOnly(model)
+        }
+        #endif
+        #else
+        try await load(model)
         #endif
     }
 

@@ -45,7 +45,9 @@ struct AddCustomModelView: View {
             } header: {
                 Text("Hugging Face model")
             } footer: {
-                Text("Paste a model address such as mlx-community/Qwen3-VL-2B-Instruct-4bit. Only models converted for MLX will work; the mlx-community organization publishes thousands of them.")
+                // Not a catalog repository: users paste the example as is, and
+                // a custom copy of a built-in shares its folder on disk.
+                Text("Paste a model address such as mlx-community/Llama-3.2-1B-Instruct-4bit. Only models converted for MLX will work; the mlx-community organization publishes thousands of them.")
             }
 
             if let errorMessage {
@@ -81,6 +83,23 @@ struct AddCustomModelView: View {
                         if let model = AIModel.model(withId: candidate.id) {
                             appState.engine.select(model)
                             appState.engine.approveDownload(for: model)
+                            // Start the download now, with the approval. An
+                            // approved-but-absent selected model used to sit
+                            // until the next feature touched it - Translate
+                            // or a recording summary then pulled gigabytes
+                            // behind their own spinner, with no progress and
+                            // no Stop. From here the chat chip shows it.
+                            let engine = appState.engine
+                            let chat = appState.chatViewModel
+                            Task {
+                                do {
+                                    try await engine.prepare(model)
+                                } catch is CancellationError {
+                                    // The user stopped it; nothing to explain.
+                                } catch {
+                                    chat.errorBanner = .init(message: error.localizedDescription, canRetry: false)
+                                }
+                            }
                         }
                         dismiss()
                     } label: {
@@ -119,9 +138,16 @@ struct AddCustomModelView: View {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
-        if let repoId = HuggingFaceValidator.normalize(text), store.contains(repoId: repoId) {
-            errorMessage = ModelValidationError.alreadyAdded.errorDescription
-            return
+        if let repoId = HuggingFaceValidator.normalize(text) {
+            // Both answered instantly, without a network round trip.
+            if store.contains(repoId: repoId) {
+                errorMessage = ModelValidationError.alreadyAdded.errorDescription
+                return
+            }
+            if HuggingFaceValidator.isBuiltInRepo(repoId) {
+                errorMessage = ModelValidationError.alreadyBuiltIn.errorDescription
+                return
+            }
         }
 
         checkTask?.cancel()

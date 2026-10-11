@@ -44,6 +44,12 @@ nonisolated struct RecordingCheckpoint: Codable, Equatable {
     var duration: TimeInterval
     var audioFileName: String?
     var languageCode: String
+    /// Whether the user asked to keep the audio. Audio is always captured as
+    /// insurance and a normal finish deletes it when the transcript came out
+    /// and the toggle was off; recovery honours the same choice. Optional so
+    /// checkpoints written before this field existed still decode (treated
+    /// as "keep", the safe direction).
+    var keepAudio: Bool? = nil
 }
 
 @MainActor
@@ -160,15 +166,41 @@ final class RecordingStore: ObservableObject {
     /// Save a snapshot of the recording in progress. Called every few
     /// seconds while recording; cheap, and atomic so a kill mid-write leaves
     /// the previous snapshot intact.
+    ///
+    /// One file holds one recording. If an interrupted recording is still
+    /// waiting for a decision ("Decide later" on the recovery prompt), it is
+    /// saved first rather than overwritten - and if it cannot be saved, it is
+    /// left alone and this snapshot is skipped. A three-hour meeting that
+    /// survived a crash must not be destroyed by a ten-second note.
     func writeCheckpoint(_ checkpoint: RecordingCheckpoint) {
+        guard recoverForeignCheckpoint(before: checkpoint.id) else { return }
         guard let data = try? JSONEncoder().encode(checkpoint) else { return }
         try? data.write(to: Self.checkpointURL, options: [.atomic, .completeFileProtectionUnlessOpen])
     }
 
-    /// The recording finished normally (or was deliberately discarded).
-    func clearCheckpoint() {
+    /// The recording with this id finished normally (or was deliberately
+    /// discarded). Scoped to an id on purpose: a checkpoint left by an
+    /// interrupted recording the user has not decided about is not this
+    /// recording's to delete.
+    func clearCheckpoint(id: UUID) {
+        guard pendingCheckpoint == nil || pendingCheckpoint?.id == id else { return }
+        removeCheckpointFile()
+    }
+
+    private func removeCheckpointFile() {
         pendingCheckpoint = nil
         try? FileManager.default.removeItem(at: Self.checkpointURL)
+    }
+
+    /// Save an interrupted recording the user has not decided about, so a
+    /// recording with another id can take over the checkpoint file. Returns
+    /// false only when it could not be saved; the file is then untouched.
+    @discardableResult
+    func recoverForeignCheckpoint(before id: UUID) -> Bool {
+        guard let pending = pendingCheckpoint, pending.id != id else { return true }
+        return recoverPendingCheckpoint(
+            title: RecordingSummarizer.fallbackTitle(from: pending.transcript, date: pending.startedAt)
+        )
     }
 
     /// Turn a recovered checkpoint into a real recording.
@@ -178,6 +210,11 @@ final class RecordingStore: ObservableObject {
         let hasAudio = checkpoint.audioFileName.map {
             FileManager.default.fileExists(atPath: Self.audioURL(named: $0).path)
         } ?? false
+        // The same rule as a normal finish: audio the user did not ask to
+        // keep is only insurance against a transcript that never came. With
+        // the words safe, it goes. (An old checkpoint without the flag, or
+        // one with no words, keeps its audio.)
+        let unwantedAudio = hasAudio && checkpoint.keepAudio == false && !checkpoint.transcript.isEmpty
         let recording = Recording(
             id: checkpoint.id,
             title: title,
@@ -185,11 +222,17 @@ final class RecordingStore: ObservableObject {
             duration: checkpoint.duration,
             transcript: checkpoint.transcript,
             summary: nil,
-            audioFileName: hasAudio ? checkpoint.audioFileName : nil,
+            audioFileName: hasAudio && !unwantedAudio ? checkpoint.audioFileName : nil,
             languageCode: checkpoint.languageCode
         )
         let saved = add(recording)
-        if saved { clearCheckpoint() }
+        if saved {
+            // Deleted only once the transcript is safely in the library.
+            if unwantedAudio, let name = checkpoint.audioFileName {
+                try? FileManager.default.removeItem(at: Self.audioURL(named: name))
+            }
+            removeCheckpointFile()
+        }
         return saved
     }
 
@@ -198,7 +241,7 @@ final class RecordingStore: ObservableObject {
         if let name = pendingCheckpoint?.audioFileName {
             try? FileManager.default.removeItem(at: Self.audioURL(named: name))
         }
-        clearCheckpoint()
+        removeCheckpointFile()
     }
 
     // MARK: - Mutations

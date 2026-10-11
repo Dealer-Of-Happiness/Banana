@@ -41,8 +41,12 @@ struct ChatView: View {
     /// Whether the transcript is scrolled to the bottom, so a streaming
     /// answer follows along without stealing the scroll from the user.
     @State private var isPinnedToBottom = true
+    /// Whether the transcript is taller than its viewport (a drag on a
+    /// short chat is a rubber-band, not a request to stop following).
+    @State private var isScrollable = false
     @State private var showingSetup = false
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.scenePhase) private var scenePhase
     /// Drawer or sidebar, decided by `MainView` for this window.
     @Environment(\.conversationListStyle) private var listStyle
     /// Shown once, right after the terms, so a new user knows where they
@@ -86,7 +90,9 @@ struct ChatView: View {
                     .background(Color.blue.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .padding(.horizontal)
-                    .task {
+                    // Keyed to the text: a second fact saved within six
+                    // seconds otherwise inherited the first one's timer.
+                    .task(id: notice) {
                         try? await Task.sleep(nanoseconds: 6_000_000_000)
                         withAnimation { viewModel.memoryNotice = nil }
                     }
@@ -186,7 +192,11 @@ struct ChatView: View {
                         showingScanner = false
                         Task { await viewModel.processScan(scan) }
                     },
-                    onCancel: { showingScanner = false }
+                    onCancel: { showingScanner = false },
+                    onFail: { error in
+                        showingScanner = false
+                        viewModel.presentImportError(DocumentScannerView.failureMessage(for: error))
+                    }
                 )
                 .ignoresSafeArea()
             }
@@ -296,6 +306,16 @@ struct ChatView: View {
         // Widgets, Control Center and Siri can ask for a specific screen.
         .onChange(of: appState.pendingRoute) { _, _ in
             applyPendingRoute()
+        }
+        // A downloaded model must not keep generating from the background
+        // (see `pauseForBackground`). `.inactive` is left alone: Control
+        // Center and the Face ID prompt pass through it.
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .background: viewModel.pauseForBackground()
+            case .active: viewModel.resumeFromBackground()
+            default: break
+            }
         }
     }
 
@@ -442,9 +462,17 @@ struct ChatView: View {
             .simultaneousGesture(
                 DragGesture(minimumDistance: 12)
                     .onChanged { value in
-                        if value.translation.height > 0 { isPinnedToBottom = false }
+                        // Only when there is somewhere to scroll: a
+                        // rubber-band pull on a short chat unpinned with
+                        // no way back until content grew.
+                        if value.translation.height > 0, isScrollable { isPinnedToBottom = false }
                     }
             )
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                geometry.contentSize.height > geometry.containerSize.height
+            } action: { _, scrollable in
+                isScrollable = scrollable
+            }
             .onScrollGeometryChange(for: Bool.self) { geometry in
                 let bottom = geometry.contentOffset.y + geometry.containerSize.height
                 return bottom >= geometry.contentSize.height - 120
@@ -452,10 +480,30 @@ struct ChatView: View {
                 // Re-pin as soon as the user comes back to the bottom.
                 if atBottom { isPinnedToBottom = true }
             }
+            // Open at the newest message. The count-based scroll below never
+            // fired on a cold launch or when coming back from an empty New
+            // Chat: the scroll view was created in the same update the
+            // messages arrived, so there was no change to observe.
+            .defaultScrollAnchor(.bottom)
+            .onChange(of: appState.currentConversation?.id, initial: true) { _, _ in
+                isPinnedToBottom = true
+                proxy.scrollTo(viewModel.messages.last?.id.uuidString, anchor: .bottom)
+            }
             .onChange(of: viewModel.messages.count) { _, _ in
-                // A new message the user just sent always scrolls.
+                // A message the user just sent always scrolls; the answer
+                // being appended must not yank back a reader who scrolled
+                // up to re-read something while it streamed.
+                guard viewModel.messages.last?.role == .user || isPinnedToBottom else { return }
                 isPinnedToBottom = true
                 withAnimation {
+                    proxy.scrollTo(viewModel.messages.last?.id.uuidString, anchor: .bottom)
+                }
+            }
+            .onChange(of: isInputFocused) { _, focused in
+                // The keyboard shrinks the scroll view but keeps its offset,
+                // hiding the newest messages behind the composer.
+                guard focused, isPinnedToBottom else { return }
+                DispatchQueue.main.async {
                     proxy.scrollTo(viewModel.messages.last?.id.uuidString, anchor: .bottom)
                 }
             }
@@ -504,7 +552,14 @@ struct ChatView: View {
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
-                if appState.engine.mlx.isDownloadStalled {
+                if appState.engine.mlx.isWaitingForWiFi {
+                    // Parked, not stalled: the Wi-Fi-only setting is doing
+                    // its job on cellular, and the system waits silently.
+                    Text("Waiting for Wi-Fi. Connect to Wi-Fi, or turn off \"Download over Wi-Fi only\" in Settings.")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if appState.engine.mlx.isDownloadStalled {
                     Text("Download stalled. Check your internet connection.")
                         .font(.caption2)
                         .foregroundStyle(.orange)
@@ -515,11 +570,12 @@ struct ChatView: View {
             .frame(maxWidth: .infinity)
             .background(Color(.systemGray6))
             .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.updatesFrequently)
         case .preparing:
             HStack(spacing: 8) {
                 ProgressView()
                     .controlSize(.small)
-                Text("Preparing \(appState.engine.selectedModel.name)...")
+                Text("Preparing \(loadingModelName)...")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -553,11 +609,18 @@ struct ChatView: View {
         }
     }
 
+    /// The model being fetched or loaded right now - not necessarily the
+    /// selected one (an image question on Apple Intelligence borrows a
+    /// vision model, and the chip used to say "Preparing Apple Intelligence").
+    private var loadingModelName: String {
+        appState.engine.mlx.loadingModelName ?? appState.engine.selectedModel.name
+    }
+
     /// "Downloading Qwen3 Vision 2B · 213 MB of 1.8 GB" when byte counts are
     /// known, falling back to a simple percentage.
     private func downloadStatusText(progress: Double) -> String {
         let mlx = appState.engine.mlx
-        let name = appState.engine.selectedModel.name
+        let name = loadingModelName
         if mlx.totalDownloadBytes > 1, mlx.downloadedBytes > 0 {
             let done = ByteCountFormatter.string(fromByteCount: mlx.downloadedBytes, countStyle: .file)
             let total = ByteCountFormatter.string(fromByteCount: mlx.totalDownloadBytes, countStyle: .file)
@@ -1072,7 +1135,14 @@ class ChatViewModel: ObservableObject {
         guard conversation?.id != currentConversationId else { return }
 
         stopGeneration()
+        // Cleared here, not left to the cancelled task's finalizer: that
+        // can be seconds away when it is parked in a model load, and
+        // meanwhile the old chat's partial answer rendered in the new one.
+        streamingText = nil
         messages.removeAll()
+        // Bitmaps from every chat visited used to accumulate here until a
+        // memory warning. `getImage` refills from disk on demand.
+        imageCache.removeAll()
         pendingImage = nil
         pendingImageId = nil
         pendingDocumentName = nil
@@ -1137,21 +1207,13 @@ class ChatViewModel: ObservableObject {
                 return
             }
 
+            // One normalizer for every way a picture enters the app. The
+            // old inline resize used the screen's scale, so "1024" was a
+            // 3072-pixel bitmap on a 3x phone - nine times the pixels the
+            // model ever sees, cached, drawn and written to disk as such.
             let processedImage = await Task.detached(priority: .userInitiated) { () -> UIImage? in
                 guard let image = UIImage(data: data) else { return nil }
-
-                let maxDimension: CGFloat = 1024
-                let size = image.size
-                if size.width <= maxDimension && size.height <= maxDimension {
-                    return image
-                }
-
-                let ratio = min(maxDimension / size.width, maxDimension / size.height)
-                let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
-                let renderer = UIGraphicsImageRenderer(size: newSize)
-                return renderer.image { _ in
-                    image.draw(in: CGRect(origin: .zero, size: newSize))
-                }
+                return ImageNormalizer.attachment(image)
             }.value
 
             if let image = processedImage {
@@ -1198,7 +1260,7 @@ class ChatViewModel: ObservableObject {
             default:
                 // Read and decode off the main thread.
                 content = try await Task.detached(priority: .userInitiated) {
-                    try String(contentsOf: url, encoding: .utf8)
+                    try DocumentText.read(url)
                 }.value
             }
 
@@ -1213,7 +1275,7 @@ class ChatViewModel: ObservableObject {
             // of the document, not just the first page.
             pendingDocumentName = url.lastPathComponent
             pendingDocumentContent = String(trimmed.prefix(4000))
-            pendingDocumentId = await DocumentIndex.shared.store(
+            pendingDocumentId = try await DocumentIndex.shared.store(
                 name: url.lastPathComponent, fullText: trimmed
             )
         } catch {
@@ -1226,10 +1288,28 @@ class ChatViewModel: ObservableObject {
     func processSharedFile(_ url: URL, displayName: String) async {
         clearPendingDocument()
 
+        // The share sheet offers the app for any file. The same cap as the
+        // picker: this used to read a shared video whole, on the main actor.
+        if let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+           Int64(size) > Self.maxImportBytes {
+            let limit = ByteCountFormatter.string(fromByteCount: Self.maxImportBytes, countStyle: .file)
+            presentImportError(L10n.text("This file is too large to import. The limit is \(limit)."))
+            return
+        }
+
         // Images become an attachment; everything else is read as a document.
-        if let data = try? Data(contentsOf: url), let image = UIImage(data: data) {
-            pendingImage = image
-            pendingImageId = UUID()
+        let type = UTType(filenameExtension: url.pathExtension) ?? .data
+        if type.conforms(to: .image) {
+            let image = await Task.detached(priority: .userInitiated) { () -> UIImage? in
+                guard let data = try? Data(contentsOf: url), let image = UIImage(data: data) else { return nil }
+                return ImageNormalizer.attachment(image)
+            }.value
+            if let image {
+                pendingImage = image
+                pendingImageId = UUID()
+            } else {
+                presentImportError(L10n.text("This photo couldn't be read. Try a different one."))
+            }
             return
         }
 
@@ -1239,7 +1319,7 @@ class ChatViewModel: ObservableObject {
                 text = try await extractTextFromPDF(url)
             } else {
                 text = try await Task.detached(priority: .userInitiated) {
-                    try String(contentsOf: url, encoding: .utf8)
+                    try DocumentText.read(url)
                 }.value
             }
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1249,7 +1329,7 @@ class ChatViewModel: ObservableObject {
             }
             pendingDocumentName = displayName
             pendingDocumentContent = String(trimmed.prefix(4000))
-            pendingDocumentId = await DocumentIndex.shared.store(name: displayName, fullText: trimmed)
+            pendingDocumentId = try await DocumentIndex.shared.store(name: displayName, fullText: trimmed)
         } catch {
             presentImportError(L10n.text("Couldn't read \(displayName): \(error.localizedDescription)"))
         }
@@ -1265,7 +1345,9 @@ class ChatViewModel: ObservableObject {
         pendingDocumentId = nil
     }
 
-    private func extractTextFromPDF(_ url: URL) async throws -> String {
+    /// Text of a PDF: its text layer, or on-device OCR when it has none
+    /// (a scan). Shared with the Knowledge Library importer.
+    func extractTextFromPDF(_ url: URL) async throws -> String {
         // PDF parsing happens off the main thread.
         let embedded = try await Task.detached(priority: .userInitiated) {
             guard let document = PDFDocument(url: url) else {
@@ -1355,18 +1437,27 @@ class ChatViewModel: ObservableObject {
         let name = L10n.text("Scan \(Date().formatted(date: .abbreviated, time: .shortened))")
         pendingDocumentName = name
         pendingDocumentContent = String(trimmed.prefix(4000))
-        pendingDocumentId = await DocumentIndex.shared.store(name: name, fullText: trimmed)
+        do {
+            pendingDocumentId = try await DocumentIndex.shared.store(name: name, fullText: trimmed)
+        } catch {
+            pendingDocumentName = nil
+            pendingDocumentContent = nil
+            presentImportError(L10n.text("Couldn't save the scan: \(error.localizedDescription)"))
+            return
+        }
 
         // Say what was left out rather than quietly handing over a document
         // with pages missing from it.
         if totalScanned > readable {
             scanNotice = L10n.text("Only the first \(readable) pages were read. Scan the rest separately.")
+        } else if failed == 1 {
+            scanNotice = L10n.text("One page had no readable text and was left out.")
         } else if failed > 0 {
             scanNotice = L10n.text("\(failed) of \(readable) pages had no readable text and were left out.")
         }
     }
 
-    private func presentImportError(_ message: String) {
+    func presentImportError(_ message: String) {
         importErrorMessage = message
         showingImportError = true
     }
@@ -1537,6 +1628,10 @@ class ChatViewModel: ObservableObject {
                 imageCache[imageId] = image
                 saveImage(image, withId: imageId)
                 conv.attachedImageIds.append(imageId)
+                // Saved now, not with the answer: a crash while the model
+                // loads left the append unsaved, and the launch sweep then
+                // deleted the photo as an orphan.
+                appState.conversationManager.updateConversation(conv)
             }
         }
 
@@ -1567,6 +1662,12 @@ class ChatViewModel: ObservableObject {
         // can be explained accurately.
         let wasDownloading = routedModel.backend == .mlx && !routedModel.isDownloaded
 
+        // The conversation's identity, captured before the task: the model
+        // object itself may be deleted (swipe-to-delete, Clear All) while
+        // the answer is in flight, and touching a deleted SwiftData model
+        // traps.
+        let conversationId = conversation?.id
+
         generationTask = Task {
             var finalText = ""
             var failure: String?
@@ -1584,13 +1685,19 @@ class ChatViewModel: ObservableObject {
                 let libraryIds = KnowledgeLibrary.shared.activeDocumentIds
                 let searchableIds = Array(Set((conversation?.attachedDocumentIds ?? []) + libraryIds))
                 if request.image == nil, !searchableIds.isEmpty {
-                    // contextWindow is in tokens; the retrieval budget is in
-                    // characters (~3.5 per token). Spend at most ~40% of the
-                    // window on passages so the conversation still fits.
-                    let windowChars = Double(appState.settings.contextWindow) * 3.5
-                    let budget = max(2000, min(Int(windowChars * 0.4), 12000))
+                    // Budgeted against the window the ROUTED backend has, in
+                    // weighted characters (~3 per token). Apple Intelligence
+                    // works in 4096 tokens for instructions, transcript and
+                    // answer together; sizing passages to the Settings
+                    // context window (8K-32K) blew that every second turn.
+                    let windowTokens = routedModel.backend == .appleIntelligence
+                        ? AppleIntelligenceService.contextWindowTokens
+                        : MLXService.effectiveContextWindow(for: routedModel, requested: appState.settings.contextWindow)
+                    let budgetTokens = max(300, windowTokens / 4)
+                    let budget = min(budgetTokens * 3, 12000)
                     if let retrieved = await DocumentIndex.shared.context(
-                        for: request.prompt, documentIds: searchableIds, budget: budget
+                        for: request.prompt, documentIds: searchableIds,
+                        libraryIds: Set(libraryIds), budget: budget
                     ) {
                         generationPrompt = "\(retrieved)\n\nUsing the passages above when they're relevant, answer:\n\(request.prompt)"
                     } else if let seed = request.transientContext {
@@ -1601,32 +1708,54 @@ class ChatViewModel: ObservableObject {
                 }
                 try Task.checkCancellation()
 
-                // Build the session once per conversation; reuse it between turns.
-                // History must end after an assistant turn: trailing user turns
-                // are pending questions (including the one being asked now) and
-                // are delivered via streamResponse instead.
-                if !appState.engine.hasSession(for: routedModel) {
-                    var history = historyForModel
-                    while history.last?.role == MessageRole.user.rawValue {
-                        history.removeLast()
+                // One transparent retry when Apple Intelligence's transcript
+                // outgrows its window: rebuild the session from trimmed
+                // history and ask again, instead of blaming the length of
+                // the conversation and making the user tap Try Again (which
+                // did exactly this).
+                var attempts = 0
+                while true {
+                    attempts += 1
+                    // Build the session once per conversation; reuse it
+                    // between turns. History must end after an assistant
+                    // turn: trailing user turns are pending questions
+                    // (including the one being asked now) and are delivered
+                    // via streamResponse instead.
+                    if !appState.engine.hasSession(for: routedModel) {
+                        var history = historyForModel
+                        while history.last?.role == MessageRole.user.rawValue {
+                            history.removeLast()
+                        }
+                        try await appState.engine.startConversation(
+                            model: routedModel,
+                            history: history
+                        )
                     }
-                    try await appState.engine.startConversation(
+
+                    let stream = appState.engine.respondStream(
                         model: routedModel,
-                        history: history
+                        prompt: generationPrompt,
+                        image: request.image
                     )
-                }
 
-                let stream = appState.engine.respondStream(
-                    model: routedModel,
-                    prompt: generationPrompt,
-                    image: request.image
-                )
-
-                for try await snapshot in stream {
-                    if Task.isCancelled { break }
-                    streamingText = snapshot
-                    finalText = snapshot
+                    do {
+                        for try await snapshot in stream {
+                            if Task.isCancelled { break }
+                            streamingText = snapshot
+                            finalText = snapshot
+                        }
+                        break
+                    } catch AppleIntelligenceError.contextExceeded where attempts == 1 && finalText.isEmpty {
+                        appState.engine.resetSessions()
+                        continue
+                    }
                 }
+                // The stream ends quietly on cancellation (it never throws
+                // CancellationError), so the catch below would not know.
+                // Without this the session kept the truncated answer and
+                // the next one continued it, and Stop before the first
+                // token showed a false "No answer was produced".
+                if Task.isCancelled { wasCancelled = true }
             } catch is CancellationError {
                 // Stop during generation is self-explanatory: the partial
                 // answer is on screen. Stop during a multi-gigabyte DOWNLOAD
@@ -1654,7 +1783,15 @@ class ChatViewModel: ObservableObject {
             // Finalize on the main actor.
             let cleaned = finalText.trimmingCharacters(in: .whitespacesAndNewlines)
 
-            if !cleaned.isEmpty, let conv = conversation {
+            // Still exists? Deleting the open chat (or Clear All) while it
+            // answers removes the model from the store; writing into it
+            // afterwards traps, and even reading `conv.id` is unsafe.
+            let conversationAlive = conversationId.map { id in
+                appState.conversationManager.conversations.contains { $0.id == id }
+            } ?? false
+            let onScreen = conversationId != nil && currentConversationId == conversationId
+
+            if !cleaned.isEmpty, conversationAlive, let conv = conversation {
                 let assistantMessage = appState.conversationManager.addMessage(
                     to: conv,
                     role: .assistant,
@@ -1662,12 +1799,13 @@ class ChatViewModel: ObservableObject {
                 )
                 // Only show the bubble if this conversation is still the one
                 // on screen — the user may have switched chats mid-answer.
-                if currentConversationId == conv.id {
+                if onScreen {
                     messages.append(assistantMessage)
 
                     if appState.settings.hapticFeedbackEnabled {
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
                     }
+                    Self.announce(L10n.text("Answer complete"))
                 }
             }
 
@@ -1675,16 +1813,17 @@ class ChatViewModel: ObservableObject {
                 appState.engine.resetSessions()
             }
 
-            if let failure, currentConversationId == conversation?.id {
+            if let failure, onScreen {
                 errorBanner = ErrorBanner(message: failure, canRetry: true)
+                Self.announce(failure)
                 // The session may be mid-turn; rebuild next time.
                 appState.engine.resetSessions()
-            } else if cancelledDownload, currentConversationId == conversation?.id {
+            } else if cancelledDownload, onScreen {
                 errorBanner = ErrorBanner(
                     message: L10n.text("Download cancelled, so your message wasn't answered. What was already downloaded is kept - tap Try Again to continue."),
                     canRetry: true
                 )
-            } else if cleaned.isEmpty, !wasCancelled, currentConversationId == conversation?.id {
+            } else if cleaned.isEmpty, !wasCancelled, onScreen {
                 // The stream ended cleanly with nothing in it. Without this
                 // the question simply sat there unanswered, with no bubble
                 // and no error, which reads as the app having ignored it.
@@ -1692,6 +1831,7 @@ class ChatViewModel: ObservableObject {
                     message: L10n.text("No answer was produced. Tap Try Again, or rephrase the question."),
                     canRetry: true
                 )
+                Self.announce(L10n.text("No answer was produced. Tap Try Again, or rephrase the question."))
                 appState.engine.resetSessions()
             }
 
@@ -1784,6 +1924,39 @@ class ChatViewModel: ObservableObject {
         generationTask?.cancel()
     }
 
+    /// The app is leaving the foreground. A downloaded model keeps issuing
+    /// GPU work from the background, which iOS refuses and MLX turns into
+    /// an uncaught exception - the app simply disappeared. Apple
+    /// Intelligence answers run in a system process and are left alone.
+    func pauseForBackground() {
+        guard isGenerating, let appState, appState.engine.mlx.isBusy else { return }
+        generationTask?.cancel()
+        backgroundStoppedAnswer = true
+    }
+
+    /// Set when `pauseForBackground` cut an answer short, so the user is
+    /// told why on return instead of finding a half answer with no reason.
+    private var backgroundStoppedAnswer = false
+
+    func resumeFromBackground() {
+        guard backgroundStoppedAnswer else { return }
+        backgroundStoppedAnswer = false
+        if errorBanner == nil, lastRequest != nil {
+            errorBanner = ErrorBanner(
+                message: L10n.text("The answer was stopped because the app went to the background. Tap Try Again to continue."),
+                canRetry: true
+            )
+        }
+    }
+
+    /// VoiceOver users get no other signal that an answer or an error has
+    /// arrived: the Send button quietly turns back from Stop, a bubble is
+    /// appended below the focus, and a banner is inserted above the composer.
+    static func announce(_ text: String) {
+        guard UIAccessibility.isVoiceOverRunning else { return }
+        AccessibilityNotification.Announcement(text).post()
+    }
+
     /// Cancel and WAIT. `cancel()` alone only requests cancellation - the
     /// task's finalizer still runs and will happily re-append the partial
     /// answer to a chat the user just cleared.
@@ -1809,6 +1982,26 @@ class ChatViewModel: ObservableObject {
     }
 
     func regenerateLastResponse() {
+        guard !isGenerating else { return }
+        // A trailing question with no answer (an error, or Stop before the
+        // first token) is what the user wants retried. Regenerating the
+        // previous answer instead destroyed a good one and appended the
+        // result under the wrong question.
+        if let last = messages.last, last.role == .user {
+            errorBanner = nil
+            appState?.engine.resetSessions()
+            let retry = PendingRequest(
+                prompt: last.modelFacingContent,
+                displayMessage: last.content,
+                hiddenContext: last.hiddenContext,
+                image: last.attachmentId.flatMap { getImage(for: $0) },
+                imageId: nil,
+                attachmentType: nil,
+                persistUserMessage: false
+            )
+            Task { await perform(retry) }
+            return
+        }
         guard let lastAssistant = messages.last(where: { $0.role == .assistant }) else { return }
         regenerateResponse(for: lastAssistant)
     }
@@ -1826,7 +2019,9 @@ class ChatViewModel: ObservableObject {
         }
         guard let userMessage = sourceUser else { return }
 
-        let image = userMessage.attachmentId.flatMap { imageCache[$0] }
+        // From disk if the cache was dropped by a memory warning; otherwise
+        // the picture quietly vanished from the regenerated question.
+        let image = userMessage.attachmentId.flatMap { getImage(for: $0) }
 
         // Remove the old answer, rebuild the session from the edited history.
         appState?.conversationManager.deleteMessage(message)
@@ -1871,9 +2066,9 @@ class ChatViewModel: ObservableObject {
         // user reasonably expects to be gone too.
         do {
             let conversation = target
-            for message in conversation.messages {
-                appState?.conversationManager.deleteMessage(message)
-            }
+            // One save for all of them: a save per message froze the app
+            // for seconds on a long chat.
+            appState?.conversationManager.deleteMessages(Array(conversation.messages))
             let docIds = conversation.attachedDocumentIds
             Task {
                 for id in docIds { await DocumentIndex.shared.removeDocument(id) }
@@ -1917,12 +2112,20 @@ class ChatViewModel: ObservableObject {
 
     private func saveImage(_ image: UIImage, withId id: UUID) {
         guard let data = ImageNormalizer.upright(image).jpegData(compressionQuality: 0.8) else { return }
+        // The folder is created on demand: "Clear All Conversations" used to
+        // remove it, after which every photo attached until the next launch
+        // was silently never written and vanished on relaunch.
+        let path = ConversationManager.imagePath(for: id)
+        try? FileManager.default.createDirectory(
+            at: path.deletingLastPathComponent(), withIntermediateDirectories: true
+        )
         // Protected at rest: an attached photo can be a medical result or a
         // document, and should not be readable while the device is locked.
-        try? data.write(
-            to: ConversationManager.imagePath(for: id),
-            options: [.atomic, .completeFileProtectionUnlessOpen]
-        )
+        do {
+            try data.write(to: path, options: [.atomic, .completeFileProtectionUnlessOpen])
+        } catch {
+            presentImportError(L10n.text("Couldn't save the photo: \(error.localizedDescription)"))
+        }
     }
 
     private func getImagePath(for id: UUID) -> URL? {
@@ -2101,9 +2304,14 @@ struct ModelDownloadConsentSheet: View {
                 }
                 .buttonStyle(.borderedProminent)
 
-                Button("Not Now", action: onCancel)
-                    .font(.subheadline)
-                    .frame(minHeight: 44)
+                Button(action: onCancel) {
+                    // The frame lives inside the label: applied to the
+                    // button it only moves layout, not the tappable area.
+                    Text("Not Now")
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
             }
             .padding(.horizontal)
             .padding(.bottom, 16)

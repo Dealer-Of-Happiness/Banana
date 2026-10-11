@@ -155,6 +155,7 @@ final class AIGoodbyeUITests: XCTestCase {
         }
         XCTAssertTrue(presented || title.waitForExistence(timeout: 5),
                       "Voice mode should present")
+        allowPermissionAlerts()
 
         let close = app.buttons["Close voice mode"]
         XCTAssertTrue(close.waitForExistence(timeout: 5))
@@ -219,6 +220,7 @@ final class AIGoodbyeUITests: XCTestCase {
             usleep(700_000)
         }
         XCTAssertTrue(presented || talk.waitForExistence(timeout: 5), "Voice mode should present in landscape")
+        allowPermissionAlerts()
         XCTAssertTrue(talk.isHittable, "Tap to talk must be on screen in landscape")
 
         let close = app.buttons["Close voice mode"]
@@ -229,6 +231,23 @@ final class AIGoodbyeUITests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// System permission alerts (microphone, speech) belong to SpringBoard,
+    /// not the app, and an interruption monitor only fires on interactions -
+    /// `isHittable` is not one. Dismiss them explicitly before asserting.
+    @MainActor
+    private func allowPermissionAlerts() {
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        for _ in 0..<3 {
+            let alert = springboard.alerts.firstMatch
+            guard alert.waitForExistence(timeout: 2) else { return }
+            for label in ["Allow While Using App", "Allow", "OK"] {
+                let button = alert.buttons[label]
+                if button.exists { button.tap(); break }
+            }
+            usleep(500_000)
+        }
+    }
 
     @MainActor
     private func acceptTermsIfNeeded(_ app: XCUIApplication) {

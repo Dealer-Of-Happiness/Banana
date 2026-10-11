@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import NaturalLanguage
 import SwiftData
 
 // MARK: - Conversation
@@ -53,12 +54,37 @@ final class Conversation {
     }
 
     func updateTitle(from message: String) {
-        // Auto-generate title from first user message
-        let words = message.split(separator: " ").prefix(6)
-        title = words.joined(separator: " ")
-        if message.count > title.count {
-            title += "..."
+        title = Self.title(from: message)
+    }
+
+    /// A short title from the first message: about six words, one line.
+    /// Word boundaries come from the tokenizer, not from spaces - Chinese
+    /// and Japanese have none, and an 800-character question used to become
+    /// an 800-character title.
+    nonisolated static func title(from message: String) -> String {
+        let oneLine = message
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\r", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !oneLine.isEmpty else { return "New Chat" }
+
+        let tokenizer = NLTokenizer(unit: .word)
+        tokenizer.string = oneLine
+        var end = oneLine.startIndex
+        var words = 0
+        tokenizer.enumerateTokens(in: oneLine.startIndex..<oneLine.endIndex) { range, _ in
+            words += 1
+            end = range.upperBound
+            return words < 6
         }
+        var candidate = String(oneLine[oneLine.startIndex..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
+        if candidate.isEmpty || candidate.count > 40 {
+            candidate = String(oneLine.prefix(40)).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if candidate.count < oneLine.count {
+            candidate += "..."
+        }
+        return candidate
     }
 }
 

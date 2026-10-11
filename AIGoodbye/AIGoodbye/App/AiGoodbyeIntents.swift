@@ -74,7 +74,7 @@ enum IntentAnsweringError: Error, CustomLocalizedStringResourceConvertible {
         case .timedOut:
             return "That took too long to answer. Try a shorter question, or ask in the app."
         case .locked:
-            return "AiGoodbye is locked. Open the app and unlock it first."
+            return "AiGoodbye is locked. Siri can answer while the app is open and unlocked."
         case .busy:
             return "AiGoodbye is busy with another task. Try again in a moment."
         }
@@ -127,13 +127,15 @@ enum IntentAnswering {
         // memory on their next message.
         defer { engine.releaseUtility() }
 
-        // A base prompt, not the personalized one: a Siri answer must not be
-        // shaped by private memory facts.
-        try await engine.startCleanSession(model: model)
-
-        // Siri has a limited response budget; don't hang forever.
+        // Siri has a limited response budget; don't hang forever. The timer
+        // covers the session start too: for a downloaded model that is a
+        // weights load of tens of seconds, which used to run untimed and
+        // end in Siri's own generic error.
         return try await withThrowingTaskGroup(of: String.self) { group in
             group.addTask { @MainActor in
+                // A base prompt, not the personalized one: a Siri answer
+                // must not be shaped by private memory facts.
+                try await engine.startCleanSession(model: model)
                 var final = ""
                 let stream = engine.respondStream(model: model, prompt: prompt, image: nil)
                 for try await snapshot in stream {

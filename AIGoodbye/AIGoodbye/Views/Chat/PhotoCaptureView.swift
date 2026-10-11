@@ -19,6 +19,9 @@ struct PhotoCaptureView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @StateObject private var camera = CameraController()
+    /// The camera must not come back on behind the Face ID lock screen
+    /// when the biometric prompt is cancelled; see LiveCameraView.
+    @ObservedObject private var lock = AppLock.shared
     @State private var isCapturing = false
     /// The still being reviewed before it is used.
     @State private var captured: UIImage?
@@ -27,6 +30,11 @@ struct PhotoCaptureView: View {
     var body: some View {
         NavigationStack {
             stage
+                // Dark throughout, like the navigation bar. The materials
+                // and labels below otherwise followed the device's light
+                // scheme: a light grey pill under white text over a bright
+                // scene, well under 3:1.
+                .environment(\.colorScheme, .dark)
                 .background(Color.black.ignoresSafeArea())
             .navigationTitle("Take Photo")
             .navigationBarTitleDisplayMode(.inline)
@@ -63,10 +71,31 @@ struct PhotoCaptureView: View {
                 Text("Please try again.")
             }
         }
-        .onAppear { camera.start() }
+        .onAppear {
+            // Under the lock screen (a deep link while locked) the lock
+            // observer below starts the camera once it clears.
+            if !lock.isLocked { camera.start() }
+        }
         .onDisappear { camera.stop() }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { camera.retry() } else { camera.stop() }
+            switch phase {
+            case .active:
+                guard !lock.isLocked else { return }
+                camera.resume()
+            case .inactive:
+                // Control Center, a banner, a system alert: the viewfinder
+                // is still on screen, so the camera stays on. Stopping it
+                // here meant a black viewfinder for a second on every swipe.
+                break
+            case .background:
+                camera.stop()
+            @unknown default:
+                break
+            }
+        }
+        .onChange(of: lock.isLocked) { _, locked in
+            guard !locked, scenePhase != .background else { return }
+            camera.resume()
         }
     }
 
@@ -124,19 +153,25 @@ struct PhotoCaptureView: View {
             if let interruption = camera.interruption {
                 Label(interruption, systemImage: "video.slash")
                     .font(.footnote)
-                    .foregroundStyle(.white)
                     .padding(10)
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
             }
             if captured != nil {
-                Button("Retake", systemImage: "arrow.counterclockwise") {
+                Button {
                     captured = nil
+                } label: {
+                    // Size and shape INSIDE the label: a button's hit area
+                    // is its label, so a frame on the Button only moved
+                    // the pixels and left the target the height of a line
+                    // of text.
+                    Label("Retake", systemImage: "arrow.counterclockwise")
+                        .font(.headline)
+                        .padding(.horizontal, 18)
+                        .frame(minHeight: 44)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .contentShape(Capsule())
                 }
-                .font(.headline)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 18)
-                .frame(minHeight: 44)
-                .background(.ultraThinMaterial, in: Capsule())
+                .buttonStyle(.plain)
             } else {
                 shutter
             }
@@ -175,7 +210,10 @@ struct PhotoCaptureView: View {
             }
         }
         .buttonStyle(.plain)
-        .disabled(!camera.isReady || isCapturing)
+        // Off during a flip too: `capturePhoto` returns nil while the
+        // cameras swap, which came back as "Couldn't take the photo" for a
+        // tap that simply landed half a second early.
+        .disabled(!camera.isReady || isCapturing || camera.isSwitchingCamera)
         .accessibilityLabel(Text("Take photo"))
     }
 

@@ -153,7 +153,7 @@ private struct BehaviorSection: View {
     }
 
     private var contextWindowText: String {
-        "\(settings.contextWindow / 1024)K tokens"
+        L10n.text("\(settings.contextWindow / 1024)K tokens")
     }
 
     private var contextWindowBinding: Binding<Double> {
@@ -291,9 +291,29 @@ private struct PrivacySection: View {
             }
 
             if lock.isAvailable {
-                Toggle(isOn: $lock.isEnabled) {
+                // Turning the lock OFF asks for the same authentication the
+                // lock uses: otherwise anyone who reached Settings could
+                // simply switch it off.
+                Toggle(isOn: Binding(
+                    get: { lock.isEnabled },
+                    set: { wanted in
+                        if wanted {
+                            lock.isEnabled = true
+                        } else {
+                            Task { @MainActor in
+                                if await lock.authenticateToChangeSetting() {
+                                    lock.isEnabled = false
+                                }
+                            }
+                        }
+                    }
+                )) {
                     Label(L10n.text("Lock with \(lock.biometryName)"), systemImage: "lock")
                 }
+            }
+
+            Link(destination: URL(string: "https://aigoodbye.ai/privacy-policy.html")!) {
+                Label("Privacy Policy", systemImage: "hand.raised")
             }
 
             NavigationLink("About & Legal") {
@@ -327,9 +347,16 @@ private struct DataSection: View {
                 titleVisibility: .visible
             ) {
                 Button("Delete All", role: .destructive) {
-                    appState.conversationManager.clearAllData()
-                    appState.engine.resetSessions()
-                    appState.currentConversation = nil
+                    // Stop and detach the chat on screen BEFORE the store is
+                    // emptied: a finalizer or a re-render touching a
+                    // deleted SwiftData model traps.
+                    Task { @MainActor in
+                        await appState.chatViewModel.stopGenerationAndWait()
+                        appState.chatViewModel.loadConversation(nil)
+                        appState.currentConversation = nil
+                        appState.conversationManager.clearAllData()
+                        appState.engine.resetSessions()
+                    }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
@@ -346,10 +373,13 @@ private struct DataSection: View {
             ) {
                 Button("Reset", role: .destructive) {
                     appState.settings.resetToDefaults()
+                    // The live session was built with the old creativity
+                    // and context values; rebuild it with the defaults.
+                    appState.engine.resetSessions()
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Restores every setting to its default value. Your conversations are not affected.")
+                Text("Restores creativity, conversation memory, language, haptics and download settings to their defaults. Your conversations are not affected.")
             }
         } header: {
             Text("Data")
@@ -430,6 +460,10 @@ struct AboutView: View {
 
     private var links: some View {
         VStack(spacing: 12) {
+            Link(destination: URL(string: "https://aigoodbye.ai/privacy-policy.html")!) {
+                Label("Privacy Policy", systemImage: "hand.raised")
+            }
+
             Link(destination: URL(string: "https://aigoodbye.ai")!) {
                 Label("aigoodbye.ai", systemImage: "globe")
                     .frame(maxWidth: .infinity, alignment: .leading)

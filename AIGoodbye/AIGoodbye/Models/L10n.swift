@@ -30,10 +30,10 @@ enum L10n {
     /// Point lookups at the given language. Called by SettingsManager.
     nonisolated static func apply(_ language: AppLanguage) {
         let resolved: Bundle
-        if language == .automatic {
-            resolved = .main
-        } else if let path = Bundle.main.path(forResource: language.rawValue, ofType: "lproj"),
-                  let languageBundle = Bundle(path: path) {
+        let code = language == .automatic ? deviceLanguageCode : language.rawValue
+        if let code,
+           let path = Bundle.main.path(forResource: code, ofType: "lproj"),
+           let languageBundle = Bundle(path: path) {
             resolved = languageBundle
         } else {
             resolved = .main
@@ -41,6 +41,17 @@ enum L10n {
         lock.lock()
         _bundle = resolved
         lock.unlock()
+    }
+
+    /// The localization the DEVICE prefers, ignoring this app's own
+    /// `AppleLanguages` override. `Bundle.main` caches its preferred
+    /// localization once per process, so switching back to Automatic used
+    /// to change nothing until the next launch.
+    nonisolated static var deviceLanguageCode: String? {
+        let global = UserDefaults.standard.volatileDomain(forName: UserDefaults.globalDomain)
+        let preferred = (global["AppleLanguages"] as? [String]) ?? Locale.preferredLanguages
+        let available = Bundle.main.localizations.filter { $0 != "Base" }
+        return Bundle.preferredLocalizations(from: available, forPreferences: preferred).first
     }
 
     /// Localized string in the currently selected app language.

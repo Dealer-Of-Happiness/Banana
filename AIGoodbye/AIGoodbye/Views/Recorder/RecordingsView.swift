@@ -115,6 +115,11 @@ struct RecordingsView: View {
         .padding(32)
     }
 
+    /// A search that matched nothing, as opposed to an empty library.
+    private var searchCameUpEmpty: Bool {
+        results.isEmpty && !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     private var list: some View {
         List {
             Section {
@@ -156,6 +161,16 @@ struct RecordingsView: View {
             }
         }
         .searchable(text: $query, prompt: Text("Search recordings"))
+        // An overlay rather than a replacement: `searchable` lives on the
+        // list, and swapping the list out would take the search field (and
+        // the query) with it. Without this the rows simply vanished under the
+        // search field, which reads as "the recordings are gone".
+        .overlay {
+            if searchCameUpEmpty {
+                ContentUnavailableView.search(text: query)
+                    .background(Color(.systemGroupedBackground))
+            }
+        }
         .alert("Delete all recordings?", isPresented: $confirmDeleteAll) {
             Button("Cancel", role: .cancel) {}
             Button("Delete All", role: .destructive) { store.deleteAll() }
@@ -272,11 +287,18 @@ struct RecordingDetailView: View {
                         Text(summaryStep.isEmpty ? L10n.text("Summarizing on this device...") : summaryStep)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        Button("Stop") {
+                        Button {
                             summaryTask?.cancel()
                             isSummarizing = false
+                        } label: {
+                            // The 44 pt target is part of the label, so the
+                            // whole of it is tappable - a frame outside the
+                            // button only pads the layout, not the hit area.
+                            Text("Stop")
+                                .font(.subheadline)
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
                         }
-                        .font(.subheadline)
                     }
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -345,6 +367,10 @@ struct RecordingDetailView: View {
                 Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
                     .font(.system(size: 40))
                     .foregroundStyle(.blue)
+                    // The glyph is 40 pt; the tappable area must not be. Inside
+                    // the label, so the padding is part of the hit test.
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text(player.isPlaying ? L10n.text("Pause") : L10n.text("Play")))
@@ -377,13 +403,13 @@ struct RecordingDetailView: View {
                 ) {
                     guard !addedToLibrary else { return }
                     Task {
-                        let documentId = await library.add(
+                        guard let added = try? await library.add(
                             name: recording.title,
                             fullText: recording.transcript
-                        )
+                        ) else { return }
                         // Remembered so deleting the recording also deletes
                         // this copy of the transcript.
-                        store.modify(id: recording.id) { $0.libraryDocumentId = documentId }
+                        store.modify(id: recording.id) { $0.libraryDocumentId = added.id }
                     }
                 }
                 .disabled(addedToLibrary)
@@ -470,6 +496,10 @@ struct RecordingDetailView: View {
                 }
             } catch is CancellationError {
                 // Left as it was.
+            } catch let error as RecordingSummarizer.SummarizerError {
+                // Says what to do (download the model from the chat screen,
+                // wait for the other task) rather than a generic shrug.
+                summaryFailed = error.errorDescription
             } catch {
                 summaryFailed = L10n.text("The summary couldn't be made right now. The recording and transcript are safe.")
             }

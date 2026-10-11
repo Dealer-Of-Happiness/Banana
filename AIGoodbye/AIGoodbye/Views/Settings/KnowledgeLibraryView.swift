@@ -11,6 +11,8 @@ import PDFKit
 
 struct KnowledgeLibraryView: View {
     @ObservedObject private var library = KnowledgeLibrary.shared
+    /// Borrowed for the chat's PDF importer (text layer, then OCR).
+    @EnvironmentObject private var appState: AppState
     @State private var showingPicker = false
     @State private var importError: String?
     @State private var isImporting = false
@@ -143,21 +145,14 @@ struct KnowledgeLibraryView: View {
         do {
             let text: String
             if url.pathExtension.lowercased() == "pdf" {
-                text = try await Task.detached(priority: .userInitiated) {
-                    guard let document = PDFDocument(url: url) else {
-                        throw CocoaError(.fileReadCorruptFile)
-                    }
-                    var full = ""
-                    for index in 0..<min(document.pageCount, 300) {
-                        if let page = document.page(at: index), let pageText = page.string {
-                            full += "[Page \(index + 1)]\n\(pageText)\n\n"
-                        }
-                    }
-                    return full
-                }.value
+                // The chat's importer: text layer first, on-device OCR for
+                // a scanned PDF. The library used to have only the first
+                // half, so a scanned contract was "no readable text" here
+                // and fine in a chat.
+                text = try await appState.chatViewModel.extractTextFromPDF(url)
             } else {
                 text = try await Task.detached(priority: .userInitiated) {
-                    try String(contentsOf: url, encoding: .utf8)
+                    try DocumentText.read(url)
                 }.value
             }
 
@@ -166,7 +161,10 @@ struct KnowledgeLibraryView: View {
                 importError = L10n.text("No readable text was found in \(url.lastPathComponent).")
                 return
             }
-            await library.add(name: url.lastPathComponent, fullText: trimmed)
+            let added = try await library.add(name: url.lastPathComponent, fullText: trimmed)
+            if !added.isEnabled {
+                importError = L10n.text("Added, but switched off: up to \(KnowledgeLibrary.maxEnabled) documents can be on at once. Turn another one off to use it.")
+            }
         } catch {
             importError = L10n.text("Couldn't read \(url.lastPathComponent): \(error.localizedDescription)")
         }

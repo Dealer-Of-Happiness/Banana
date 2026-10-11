@@ -53,8 +53,18 @@ final class VoiceService: NSObject, ObservableObject {
     /// Called when listening ended without a transcript (recognizer gave up,
     /// interruption, etc.) so the UI can recover instead of hanging.
     var onListeningEnded: (() -> Void)?
+    /// Called, on the main actor, when speech in progress was cut off by an
+    /// audio-session interruption (phone call, Siri, alarm) or a media
+    /// services reset. The synthesizer never reports an utterance it was
+    /// stopped from finishing, so without this the owning screen sat on
+    /// "Speaking" forever with nothing playing. `onFinishedSpeaking` is NOT
+    /// called in this case.
+    var onSpeechInterrupted: (() -> Void)?
 
-    private let audioEngine = AVAudioEngine()
+    /// `var`, not `let`: after a media-services reset every audio object is
+    /// invalid and the engine has to be built again, or every later start
+    /// throws for the rest of the screen's life.
+    private var audioEngine = AVAudioEngine()
     /// The same engine the recorder uses: SpeechAnalyzer on iOS 26, the
     /// older recognizer for languages it doesn't cover. One speech stack,
     /// one set of fixes.
@@ -197,16 +207,30 @@ final class VoiceService: NSObject, ObservableObject {
         do {
             try activateSession(for: .record)
 
-            let inputNode = audioEngine.inputNode
-            let format = inputNode.outputFormat(forBus: 0)
-
             // A 0 Hz/0-channel format means no usable microphone (common in
-            // the Simulator, or when another app holds the mic). Installing a
-            // tap with it raises an exception - bail out gracefully instead.
-            guard format.sampleRate > 0, format.channelCount > 0 else {
-                transcriber.cancel()
-                deactivateSession()
-                listeningState = .unavailable(L10n.text("The microphone couldn't be started. Check that another app isn't using it."))
+            // the Simulator, or when another app holds the mic). Checked
+            // before the speech engine is started, so a dead microphone
+            // fails fast rather than after a model load.
+            guard usableInputFormat() != nil else {
+                failStart()
+                return
+            }
+
+            try await transcriber.start(locale: locale)
+            // Stopped or restarted while the engine was starting: whoever did
+            // that owns the audio graph now.
+            guard generation == listenGeneration, listeningState == .preparing else { return }
+
+            // The tap is installed only NOW, right before the engine starts,
+            // with the format read at this moment. Starting the speech
+            // engine above takes hundreds of milliseconds (seconds on a
+            // language's first use), and AirPods connecting in that window
+            // change the hardware format; starting the engine with a tap in
+            // the old format raises an AVFoundation exception - a crash, not
+            // a Swift error. Installing a tap with a 0 Hz format raises too,
+            // hence the second check.
+            guard let format = usableInputFormat() else {
+                failStart()
                 return
             }
 
@@ -217,7 +241,7 @@ final class VoiceService: NSObject, ObservableObject {
             // level box.
             let levelBox = self.levelBox
             let transcriber = self.transcriber
-            inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+            audioEngine.inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
                 transcriber.append(buffer)
                 if let channel = buffer.floatChannelData?[0] {
                     let frames = Int(buffer.frameLength)
@@ -229,11 +253,6 @@ final class VoiceService: NSObject, ObservableObject {
             }
             didInstallTap = true
 
-            try await transcriber.start(locale: locale)
-            // Stopped or restarted while the engine was starting: whoever did
-            // that owns the audio graph now.
-            guard generation == listenGeneration, listeningState == .preparing else { return }
-
             audioEngine.prepare()
             try audioEngine.start()
 
@@ -243,9 +262,21 @@ final class VoiceService: NSObject, ObservableObject {
             startTimers()
         } catch {
             guard generation == listenGeneration else { return }
-            cleanUpAudio()
-            listeningState = .unavailable(L10n.text("The microphone couldn't be started. Check that another app isn't using it."))
+            failStart()
         }
+    }
+
+    /// The microphone's current format, or nil when there is no usable input.
+    private func usableInputFormat() -> AVAudioFormat? {
+        let format = audioEngine.inputNode.outputFormat(forBus: 0)
+        guard format.sampleRate > 0, format.channelCount > 0 else { return nil }
+        return format
+    }
+
+    /// Abandon a start that cannot go live and tell the screen why.
+    private func failStart() {
+        cleanUpAudio()
+        listeningState = .unavailable(L10n.text("The microphone couldn't be started. Check that another app isn't using it."))
     }
 
     private func transcriptChanged(_ text: String, generation: Int) {
@@ -389,9 +420,11 @@ final class VoiceService: NSObject, ObservableObject {
         observers.append(center.addObserver(
             forName: AVAudioSession.routeChangeNotification,
             object: nil, queue: .main
-        ) { [weak self] _ in
+        ) { [weak self] note in
+            // Same as above: only the reason crosses into the task.
+            let raw = note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
             let service = self
-            Task { @MainActor in service?.handleRouteChange() }
+            Task { @MainActor in service?.handleRouteChange(raw) }
         })
         observers.append(center.addObserver(
             forName: AVAudioSession.mediaServicesWereResetNotification,
@@ -399,7 +432,7 @@ final class VoiceService: NSObject, ObservableObject {
         ) { [weak self] _ in
             // Keep the callbacks: the screen can recover by listening again.
             let service = self
-            Task { @MainActor in service?.pause() }
+            Task { @MainActor in service?.handleMediaServicesReset() }
         })
     }
 
@@ -416,19 +449,59 @@ final class VoiceService: NSObject, ObservableObject {
         switch type {
         case .began:
             // Phone call, Siri, etc. Stop cleanly and let the UI re-arm.
+            // `stopSpeaking` suppresses the synthesizer's callbacks and the
+            // watchdog, so the owner is told separately that its speech was
+            // cut off - otherwise voice mode sat on "Speaking" for good and
+            // hands-free translate never listened again.
+            let wasSpeaking = isSpeaking
             stopSpeaking()
             stopListening()
+            if wasSpeaking { onSpeechInterrupted?() }
         default:
             break
         }
     }
 
-    private func handleRouteChange() {
-        // The tap format is tied to the previous route; restart cleanly and
-        // let the UI decide whether to listen again.
-        if isListeningOrPreparing {
+    private func handleRouteChange(_ rawReason: UInt?) {
+        guard let raw = rawReason,
+              let reason = AVAudioSession.RouteChangeReason(rawValue: raw) else { return }
+        // Only a device coming or going. Every category switch this service
+        // makes itself (.playback to speak, .playAndRecord to listen) and
+        // every activation posts a route change too, and acting on those
+        // killed each hands-free listen as it started - with AirPods, every
+        // listen, because the A2DP-to-HFP switch posts yet another one.
+        guard reason == .oldDeviceUnavailable || reason == .newDeviceAvailable else { return }
+        // Never kill a start in flight. The tap is installed with the format
+        // read immediately before the engine starts, so a change before
+        // that point costs nothing.
+        guard listeningState == .listening else { return }
+        // The tap's format belongs to the old route, so the engine has to be
+        // rebuilt. What was already heard is delivered, not dropped.
+        if !liveTranscript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            finishListening()
+        } else {
             stopListening()
         }
+    }
+
+    /// Media services died: every audio object is invalid. The engine is
+    /// built again - a start on the old one throws for the rest of the
+    /// screen's life - and the screen is told, so it leaves "Listening".
+    private func handleMediaServicesReset() {
+        let wasSpeaking = isSpeaking
+        speechWatchdog?.cancel(); speechWatchdog = nil
+        pendingUtterances = 0
+        if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
+        isSpeaking = false
+        // The old engine and its tap died with the services; forget them
+        // rather than poke at them. The session is gone too.
+        didInstallTap = false
+        sessionIsActive = false
+        audioEngine = AVAudioEngine()
+        // Notifies the screen if a listen was under way, so it does not stay
+        // on "Listening" with no microphone.
+        stopListening()
+        if wasSpeaking { onSpeechInterrupted?() }
     }
 
     // MARK: - Speaking
@@ -515,6 +588,7 @@ final class VoiceService: NSObject, ObservableObject {
         onFinalTranscript = nil
         onFinishedSpeaking = nil
         onListeningEnded = nil
+        onSpeechInterrupted = nil
         removeAudioObservers()
     }
 

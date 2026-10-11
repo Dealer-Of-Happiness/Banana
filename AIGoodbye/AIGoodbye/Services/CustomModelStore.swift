@@ -76,6 +76,9 @@ final class CustomModelStore: ObservableObject {
 
     func add(_ spec: CustomModelSpec) {
         guard !specs.contains(where: { $0.repoId.lowercased() == spec.repoId.lowercased() }) else { return }
+        // A built-in's repository would share the built-in's folder; the
+        // validator refuses it first, this keeps every other path honest.
+        guard !HuggingFaceValidator.isBuiltInRepo(spec.repoId) else { return }
         specs.append(spec)
         CustomModelRegistry.replace(with: specs)
     }
@@ -84,6 +87,11 @@ final class CustomModelStore: ObservableObject {
     /// the active one, delete the download, and forget the entry. All of it
     /// lives here so no caller can do half the job.
     func remove(_ spec: CustomModelSpec, engine: ChatEngine?) {
+        // A download or load still in flight for this model must stop first,
+        // or its files land in the folder deleted below and the model goes
+        // on being installed after it left the list - gigabytes the app can
+        // no longer see or free.
+        engine?.mlx.cancelLoad(of: spec.id)
         if let model = AIModel.model(withId: spec.id) {
             engine?.modelWasDeleted(model)
             // Free the download too: these are the biggest files the app keeps.

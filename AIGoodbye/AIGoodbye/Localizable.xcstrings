@@ -2,10 +2,12 @@
   "sourceLanguage": "en",
   "strings": {
     "": {
-      "shouldTranslate": false
+      "shouldTranslate": false,
+      "localizations": {}
     },
     "%@ - %@": {
-      "shouldTranslate": false
+      "shouldTranslate": false,
+      "localizations": {}
     },
     "%@ can't run on this engine.": {
       "localizations": {
@@ -79,6 +81,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 无法在此引擎上运行。"
+          }
+        }
+      }
+    },
+    "%@ is already on this device but couldn't be loaded last time. Try again, or choose another model.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ist bereits auf diesem Gerät, konnte beim letzten Mal aber nicht geladen werden. Versuche es erneut oder wähle ein anderes Modell."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ya está en este dispositivo, pero no se pudo cargar la última vez. Inténtalo de nuevo o elige otro modelo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ est déjà sur cet appareil mais n'a pas pu être chargé la dernière fois. Réessayez ou choisissez un autre modèle."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ è già su questo dispositivo ma l'ultima volta non è stato possibile caricarlo. Riprova o scegli un altro modello."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ já está neste aparelho, mas não pôde ser carregado da última vez. Tente novamente ou escolha outro modelo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ уже на этом устройстве, но в прошлый раз его не удалось загрузить. Попробуйте ещё раз или выберите другую модель."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ уже на цьому пристрої, але минулого разу його не вдалося завантажити. Спробуйте ще раз або виберіть іншу модель."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το %@ υπάρχει ήδη σε αυτή τη συσκευή, αλλά δεν φορτώθηκε την τελευταία φορά. Δοκιμάστε ξανά ή επιλέξτε άλλο μοντέλο."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@은(는) 이미 이 기기에 있지만 지난번에 불러오지 못했습니다. 다시 시도하거나 다른 모델을 선택하세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@はすでにこのデバイスにありますが、前回は読み込めませんでした。もう一度試すか、別のモデルを選んでください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 已在此设备上，但上次未能加载。请重试，或选择其他模型。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 已經喺此裝置上，但上次未能載入。請再試一次，或揀另一個模型。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is already on this device but couldn't be loaded last time. Try again, or choose another model."
           }
         }
       }
@@ -405,7 +489,8 @@
       }
     },
     "%lld": {
-      "shouldTranslate": false
+      "shouldTranslate": false,
+      "localizations": {}
     },
     "%lld of %lld pages had no readable text and were left out.": {
       "localizations": {
@@ -485,6 +570,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "%2$lld 页中有 %1$lld 页没有可读文字，已跳过。"
+          }
+        }
+      }
+    },
+    "%lldK tokens": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldK tokens"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldK tokens"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldK tokens"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldK tokens"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldK tokens"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldK токенов"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldK токенів"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldK tokens"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldK 토큰"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldK トークン"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldK 个词元"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldK 個詞元"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldK tokens"
           }
         }
       }
@@ -794,10 +961,12 @@
       }
     },
     "32K": {
-      "shouldTranslate": false
+      "shouldTranslate": false,
+      "localizations": {}
     },
     "4K": {
-      "shouldTranslate": false
+      "shouldTranslate": false,
+      "localizations": {}
     },
     "A hands-free voice conversation": {
       "localizations": {
@@ -1783,6 +1952,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "关于与法律信息"
+          }
+        }
+      }
+    },
+    "About 1 second of audio was dropped because the device couldn't keep up. The transcript is unaffected.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwa 1 Sekunde Audio ging verloren, weil das Gerät nicht mitkam. Die Mitschrift ist davon nicht betroffen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se perdió aproximadamente 1 segundo de audio porque el dispositivo no pudo seguir el ritmo. La transcripción no se ve afectada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environ 1 seconde d'audio a été perdue, car l'appareil n'a pas pu suivre. La transcription n'est pas affectée."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Circa 1 secondo di audio è andato perso perché il dispositivo non è riuscito a stare al passo. La trascrizione non ne risente."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca de 1 segundo de áudio foi perdido porque o aparelho não conseguiu acompanhar. A transcrição não é afetada."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Около 1 секунды аудио потеряно: устройство не успевало. На расшифровку это не влияет."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Близько 1 секунди аудіо втрачено: пристрій не встигав. На розшифровку це не впливає."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Περίπου 1 δευτερόλεπτο ήχου χάθηκε επειδή η συσκευή δεν πρόλαβε. Η απομαγνητοφώνηση δεν επηρεάζεται."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기가 따라가지 못해 약 1초의 오디오가 누락되었습니다. 받아쓰기에는 영향이 없습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバイスが追いつかず、約1秒分の音声が欠落しました。文字起こしには影響ありません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由于设备未能跟上，约 1 秒音频已丢失。文字记录不受影响。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "因為裝置跟唔上，大約 1 秒音訊已遺失。文字紀錄唔受影響。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About 1 second of audio was dropped because the device couldn't keep up. The transcript is unaffected."
           }
         }
       }
@@ -3231,6 +3482,88 @@
         }
       }
     },
+    "Added, but switched off: up to %lld documents can be on at once. Turn another one off to use it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hinzugefügt, aber ausgeschaltet: Es können höchstens %lld Dokumente gleichzeitig eingeschaltet sein. Schalte ein anderes aus, um es zu nutzen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadido, pero desactivado: solo pueden estar activos %lld documentos a la vez. Desactiva otro para usarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouté, mais désactivé : au plus %lld documents peuvent être activés à la fois. Désactivez-en un autre pour l'utiliser."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiunto, ma disattivato: possono essere attivi al massimo %lld documenti alla volta. Disattivane un altro per usarlo."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionado, mas desativado: no máximo %lld documentos podem estar ativos ao mesmo tempo. Desative outro para usá-lo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавлено, но выключено: одновременно могут быть включены не более %lld документов. Выключите другой, чтобы использовать этот."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Додано, але вимкнено: одночасно можуть бути ввімкнені не більше %lld документів. Вимкніть інший, щоб використовувати цей."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Προστέθηκε, αλλά απενεργοποιημένο: μπορούν να είναι ενεργά έως %lld έγγραφα ταυτόχρονα. Απενεργοποιήστε ένα άλλο για να το χρησιμοποιήσετε."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "추가되었지만 꺼져 있습니다. 한 번에 최대 %lld개의 문서만 켤 수 있습니다. 다른 문서를 끄면 사용할 수 있습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加されましたがオフになっています。一度にオンにできる書類は最大%lld件です。使うには別の書類をオフにしてください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已添加但已关闭：最多可同时开启 %lld 个文档。关闭另一个即可使用。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已加入但已關閉：最多可同時開啟 %lld 個文件。關閉另一個就可以使用。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added, but switched off: up to %lld documents can be on at once. Turn another one off to use it."
+          }
+        }
+      }
+    },
     "Advertising": {
       "localizations": {
         "de": {
@@ -3384,7 +3717,8 @@
       }
     },
     "AiGoodbye": {
-      "shouldTranslate": false
+      "shouldTranslate": false,
+      "localizations": {}
     },
     "AiGoodbye is a one-time purchase. There are no subscriptions and no hidden fees - pay once and it is yours.": {
       "localizations": {
@@ -3538,78 +3872,84 @@
         }
       }
     },
-    "AiGoodbye is locked. Open the app and unlock it first.": {
+    "AiGoodbye is locked. Siri can answer while the app is open and unlocked.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye ist gesperrt. Öffne die App und entsperre sie zuerst."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Το AiGoodbye είναι κλειδωμένο. Άνοιξε την εφαρμογή και ξεκλείδωσέ την πρώτα."
+            "value": "AiGoodbye ist gesperrt. Siri kann antworten, solange die App geöffnet und entsperrt ist."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye está bloqueado. Abre la app y desbloquéala primero."
+            "value": "AiGoodbye está bloqueada. Siri puede responder mientras la app esté abierta y desbloqueada."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye est verrouillé. Ouvrez l'app et déverrouillez-la d'abord."
+            "value": "AiGoodbye est verrouillé. Siri peut répondre tant que l'app est ouverte et déverrouillée."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye è bloccato. Apri l'app e sbloccala prima."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye はロックされています。先にアプリを開いてロックを解除してください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye가 잠겨 있습니다. 먼저 앱을 열어 잠금을 해제하세요."
+            "value": "AiGoodbye è bloccata. Siri può rispondere mentre l'app è aperta e sbloccata."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O AiGoodbye está bloqueado. Abra o app e desbloqueie primeiro."
+            "value": "O AiGoodbye está bloqueado. A Siri pode responder enquanto o app estiver aberto e desbloqueado."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye заблокирован. Откройте приложение и разблокируйте его."
+            "value": "AiGoodbye заблокировано. Siri может отвечать, пока приложение открыто и разблокировано."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye заблоковано. Відкрийте застосунок і розблокуйте його."
+            "value": "AiGoodbye заблоковано. Siri може відповідати, поки застосунок відкритий і розблокований."
           }
         },
-        "zh-HK": {
+        "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye 已鎖定。請先開啟 App 並解鎖。"
+            "value": "Το AiGoodbye είναι κλειδωμένο. Το Siri μπορεί να απαντά όσο η εφαρμογή είναι ανοιχτή και ξεκλείδωτη."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye가 잠겨 있습니다. 앱이 열려 있고 잠금이 해제된 동안에는 Siri가 답할 수 있습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbyeはロックされています。アプリを開いてロックを解除している間はSiriが回答できます。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye 已锁定。请先打开 App 并解锁。"
+            "value": "AiGoodbye 已锁定。应用打开且已解锁时，Siri 才能回答。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye 已鎖定。App 開啟並解鎖時，Siri 先可以回答。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye is locked. Siri can answer while the app is open and unlocked."
           }
         }
       }
@@ -4526,6 +4866,88 @@
         }
       }
     },
+    "Answer complete": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antwort fertig"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Respuesta completa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réponse terminée"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Risposta completata"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resposta concluída"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ответ готов"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Відповідь готова"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Η απάντηση ολοκληρώθηκε"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "답변 완료"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回答が完了しました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回答完成"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回答完成"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Answer complete"
+          }
+        }
+      }
+    },
     "App Language": {
       "localizations": {
         "de": {
@@ -4603,7 +5025,8 @@
       }
     },
     "Apple Intelligence": {
-      "shouldTranslate": false
+      "shouldTranslate": false,
+      "localizations": {}
     },
     "Apple Intelligence declined this request. Try rephrasing, or switch to a downloaded model in Settings.": {
       "localizations": {
@@ -9014,6 +9437,88 @@
         }
       }
     },
+    "Confirm it's you to change the app lock": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bestätige, dass du es bist, um die App-Sperre zu ändern"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirma que eres tú para cambiar el bloqueo de la app"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmez votre identité pour modifier le verrouillage de l'app"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conferma la tua identità per modificare il blocco dell'app"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirme que é você para alterar o bloqueio do app"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подтвердите, что это вы, чтобы изменить блокировку приложения"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Підтвердьте, що це ви, щоб змінити блокування застосунку"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Επιβεβαιώστε ότι είστε εσείς για να αλλάξετε το κλείδωμα της εφαρμογής"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱 잠금을 변경하려면 본인 확인이 필요합니다"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリのロックを変更するには本人確認が必要です"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请确认是您本人，以更改应用锁定"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請確認係你本人，以更改 App 鎖定"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm it's you to change the app lock"
+          }
+        }
+      }
+    },
     "Contact": {
       "localizations": {
         "de": {
@@ -10306,6 +10811,170 @@
         }
       }
     },
+    "Couldn't save the photo: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto konnte nicht gespeichert werden: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo guardar la foto: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d'enregistrer la photo : %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile salvare la foto: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível salvar a foto: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось сохранить фото: %@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не вдалося зберегти фото: %@"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δεν ήταν δυνατή η αποθήκευση της φωτογραφίας: %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사진을 저장할 수 없습니다: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "写真を保存できませんでした：%@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法保存照片：%@"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法儲存相片：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save the photo: %@"
+          }
+        }
+      }
+    },
+    "Couldn't save the scan: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan konnte nicht gespeichert werden: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo guardar el escaneo: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d'enregistrer le scan : %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile salvare la scansione: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível salvar a digitalização: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось сохранить скан: %@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не вдалося зберегти скан: %@"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δεν ήταν δυνατή η αποθήκευση της σάρωσης: %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스캔을 저장할 수 없습니다: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スキャンを保存できませんでした：%@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法保存扫描件：%@"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法儲存掃描：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save the scan: %@"
+          }
+        }
+      }
+    },
     "Couldn't save this recording": {
       "localizations": {
         "de": {
@@ -11446,6 +12115,170 @@
         }
       }
     },
+    "Delete Folder and Chats": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordner und Chats löschen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar carpeta y chats"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer le dossier et les discussions"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina cartella e chat"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir pasta e conversas"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить папку и чаты"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Видалити папку та чати"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Διαγραφή φακέλου και συνομιλιών"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더와 대화 삭제"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダとチャットを削除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除文件夹和聊天"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除資料夾同對話"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Folder and Chats"
+          }
+        }
+      }
+    },
+    "Delete Folder, Keep Chats": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordner löschen, Chats behalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar carpeta, conservar chats"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer le dossier, garder les discussions"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina cartella, conserva le chat"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir pasta, manter conversas"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить папку, оставить чаты"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Видалити папку, залишити чати"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Διαγραφή φακέλου, διατήρηση συνομιλιών"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더만 삭제하고 대화 유지"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダを削除、チャットは残す"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除文件夹，保留聊天"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除資料夾，保留對話"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Folder, Keep Chats"
+          }
+        }
+      }
+    },
     "Delete Model?": {
       "localizations": {
         "de": {
@@ -11746,6 +12579,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除所有录音？"
+          }
+        }
+      }
+    },
+    "Delete this folder?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Ordner löschen?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Eliminar esta carpeta?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer ce dossier ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminare questa cartella?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir esta pasta?"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить эту папку?"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Видалити цю папку?"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Διαγραφή αυτού του φακέλου;"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 폴더를 삭제할까요?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このフォルダを削除しますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除此文件夹？"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除呢個資料夾？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this folder?"
           }
         }
       }
@@ -16544,6 +17459,88 @@
         }
       }
     },
+    "Hands-free stopped because another app took over the audio.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Freisprechmodus beendet, weil eine andere App den Ton übernommen hat."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El modo manos libres se detuvo porque otra app tomó el control del audio."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le mode mains libres s'est arrêté, car une autre app a pris le contrôle de l'audio."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La modalità a mani libere si è interrotta perché un'altra app ha preso il controllo dell'audio."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O modo mãos livres parou porque outro app assumiu o áudio."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Режим без рук остановлен: другое приложение заняло звук."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Режим без рук зупинено: інший застосунок зайняв звук."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Η λειτουργία handsfree σταμάτησε επειδή μια άλλη εφαρμογή ανέλαβε τον ήχο."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 앱이 오디오를 사용해 핸즈프리가 중지되었습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別のアプリがオーディオを使用したため、ハンズフリーを停止しました。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "免提已停止，因为另一个应用接管了音频。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "免提已停止，因為另一個 App 接管咗音訊。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hands-free stopped because another app took over the audio."
+          }
+        }
+      }
+    },
     "Haptic Feedback": {
       "localizations": {
         "de": {
@@ -16768,6 +17765,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hugging Face 模型"
+          }
+        }
+      }
+    },
+    "Hugging Face returned an error (%lld). Try again later.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hugging Face hat einen Fehler gemeldet (%lld). Versuche es später erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hugging Face devolvió un error (%lld). Inténtalo más tarde."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hugging Face a renvoyé une erreur (%lld). Réessayez plus tard."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hugging Face ha restituito un errore (%lld). Riprova più tardi."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Hugging Face retornou um erro (%lld). Tente novamente mais tarde."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hugging Face вернул ошибку (%lld). Попробуйте позже."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hugging Face повернув помилку (%lld). Спробуйте пізніше."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το Hugging Face επέστρεψε σφάλμα (%lld). Δοκιμάστε ξανά αργότερα."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hugging Face에서 오류(%lld)가 발생했습니다. 나중에 다시 시도하세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hugging Faceがエラー（%lld）を返しました。後でもう一度お試しください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hugging Face 返回错误（%lld）。请稍后重试。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hugging Face 傳回錯誤（%lld）。請稍後再試。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hugging Face returned an error (%lld). Try again later."
           }
         }
       }
@@ -17684,6 +18763,88 @@
         }
       }
     },
+    "Kept with the chat on this device, never uploaded": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bleiben mit dem Chat auf diesem Gerät, werden nie hochgeladen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se guardan con el chat en este dispositivo, nunca se suben"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conservés avec la discussion sur cet appareil, jamais envoyés"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conservati con la chat su questo dispositivo, mai caricati"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ficam com a conversa neste aparelho, nunca são enviados"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Хранятся вместе с чатом на этом устройстве, никогда не отправляются"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зберігаються разом із чатом на цьому пристрої, ніколи не надсилаються"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Διατηρούνται με τη συνομιλία σε αυτή τη συσκευή, δεν ανεβαίνουν ποτέ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 기기의 대화와 함께 보관되며 절대 업로드되지 않음"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイスのチャットと一緒に保存され、アップロードされることはありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "随聊天保存在本设备上，绝不上传"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隨對話保存喺本裝置，絕不上載"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kept with the chat on this device, never uploaded"
+          }
+        }
+      }
+    },
     "Knowledge Library": {
       "localizations": {
         "de": {
@@ -18440,6 +19601,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "实时相机需要 %@ 视觉模型。请先在聊天界面下载。"
+          }
+        }
+      }
+    },
+    "Load %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ laden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cargar %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charger %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carica %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carregar %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Загрузить %@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Завантажити %@"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Φόρτωση %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 불러오기"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@を読み込む"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加载 %@"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "載入 %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Load %@"
           }
         }
       }
@@ -23232,6 +24475,88 @@
         }
       }
     },
+    "One page had no readable text and was left out.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Seite enthielt keinen lesbaren Text und wurde ausgelassen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una página no tenía texto legible y se omitió."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une page ne contenait aucun texte lisible et a été ignorée."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una pagina non conteneva testo leggibile ed è stata esclusa."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma página não tinha texto legível e foi deixada de fora."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На одной странице не было читаемого текста, она пропущена."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На одній сторінці не було читабельного тексту, її пропущено."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Μία σελίδα δεν είχε αναγνώσιμο κείμενο και παραλείφθηκε."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "읽을 수 있는 텍스트가 없는 페이지 1장이 제외되었습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み取れるテキストのないページが1ページあり、除外されました。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 1 页没有可读文本，已略过。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 1 頁冇可讀文字，已略過。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One page had no readable text and was left out."
+          }
+        }
+      }
+    },
     "One-time download of %@": {
       "localizations": {
         "de": {
@@ -23916,78 +25241,84 @@
         }
       }
     },
-    "Paste a model address such as mlx-community/Qwen3-VL-2B-Instruct-4bit. Only models converted for MLX will work; the mlx-community organization publishes thousands of them.": {
+    "Paste a model address such as mlx-community/Llama-3.2-1B-Instruct-4bit. Only models converted for MLX will work; the mlx-community organization publishes thousands of them.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Füge eine Modelladresse ein, etwa mlx-community/Qwen3-VL-2B-Instruct-4bit. Es funktionieren nur für MLX konvertierte Modelle; die Organisation mlx-community veröffentlicht Tausende davon."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Επικόλλησε μια διεύθυνση μοντέλου, π.χ. mlx-community/Qwen3-VL-2B-Instruct-4bit. Λειτουργούν μόνο μοντέλα μετατρεμμένα για MLX· ο οργανισμός mlx-community δημοσιεύει χιλιάδες τέτοια."
+            "value": "Füge eine Modelladresse wie mlx-community/Llama-3.2-1B-Instruct-4bit ein. Nur für MLX konvertierte Modelle funktionieren; die Organisation mlx-community veröffentlicht Tausende davon."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pega una dirección de modelo como mlx-community/Qwen3-VL-2B-Instruct-4bit. Solo funcionan los modelos convertidos para MLX; la organización mlx-community publica miles."
+            "value": "Pega una dirección de modelo como mlx-community/Llama-3.2-1B-Instruct-4bit. Solo funcionan los modelos convertidos para MLX; la organización mlx-community publica miles de ellos."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Collez une adresse de modèle telle que mlx-community/Qwen3-VL-2B-Instruct-4bit. Seuls les modèles convertis pour MLX fonctionnent ; l'organisation mlx-community en publie des milliers."
+            "value": "Collez une adresse de modèle telle que mlx-community/Llama-3.2-1B-Instruct-4bit. Seuls les modèles convertis pour MLX fonctionnent ; l'organisation mlx-community en publie des milliers."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Incolla un indirizzo di modello come mlx-community/Qwen3-VL-2B-Instruct-4bit. Funzionano solo i modelli convertiti per MLX; l'organizzazione mlx-community ne pubblica migliaia."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "mlx-community/Qwen3-VL-2B-Instruct-4bit のようなモデルのアドレスを貼り付けてください。MLX 用に変換されたモデルのみ動作します。mlx-community には数千のモデルがあります。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "mlx-community/Qwen3-VL-2B-Instruct-4bit 같은 모델 주소를 붙여 넣으세요. MLX용으로 변환된 모델만 작동하며, mlx-community 조직이 수천 개를 공개하고 있습니다."
+            "value": "Incolla un indirizzo di modello come mlx-community/Llama-3.2-1B-Instruct-4bit. Funzionano solo i modelli convertiti per MLX; l'organizzazione mlx-community ne pubblica migliaia."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cole um endereço de modelo como mlx-community/Qwen3-VL-2B-Instruct-4bit. Só funcionam modelos convertidos para MLX; a organização mlx-community publica milhares deles."
+            "value": "Cole um endereço de modelo como mlx-community/Llama-3.2-1B-Instruct-4bit. Só funcionam modelos convertidos para MLX; a organização mlx-community publica milhares deles."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Вставьте адрес модели, например mlx-community/Qwen3-VL-2B-Instruct-4bit. Работают только модели, конвертированные для MLX; организация mlx-community публикует их тысячами."
+            "value": "Вставьте адрес модели, например mlx-community/Llama-3.2-1B-Instruct-4bit. Работают только модели, сконвертированные для MLX; организация mlx-community публикует тысячи таких."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Вставте адресу моделі, наприклад mlx-community/Qwen3-VL-2B-Instruct-4bit. Працюють лише моделі, конвертовані для MLX; організація mlx-community публікує їх тисячами."
+            "value": "Вставте адресу моделі, наприклад mlx-community/Llama-3.2-1B-Instruct-4bit. Працюють лише моделі, сконвертовані для MLX; організація mlx-community публікує тисячі таких."
           }
         },
-        "zh-HK": {
+        "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "貼上模型位址，例如 mlx-community/Qwen3-VL-2B-Instruct-4bit。僅支援已轉換為 MLX 格式的模型；mlx-community 組織發布了數千個這樣的模型。"
+            "value": "Επικολλήστε μια διεύθυνση μοντέλου όπως mlx-community/Llama-3.2-1B-Instruct-4bit. Λειτουργούν μόνο μοντέλα μετατραπέντα για MLX· ο οργανισμός mlx-community δημοσιεύει χιλιάδες."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mlx-community/Llama-3.2-1B-Instruct-4bit 같은 모델 주소를 붙여넣으세요. MLX용으로 변환된 모델만 작동하며, mlx-community 조직에서 수천 개를 공개하고 있습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mlx-community/Llama-3.2-1B-Instruct-4bit のようなモデルのアドレスを貼り付けてください。MLX向けに変換されたモデルのみ動作します。mlx-community組織が数千のモデルを公開しています。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "粘贴模型地址，例如 mlx-community/Qwen3-VL-2B-Instruct-4bit。仅支持已转换为 MLX 格式的模型；mlx-community 组织发布了数千个这样的模型。"
+            "value": "粘贴模型地址，例如 mlx-community/Llama-3.2-1B-Instruct-4bit。只有为 MLX 转换过的模型才能使用；mlx-community 组织发布了数千个此类模型。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "貼上模型地址，例如 mlx-community/Llama-3.2-1B-Instruct-4bit。只有為 MLX 轉換過嘅模型先可以用；mlx-community 組織發佈咗數千個呢類模型。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste a model address such as mlx-community/Llama-3.2-1B-Instruct-4bit. Only models converted for MLX will work; the mlx-community organization publishes thousands of them."
           }
         }
       }
@@ -25284,6 +26615,88 @@
         }
       }
     },
+    "Privacy Policy": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datenschutzrichtlinie"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Política de privacidad"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Politique de confidentialité"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informativa sulla privacy"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Política de Privacidade"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Политика конфиденциальности"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Політика конфіденційності"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Πολιτική απορρήτου"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개인정보 처리방침"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プライバシーポリシー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐私政策"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "私隱政策"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy Policy"
+          }
+        }
+      }
+    },
     "Private, on-device AI. Works offline, no subscriptions, your conversations never leave your device.": {
       "localizations": {
         "de": {
@@ -25964,82 +27377,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "阅读文稿"
-          }
-        }
-      }
-    },
-    "Read on this device, never uploaded": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auf diesem Gerät gelesen, nie hochgeladen"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Διαβάζονται σε αυτή τη συσκευή, ποτέ δεν ανεβαίνουν"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se leen en este dispositivo, nunca se suben"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lus sur cet appareil, jamais envoyés"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Letti su questo dispositivo, mai caricati"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このデバイスで読み取り、アップロードなし"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 기기에서 읽고, 업로드하지 않음"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lidos neste dispositivo, nunca enviados"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Читаются на этом устройстве, никогда не выгружаются"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Читаються на цьому пристрої, ніколи не вивантажуються"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "喺呢部裝置讀取，從來唔會上載"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在此设备上读取，从不上传"
           }
         }
       }
@@ -28938,78 +30275,84 @@
         }
       }
     },
-    "Restores every setting to its default value. Your conversations are not affected.": {
+    "Restores creativity, conversation memory, language, haptics and download settings to their defaults. Your conversations are not affected.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Setzt alle Einstellungen auf ihre Standardwerte zurück. Ihre Unterhaltungen sind davon nicht betroffen."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Επαναφέρει κάθε ρύθμιση στην προεπιλεγμένη τιμή της. Οι συζητήσεις σας δεν επηρεάζονται."
+            "value": "Setzt Kreativität, Gesprächsgedächtnis, Sprache, Haptik und Download-Einstellungen auf die Standardwerte zurück. Deine Unterhaltungen bleiben unberührt."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Restablece todos los ajustes a sus valores predeterminados. Tus conversaciones no se ven afectadas."
+            "value": "Restablece la creatividad, la memoria de conversación, el idioma, la respuesta háptica y los ajustes de descarga a sus valores predeterminados. Tus conversaciones no se ven afectadas."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rétablit la valeur par défaut de chaque réglage. Vos conversations ne sont pas affectées."
+            "value": "Rétablit la créativité, la mémoire de conversation, la langue, le retour haptique et les réglages de téléchargement par défaut. Vos discussions ne sont pas affectées."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Riporta ogni impostazione al valore predefinito. Le tue conversazioni non vengono toccate."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "すべての設定をデフォルト値に戻します。会話には影響しません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "모든 설정을 기본값으로 복원합니다. 대화는 영향을 받지 않습니다."
+            "value": "Ripristina creatività, memoria della conversazione, lingua, feedback aptico e impostazioni di download ai valori predefiniti. Le tue chat non vengono toccate."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Restaura todos os ajustes para os valores padrão. Suas conversas não são afetadas."
+            "value": "Restaura criatividade, memória da conversa, idioma, resposta tátil e configurações de download para os padrões. Suas conversas não são afetadas."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Возвращает все настройки к значениям по умолчанию. Ваши беседы не затрагиваются."
+            "value": "Возвращает креативность, память разговора, язык, тактильный отклик и настройки загрузки к значениям по умолчанию. Ваши чаты не затрагиваются."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Повертає всі налаштування до стандартних значень. Ваші розмови залишаться без змін."
+            "value": "Повертає креативність, пам'ять розмови, мову, тактильний відгук і налаштування завантаження до типових значень. Ваші чати не змінюються."
           }
         },
-        "zh-HK": {
+        "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "將所有設定回復為預設值。你的對話不會受影響。"
+            "value": "Επαναφέρει τη δημιουργικότητα, τη μνήμη συνομιλίας, τη γλώσσα, την απτική ανάδραση και τις ρυθμίσεις λήψης στις προεπιλογές. Οι συνομιλίες σας δεν επηρεάζονται."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "창의성, 대화 메모리, 언어, 햅틱, 다운로드 설정을 기본값으로 되돌립니다. 대화는 영향을 받지 않습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "創造性、会話メモリ、言語、触覚フィードバック、ダウンロード設定をデフォルトに戻します。会話には影響しません。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "将所有设置恢复为默认值。您的对话不受影响。"
+            "value": "将创造力、对话记忆、语言、触感反馈和下载设置恢复为默认值。你的对话不受影响。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將創意度、對話記憶、語言、觸覺回饋同下載設定回復預設值。你嘅對話唔受影響。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restores creativity, conversation memory, language, haptics and download settings to their defaults. Your conversations are not affected."
           }
         }
       }
@@ -32510,82 +33853,6 @@
         }
       }
     },
-    "Stored on this device": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auf diesem Gerät gespeichert"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Αποθηκεύονται σε αυτή τη συσκευή"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se guardan en este dispositivo"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stockés sur cet appareil"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Archiviati su questo dispositivo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このデバイスに保存"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 기기에 저장됨"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guardadas neste dispositivo"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Хранятся на этом устройстве"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Зберігаються на цьому пристрої"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "儲存喺呢部裝置"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "储存在此设备上"
-          }
-        }
-      }
-    },
     "Stored on this device (included in your iCloud backup, if you use one)": {
       "localizations": {
         "de": {
@@ -33114,6 +34381,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "用 AiGoodbye 生成摘要"
+          }
+        }
+      }
+    },
+    "Summarizing needs the %@ model. Download it from the chat screen first.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für die Zusammenfassung wird das Modell %@ benötigt. Lade es zuerst im Chat herunter."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para resumir se necesita el modelo %@. Descárgalo primero desde la pantalla de chat."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le résumé nécessite le modèle %@. Téléchargez-le d'abord depuis l'écran de discussion."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per riassumere serve il modello %@. Scaricalo prima dalla schermata della chat."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resumir exige o modelo %@. Baixe-o primeiro na tela de conversa."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Для резюме нужна модель %@. Сначала загрузите её на экране чата."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Для підсумку потрібна модель %@. Спочатку завантажте її на екрані чату."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Η σύνοψη χρειάζεται το μοντέλο %@. Κατεβάστε το πρώτα από την οθόνη συνομιλίας."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "요약에는 %@ 모델이 필요합니다. 먼저 대화 화면에서 다운로드하세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要約には%@モデルが必要です。まずチャット画面からダウンロードしてください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "总结需要 %@ 模型。请先在聊天界面下载。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "總結需要 %@ 模型。請先喺對話畫面下載。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summarizing needs the %@ model. Download it from the chat screen first."
           }
         }
       }
@@ -33802,78 +35151,84 @@
         }
       }
     },
-    "That doesn't look like a model address. Use the form owner/model-name, for example mlx-community/Qwen3-VL-2B-Instruct-4bit.": {
+    "That doesn't look like a model address. Use the form owner/model-name, for example mlx-community/Llama-3.2-1B-Instruct-4bit.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Das sieht nicht nach einer Modelladresse aus. Verwende die Form owner/model-name, zum Beispiel mlx-community/Qwen3-VL-2B-Instruct-4bit."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Αυτό δεν μοιάζει με διεύθυνση μοντέλου. Χρησιμοποίησε τη μορφή owner/model-name, για παράδειγμα mlx-community/Qwen3-VL-2B-Instruct-4bit."
+            "value": "Das sieht nicht nach einer Modelladresse aus. Verwende die Form besitzer/modellname, zum Beispiel mlx-community/Llama-3.2-1B-Instruct-4bit."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eso no parece una dirección de modelo. Usa el formato owner/model-name, por ejemplo mlx-community/Qwen3-VL-2B-Instruct-4bit."
+            "value": "Eso no parece una dirección de modelo. Usa la forma propietario/nombre-del-modelo, por ejemplo mlx-community/Llama-3.2-1B-Instruct-4bit."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cela ne ressemble pas à une adresse de modèle. Utilisez la forme owner/model-name, par exemple mlx-community/Qwen3-VL-2B-Instruct-4bit."
+            "value": "Cela ne ressemble pas à une adresse de modèle. Utilisez la forme propriétaire/nom-du-modèle, par exemple mlx-community/Llama-3.2-1B-Instruct-4bit."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Non sembra un indirizzo di modello. Usa la forma owner/model-name, ad esempio mlx-community/Qwen3-VL-2B-Instruct-4bit."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "モデルのアドレスではないようです。owner/model-name の形式で入力してください（例: mlx-community/Qwen3-VL-2B-Instruct-4bit）。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "모델 주소 형식이 아닌 것 같습니다. owner/model-name 형식으로 입력하세요. 예: mlx-community/Qwen3-VL-2B-Instruct-4bit"
+            "value": "Non sembra un indirizzo di modello. Usa la forma proprietario/nome-modello, ad esempio mlx-community/Llama-3.2-1B-Instruct-4bit."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Isso não parece um endereço de modelo. Use o formato owner/model-name, por exemplo mlx-community/Qwen3-VL-2B-Instruct-4bit."
+            "value": "Isso não parece um endereço de modelo. Use a forma dono/nome-do-modelo, por exemplo mlx-community/Llama-3.2-1B-Instruct-4bit."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Это не похоже на адрес модели. Используйте форму owner/model-name, например mlx-community/Qwen3-VL-2B-Instruct-4bit."
+            "value": "Это не похоже на адрес модели. Используйте форму владелец/имя-модели, например mlx-community/Llama-3.2-1B-Instruct-4bit."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Це не схоже на адресу моделі. Використовуйте форму owner/model-name, наприклад mlx-community/Qwen3-VL-2B-Instruct-4bit."
+            "value": "Це не схоже на адресу моделі. Використовуйте форму власник/назва-моделі, наприклад mlx-community/Llama-3.2-1B-Instruct-4bit."
           }
         },
-        "zh-HK": {
+        "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "這看起來不是模型位址。請使用 owner/model-name 的形式，例如 mlx-community/Qwen3-VL-2B-Instruct-4bit。"
+            "value": "Αυτό δεν μοιάζει με διεύθυνση μοντέλου. Χρησιμοποιήστε τη μορφή κάτοχος/όνομα-μοντέλου, π.χ. mlx-community/Llama-3.2-1B-Instruct-4bit."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모델 주소 형식이 아닙니다. 소유자/모델-이름 형식을 사용하세요. 예: mlx-community/Llama-3.2-1B-Instruct-4bit."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モデルのアドレスではないようです。所有者/モデル名 の形式で入力してください。例：mlx-community/Llama-3.2-1B-Instruct-4bit"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "这看起来不是模型地址。请使用 owner/model-name 的形式，例如 mlx-community/Qwen3-VL-2B-Instruct-4bit。"
+            "value": "这看起来不像模型地址。请使用“所有者/模型名称”的形式，例如 mlx-community/Llama-3.2-1B-Instruct-4bit。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "呢個唔似係模型地址。請用「擁有者/模型名稱」嘅形式，例如 mlx-community/Llama-3.2-1B-Instruct-4bit。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That doesn't look like a model address. Use the form owner/model-name, for example mlx-community/Llama-3.2-1B-Instruct-4bit."
           }
         }
       }
@@ -33950,6 +35305,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "该模型已添加。"
+          }
+        }
+      }
+    },
+    "That model is already built in - pick it from the model list.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Modell ist bereits integriert – wähle es in der Modellliste aus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ese modelo ya viene integrado: elígelo en la lista de modelos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce modèle est déjà intégré : choisissez-le dans la liste des modèles."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quel modello è già integrato: sceglilo dall'elenco dei modelli."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esse modelo já vem integrado: escolha-o na lista de modelos."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Эта модель уже встроена — выберите её в списке моделей."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ця модель уже вбудована — виберіть її в списку моделей."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Αυτό το μοντέλο είναι ήδη ενσωματωμένο – επιλέξτε το από τη λίστα μοντέλων."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 모델은 이미 기본으로 포함되어 있습니다. 모델 목록에서 선택하세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "そのモデルはすでに内蔵されています。モデル一覧から選んでください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该模型已内置，请在模型列表中选择。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "呢個模型已經內置，請喺模型清單揀選。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That model is already built in - pick it from the model list."
           }
         }
       }
@@ -34254,6 +35691,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "AI 在本设备上运行。你输入的任何内容都不会被上传。"
+          }
+        }
+      }
+    },
+    "The answer was stopped because the app went to the background. Tap Try Again to continue.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Antwort wurde abgebrochen, weil die App in den Hintergrund ging. Tippe auf „Erneut versuchen“, um fortzufahren."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La respuesta se detuvo porque la app pasó a segundo plano. Toca Reintentar para continuar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La réponse a été interrompue, car l'app est passée en arrière-plan. Touchez Réessayer pour continuer."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La risposta è stata interrotta perché l'app è passata in background. Tocca Riprova per continuare."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A resposta foi interrompida porque o app foi para segundo plano. Toque em Tentar novamente para continuar."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ответ прерван: приложение ушло в фон. Нажмите «Повторить», чтобы продолжить."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Відповідь перервано: застосунок перейшов у фон. Натисніть «Повторити», щоб продовжити."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Η απάντηση διακόπηκε επειδή η εφαρμογή πήγε στο παρασκήνιο. Πατήστε «Δοκιμή ξανά» για να συνεχίσετε."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱이 백그라운드로 전환되어 답변이 중단되었습니다. 계속하려면 다시 시도를 탭하세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリがバックグラウンドに移動したため回答を停止しました。続けるには「再試行」をタップしてください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用转入后台，回答已停止。点按“重试”继续。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App 轉入背景，回答已停止。點一下「再試一次」繼續。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The answer was stopped because the app went to the background. Tap Try Again to continue."
           }
         }
       }
@@ -35322,6 +36841,88 @@
         }
       }
     },
+    "The chats inside can be kept and moved out of the folder, or deleted with it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Chats darin können behalten und aus dem Ordner verschoben oder zusammen mit ihm gelöscht werden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los chats que contiene pueden conservarse y sacarse de la carpeta, o eliminarse con ella."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les discussions qu'il contient peuvent être conservées et sorties du dossier, ou supprimées avec lui."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le chat al suo interno possono essere conservate e spostate fuori dalla cartella, oppure eliminate con essa."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As conversas dentro dela podem ser mantidas e movidas para fora da pasta, ou excluídas junto com ela."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Чаты внутри можно оставить, переместив их из папки, или удалить вместе с ней."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Чати всередині можна залишити, перемістивши їх із папки, або видалити разом із нею."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Οι συνομιλίες μέσα του μπορούν να διατηρηθούν και να μεταφερθούν εκτός φακέλου, ή να διαγραφούν μαζί του."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더 안의 대화는 유지하여 폴더 밖으로 옮기거나, 폴더와 함께 삭제할 수 있습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中のチャットは残してフォルダの外に移動するか、フォルダと一緒に削除できます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其中的聊天可以保留并移出文件夹，也可以随文件夹一起删除。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入面嘅對話可以保留並移出資料夾，或者隨資料夾一齊刪除。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The chats inside can be kept and moved out of the folder, or deleted with it."
+          }
+        }
+      }
+    },
     "The connection timed out. Please try again.": {
       "localizations": {
         "de": {
@@ -35550,6 +37151,88 @@
         }
       }
     },
+    "The library index couldn't be read, so nothing can be added until it is repaired. Restart the app and try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Bibliotheksindex konnte nicht gelesen werden, daher kann nichts hinzugefügt werden, bis er repariert ist. Starte die App neu und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo leer el índice de la biblioteca, así que no se puede añadir nada hasta que se repare. Reinicia la app e inténtalo de nuevo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'index de la bibliothèque n'a pas pu être lu : rien ne peut être ajouté tant qu'il n'est pas réparé. Redémarrez l'app et réessayez."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile leggere l'indice della libreria, quindi non è possibile aggiungere nulla finché non viene riparato. Riavvia l'app e riprova."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível ler o índice da biblioteca, então nada pode ser adicionado até que ele seja reparado. Reinicie o app e tente novamente."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось прочитать индекс библиотеки, поэтому ничего нельзя добавить, пока он не будет восстановлен. Перезапустите приложение и попробуйте снова."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не вдалося прочитати індекс бібліотеки, тому нічого не можна додати, доки його не буде відновлено. Перезапустіть застосунок і спробуйте знову."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δεν ήταν δυνατή η ανάγνωση του ευρετηρίου της βιβλιοθήκης, οπότε δεν μπορεί να προστεθεί τίποτα μέχρι να επισκευαστεί. Επανεκκινήστε την εφαρμογή και δοκιμάστε ξανά."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "라이브러리 색인을 읽을 수 없어 복구될 때까지 아무것도 추가할 수 없습니다. 앱을 다시 시작한 후 다시 시도하세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブラリの索引を読み込めないため、修復されるまで何も追加できません。アプリを再起動してもう一度お試しください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取资料库索引，修复前无法添加任何内容。请重新启动应用后重试。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法讀取資料庫索引，修復前無法加入任何內容。請重新啟動 App 再試。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The library index couldn't be read, so nothing can be added until it is repaired. Restart the app and try again."
+          }
+        }
+      }
+    },
     "The microphone couldn't be started. Check that another app isn't using it.": {
       "localizations": {
         "de": {
@@ -35774,6 +37457,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "你刚拍的照片"
+          }
+        }
+      }
+    },
+    "The scanner couldn't start: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Scanner konnte nicht starten: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El escáner no pudo iniciarse: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le scanner n'a pas pu démarrer : %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile avviare lo scanner: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O scanner não pôde iniciar: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сканер не запустился: %@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сканер не запустився: %@"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ο σαρωτής δεν μπόρεσε να ξεκινήσει: %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스캐너를 시작할 수 없습니다: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スキャナーを開始できませんでした：%@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "扫描仪无法启动：%@"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "掃描器無法啟動：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The scanner couldn't start: %@"
           }
         }
       }
@@ -37218,6 +38983,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "这将立即释放 %1$@。您可以随时重新下载 %2$@。"
+          }
+        }
+      }
+    },
+    "This model is gated or private and can't be downloaded.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Modell ist zugangsbeschränkt oder privat und kann nicht heruntergeladen werden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este modelo es restringido o privado y no se puede descargar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce modèle est à accès restreint ou privé et ne peut pas être téléchargé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo modello è ad accesso limitato o privato e non può essere scaricato."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este modelo é restrito ou privado e não pode ser baixado."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Эта модель с ограниченным доступом или приватная, её нельзя загрузить."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ця модель з обмеженим доступом або приватна, її не можна завантажити."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Αυτό το μοντέλο έχει περιορισμένη πρόσβαση ή είναι ιδιωτικό και δεν μπορεί να ληφθεί."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 모델은 접근이 제한되어 있거나 비공개이므로 다운로드할 수 없습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このモデルはアクセス制限付きまたは非公開のため、ダウンロードできません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此模型受限或为私有，无法下载。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "呢個模型受限或者係私人模型，無法下載。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This model is gated or private and can't be downloaded."
           }
         }
       }
@@ -38830,6 +40677,88 @@
         }
       }
     },
+    "Translating needs the %@ model. Download it from the chat screen first.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Übersetzen wird das Modell %@ benötigt. Lade es zuerst im Chat herunter."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para traducir se necesita el modelo %@. Descárgalo primero desde la pantalla de chat."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La traduction nécessite le modèle %@. Téléchargez-le d'abord depuis l'écran de discussion."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per tradurre serve il modello %@. Scaricalo prima dalla schermata della chat."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduzir exige o modelo %@. Baixe-o primeiro na tela de conversa."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Для перевода нужна модель %@. Сначала загрузите её на экране чата."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Для перекладу потрібна модель %@. Спочатку завантажте її на екрані чату."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Η μετάφραση χρειάζεται το μοντέλο %@. Κατεβάστε το πρώτα από την οθόνη συνομιλίας."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "번역에는 %@ 모델이 필요합니다. 먼저 대화 화면에서 다운로드하세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻訳には%@モデルが必要です。まずチャット画面からダウンロードしてください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译需要 %@ 模型。请先在聊天界面下载。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻譯需要 %@ 模型。請先喺對話畫面下載。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translating needs the %@ model. Download it from the chat screen first."
+          }
+        }
+      }
+    },
     "Translator": {
       "localizations": {
         "de": {
@@ -40118,6 +42047,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "语音状态"
+          }
+        }
+      }
+    },
+    "Waiting for Wi-Fi. Connect to Wi-Fi, or turn off \"Download over Wi-Fi only\" in Settings.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warte auf WLAN. Verbinde dich mit einem WLAN oder schalte „Nur über WLAN laden“ in den Einstellungen aus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esperando Wi-Fi. Conéctate a una red Wi-Fi o desactiva «Descargar solo por Wi-Fi» en Ajustes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En attente du Wi-Fi. Connectez-vous au Wi-Fi ou désactivez « Télécharger uniquement en Wi-Fi » dans les Réglages."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In attesa del Wi-Fi. Connettiti a una rete Wi-Fi oppure disattiva «Scarica solo con Wi-Fi» nelle Impostazioni."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aguardando Wi-Fi. Conecte-se a uma rede Wi-Fi ou desative “Baixar apenas por Wi-Fi” nos Ajustes."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ожидание Wi-Fi. Подключитесь к Wi-Fi или выключите «Загружать только по Wi-Fi» в настройках."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Очікування Wi-Fi. Підключіться до Wi-Fi або вимкніть «Завантажувати лише через Wi-Fi» в налаштуваннях."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Αναμονή για Wi-Fi. Συνδεθείτε σε Wi-Fi ή απενεργοποιήστε το «Λήψη μόνο μέσω Wi-Fi» στις Ρυθμίσεις."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi를 기다리는 중입니다. Wi-Fi에 연결하거나 설정에서 'Wi-Fi로만 다운로드'를 끄세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fiを待っています。Wi-Fiに接続するか、設定で「Wi-Fi接続時のみダウンロード」をオフにしてください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在等待 Wi-Fi。请连接 Wi-Fi，或在设置中关闭“仅通过 Wi-Fi 下载”。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在等待 Wi-Fi。請連接 Wi-Fi，或者喺設定關閉「只用 Wi-Fi 下載」。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for Wi-Fi. Connect to Wi-Fi, or turn off \"Download over Wi-Fi only\" in Settings."
           }
         }
       }
@@ -42251,16 +44262,20 @@
       }
     },
     "aigoodbye.ai": {
-      "shouldTranslate": false
+      "shouldTranslate": false,
+      "localizations": {}
     },
     "marketing@dealerofhappiness.com": {
-      "shouldTranslate": false
+      "shouldTranslate": false,
+      "localizations": {}
     },
     "owner/model-name": {
-      "shouldTranslate": false
+      "shouldTranslate": false,
+      "localizations": {}
     },
     "·": {
-      "shouldTranslate": false
+      "shouldTranslate": false,
+      "localizations": {}
     }
   },
   "version": "1.0"

@@ -163,7 +163,10 @@ private struct PersonaEditor: View {
                                     )
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel(Text(symbol))
+                            // "pencil and outline", not "pencil.and.outline",
+                            // and VoiceOver learns which one is chosen.
+                            .accessibilityLabel(Text(symbol.replacingOccurrences(of: ".", with: " ")))
+                            .accessibilityAddTraits(persona.symbol == symbol ? [.isSelected] : [])
                         }
                     }
                     .padding(.vertical, 4)

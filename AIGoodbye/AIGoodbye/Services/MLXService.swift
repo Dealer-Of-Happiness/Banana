@@ -17,6 +17,7 @@
 import Foundation
 import UIKit
 import Combine
+import Network
 import MLX
 import MLXLMCommon
 import MLXLLM
@@ -34,11 +35,28 @@ final class MLXService: ObservableObject {
     @Published var isDownloadStalled: Bool = false
     @Published var isPreparingModel: Bool = false
     @Published var loadedModelId: String?
+    /// The model a `performLoad` is currently downloading or preparing. Not
+    /// necessarily the selected one: an image question on Apple Intelligence
+    /// borrows a vision model, and the storage screen must know that model
+    /// is busy even though it is not selected.
+    @Published private(set) var loadingModelId: String?
+    @Published private(set) var loadingModelName: String?
+    /// True while a Wi-Fi-only download is parked because the device is on
+    /// cellular or another expensive path. The system waits silently (for
+    /// hours) in that state, so the chip has to say what is going on.
+    @Published private(set) var isWaitingForWiFi: Bool = false
 
     /// Last moment download bytes moved; drives the stall warning.
     private var lastDownloadActivity = Date()
     private var stallMonitor: Task<Void, Never>?
     private var diskPollTask: Task<Void, Never>?
+    private var pathMonitor: NWPathMonitor?
+    private var pathIsExpensive = false
+    private var settingsWatch: AnyCancellable?
+    /// The transfer currently running inside `performLoad`, so a settings
+    /// change can restart it without cancelling the load that owns it.
+    private var prefetchJob: Task<Void, Error>?
+    private var restartPrefetch = false
 
     /// Guards against concurrent loads (e.g. the launch warm-up racing a
     /// user-triggered load): the second caller awaits the first instead of
@@ -93,6 +111,21 @@ final class MLXService: ObservableObject {
     init(settings: SettingsManager) {
         self.settings = settings
 
+        // Keep the network path's cost current so a Wi-Fi-only download
+        // parked on cellular can be reported instead of looking stalled.
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] path in
+            let expensive = path.isExpensive || path.usesInterfaceType(.cellular)
+            let service = self
+            Task { @MainActor in
+                guard let service else { return }
+                service.pathIsExpensive = expensive
+                service.refreshWiFiWait()
+            }
+        }
+        monitor.start(queue: DispatchQueue.global(qos: .utility))
+        pathMonitor = monitor
+
         #if !targetEnvironment(simulator)
         // Cap the MLX GPU cache to prevent memory accumulation during inference.
         // 20 MB follows the official mlx-swift-examples guidance for iOS.
@@ -127,9 +160,15 @@ final class MLXService: ObservableObject {
                 break
             }
             try await join(inflight)
-            // The join succeeded but left nothing loaded: go round and start
-            // a fresh load rather than reporting a model that isn't there.
-            if inFlightLoad?.id == inflight.id { break }
+            // Loaded: done, whether or not the original's `defer` has run
+            // yet. (Testing the registry instead of the weights, as this
+            // once did, made a joiner that resumed first unload the model
+            // that had just finished loading and load it a second time.)
+            if modelContainer != nil && loadedModelId == model.id { return }
+            // The join succeeded but left nothing loaded (`unload()` ran in
+            // between): drop the stale entry and start a fresh load rather
+            // than reporting a model that isn't there.
+            if inFlightLoad?.id == inflight.id { inFlightLoad = nil; break }
         }
 
         nextLoadId += 1
@@ -144,6 +183,14 @@ final class MLXService: ObservableObject {
         defer { if inFlightLoad?.id == loadId { inFlightLoad = nil } }
 
         try await join(entry)
+    }
+
+    /// Cancel the in-flight load or download of `modelId`, if any. Used
+    /// when the user removes a model that is still downloading, so the
+    /// transfer does not quietly recreate the folder it just deleted.
+    func cancelLoad(of modelId: String) {
+        guard let inflight = inFlightLoad, inflight.modelId == modelId else { return }
+        inflight.task.cancel()
     }
 
     /// Wait for a load, letting cancellation through.
@@ -210,14 +257,19 @@ final class MLXService: ObservableObject {
                 )
             }
         }
+        loadingModelId = model.id
+        loadingModelName = model.name
         if !wasDownloaded {
             beginDownloadState(expectedBytes: model.sizeBytes)
+            if settings.wifiOnlyDownloads { startWiFiWatch() }
         } else {
             isPreparingModel = true
         }
         defer {
             endDownloadState()
             isPreparingModel = false
+            loadingModelId = nil
+            loadingModelName = nil
         }
 
         // Fast path: download the files ourselves at full network speed with
@@ -226,15 +278,43 @@ final class MLXService: ObservableObject {
         var filesOnDisk = wasDownloaded
         if !wasDownloaded, let repoDir = ModelManager.shared.modelDirectory(for: model) {
             do {
-                let prefetcher = ModelPrefetcher()
-                prefetcher.wifiOnly = settings.wifiOnlyDownloads
-                try await prefetcher.prefetch(hfId: hfId, into: repoDir) { [weak self] done, total in
-                    // Bound to a local constant first: reaching for the
-                    // capture-list `self` from inside the nested Task is a
-                    // reference to a captured var from concurrent code.
-                    let service = self
-                    Task { @MainActor in
-                        service?.noteDownloadProgress(done: done, total: total)
+                // The transfer runs in a child task of its own so that a
+                // change to the Wi-Fi-only setting mid-download can restart
+                // just the transfer (with resume data) without cancelling
+                // this load. A session's configuration is immutable once
+                // created, so a user who turns the setting off to unblock a
+                // download parked on cellular used to see nothing happen.
+                while true {
+                    let prefetcher = ModelPrefetcher()
+                    prefetcher.wifiOnly = settings.wifiOnlyDownloads
+                    let job = Task { [weak self] in
+                        try await prefetcher.prefetch(hfId: hfId, into: repoDir) { done, total in
+                            // Bound to a local constant first: reaching for
+                            // the capture-list `self` from inside the nested
+                            // Task is a reference to a captured var from
+                            // concurrent code.
+                            let service = self
+                            Task { @MainActor in
+                                service?.noteDownloadProgress(done: done, total: total)
+                            }
+                        }
+                    }
+                    prefetchJob = job
+                    do {
+                        try await withTaskCancellationHandler {
+                            try await Timeout.awaitCancellable(job)
+                        } onCancel: {
+                            job.cancel()
+                        }
+                        prefetchJob = nil
+                        break
+                    } catch {
+                        prefetchJob = nil
+                        if restartPrefetch, !Task.isCancelled {
+                            restartPrefetch = false
+                            continue
+                        }
+                        throw error
                     }
                 }
                 isDownloading = false
@@ -250,16 +330,31 @@ final class MLXService: ObservableObject {
                         L10n.text("Not enough free space. \(model.name) needs about \(model.size) free. Free up space and try again.")
                     )
                 }
+                // Say what actually went wrong (Hugging Face error, gated
+                // repository, no connection) before falling back to the
+                // generic Wi-Fi text, which used to be the answer for every
+                // failure and told people on Wi-Fi to check their Wi-Fi.
+                if let specific = ModelPrefetcher.friendlyMessage(for: error) {
+                    throw MLXError.modelLoadFailed(specific)
+                }
+                if (error as NSError).domain == NSURLErrorDomain {
+                    throw MLXError.modelLoadFailed(friendlyMessage(for: error))
+                }
                 // The library's downloader knows nothing of the Wi-Fi-only
                 // setting: falling through to it here would put gigabytes
                 // on a cellular plan the user explicitly protected. Stop
                 // instead and say so.
                 if settings.wifiOnlyDownloads {
                     throw MLXError.modelLoadFailed(
-                        L10n.text("The download couldn't be completed. Check that Wi-Fi is connected and try again.")
+                        isWaitingForWiFi
+                            ? L10n.text("Waiting for Wi-Fi. Connect to Wi-Fi, or turn off \"Download over Wi-Fi only\" in Settings.")
+                            : L10n.text("The download couldn't be completed. Check that Wi-Fi is connected and try again.")
                     )
                 }
-                // Library fallback still runs; show byte progress from disk.
+                // Library fallback still runs; show byte progress from disk,
+                // and record the transfers it is about to make so the
+                // Privacy Center's log stays honest.
+                NetworkAudit.noteLibraryDownload(files: ModelPrefetcher.plannedTransferURLs(for: model))
                 startDiskPollProgress(for: model)
             }
         }
@@ -312,6 +407,21 @@ final class MLXService: ObservableObject {
                 } catch is CancellationError {
                     throw CancellationError()
                 } catch {
+                    // Retry through the Hub only for a file an older download
+                    // never fetched. Any other failure (unsupported
+                    // architecture, corrupt shard, out of memory) used to go
+                    // the same way, which contacted huggingface.co for an
+                    // installed model and, offline, replaced the real error
+                    // with "No internet connection".
+                    guard ModelPrefetcher.isMissingFileError(error) else { throw error }
+                    if settings.wifiOnlyDownloads, isOnExpensivePath() {
+                        throw MLXError.modelLoadFailed(
+                            L10n.text("Waiting for Wi-Fi. Connect to Wi-Fi, or turn off \"Download over Wi-Fi only\" in Settings.")
+                        )
+                    }
+                    beginDownloadState(expectedBytes: model.sizeBytes)
+                    NetworkAudit.noteLibraryDownload(files: ModelPrefetcher.plannedTransferURLs(for: model))
+                    startDiskPollProgress(for: model)
                     modelContainer = try await load(hubConfiguration)
                 }
             } else {
@@ -347,7 +457,9 @@ final class MLXService: ObservableObject {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 5_000_000_000)
                 guard let self, self.isDownloading else { break }
-                if Date().timeIntervalSince(self.lastDownloadActivity) > 45 {
+                // Parked for Wi-Fi is not a stall; the chip says so instead.
+                if !self.isWaitingForWiFi,
+                   Date().timeIntervalSince(self.lastDownloadActivity) > 45 {
                     self.isDownloadStalled = true
                 }
             }
@@ -357,10 +469,47 @@ final class MLXService: ObservableObject {
     private func endDownloadState() {
         isDownloading = false
         isDownloadStalled = false
+        isWaitingForWiFi = false
         stallMonitor?.cancel()
         stallMonitor = nil
         diskPollTask?.cancel()
         diskPollTask = nil
+        settingsWatch = nil
+        prefetchJob = nil
+        restartPrefetch = false
+    }
+
+    /// While a Wi-Fi-only download runs: say when it is parked because the
+    /// device is on cellular (the system otherwise waits for hours behind a
+    /// frozen bar), and restart the transfer if the user turns the setting
+    /// off meanwhile (a session's configuration cannot change after the
+    /// fact; resume data makes the restart cheap).
+    private func startWiFiWatch() {
+        refreshWiFiWait()
+        settingsWatch = settings.$wifiOnlyDownloads
+            .dropFirst()
+            .sink { [weak self] wifiOnly in
+                let service = self
+                Task { @MainActor in
+                    guard let service, service.isDownloading, !wifiOnly, let job = service.prefetchJob else { return }
+                    service.isWaitingForWiFi = false
+                    service.restartPrefetch = true
+                    job.cancel()
+                }
+            }
+    }
+
+    /// Whether the current network path is cellular or otherwise expensive
+    /// (kept current by the path monitor started in `init`).
+    private func isOnExpensivePath() -> Bool { pathIsExpensive }
+
+    private func refreshWiFiWait() {
+        let waiting = isDownloading && settings.wifiOnlyDownloads && pathIsExpensive
+        if waiting != isWaitingForWiFi { isWaitingForWiFi = waiting }
+        if waiting {
+            lastDownloadActivity = Date()
+            isDownloadStalled = false
+        }
     }
 
     private func noteDownloadProgress(done: Int64, total: Int64) {
@@ -507,7 +656,9 @@ final class MLXService: ObservableObject {
         // Trimmed against the window we will honour, not the one the user
         // asked for: on a 6 GB phone those differ, and history sized to the
         // larger number arrived in a cache budgeted for the smaller one.
-        let trimmed = Self.trimHistory(history, tokenBudget: budget)
+        // Half of it, so that several turns fit before the session is
+        // retired and rebuilt (a full prefill, tens of seconds on a 2B VLM).
+        let trimmed = Self.trimHistory(history, tokenBudget: budget / 2)
         let chatHistory: [Chat.Message] = trimmed.compactMap { entry in
             switch entry.role.lowercased() {
             case "user": return .user(entry.content)
@@ -663,9 +814,13 @@ final class MLXService: ObservableObject {
         _ history: [(role: String, content: String)],
         tokenBudget: Int
     ) -> [(role: String, content: String)] {
-        // Reserve room for the system prompt, the next question, and the answer.
-        let reserve = 1800
-        let charBudget = max(2000, Int(Double(tokenBudget) * 3.5) - reserve)
+        // Reserve room (in tokens) for the system prompt, the next question
+        // and the answer, then convert at the same 3 characters per token
+        // the session estimate uses. The old mix of a character reserve and
+        // a 3.5 ratio made a full conversation count as over budget the
+        // moment its session was built, so it was rebuilt on every turn.
+        let reserveTokens = 600
+        let charBudget = max(2000, (tokenBudget - reserveTokens) * 3)
 
         var result: [(role: String, content: String)] = []
         var used = 0

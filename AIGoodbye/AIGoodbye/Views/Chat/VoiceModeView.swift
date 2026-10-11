@@ -34,7 +34,13 @@ struct VoiceModeView: View {
     @State private var spokenOffset = 0
     @State private var lastStreamed = ""
     @State private var isActive = true
+    /// False while the scene is not `.active`. Nothing is spoken and no
+    /// listen is started while it is false: a streamed token used to undo
+    /// `pause()` within milliseconds, and the phone then read the answer out
+    /// from the lock screen and opened the microphone with no screen.
+    @State private var inForeground = true
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationStack {
@@ -66,22 +72,42 @@ struct VoiceModeView: View {
         .onAppear(perform: start)
         .onDisappear(perform: teardown)
         .onChange(of: scenePhase) { _, phase in
-            // Backgrounding doesn't fire onDisappear: never leave the mic hot.
-            // `pause` keeps the callbacks so the screen still works on return.
-            if phase != .active {
+            inForeground = (phase == .active)
+            switch phase {
+            case .background:
+                // Backgrounding doesn't fire onDisappear: never leave the mic
+                // hot. `pause` keeps the callbacks so the screen still works
+                // on return; the user taps to resume.
                 voice.pause()
                 if isActive { turn = .idle }
+            case .inactive:
+                // Control Center, the app switcher, a system alert - including
+                // the one-time Speech Recognition prompt a first listen in
+                // some languages shows. The screen is still there, so a
+                // listen in flight survives (tearing it down here made the
+                // user grant permission and land on "Tap to talk"). Only the
+                // speaker is silenced; the answer is in the chat.
+                if voice.isSpeaking {
+                    voice.stopSpeaking()
+                    if isActive, turn == .speaking { turn = .idle }
+                }
+            default:
+                break
             }
         }
         .onChange(of: voice.listeningState) { _, state in
             listeningStateChanged(state)
         }
         .onChange(of: viewModel.streamingText) { _, text in
-            if let text, !text.isEmpty {
-                lastStreamed = text
-                turn = .speaking
-                speakNewSentences(in: text)
-            }
+            // Only an answer to THIS screen's current turn is spoken. After a
+            // barge-in the turn is `.listening` and a late snapshot must not
+            // speak over the user; after a pause it is `.idle`.
+            guard isActive, let text, !text.isEmpty,
+                  turn == .thinking || turn == .speaking else { return }
+            lastStreamed = text
+            guard inForeground else { return }
+            turn = .speaking
+            speakNewSentences(in: text)
         }
         .onChange(of: viewModel.isGenerating) { _, generating in
             if generating {
@@ -92,8 +118,10 @@ struct VoiceModeView: View {
         }
         .onChange(of: viewModel.errorBanner) { _, banner in
             // Say it here rather than dismissing to a banner the user has to
-            // go and find.
-            if let banner { turn = .blocked(banner.message) }
+            // go and find - unless the user has already barged in and is
+            // talking: the cancelled turn's "no answer" must not cover a
+            // live microphone.
+            if let banner, turn != .listening { turn = .blocked(banner.message) }
         }
         // Presented HERE, not by dismissing to the chat screen. Dismissing a
         // cover and presenting a sheet in the same transaction means UIKit
@@ -188,8 +216,10 @@ struct VoiceModeView: View {
             Circle()
                 .fill(indicatorColor.opacity(0.15))
                 .frame(width: indicatorSize, height: indicatorSize)
-                .scaleEffect(1 + voice.micLevel * 0.5)
-                .animation(.easeOut(duration: 0.12), value: voice.micLevel)
+                // Reduce Motion: a 190 pt circle pulsing ten times a second
+                // is exactly the effect that setting exists to switch off.
+                .scaleEffect(reduceMotion ? 1 : 1 + voice.micLevel * 0.5)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: voice.micLevel)
 
             Circle()
                 .fill(indicatorColor.opacity(0.25))
@@ -205,9 +235,7 @@ struct VoiceModeView: View {
             // Barge-in: interrupt the answer (including any generation still
             // streaming, which would otherwise speak over the user) and talk.
             if turn == .speaking || turn == .thinking || voice.isSpeaking {
-                viewModel.stopGeneration()
-                voice.stopSpeaking()
-                beginListening()
+                bargeIn()
             } else if turn == .idle {
                 beginListening()
             }
@@ -301,9 +329,7 @@ struct VoiceModeView: View {
 
     private var controls: some View {
         Button {
-            viewModel.stopGeneration()
-            voice.stopSpeaking()
-            beginListening()
+            bargeIn()
         } label: {
             Label("Tap to talk", systemImage: "mic.badge.plus")
                 .font(.subheadline.weight(.medium))
@@ -327,13 +353,21 @@ struct VoiceModeView: View {
         }
         voice.onFinishedSpeaking = {
             Task { @MainActor in
-                guard isActive, !viewModel.isGenerating, turn == .speaking else { return }
+                guard isActive, inForeground, !viewModel.isGenerating, turn == .speaking else { return }
                 beginListening()
             }
         }
         voice.onListeningEnded = {
             Task { @MainActor in
                 guard isActive, turn == .listening else { return }
+                turn = .idle
+            }
+        }
+        voice.onSpeechInterrupted = {
+            Task { @MainActor in
+                // A phone call or Siri cut the answer off. Nothing will finish
+                // playing, so the turn is handed back; the user taps to go on.
+                guard isActive, turn == .speaking else { return }
                 turn = .idle
             }
         }
@@ -354,12 +388,24 @@ struct VoiceModeView: View {
     }
 
     private func beginListening() {
-        guard isActive, !permissionDenied else { return }
+        guard isActive, inForeground, !permissionDenied else { return }
         // Asynchronous: the engine may need a moment (or, once per
         // language, a model download). The outcome arrives through
         // `voice.listeningState`, handled in `listeningStateChanged`.
         voice.startListening(language: appState.settings.appLanguage)
         turn = .listening
+    }
+
+    /// The user interrupts the answer to talk. The generation is cancelled
+    /// and the spoken-text bookkeeping reset, so when `isGenerating` flips to
+    /// false a moment later nothing of the abandoned answer is read out over
+    /// the user (`finishAssistantTurn` also refuses while `.listening`).
+    private func bargeIn() {
+        viewModel.stopGeneration()
+        voice.stopSpeaking()
+        spokenOffset = 0
+        lastStreamed = ""
+        beginListening()
     }
 
     private func listeningStateChanged(_ state: VoiceService.ListeningState) {
@@ -386,6 +432,19 @@ struct VoiceModeView: View {
     /// back to the user.
     private func finishAssistantTurn() {
         guard isActive else { return }
+        // Only while an assistant turn is actually in progress. The user may
+        // have barged in (`.listening` - speaking the tail of the answer they
+        // just interrupted would kill their listen and talk over them), the
+        // screen may be showing an error (`.blocked` - a failed generation
+        // sets the banner, clears the text and ends generation in one
+        // transaction, and whichever observer fired first used to lose), or
+        // the turn was ended by a pause (`.idle`).
+        guard turn == .speaking || turn == .thinking else { return }
+        // Away from the screen nothing is read out; the answer is in the chat.
+        guard inForeground else {
+            turn = .idle
+            return
+        }
         // Only ever speak THIS turn's text (never an older message).
         let text = lastStreamed
         guard !text.isEmpty else {
@@ -397,9 +456,12 @@ struct VoiceModeView: View {
         let start = text.index(text.startIndex, offsetBy: safeOffset)
         let remainder = String(text[start...]).trimmingCharacters(in: .whitespacesAndNewlines)
         spokenOffset = text.count
-        if !remainder.isEmpty {
+        // `speak` returns false when the tail has nothing sayable in it - a
+        // closing "**" after the last sentence's full stop, a lone "#" or
+        // "|". The turn then ends here, or when the earlier sentences finish
+        // playing, instead of sitting on "Speaking" until the user taps.
+        if !remainder.isEmpty, voice.speak(remainder) {
             turn = .speaking
-            voice.speak(remainder)
         } else if !voice.isSpeaking {
             beginListening()
         }

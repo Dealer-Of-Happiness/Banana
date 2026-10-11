@@ -26,6 +26,12 @@ struct SceneDescriptionView: View {
 
     @StateObject private var camera = CameraController()
     @StateObject private var voice = VoiceService()
+    /// Neither the camera nor the voice may come back behind the Face ID
+    /// lock screen. The lock engages on `.background`, which stops both,
+    /// but `.active` used to restart them whether or not the user had
+    /// unlocked - so a cancelled biometric prompt left the room being
+    /// described aloud from behind a "locked" app.
+    @ObservedObject private var lock = AppLock.shared
 
     enum Mode: String, CaseIterable, Identifiable {
         case brief, detailed, text
@@ -69,6 +75,10 @@ struct SceneDescriptionView: View {
     /// off, so standing still doesn't mean silent full-rate inference with
     /// the GPU pegged and the phone getting hot.
     @State private var suppressedInARow = 0
+    /// Whether the voice that will speak is an English one. The quick
+    /// "Looks like..." answer is built from Vision's classifier labels,
+    /// which exist only in English; in any other voice they are noise.
+    @State private var speaksEnglish = false
 
     /// Quiet gap between one description finishing and the next starting.
     private let pauseBetween: TimeInterval = 1.5
@@ -86,6 +96,11 @@ struct SceneDescriptionView: View {
     var body: some View {
         NavigationStack {
             stage
+                // Dark throughout, like the navigation bar. The materials
+                // and labels otherwise followed the device's light scheme:
+                // white text on a light grey pill over a bright scene, well
+                // under 3:1 - on the screen built for low-vision users.
+                .environment(\.colorScheme, .dark)
                 .background(Color.black.ignoresSafeArea())
             .navigationTitle("Describe Surroundings")
             .navigationSubtitle("Spoken aloud · 100% on-device")
@@ -118,21 +133,53 @@ struct SceneDescriptionView: View {
             stopLoop(reason: L10n.text("The camera isn't available. Check camera permission in the Settings app."))
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
-                // `retry` rather than `start`: a camera that was busy because
-                // another app had it latched `failed`, and the screen then
-                // stayed dead however many times the user came back to it.
-                camera.retry()
-                if isContinuous {
-                    UIApplication.shared.isIdleTimerDisabled = true
-                    scheduleNext(after: 0.6)
-                }
-            } else {
+            switch phase {
+            case .active:
+                guard !lock.isLocked else { return }
+                resumeAfterPause()
+            case .inactive:
+                // Control Center, a call banner, Siri, a system alert. The
+                // screen is still up and the user may be reaching for the
+                // volume to hear the description better; this used to
+                // cancel the turn, stop the camera and restart the loop
+                // from scratch. The camera keeps going; if another app
+                // takes the audio, `onSpeechInterrupted` re-arms the loop.
+                break
+            case .background:
                 describeTask?.cancel()
                 camera.stop()
                 voice.pause()
                 isDescribing = false
                 UIApplication.shared.isIdleTimerDisabled = false
+            @unknown default:
+                break
+            }
+        }
+        .onChange(of: lock.isLocked) { _, locked in
+            // Unlocked after the `.active` turn that was skipped above.
+            guard !locked, scenePhase != .background else { return }
+            resumeAfterPause()
+        }
+        .onChange(of: camera.interruption) { _, reason in
+            // Another app holds the camera, or two apps share the screen
+            // (Split View, the inner display of iPhone Duo). The frames stop,
+            // so the warm-up counter ran out after ten seconds and announced
+            // "the camera isn't sending any pictures, close this screen" -
+            // the wrong diagnosis, to someone who cannot see the viewfinder
+            // go dark, and the loop never came back when the other app let
+            // go. Now: say what is happening, park, and resume by itself.
+            if let reason {
+                describeTask?.cancel()
+                isDescribing = false
+                warmUpAttempts = 0
+                notice = reason
+                voice.stopSpeaking()
+                announce(reason)
+            } else {
+                notice = nil
+                // The session resumes by itself once the other app lets go;
+                // give it a moment to deliver a frame.
+                if isContinuous { scheduleNext(after: 0.6) }
             }
         }
         .onChange(of: mode) { _, _ in
@@ -283,7 +330,6 @@ struct SceneDescriptionView: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: verticalSizeClass == .compact ? 52 : 68)
                 .background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial))
-                .foregroundStyle(.white)
             }
             .buttonStyle(.plain)
             .padding(.horizontal)
@@ -294,13 +340,12 @@ struct SceneDescriptionView: View {
             if !latest.isEmpty {
                 Button {
                     voice.stopSpeaking()
-                    voice.speak(latest)
+                    voice.speak(TextRecognizer.speakable(latest))
                 } label: {
                     Label("Repeat that", systemImage: "arrow.counterclockwise")
                         .font(.headline)
                         .frame(maxWidth: .infinity, minHeight: 50)
                         .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
-                        .foregroundStyle(.white)
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal)
@@ -309,7 +354,6 @@ struct SceneDescriptionView: View {
 
             Toggle(isOn: $isContinuous) {
                 Text("Keep describing")
-                    .foregroundStyle(.white)
             }
             .tint(.blue)
             .padding(.horizontal)
@@ -323,8 +367,11 @@ struct SceneDescriptionView: View {
         // Restored here, not only initialised: nothing else sets it back, so
         // reusing this view would give a permanently silent screen.
         isActive = true
-        camera.start()
         voice.setSpeechLanguage(appState.settings.appLanguage)
+        // Judged on the voice that will actually speak, not the UI language:
+        // a Greek UI with no Greek voice installed speaks English anyway.
+        speaksEnglish = VoiceService.speechCode(for: appState.settings.appLanguage)
+            .lowercased().hasPrefix("en")
         voice.onFinishedSpeaking = {
             Task { @MainActor in
                 guard isActive, isContinuous else { return }
@@ -334,16 +381,62 @@ struct SceneDescriptionView: View {
                 // that utterance scheduled the next turn, which cancelled the
                 // generation the user was actually waiting for.
                 guard !isDescribing else { return }
+                // Parked while another app has the camera; the interruption
+                // observer resumes the loop when it lets go.
+                guard camera.interruption == nil else { return }
                 scheduleNext(after: pauseBetween)
             }
         }
+        // The loop is driven by `onFinishedSpeaking`, and the synthesizer
+        // never reports an utterance it was stopped from finishing. When
+        // another app took the audio session - a Maps turn prompt, Siri, a
+        // call, an alarm - the sentence was cut off, nothing scheduled the
+        // next turn, and the screen fell silent with "Keep describing" still
+        // on. Maps is the worst case: it interrupts exactly `.spokenAudio`
+        // sessions and the scene phase never changes, so nothing else could
+        // rescue it - for the blind user walking with directions on, the
+        // headline use of this screen.
+        voice.onSpeechInterrupted = {
+            Task { @MainActor in
+                guard isActive, isContinuous, !isDescribing, camera.interruption == nil else { return }
+                // After the other app's audio has had a moment; if it is
+                // still playing when the next turn speaks, the watchdog in
+                // VoiceService keeps the loop alive regardless.
+                scheduleNext(after: pauseBetween)
+            }
+        }
+        // Opened under the Face ID lock screen (a deep link while locked):
+        // nothing starts until the lock observer sees it clear.
+        guard !lock.isLocked else { return }
+        camera.start()
         if isContinuous {
             UIApplication.shared.isIdleTimerDisabled = true
             scheduleNext(after: 1.2)
         }
     }
 
+    /// Back from the background, Control Center, or the lock screen: bring
+    /// the camera back and, if the loop is idle, the loop. A turn still
+    /// generating or speaking is left to finish; it schedules the next one
+    /// itself, and cancelling it here was the "restarts from scratch" the
+    /// user saw on every Control Center swipe.
+    private func resumeAfterPause() {
+        camera.resume()
+        guard isContinuous else { return }
+        UIApplication.shared.isIdleTimerDisabled = true
+        guard !isDescribing, !voice.isSpeaking else { return }
+        scheduleNext(after: 0.6)
+    }
+
     private func describeNow() {
+        // A deliberate tap must never be answered with silence. While another
+        // app has the camera there is nothing to look at, so say that again
+        // rather than counting a warm-up failure.
+        if let reason = camera.interruption {
+            voice.stopSpeaking()
+            announce(reason)
+            return
+        }
         // A deliberate tap starts a new burst, so the fast first answer
         // applies again - and must always speak, even if the scene has not
         // changed since the last one. Asking and hearing nothing back is
@@ -389,24 +482,29 @@ struct SceneDescriptionView: View {
         UIApplication.shared.isIdleTimerDisabled = false
         notice = reason
         // Speak after the toggle change has settled, so the state change
-        // doesn't stop the very announcement explaining it. With VoiceOver
-        // on, let VoiceOver say it - doing both means the user hears the
-        // same sentence twice, overlapping.
+        // doesn't stop the very announcement explaining it.
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 250_000_000)
             guard isActive else { return }
-            if UIAccessibility.isVoiceOverRunning {
-                // High priority, or iOS drops it: flipping the toggle above
-                // makes VoiceOver announce "Keep describing, off", and a
-                // default-priority announcement arriving while VoiceOver is
-                // still speaking is discarded - leaving the user with a
-                // screen that stopped for no stated reason.
-                var announcement = AttributedString(reason)
-                announcement.accessibilitySpeechAnnouncementPriority = .high
-                UIAccessibility.post(notification: .announcement, argument: announcement)
-            } else {
-                voice.speak(reason)
-            }
+            announce(reason)
+        }
+    }
+
+    /// Say something about the screen's own state out loud. With VoiceOver
+    /// on, let VoiceOver say it - doing both means the user hears the same
+    /// sentence twice, overlapping.
+    private func announce(_ text: String) {
+        if UIAccessibility.isVoiceOverRunning {
+            // High priority, or iOS drops it: flipping the toggle in
+            // `stopLoop` makes VoiceOver announce "Keep describing, off", and
+            // a default-priority announcement arriving while VoiceOver is
+            // still speaking is discarded - leaving the user with a screen
+            // that stopped for no stated reason.
+            var announcement = AttributedString(text)
+            announcement.accessibilitySpeechAnnouncementPriority = .high
+            UIAccessibility.post(notification: .announcement, argument: announcement)
+        } else {
+            voice.speak(text)
         }
     }
 
@@ -423,6 +521,10 @@ struct SceneDescriptionView: View {
         }
 
         guard let frame = camera.snapshot() else {
+            // Paused, not broken: another app has the camera. The
+            // interruption observer has said so and will resume the loop;
+            // counting this as a warm-up failure blamed the camera instead.
+            if camera.interruption != nil { return }
             warmUpAttempts += 1
             if warmUpAttempts >= 10 {
                 stopLoop(reason: L10n.text("The camera isn't sending any pictures. Close this screen and open it again."))
@@ -443,8 +545,16 @@ struct SceneDescriptionView: View {
         notice = nil
 
         if mode == .text {
+            // Read from a still, not the live frame. The frames are scaled
+            // to 768 px for the vision encoder, which puts a line of body
+            // text on a letter or menu at eight to eleven pixels tall -
+            // fragments or "No text in view" from pages the Scan Document
+            // path reads perfectly. The still is asked for at OCR size; the
+            // live frame remains the fallback if the shutter cannot fire.
+            let page = await camera.capturePhoto(maxEdge: TextRecognizer.maximumPixels) ?? frame
+            guard !Task.isCancelled, currentTurn == turn else { return }
             let languages = TextRecognizer.languages(for: appState.settings.appLanguage)
-            let read = await TextRecognizer.text(in: frame, languages: languages)
+            let read = await TextRecognizer.text(in: page, languages: languages)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             guard !Task.isCancelled, currentTurn == turn else { return }
             latest = read.isEmpty ? L10n.text("No text in view.") : read
@@ -458,7 +568,13 @@ struct SceneDescriptionView: View {
         //
         // Deliberately NOT gated on VoiceOver: this is the app's own voice,
         // and blind users are exactly who the latency fix is for.
-        if !spokeQuickImpression,
+        //
+        // Gated on the voice being English: the labels are Vision's English
+        // taxonomy ("kitchen, indoor") and cannot be localized, so in any
+        // other voice the fast answer was "Похоже на kitchen, indoor" - noise
+        // for most of the app's audience. Those users go straight to the
+        // model's description in their language.
+        if !spokeQuickImpression, speaksEnglish,
            let impression = await TextRecognizer.quickImpression(of: frame) {
             guard !Task.isCancelled, currentTurn == turn else { return }
             spokeQuickImpression = true
@@ -542,7 +658,11 @@ struct SceneDescriptionView: View {
         }
         suppressedInARow = 0
         lastSpoken = text
-        if !voice.speak(text), isContinuous {
+        // `speakable`: a menu or invoice recognized as a table arrives as
+        // Markdown, and the separator row under its header was read as
+        // "dash dash dash dash..." once per column before the first item.
+        // The transcript on screen keeps the table.
+        if !voice.speak(TextRecognizer.speakable(text)), isContinuous {
             scheduleNext(after: 0.8)
         }
     }

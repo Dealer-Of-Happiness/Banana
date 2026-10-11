@@ -166,10 +166,10 @@ struct DocumentIndexTests {
 
     /// The whole document must be searchable, not just the opening: a fact
     /// buried at the very end has to come back for a targeted question.
-    @Test func retrievesFactFromTheEndOfALongDocument() async {
+    @Test func retrievesFactFromTheEndOfALongDocument() async throws {
         let filler = String(repeating: "This paragraph discusses general background information. ", count: 400)
         let text = filler + "\n\nThe activation code for the roof module is QX-4417.\n"
-        let id = await DocumentIndex.shared.store(name: "manual.txt", fullText: text)
+        let id = try await DocumentIndex.shared.store(name: "manual.txt", fullText: text)
         defer { Task { await DocumentIndex.shared.removeDocument(id) } }
 
         let context = await DocumentIndex.shared.context(
@@ -611,5 +611,67 @@ struct ConversationListLayoutTests {
         #expect(MainView.listOffset(reveal: 300, listWidth: 300, leadingInset: 59) == 0)
         // Half way through a drag.
         #expect(MainView.listOffset(reveal: 150, listWidth: 300, leadingInset: 0) == -150)
+    }
+}
+
+struct MemoryCaptureTests {
+    /// The Memory screen's tip is translated into every language, so the
+    /// phrase it tells people to type must work in every language.
+    @Test func recognizesTheRememberPhraseInEveryLanguage() {
+        let samples: [(String, String)] = [
+            ("Remember that I like tea", "I like tea"),
+            ("Note that I like tea", "I like tea"),
+            ("Merk dir, dass ich Vegetarier bin", "ich Vegetarier bin"),
+            ("Recuerda que vivo en Madrid", "vivo en Madrid"),
+            ("Retiens que je suis allergique aux noix", "je suis allergique aux noix"),
+            ("Ricorda che lavoro di notte", "lavoro di notte"),
+            ("Lembre-se de que moro em Lisboa", "moro em Lisboa"),
+            ("Запомни, что я не ем мясо", "я не ем мясо"),
+            ("Запам'ятай, що я з Києва", "я з Києва"),
+            ("Θυμήσου ότι μένω στην Αθήνα", "μένω στην Αθήνα"),
+            ("기억해 줘: 나는 커피를 안 마셔", "나는 커피를 안 마셔"),
+            ("记住：我对花生过敏", "我对花生过敏"),
+            ("私は猫を飼っているを覚えておいて", "私は猫を飼っている"),
+            ("나는 채식주의자를 기억해 줘", "나는 채식주의자")
+        ]
+        for (input, expected) in samples {
+            #expect(MemoryStore.requestedFact(in: input) == expected, "\(input)")
+        }
+        #expect(MemoryStore.requestedFact(in: "What is the weather like?") == nil)
+        #expect(MemoryStore.requestedFact(in: "Remember that ") == nil)
+    }
+}
+
+struct ConversationTitleTests {
+    @Test func titleIsShortInLanguagesWithoutSpaces() {
+        let long = String(repeating: "今天天气很好我们去公园散步吧", count: 20)
+        let title = Conversation.title(from: long)
+        #expect(title.count <= 44)
+        #expect(title.hasSuffix("..."))
+    }
+
+    @Test func titleKeepsAboutSixWordsAndOneLine() {
+        let title = Conversation.title(from: "Hi\nCan you help me plan a trip to Portugal next spring")
+        #expect(!title.contains("\n"))
+        #expect(title.hasSuffix("..."))
+        #expect(title.split(separator: " ").count <= 7)
+    }
+
+    @Test func shortMessageIsItsOwnTitle() {
+        #expect(Conversation.title(from: "Hello there") == "Hello there")
+    }
+}
+
+struct DocumentTextTests {
+    @Test func readsLegacyWindowsEncodings() throws {
+        let dir = FileManager.default.temporaryDirectory
+        let cyrillic = dir.appendingPathComponent("cp1251.txt")
+        let text = "Привет, мир"
+        try text.data(using: .windowsCP1251)!.write(to: cyrillic)
+        #expect(try DocumentText.read(cyrillic) == text)
+
+        let utf16 = dir.appendingPathComponent("utf16.txt")
+        try text.data(using: .utf16)!.write(to: utf16)
+        #expect(try DocumentText.read(utf16) == text)
     }
 }

@@ -158,6 +158,20 @@ final class CameraController: NSObject, ObservableObject {
         start()
     }
 
+    /// Bring the camera back when the app returns to the foreground or the
+    /// lock screen clears: start it if it was stopped, try again if it had
+    /// failed, and leave an attempt that is still configuring alone.
+    ///
+    /// The foreground path used to call `retry()`, which cancels whatever is
+    /// in flight. An `.inactive`/`.active` bounce inside the half-second
+    /// configuration window (the permission alert closing, a banner tap)
+    /// therefore queued a second configuration behind the first; it found
+    /// the inputs already wired, returned nil and latched "check camera
+    /// permission" on a camera that was granted and fully wired.
+    func resume() {
+        if failed { retry() } else { start() }
+    }
+
     /// The preview layer showing this session, so its picture can be kept
     /// upright along with the frames.
     func attachPreview(_ layer: AVCaptureVideoPreviewLayer) {
@@ -207,15 +221,40 @@ final class CameraController: NSObject, ObservableObject {
 
     @Published private(set) var isSwitchingCamera = false
 
-    /// Stills at the camera's full resolution. The session runs at 720p
-    /// for the live frames, and without this the photo output inherited
-    /// that: "Take Photo" was handing the model a 0.9-megapixel picture
-    /// where the old system camera gave it twelve.
+    /// Stills big enough to read, independent of the live frames. The
+    /// session runs at 720p for those, and without this the photo output
+    /// inherited it: "Take Photo" was handing the model a 0.9-megapixel
+    /// picture where the old system camera gave it twelve.
+    ///
+    /// Must run AFTER `commitConfiguration()`. Inside the configuration
+    /// block the preset has not been applied yet, so `activeFormat` is the
+    /// device's default format, not the one the session will run; a size
+    /// taken from its list is not necessarily in the 720p format's list,
+    /// and `capturePhoto(with:)` validates the settings against the active
+    /// format by raising - an uncatchable crash on every shutter tap on a
+    /// device where the two lists happen not to overlap.
     nonisolated private static func configureStills(_ output: AVCapturePhotoOutput, for device: AVCaptureDevice) {
-        guard let largest = device.activeFormat.supportedMaxPhotoDimensions.max(by: {
-            Int($0.width) * Int($0.height) < Int($1.width) * Int($1.height)
-        }) else { return }
-        output.maxPhotoDimensions = largest
+        guard let wanted = stillDimensions(for: device) else { return }
+        output.maxPhotoDimensions = wanted
+    }
+
+    /// The still size to ask for: the smallest the active format offers
+    /// with at least 2400 px on its long edge, or the largest when none is.
+    ///
+    /// Not simply the biggest. Everything downstream is capped - the
+    /// attachment at 1536 px, OCR at 2400 - so a 48 MP still bought nothing
+    /// but a 200 MB decode on the capture thread next to a resident
+    /// multi-gigabyte model. 2400 is `TextRecognizer.maximumPixels`: enough
+    /// for Read-text mode to read body text, which the 768 px live frame
+    /// cannot.
+    nonisolated private static func stillDimensions(for device: AVCaptureDevice) -> CMVideoDimensions? {
+        let preferredEdge: Int32 = 2400
+        let supported = device.activeFormat.supportedMaxPhotoDimensions
+        let pixels = { (dimensions: CMVideoDimensions) -> Int in
+            Int(dimensions.width) * Int(dimensions.height)
+        }
+        let readable = supported.filter { max($0.width, $0.height) >= preferredEdge }
+        return readable.min { pixels($0) < pixels($1) } ?? supported.max { pixels($0) < pixels($1) }
     }
 
     /// The camera facing a direction. Looked up by direction every time,
@@ -262,8 +301,22 @@ final class CameraController: NSObject, ObservableObject {
         }
 
         let configured: AVCaptureDeviceInput? = await Self.onSessionQueue { () -> AVCaptureDeviceInput? in
+            // Idempotent. A second attempt can reach this point while the
+            // first attempt's block is still queued ahead of it - `stop()`
+            // cannot interrupt a running block, and `isConfigured` is only
+            // set once the first block has returned. With the camera already
+            // wired, `canAddInput` was false, this returned nil, and the
+            // screen latched "check camera permission" on a granted, fully
+            // configured camera that merely wasn't running yet.
+            if let existing = session.inputs.lazy
+                .compactMap({ $0 as? AVCaptureDeviceInput })
+                .first(where: { $0.device.hasMediaType(.video) }) {
+                // `stop()` may have detached the delegate in between.
+                videoOutput.setSampleBufferDelegate(delegate, queue: queue)
+                return existing
+            }
+
             session.beginConfiguration()
-            defer { session.commitConfiguration() }
 
             session.sessionPreset = .hd1280x720
             // Don't let the capture session stomp the audio session we use
@@ -279,6 +332,7 @@ final class CameraController: NSObject, ObservableObject {
             guard let device = Self.camera(facing: wantedPosition),
                   let input = try? AVCaptureDeviceInput(device: device),
                   session.canAddInput(input) else {
+                session.commitConfiguration()
                 return nil
             }
             session.addInput(input)
@@ -286,20 +340,34 @@ final class CameraController: NSObject, ObservableObject {
             videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
             videoOutput.alwaysDiscardsLateVideoFrames = true
             videoOutput.setSampleBufferDelegate(delegate, queue: queue)
-            guard session.canAddOutput(videoOutput) else { return nil }
+            guard session.canAddOutput(videoOutput) else {
+                // Leave the session as it was found, or the next attempt
+                // sees a camera with an input and no output and "succeeds"
+                // into a black viewfinder.
+                session.removeInput(input)
+                session.commitConfiguration()
+                return nil
+            }
             session.addOutput(videoOutput)
 
             // Stills, for the "take a photo" path. Optional: a session that
             // can't add it still works for live questions.
-            if session.canAddOutput(photoOutput) {
-                session.addOutput(photoOutput)
-                Self.configureStills(photoOutput, for: device)
-            }
+            let hasStills = session.canAddOutput(photoOutput)
+            if hasStills { session.addOutput(photoOutput) }
+            session.commitConfiguration()
+
+            // Only now: the commit is what makes the 720p format active, and
+            // the still size has to come from that format's list (see
+            // `configureStills`). Before `startRunning`, as Apple asks.
+            if hasStills { Self.configureStills(photoOutput, for: device) }
             return input
         }
 
         guard let input = configured else {
-            failed = true
+            // Only the attempt still being waited on may latch the failure;
+            // a superseded one would be reporting on a camera that a newer
+            // attempt owns.
+            if epoch == attempt { failed = true }
             return
         }
         isConfigured = true
@@ -374,6 +442,37 @@ final class CameraController: NSObject, ObservableObject {
         ) { _ in
             Task { @MainActor in controller?.interruption = nil }
         })
+        // A runtime error stops the session WITHOUT an interruption: no
+        // notice, `isReady` still true, a black viewfinder that every
+        // question answered with "give the camera a moment" forever.
+        notificationObservers.append(center.addObserver(
+            forName: AVCaptureSession.runtimeErrorNotification,
+            object: session, queue: .main
+        ) { note in
+            let code = (note.userInfo?[AVCaptureSessionErrorKey] as? NSError)?.code
+            Task { @MainActor in controller?.handleRuntimeError(code) }
+        })
+    }
+
+    /// Recover from, or at least admit to, a session that died on its own.
+    ///
+    /// Media services get reset after some phone calls and whenever the
+    /// audio daemon restarts; the session simply needs starting again. Any
+    /// other runtime error is a real failure: the screen shows its failure
+    /// state and the next foreground `resume()` tries again, instead of a
+    /// shutter that "works" on a stopped session.
+    private func handleRuntimeError(_ code: Int?) {
+        // A stopped screen, or an attempt still configuring, handles itself.
+        guard isReady else { return }
+        if code == AVError.mediaServicesWereReset.rawValue {
+            let session = self.session
+            Self.sessionQueue.async {
+                if !session.isRunning { session.startRunning() }
+            }
+        } else {
+            isReady = false
+            failed = true
+        }
     }
 
     private func handleInterruption(_ raw: Int?) {
@@ -435,18 +534,31 @@ final class CameraController: NSObject, ObservableObject {
         frameStore.get()
     }
 
-    /// A full-resolution still, upright, or nil if the camera isn't ready.
-    func capturePhoto() async -> UIImage? {
+    /// A still, upright and no longer than `maxEdge` pixels on its long
+    /// side, or nil if the camera isn't ready. The default is the attachment
+    /// size; Read-text mode asks for more so OCR has pixels to work with.
+    func capturePhoto(maxEdge: CGFloat = 1536) async -> UIImage? {
         guard isReady, !isSwitchingCamera,
               session.outputs.contains(where: { $0 === photoOutput }),
               photoOutput.connection(with: .video) != nil else { return nil }
         let settings = AVCapturePhotoSettings()
-        settings.maxPhotoDimensions = photoOutput.maxPhotoDimensions
+        // From the format the session is running right now, not echoed
+        // from the output: the settings are validated against the active
+        // format's list at capture time, and a stale output value raises.
+        // The value also has to fit under the output's own maximum, which
+        // `configureStills` set from the same format with the same rule;
+        // should they ever disagree, the output's default is the safe one.
+        if let device = currentInput?.device,
+           let wanted = Self.stillDimensions(for: device),
+           wanted.width <= photoOutput.maxPhotoDimensions.width,
+           wanted.height <= photoOutput.maxPhotoDimensions.height {
+            settings.maxPhotoDimensions = wanted
+        }
         let photoOutput = self.photoOutput
         weak let controller = self
         let id = settings.uniqueID
         return await withCheckedContinuation { continuation in
-            let delegate = PhotoCaptureDelegate { image in
+            let delegate = PhotoCaptureDelegate(maxEdge: maxEdge) { image in
                 Task { @MainActor in
                     controller?.photoDelegates[id] = nil
                     continuation.resume(returning: image)
@@ -471,11 +583,13 @@ final class CameraController: NSObject, ObservableObject {
 /// its shutter disabled.
 private nonisolated final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, @unchecked Sendable {
     private let completion: @Sendable (UIImage?) -> Void
+    private let maxEdge: CGFloat
     private let lock = NSLock()
     private var image: UIImage?
     private var completed = false
 
-    init(completion: @escaping @Sendable (UIImage?) -> Void) {
+    init(maxEdge: CGFloat, completion: @escaping @Sendable (UIImage?) -> Void) {
+        self.maxEdge = maxEdge
         self.completion = completion
     }
 
@@ -483,9 +597,13 @@ private nonisolated final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCa
         guard error == nil, let data = photo.fileDataRepresentation(), let decoded = UIImage(data: data) else { return }
         // Rotation is applied on the connection, so the pixels are already
         // upright for the window; any remaining EXIF orientation is baked
-        // in so every consumer sees the picture the user saw.
-        let upright = ImageNormalizer.upright(decoded)
-        lock.lock(); image = upright; lock.unlock()
+        // in so every consumer sees the picture the user saw. Downscaled in
+        // the same pass: the full sensor still was kept, shown, cached and
+        // written to disk although nothing ever looked at more than 768 px
+        // of it, and two or three of those in one chat got the app killed
+        // next to a loaded vision model.
+        let normalized = ImageNormalizer.attachment(decoded, maxEdge: maxEdge)
+        lock.lock(); image = normalized; lock.unlock()
     }
 
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishCaptureFor resolvedSettings: AVCaptureResolvedPhotoSettings, error: Error?) {
@@ -552,6 +670,12 @@ struct LiveCameraView: View {
     @StateObject private var camera = CameraController()
     @StateObject private var voice = VoiceService()
     @Environment(\.scenePhase) private var scenePhase
+    /// The camera must not run behind the Face ID lock screen. The lock
+    /// engages on `.background`, which stops the camera, but `.active`
+    /// used to start it again whether or not the user had unlocked - so a
+    /// cancelled biometric prompt left the green indicator on behind a
+    /// "locked" app.
+    @ObservedObject private var lock = AppLock.shared
 
     @State private var question = ""
     @State private var answer: String?
@@ -592,7 +716,9 @@ struct LiveCameraView: View {
             }
         }
         .onAppear {
-            camera.start()
+            // A deep link can open this screen under the lock screen; the
+            // lock observer below starts the camera once it clears.
+            if !lock.isLocked { camera.start() }
             voice.setSpeechLanguage(appState.settings.appLanguage)
         }
         .onDisappear {
@@ -604,15 +730,28 @@ struct LiveCameraView: View {
             // Never keep the camera or speaker running in the background -
             // and bring the viewfinder back when the user returns (onAppear
             // does not fire again while the cover stays presented).
-            if phase == .active {
-                // `retry`, not `start`: a camera another app had latched
-                // `failed`, and `start` refuses to run while it is set.
-                camera.retry()
-            } else {
+            switch phase {
+            case .active:
+                guard !lock.isLocked else { return }
+                camera.resume()
+            case .inactive:
+                // Control Center, a call banner, Siri, a system alert: the
+                // camera is still on screen, so it stays on. Stopping it
+                // here cancelled the answer in progress with no notice and
+                // left a black viewfinder for a second on every swipe.
+                voice.stopSpeaking()
+            case .background:
                 generationTask?.cancel()
                 camera.stop()
                 voice.stopSpeaking()
+            @unknown default:
+                break
             }
+        }
+        .onChange(of: lock.isLocked) { _, locked in
+            // Unlocked after the `.active` turn that was skipped above.
+            guard !locked, scenePhase != .background else { return }
+            camera.resume()
         }
     }
 

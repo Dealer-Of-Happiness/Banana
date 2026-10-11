@@ -132,11 +132,16 @@ enum RecordingSummarizer {
 
     enum SummarizerError: LocalizedError {
         case engineBusy
+        /// The routed model is not on disk. Summaries never start a download
+        /// themselves; the chat screen owns that (consent, progress, Wi-Fi).
+        case modelNotDownloaded(AIModel)
 
         var errorDescription: String? {
             switch self {
             case .engineBusy:
                 return L10n.text("The AI is busy with another task. Try again in a moment.")
+            case .modelNotDownloaded(let model):
+                return L10n.text("Summarizing needs the \(model.name) model. Download it from the chat screen first.")
             }
         }
     }
@@ -148,7 +153,7 @@ enum RecordingSummarizer {
         engine: ChatEngine,
         progress: @MainActor (Double, String) -> Void = { _, _ in }
     ) async throws -> Result {
-        let model = try engine.route(hasImage: false)
+        let model = try routedModel(engine: engine)
         // Only one utility may own the engine: two summaries (or a summary
         // and a translation) would each destroy the other's session.
         guard engine.claimUtility() else { throw SummarizerError.engineBusy }
@@ -259,6 +264,25 @@ enum RecordingSummarizer {
 
         progress(1.0, L10n.text("Done"))
         return Result(title: title, summary: summary.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    /// The model that will write the summary, which must already be on disk.
+    /// A model that is approved but not yet downloaded would otherwise begin
+    /// a multi-gigabyte download inside the summary, behind a progress bar
+    /// that says "Reading part 1 of 12". The chat screen owns downloads
+    /// (consent, progress, Wi-Fi); the user is sent there instead.
+    @MainActor
+    private static func routedModel(engine: ChatEngine) throws -> AIModel {
+        do {
+            return try engine.route(hasImage: false, requiresDownloaded: true)
+        } catch let error as ChatEngine.RouteError {
+            switch error {
+            case .needsDownloadConsent(let missing), .visionNeedsDownloadedModel(let missing):
+                throw SummarizerError.modelNotDownloaded(missing)
+            case .nothingAvailable:
+                throw error
+            }
+        }
     }
 
     /// One question, one clean session, the whole answer as a string.

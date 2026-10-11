@@ -21,7 +21,9 @@ final class ModelManager: ObservableObject {
     /// Bumped whenever installed models change so views refresh.
     @Published private(set) var revision: Int = 0
 
-    private init() {}
+    private init() {
+        sweepLegacyLibraryCache()
+    }
 
     // MARK: - Locations
 
@@ -141,7 +143,15 @@ final class ModelManager: ObservableObject {
     }
 
     var totalDownloadedBytes: Int64 {
-        AIModel.allModels.reduce(0) { $0 + downloadedSizeBytes(for: $1) }
+        // One directory per repository, not per model: a custom entry that
+        // names a built-in's repository (older installs could add one) shares
+        // the built-in's folder and must not be counted twice.
+        var seenRepos = Set<String>()
+        return AIModel.allModels.reduce(0) { total, model in
+            guard let hfId = model.huggingFaceId?.lowercased(),
+                  seenRepos.insert(hfId).inserted else { return total }
+            return total + downloadedSizeBytes(for: model)
+        }
     }
 
     var formattedTotalSize: String {
@@ -152,9 +162,46 @@ final class ModelManager: ObservableObject {
 
     func deleteModel(_ model: AIModel) {
         guard let dir = modelDirectory(for: model) else { return }
+        // Before the files go: a transfer the system kept running after the
+        // app was killed would otherwise carry on for hours and reinstall
+        // what the user just removed. The manifest it needs is in `dir`.
+        ModelPrefetcher.cancelBackgroundTransfers(for: model)
         try? FileManager.default.removeItem(at: dir)
         invalidateCaches()
         revision += 1
+    }
+
+    // MARK: - Legacy cache sweep
+
+    /// Read from the detached sweep task, so explicitly off the main actor.
+    nonisolated private static let legacyCacheSweptKey = "legacyLibraryCacheSwept"
+
+    /// One-time removal of model copies left behind by 3.4.0.
+    ///
+    /// That version loaded through the library's default `HubApi`, which
+    /// mlx-swift-lm (2.25.5 and later, `defaultHubApi`) points at the Caches
+    /// directory itself - so its repositories landed in
+    /// `Library/Caches/models/<owner>/<repo>`. 3.4.1 moved everything to
+    /// `Documents/huggingface/models` and the storage screen only ever sums
+    /// that tree, leaving a second, invisible 1-1.8 GB copy on every device
+    /// that ran 3.4.0. Never touches Documents. Runs once; a failed removal
+    /// is retried on the next launch.
+    func sweepLegacyLibraryCache() {
+        guard !UserDefaults.standard.bool(forKey: Self.legacyCacheSweptKey) else { return }
+        Task.detached(priority: .utility) {
+            guard let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return }
+            let legacyRoot = caches.appendingPathComponent("models", isDirectory: true)
+            var isDirectory: ObjCBool = false
+            if FileManager.default.fileExists(atPath: legacyRoot.path, isDirectory: &isDirectory),
+               isDirectory.boolValue {
+                do {
+                    try FileManager.default.removeItem(at: legacyRoot)
+                } catch {
+                    return
+                }
+            }
+            UserDefaults.standard.set(true, forKey: Self.legacyCacheSweptKey)
+        }
     }
 
     func noteModelInstalled(_ model: AIModel) {

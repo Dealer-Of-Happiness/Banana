@@ -95,30 +95,85 @@ final class MemoryStore: ObservableObject {
     nonisolated static func requestedFact(in message: String) -> String? {
         let text = message.trimmingCharacters(in: .whitespacesAndNewlines)
         let lowered = text.lowercased()
-        let triggers = [
-            "remember that ", "remember this: ", "remember: ",
-            "keep in mind that ", "note that i ", "don't forget that "
-        ]
-        for trigger in triggers where lowered.hasPrefix(trigger) {
-            let fact = String(text.dropFirst(trigger.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+        for trigger in prefixTriggers where lowered.hasPrefix(trigger) {
+            var fact = String(text.dropFirst(trigger.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            // "Note that I like tea" keeps its subject.
+            if trigger == "note that i " { fact = "I " + fact }
+            return fact.isEmpty ? nil : fact
+        }
+        for trigger in suffixTriggers where lowered.hasSuffix(trigger) {
+            let fact = String(text.dropLast(trigger.count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .trimmingCharacters(in: CharacterSet(charactersIn: "、,，。"))
             return fact.isEmpty ? nil : fact
         }
         return nil
     }
 
+    /// The phrases the Memory screen tells people to use, in every app
+    /// language (the tip is translated, so the triggers must be too;
+    /// English-only triggers made the feature dead in 12 of 13 languages).
+    /// Lower-case; the English ones stay available in every language.
+    nonisolated static let prefixTriggers: [String] = [
+        // English
+        "remember that ", "remember this: ", "remember: ",
+        "keep in mind that ", "note that i ", "don't forget that ",
+        // German
+        "merk dir, dass ", "merke dir, dass ", "merk dir dass ", "merke dir dass ",
+        // Spanish
+        "recuerda que ", "acuérdate de que ",
+        // French
+        "retiens que ", "souviens-toi que ", "rappelle-toi que ",
+        // Italian
+        "ricorda che ", "ricordati che ",
+        // Portuguese
+        "lembre-se de que ", "lembre-se que ", "lembre que ",
+        // Russian
+        "запомни, что ", "запомни что ",
+        // Ukrainian
+        "запам'ятай, що ", "запам'ятай що ", "запам’ятай, що ", "запам’ятай що ",
+        // Greek
+        "θυμήσου ότι ", "να θυμάσαι ότι ",
+        // Korean
+        "기억해 줘: ", "기억해: ", "기억해줘: ",
+        // Chinese (Simplified and Traditional)
+        "记住：", "记住:", "记住，", "记住,", "請記住：", "請記住:", "記住：", "記住:", "記住，", "記住,"
+    ]
+
+    /// Verb-final languages put the request at the end.
+    nonisolated static let suffixTriggers: [String] = [
+        // Japanese
+        "を覚えておいてください", "を覚えておいて", "を覚えておいてね", "を覚えて",
+        // Korean
+        "를 기억해 줘", "을 기억해 줘", "를 기억해줘", "을 기억해줘", "를 기억해", "을 기억해"
+    ]
+
     // MARK: - Persistence
 
+    /// True when the file exists but could not be read. Saving then is
+    /// refused: writing the empty in-memory list over it would erase every
+    /// fact the user ever saved.
+    private(set) var loadFailed = false
+
     private func load() {
+        guard FileManager.default.fileExists(atPath: Self.fileURL.path) else { return }
         guard let data = try? Data(contentsOf: Self.fileURL),
-              let decoded = try? JSONDecoder().decode([MemoryFact].self, from: data) else { return }
+              let decoded = try? JSONDecoder().decode([MemoryFact].self, from: data) else {
+            loadFailed = true
+            return
+        }
         facts = decoded
     }
 
     private func save() {
-        guard let data = try? JSONEncoder().encode(facts) else { return }
+        guard !loadFailed, let data = try? JSONEncoder().encode(facts) else { return }
         try? data.write(to: Self.fileURL, options: .atomic)
+        // Readable at launch after the first unlock: `.complete` kept the
+        // file unreadable while the device was locked, which is exactly
+        // when a background launch read it, decided the list was empty,
+        // and could have overwritten it.
         try? FileManager.default.setAttributes(
-            [.protectionKey: FileProtectionType.complete],
+            [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
             ofItemAtPath: Self.fileURL.path
         )
     }

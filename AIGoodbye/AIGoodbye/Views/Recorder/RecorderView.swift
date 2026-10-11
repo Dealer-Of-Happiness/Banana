@@ -20,6 +20,7 @@ struct RecorderView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     enum Stage: Equatable { case ready, capturing, saving, finished }
 
@@ -119,8 +120,10 @@ struct RecorderView: View {
                     if let name = unsaved?.audioFileName {
                         try? FileManager.default.removeItem(at: RecordingStore.audioURL(named: name))
                     }
+                    // The recording's id is its checkpoint's id, so only its
+                    // own checkpoint goes - never one still awaiting recovery.
+                    if let id = unsaved?.id { store.clearCheckpoint(id: id) }
                     unsaved = nil
-                    store.clearCheckpoint()
                     stage = .ready
                 }
                 Button("Keep trying later", role: .cancel) { saveFailed = nil }
@@ -129,9 +132,13 @@ struct RecorderView: View {
             }
             .alert("Recover the interrupted recording?", isPresented: $showingRecovery) {
                 Button("Recover") {
+                    // Dated from when it was recorded, not from now - the same
+                    // title the automatic recovery (on the next recording's
+                    // start) would give it.
                     store.recoverPendingCheckpoint(
                         title: RecordingSummarizer.fallbackTitle(
-                            from: store.pendingCheckpoint?.transcript ?? ""
+                            from: store.pendingCheckpoint?.transcript ?? "",
+                            date: store.pendingCheckpoint?.startedAt ?? Date()
                         )
                     )
                 }
@@ -217,6 +224,9 @@ struct RecorderView: View {
                 .monospacedDigit()
                 .contentTransition(.numericText())
                 .accessibilityLabel(Text("Recorded so far: \(ConversationExporter.durationText(recorder.elapsed))"))
+                // Changes four times a second: VoiceOver should not announce
+                // every tick, and should re-read it when the user asks.
+                .accessibilityAddTraits(.updatesFrequently)
 
             levelMeter
 
@@ -271,10 +281,12 @@ struct RecorderView: View {
                 let lit = recorder.phase == .recording && recorder.level > threshold
                 Capsule()
                     .fill(lit ? Color.red : Color.secondary.opacity(0.25))
-                    .frame(width: 5, height: lit ? 10 + CGFloat(recorder.level) * 22 : 10)
+                    // Reduce Motion: the bars still light up with the level,
+                    // but stay a fixed height instead of bouncing.
+                    .frame(width: 5, height: lit && !reduceMotion ? 10 + CGFloat(recorder.level) * 22 : 10)
             }
         }
-        .animation(.easeOut(duration: 0.15), value: recorder.level)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: recorder.level)
         .frame(height: 34)
         .accessibilityHidden(true)
     }
@@ -412,11 +424,18 @@ struct RecorderView: View {
                         Text(summaryStep.isEmpty ? L10n.text("Summarizing on this device...") : summaryStep)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        Button("Skip summary") {
+                        Button {
                             summaryTask?.cancel()
                             stage = .finished
+                        } label: {
+                            // The 44 pt target is part of the label, so the
+                            // whole of it is tappable - a frame outside the
+                            // button only pads the layout, not the hit area.
+                            Text("Skip summary")
+                                .font(.subheadline)
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
                         }
-                        .font(.subheadline)
                     }
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -507,9 +526,11 @@ struct RecorderView: View {
 
         // Nothing captured: don't leave an empty entry behind, and say so.
         guard !result.transcript.isEmpty || result.audioFileName != nil else {
-            store.clearCheckpoint()
             // Back to a clean slate: the timer used to keep showing the
             // failed recording's duration over a "Start recording" button.
+            // `cancel` also clears this recording's checkpoint - only this
+            // one's, so an interrupted recording still awaiting the user's
+            // decision is untouched.
             recorder.cancel()
             stage = .ready
             nothingCaptured = true
@@ -517,8 +538,10 @@ struct RecorderView: View {
         }
 
         // Save immediately with a plain title, so a failed or cancelled
-        // summary can never cost the user their recording.
+        // summary can never cost the user their recording. Saved under the
+        // same id as its crash checkpoint, exactly as recovery would have.
         let recording = Recording(
+            id: result.id,
             title: RecordingSummarizer.fallbackTitle(from: result.transcript),
             duration: result.duration,
             transcript: result.transcript,
@@ -538,7 +561,7 @@ struct RecorderView: View {
         }
         unsaved = nil
         // Saved for real: the crash checkpoint has done its job.
-        store.clearCheckpoint()
+        store.clearCheckpoint(id: recording.id)
         savedId = recording.id
 
         guard !result.transcript.isEmpty else {
@@ -573,6 +596,10 @@ struct RecorderView: View {
                 }
             } catch is CancellationError {
                 return
+            } catch let error as RecordingSummarizer.SummarizerError {
+                // Says what to do (download the model from the chat screen,
+                // wait for the other task) rather than a generic shrug.
+                summaryFailed = error.errorDescription
             } catch {
                 summaryFailed = L10n.text("The summary couldn't be made right now. The recording and transcript are saved, and you can summarize it later.")
             }
@@ -602,7 +629,7 @@ struct RecorderView: View {
             return
         }
         unsaved = nil
-        store.clearCheckpoint()
+        store.clearCheckpoint(id: recording.id)
         savedId = recording.id
         stage = .finished
     }

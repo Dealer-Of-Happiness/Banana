@@ -79,7 +79,13 @@ struct ModelsSettingsView: View {
             // Rows and specs must line up one to one, or a swipe could
             // delete the wrong model.
             ForEach(customStore.specs) { spec in
-                modelRow(for: AIModel(custom: spec))
+                let model = AIModel(custom: spec)
+                modelRow(for: model)
+                    // The Remove button was disabled while downloading, the
+                    // swipe was not: removing mid-download orphaned the
+                    // folder the transfer then refilled - gigabytes the
+                    // app could no longer see or free.
+                    .deleteDisabled(isBusy(for: model))
             }
             .onDelete { offsets in
                 // Map first: removing shifts the indices underneath. Bounds
@@ -88,7 +94,7 @@ struct ModelsSettingsView: View {
                 let doomed = offsets.compactMap { index in
                     customStore.specs.indices.contains(index) ? customStore.specs[index] : nil
                 }
-                for spec in doomed {
+                for spec in doomed where !isBusy(for: AIModel(custom: spec)) {
                     customStore.remove(spec, engine: appState.engine)
                 }
             }
@@ -156,21 +162,34 @@ struct ModelsSettingsView: View {
             Spacer(minLength: 8)
 
             if isDownloaded || bytesOnDisk > 0 {
-                // Deleting the directory while the prefetcher is writing into
-                // it leaves a half-model that later looks complete.
-                let isBusy = appState.engine.mlx.isDownloading
-                    && appState.engine.selectedModel.id == model.id
-                Button(isDownloaded ? "Delete" : "Remove", role: .destructive) {
+                Button(role: .destructive) {
                     modelToDelete = model
                     showDeleteConfirmation = true
+                } label: {
+                    // Sized inside the label: a frame on the button itself
+                    // grew the layout but not the tappable area, which stayed
+                    // the height of one line of text.
+                    Text(isDownloaded ? L10n.text("Delete") : L10n.text("Remove"))
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.borderless)
-                .frame(minHeight: 44)
-                .disabled(isBusy)
+                .disabled(isBusy(for: model))
                 .accessibilityLabel("Delete \(model.name)")
             }
         }
         .padding(.vertical, 2)
+    }
+
+    /// True while the engine is downloading or preparing this model.
+    ///
+    /// Keyed on the model being loaded, not on the selection: a vision
+    /// download borrowed by a photo while Apple Intelligence is selected, and
+    /// the "Preparing" phase after the bytes landed, both had Delete enabled -
+    /// and deleting then either reverted silently when the transfer finished
+    /// or triggered a full, invisible re-download from the loader's retry.
+    private func isBusy(for model: AIModel) -> Bool {
+        appState.engine.mlx.loadingModelId == model.id
     }
 
     // MARK: - Helpers

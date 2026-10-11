@@ -19,7 +19,6 @@ struct SideMenuView: View {
     @ObservedObject private var recordingStore = RecordingStore.shared
     @State private var showNewFolderAlert = false
     @State private var newFolderName = ""
-    @State private var showSettings = false
     @State private var showSearch = false
     @State private var showRecordings = false
     @State private var exportURL: URL?
@@ -34,6 +33,7 @@ struct SideMenuView: View {
     @State private var showRenameFolderAlert = false
     @State private var renameFolderName = ""
     @State private var folderToRename: Folder?
+    @State private var folderToDelete: Folder?
 
     // Pre-compute folder chat counts once - O(n) instead of O(n * m)
     private var folderChatCounts: [UUID: Int] {
@@ -79,6 +79,10 @@ struct SideMenuView: View {
         // Under the status bar and the leading safe area too, so a landscape
         // phone doesn't show a bare strip beside the Dynamic Island.
         .background(Color(.systemBackground).ignoresSafeArea())
+        // VoiceOver's two-finger scrub closes the drawer like the X does.
+        .accessibilityAction(.escape) {
+            if !isSidebar { appState.toggleSideMenu() }
+        }
         .alert("New Folder", isPresented: $showNewFolderAlert) {
             TextField("Folder name", text: $newFolderName)
             Button("Cancel", role: .cancel) {
@@ -88,7 +92,7 @@ struct SideMenuView: View {
                 createFolder()
             }
         }
-        .sheet(isPresented: $showSettings) {
+        .sheet(isPresented: $appState.showSettings) {
             NavigationStack {
                 SettingsView()
                     .environmentObject(appState)
@@ -134,10 +138,7 @@ struct SideMenuView: View {
             }
             Button("Delete", role: .destructive) {
                 if let conversation = conversationToDelete {
-                    appState.conversationManager.deleteConversation(conversation)
-                    if appState.currentConversation?.id == conversation.id {
-                        appState.currentConversation = nil
-                    }
+                    deleteConversation(conversation)
                 }
                 conversationToDelete = nil
             }
@@ -158,12 +159,24 @@ struct SideMenuView: View {
                         appState.objectWillChange.send()
                     },
                     onDeleteChat: { chat in
-                        appState.conversationManager.deleteConversation(chat)
-                        if appState.currentConversation?.id == chat.id {
-                            appState.currentConversation = nil
-                        }
+                        deleteConversation(chat)
                     }
                 )
+        }
+    }
+
+    /// Detach the chat screen from a conversation BEFORE deleting it. The
+    /// other order let the generation task's finalizer, or one more render
+    /// of the message list, touch a model whose row was already gone - a
+    /// SwiftData trap a second after the swipe.
+    private func deleteConversation(_ conversation: Conversation) {
+        Task { @MainActor in
+            if appState.currentConversation?.id == conversation.id {
+                await appState.chatViewModel.stopGenerationAndWait()
+                appState.chatViewModel.loadConversation(nil)
+                appState.currentConversation = nil
+            }
+            appState.conversationManager.deleteConversation(conversation)
         }
     }
 
@@ -273,6 +286,7 @@ struct SideMenuView: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal)
                 .padding(.top, 12)
+                .accessibilityAddTraits(.isHeader)
 
             // Folders list
             if appState.conversationManager.folders.isEmpty {
@@ -296,7 +310,7 @@ struct SideMenuView: View {
                             showRenameFolderAlert = true
                         },
                         onDelete: {
-                            appState.conversationManager.deleteFolder(folder, deleteContents: false)
+                            folderToDelete = folder
                         }
                     )
                     .dropDestination(for: String.self) { items, _ in
@@ -321,6 +335,34 @@ struct SideMenuView: View {
                 }
             }
         }
+        // Deleting a folder used to be instant and silent; chats confirm,
+        // folders should too - and say what happens to the chats inside.
+        .confirmationDialog(
+            "Delete this folder?",
+            isPresented: Binding(get: { folderToDelete != nil }, set: { if !$0 { folderToDelete = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Delete Folder, Keep Chats") {
+                if let folder = folderToDelete {
+                    appState.conversationManager.deleteFolder(folder, deleteContents: false)
+                }
+                folderToDelete = nil
+            }
+            Button("Delete Folder and Chats", role: .destructive) {
+                if let folder = folderToDelete {
+                    let doomed = appState.conversationManager.conversations.filter { $0.folderId == folder.id }
+                    if doomed.contains(where: { $0.id == appState.currentConversation?.id }) {
+                        appState.chatViewModel.loadConversation(nil)
+                        appState.currentConversation = nil
+                    }
+                    appState.conversationManager.deleteFolder(folder, deleteContents: true)
+                }
+                folderToDelete = nil
+            }
+            Button("Cancel", role: .cancel) { folderToDelete = nil }
+        } message: {
+            Text("The chats inside can be kept and moved out of the folder, or deleted with it.")
+        }
         .alert("Rename Folder", isPresented: $showRenameFolderAlert) {
             TextField("Folder name", text: $renameFolderName)
             Button("Cancel", role: .cancel) {
@@ -328,8 +370,9 @@ struct SideMenuView: View {
                 folderToRename = nil
             }
             Button("Rename") {
-                if let folder = folderToRename, !renameFolderName.isEmpty {
-                    appState.conversationManager.renameFolder(folder, to: renameFolderName)
+                let renamed = renameFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let folder = folderToRename, !renamed.isEmpty {
+                    appState.conversationManager.renameFolder(folder, to: renamed)
                     appState.objectWillChange.send()
                 }
                 renameFolderName = ""
@@ -349,6 +392,7 @@ struct SideMenuView: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal)
                 .padding(.top, 12)
+                .accessibilityAddTraits(.isHeader)
 
                 LazyVStack(spacing: 4) {
                     if appState.conversationManager.conversations.isEmpty {
@@ -417,13 +461,12 @@ struct SideMenuView: View {
                                         Label("Delete", systemImage: "trash")
                                     }
                                 }
+                                // `.draggable` alone: a second `.onDrag`
+                                // only existed to dim the row, and a
+                                // cancelled drag left it dimmed for good.
                                 .draggable(chat.id.uuidString) {
                                     // Drag preview
                                     ChatDragPreview(title: chat.displayTitle)
-                                }
-                                .onDrag {
-                                    draggedConversation = chat
-                                    return NSItemProvider(object: chat.id.uuidString as NSString)
                                 }
                         }
                     }
@@ -435,7 +478,7 @@ struct SideMenuView: View {
 
     private var settingsButton: some View {
         Button {
-            showSettings = true
+            appState.showSettings = true
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "gear")
@@ -484,6 +527,7 @@ struct SideMenuView: View {
     // MARK: - Actions
 
     private func createFolder() {
+        newFolderName = newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !newFolderName.isEmpty else { return }
         // Create folder using ConversationManager
         _ = appState.conversationManager.createFolder(name: newFolderName)
@@ -689,7 +733,7 @@ struct MoveToFolderSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
+                    Button("Cancel", systemImage: "xmark", action: onCancel)
                 }
             }
         }
@@ -769,7 +813,7 @@ struct FolderContentsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") {
+                    Button("Done", systemImage: "checkmark") {
                         dismiss()
                     }
                 }

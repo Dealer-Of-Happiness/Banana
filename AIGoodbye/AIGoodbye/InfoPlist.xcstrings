@@ -6,79 +6,79 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye nutzt die Kamera, damit du Fotos aufnehmen oder Fragen zur Live-Ansicht stellen kannst. Bilder werden auf deinem Gerät analysiert und niemals aufgezeichnet oder hochgeladen."
+            "value": "AiGoodbye nutzt die Kamera, damit du Fotos aufnehmen oder Fragen zum Live-Bild stellen kannst. Bilder werden auf deinem Gerät ausgewertet und nie hochgeladen. Gesendete Fotos bleiben nur in dieser Unterhaltung auf diesem Gerät."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Το AiGoodbye χρησιμοποιεί την κάμερα για να τραβάτε φωτογραφίες ή να ρωτάτε για τη ζωντανή προβολή. Οι εικόνες αναλύονται στη συσκευή σας και δεν καταγράφονται ούτε μεταφορτώνονται ποτέ."
+            "value": "Το AiGoodbye χρησιμοποιεί την κάμερα για να τραβάτε φωτογραφίες ή να ρωτάτε για τη ζωντανή εικόνα. Οι εικόνες αναλύονται στη συσκευή σας και δεν ανεβαίνουν ποτέ. Οι φωτογραφίες που στέλνετε μένουν μόνο μέσα σε αυτή τη συνομιλία, σε αυτή τη συσκευή."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye uses the camera so you can take photos or ask about a live view. Images are analyzed on your device and never recorded or uploaded."
+            "value": "AiGoodbye uses the camera so you can take photos or ask about a live view. Images are analyzed on your device and never uploaded. Photos you send are kept only inside that conversation on this device."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye usa la cámara para que puedas hacer fotos o preguntar sobre lo que ve la cámara. Las imágenes se analizan en tu dispositivo y nunca se graban ni se suben."
+            "value": "AiGoodbye usa la cámara para que puedas hacer fotos o preguntar sobre la imagen en directo. Las imágenes se analizan en tu dispositivo y nunca se suben. Las fotos que envías se guardan solo dentro de esa conversación en este dispositivo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye utilise l'appareil photo pour prendre des photos ou poser des questions sur la vue en direct. Les images sont analysées sur votre appareil et ne sont jamais enregistrées ni téléversées."
+            "value": "AiGoodbye utilise l'appareil photo pour que vous puissiez prendre des photos ou poser des questions sur l'image en direct. Les images sont analysées sur votre appareil et jamais envoyées. Les photos que vous envoyez restent uniquement dans cette conversation, sur cet appareil."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye usa la fotocamera per scattare foto o fare domande sulla vista dal vivo. Le immagini vengono analizzate sul tuo dispositivo e non sono mai registrate né caricate."
+            "value": "AiGoodbye usa la fotocamera per scattare foto o fare domande sull'inquadratura in tempo reale. Le immagini vengono analizzate sul tuo dispositivo e non vengono mai caricate. Le foto che invii restano solo in quella conversazione, su questo dispositivo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbyeは写真の撮影やライブ映像についての質問のためにカメラを使用します。画像はデバイス上で解析され、録画やアップロードは一切行いません。"
+            "value": "AiGoodbyeは、写真を撮ったりライブ映像について質問したりするためにカメラを使用します。画像はデバイス上で解析され、アップロードされることはありません。送信した写真はこのデバイスのその会話内にのみ保存されます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye는 사진 촬영이나 실시간 화면에 대한 질문을 위해 카메라를 사용합니다. 이미지는 기기에서 분석되며 녹화하거나 업로드하지 않습니다."
+            "value": "AiGoodbye는 사진을 찍거나 실시간 화면에 대해 질문할 수 있도록 카메라를 사용합니다. 이미지는 기기에서 분석되며 절대 업로드되지 않습니다. 보낸 사진은 이 기기의 해당 대화 안에만 보관됩니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O AiGoodbye usa a câmera para você tirar fotos ou perguntar sobre a visualização ao vivo. As imagens são analisadas no seu dispositivo e nunca são gravadas nem enviadas."
+            "value": "O AiGoodbye usa a câmera para você tirar fotos ou perguntar sobre a imagem ao vivo. As imagens são analisadas no seu aparelho e nunca enviadas. As fotos que você envia ficam apenas naquela conversa, neste aparelho."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye использует камеру, чтобы вы могли снимать фото или задавать вопросы о том, что видит камера. Изображения анализируются на вашем устройстве и никогда не записываются и не выгружаются."
+            "value": "AiGoodbye использует камеру, чтобы вы могли делать фото или задавать вопросы о том, что она видит. Изображения анализируются на вашем устройстве и никогда не отправляются в интернет. Отправленные фото хранятся только в этом чате на этом устройстве."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye використовує камеру, щоб ви могли робити фото або запитувати про те, що бачить камера. Зображення аналізуються на вашому пристрої й ніколи не записуються та не завантажуються."
+            "value": "AiGoodbye використовує камеру, щоб ви могли робити фото або запитувати про те, що вона бачить. Зображення аналізуються на вашому пристрої й ніколи не надсилаються в інтернет. Надіслані фото зберігаються лише в цьому чаті на цьому пристрої."
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye 用相機，等你可以影相或者問即時畫面。圖片喺你部裝置上分析，絕對唔會錄影或上載。"
+            "value": "AiGoodbye 使用相機，讓你可以影相或查詢即時畫面。影像會喺你嘅裝置上分析，絕不會上載。你傳送嘅相片只會保存喺本裝置嘅該對話入面。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye 使用相机，让您拍照或询问实时画面。图像在您的设备上分析，绝不录制或上传。"
+            "value": "AiGoodbye 使用相机，让你可以拍照或询问实时画面。图像在你的设备上分析，绝不会上传。你发送的照片只保存在本设备的该对话中。"
           }
         }
       }

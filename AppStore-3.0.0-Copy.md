@@ -306,7 +306,7 @@ TRANSLATE
 SEE
 - Ask about photos, screenshots and handwritten notes
 - Scan paper documents into text
-- Describe Surroundings: hear what the camera sees, built with blind and low-vision users
+- Describe Surroundings: hear what the camera sees, built for blind and low-vision users
 
 READ YOUR DOCUMENTS
 - Ask questions about PDFs and text files
@@ -318,7 +318,7 @@ MAKE IT YOURS
 - Siri, Shortcuts, widgets, Control Center and the share sheet
 
 PRIVATE BY CONSTRUCTION
-- Privacy Center shows every network request the app makes
+- Privacy Center shows what the app connects to, and when
 - Face ID lock
 - App Privacy label: Data Not Collected
 

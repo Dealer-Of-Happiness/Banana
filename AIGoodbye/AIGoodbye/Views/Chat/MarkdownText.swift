@@ -22,14 +22,20 @@ final class MarkdownCache {
     private var inlineCache: [String: AttributedString] = [:]
     private var blockOrder: [String] = []
     private var inlineOrder: [String] = []
-    private let limit = 60
+    /// Whole messages.
+    private let blockLimit = 60
+    /// Paragraphs. Generous because a streaming answer adds a new key for
+    /// its growing last paragraph on every redraw; with room for only 60,
+    /// those pushed out the paragraphs of the answers on screen, and every
+    /// redraw parsed them again.
+    private let inlineLimit = 400
 
     func blocks(for content: String) -> [MarkdownText.Block] {
         if let cached = blockCache[content] { return cached }
         let parsed = MarkdownText.parseBlocks(content)
         blockCache[content] = parsed
         blockOrder.append(content)
-        trim(&blockOrder) { self.blockCache[$0] = nil }
+        trim(&blockOrder, to: blockLimit) { self.blockCache[$0] = nil }
         return parsed
     }
 
@@ -38,14 +44,15 @@ final class MarkdownCache {
         let parsed = MarkdownText.parseInline(text)
         inlineCache[text] = parsed
         inlineOrder.append(text)
-        trim(&inlineOrder) { self.inlineCache[$0] = nil }
+        trim(&inlineOrder, to: inlineLimit) { self.inlineCache[$0] = nil }
         return parsed
     }
 
-    private func trim(_ order: inout [String], remove: (String) -> Void) {
-        while order.count > limit {
-            remove(order.removeFirst())
-        }
+    private func trim(_ order: inout [String], to limit: Int, remove: (String) -> Void) {
+        guard order.count > limit else { return }
+        let excess = order.count - limit
+        order.prefix(excess).forEach(remove)
+        order.removeFirst(excess)
     }
 }
 
@@ -88,6 +95,20 @@ struct MarkdownText: View {
         MarkdownText(content: text).inlineAttributed(text)
     }
 
+    /// The answer as a reader sees it, without Markdown markers - for
+    /// selecting and copying a passage out of it.
+    static func plainText(_ content: String) -> String {
+        MarkdownCache.shared.blocks(for: content).map { block -> String in
+            switch block {
+            case .text(let text):
+                return String(MarkdownCache.shared.attributed(for: text).characters)
+            case .code(let code, _):
+                return code
+            }
+        }
+        .joined(separator: "\n\n")
+    }
+
     private var parsedBlocks: [Block] {
         var result: [Block] = []
         var currentText: [String] = []
@@ -121,6 +142,13 @@ struct MarkdownText: View {
 
             if inCode {
                 currentCode.append(line)
+            } else if trimmed.isEmpty {
+                // A blank line ends a paragraph. Each paragraph is its own
+                // block and so its own cache key: while an answer streams,
+                // only the growing last paragraph is parsed again, not the
+                // whole answer on every token. (The VStack spacing stands in
+                // for the blank line.)
+                flushText()
             } else {
                 currentText.append(line)
             }
@@ -138,21 +166,27 @@ struct MarkdownText: View {
 
     // MARK: - Inline formatting
 
+    /// Compiled once. `range(of:options: .regularExpression)` built a new
+    /// regex for every line of every parse - three per line, per token.
+    private static let headerPrefix = #/^#{1,4}\s+/#
+    private static let bulletPrefix = #/^[-*]\s+/#
+    private static let numberedPrefix = #/^\d{1,3}\.\s+/#
+
     fileprivate func inlineAttributed(_ text: String) -> AttributedString {
         // Pre-process line starts that inline Markdown ignores.
         let processedLines = text.components(separatedBy: "\n").map { line -> String in
             let trimmed = line.trimmingCharacters(in: .whitespaces)
 
             // Headers become bold lines.
-            if let range = trimmed.range(of: #"^#{1,4}\s+"#, options: .regularExpression) {
-                return "**" + String(trimmed[range.upperBound...]) + "**"
+            if let match = trimmed.prefixMatch(of: Self.headerPrefix) {
+                return "**" + String(trimmed[match.range.upperBound...]) + "**"
             }
             // Bullets: "- item" or "* item" become "• item".
-            if let range = trimmed.range(of: #"^[-*]\s+"#, options: .regularExpression) {
-                return "•  " + String(trimmed[range.upperBound...])
+            if let match = trimmed.prefixMatch(of: Self.bulletPrefix) {
+                return "•  " + String(trimmed[match.range.upperBound...])
             }
             // Numbered lists pass through unchanged.
-            if trimmed.range(of: #"^\d{1,3}\.\s+"#, options: .regularExpression) != nil {
+            if trimmed.prefixMatch(of: Self.numberedPrefix) != nil {
                 return trimmed
             }
             return line
@@ -175,30 +209,61 @@ private struct CodeBlockView: View {
     let code: String
     let language: String?
 
+    /// Shows "Copied" for a moment after a tap; copying used to give no sign.
+    @State private var copied = false
+    /// Same key as `SettingsManager.hapticFeedbackEnabled`.
+    @AppStorage("haptic_feedback") private var hapticsEnabled = true
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text(language ?? "code")
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.secondary)
+                Group {
+                    if let language {
+                        Text(verbatim: language)
+                    } else {
+                        Text("Code")
+                    }
+                }
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
                 Spacer()
                 Button {
                     UIPasteboard.general.string = code
+                    if hapticsEnabled {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }
+                    copied = true
+                    ChatViewModel.announce(L10n.text("Copied"))
                 } label: {
-                    Image(systemName: "doc.on.doc")
-                        .font(.caption)
-                        .frame(minWidth: 44, minHeight: 32)
-                        .contentShape(Rectangle())
+                    HStack(spacing: 4) {
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                        if copied {
+                            Text("Copied")
+                        }
+                    }
+                    .font(.caption)
+                    // A full 44 x 44 target (it was 44 x 32).
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
                 }
-                .accessibilityLabel(Text("Copy code"))
+                .accessibilityLabel(copied ? Text("Copied") : Text("Copy code"))
+                // Keyed, so a second tap restarts the 1.5 s rather than
+                // inheriting the first one's timer.
+                .task(id: copied) {
+                    guard copied else { return }
+                    try? await Task.sleep(for: .seconds(1.5))
+                    copied = false
+                }
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 6)
             .background(Color(.systemGray4).opacity(0.5))
 
             ScrollView(.horizontal, showsIndicators: false) {
+                // Footnote, not caption: 12 pt code under 17 pt prose was
+                // the hardest text in the app to read. Still scales with
+                // Dynamic Type.
                 Text(code)
-                    .font(.system(.caption, design: .monospaced))
+                    .font(.system(.footnote, design: .monospaced))
                     .textSelection(.enabled)
                     .padding(10)
             }

@@ -63,7 +63,7 @@ struct AddCustomModelView: View {
                     LabeledContent(L10n.text("Model"), value: candidate.repoId)
                     LabeledContent(
                         L10n.text("Download size"),
-                        value: ByteCountFormatter.string(fromByteCount: candidate.sizeBytes, countStyle: .file)
+                        value: AIModel.formattedBytes(candidate.sizeBytes)
                     )
                     LabeledContent(
                         L10n.text("Memory needed"),

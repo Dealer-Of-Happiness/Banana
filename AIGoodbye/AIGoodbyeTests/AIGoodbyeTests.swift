@@ -683,3 +683,77 @@ struct DocumentTextTests {
         #expect(try DocumentText.read(utf16) == text)
     }
 }
+
+// MARK: - Round 2 (product audit) regressions
+
+struct SpokenTextTests {
+    /// A streamed "costs 3." must not be spoken before "5 dollars" arrives.
+    @Test func decimalsAreNotSentenceEnds() {
+        let text = "It costs 3.5 dollars at the market"
+        #expect(SpeechChunker.speakableSlice(of: text, from: text.startIndex) == nil)
+        let streamed = "It costs 3."
+        #expect(SpeechChunker.speakableSlice(of: streamed, from: streamed.startIndex) == nil)
+    }
+
+    @Test func linksAreSpokenAsTheirLabel() {
+        let spoken = VoiceService.plainSpeech(from: "See [the guide](https://example.com/a) or https://example.com/b now.")
+        #expect(spoken.contains("the guide"))
+        #expect(!spoken.contains("https"))
+        #expect(!spoken.contains("example.com"))
+    }
+}
+
+struct TranslationCleanupTests {
+    @Test func stripsOnlyKnownLabels() {
+        #expect(TranslateModeView.cleanTranslation("Translation: Where is the station?") == "Where is the station?")
+        #expect(TranslateModeView.cleanTranslation("Перевод: Где вокзал?") == "Где вокзал?")
+        // A real leading clause is part of the sentence, not a label.
+        #expect(TranslateModeView.cleanTranslation("Warning: wet floor") == "Warning: wet floor")
+        #expect(TranslateModeView.cleanTranslation("Note: bring ID") == "Note: bring ID")
+    }
+}
+
+struct RichDocumentTextTests {
+    @Test func readsRTFAsPlainText() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("sample-\(UUID().uuidString).rtf")
+        let rtf = #"{\rtf1\ansi\deff0 {\fonttbl {\f0 Helvetica;}}\f0\fs24 Hello \b world\b0 .}"#
+        try rtf.data(using: .utf8)!.write(to: url)
+        let text = try DocumentText.read(url)
+        #expect(text.contains("Hello"))
+        #expect(text.contains("world"))
+        #expect(!text.contains("rtf1"))
+    }
+
+    @Test func readsHTMLAsPlainText() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("sample-\(UUID().uuidString).html")
+        let html = "<html><head><style>p { color: red }</style><script>var x = 1;</script></head><body><h1>Title</h1><p>Hello &amp; welcome</p></body></html>"
+        try html.data(using: .utf8)!.write(to: url)
+        let text = try DocumentText.read(url)
+        #expect(text.contains("Title"))
+        #expect(text.contains("Hello & welcome"))
+        #expect(!text.contains("<p>"))
+        #expect(!text.contains("color: red"))
+        #expect(!text.contains("var x"))
+    }
+}
+
+struct MemoryCaptureBareFormsTests {
+    /// Chinese and Korean users rarely type punctuation after "remember".
+    @Test func bareChineseAndKoreanFormsWork() {
+        #expect(MemoryStore.requestedFact(in: "记住我对花生过敏") == "我对花生过敏")
+        #expect(MemoryStore.requestedFact(in: "請記住我住在台北") == "我住在台北")
+        #expect(MemoryStore.requestedFact(in: "나는 채식주의자라는 걸 기억해 줘") != nil)
+    }
+}
+
+struct AppLanguageDateTests {
+    @Test func relativeDatesShowTimeTodayAndWeekdayThisWeek() {
+        let now = Date()
+        let today = now.addingTimeInterval(-60)
+        let todayText = today.aigRelative(now: now)
+        #expect(!todayText.isEmpty)
+        #expect(todayText == today.aigFormatted(date: .omitted, time: .shortened))
+        let longAgo = Calendar.current.date(byAdding: .year, value: -2, to: now)!
+        #expect(longAgo.aigRelative(now: now) != todayText)
+    }
+}

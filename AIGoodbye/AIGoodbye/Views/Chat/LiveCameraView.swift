@@ -684,6 +684,8 @@ struct LiveCameraView: View {
     @State private var speakAnswers = true
     @State private var spokenOffset = 0
     @State private var generationTask: Task<Void, Never>?
+    /// Whether "Loading the vision model" has been said on this visit.
+    @State private var announcedModelLoad = false
     @FocusState private var questionFocused: Bool
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
@@ -713,18 +715,43 @@ struct LiveCameraView: View {
                     }
                     .accessibilityLabel(Text(speakAnswers ? "Turn off spoken answers" : "Turn on spoken answers"))
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    // By direction, as in PhotoCaptureView: on iPhone Duo the
+                    // camera facing the user depends on the display in use.
+                    Button("Flip Camera", systemImage: "arrow.triangle.2.circlepath.camera") {
+                        camera.setPosition(camera.position == .back ? .front : .back)
+                    }
+                    .disabled(!camera.isReady || camera.isSwitchingCamera)
+                }
             }
+        }
+        .onChange(of: camera.position) { _, position in
+            // The viewfinder says it to everyone else; VoiceOver users only
+            // learn which way the camera now faces if they are told.
+            guard UIAccessibility.isVoiceOverRunning else { return }
+            UIAccessibility.post(
+                notification: .announcement,
+                argument: position == .front ? L10n.text("Front camera") : L10n.text("Back camera")
+            )
         }
         .onAppear {
             // A deep link can open this screen under the lock screen; the
             // lock observer below starts the camera once it clears.
-            if !lock.isLocked { camera.start() }
+            if !lock.isLocked {
+                camera.start()
+                // Pointing the phone at something and waiting for the answer
+                // is hands-off by nature; auto-lock used to black out the
+                // viewfinder and cancel the answer half a minute in.
+                UIApplication.shared.isIdleTimerDisabled = true
+            }
             voice.setSpeechLanguage(appState.settings.appLanguage)
+            voice.speechRate = Float(appState.settings.speechRate)
         }
         .onDisappear {
             generationTask?.cancel()
             camera.stop()
             voice.shutdown()
+            UIApplication.shared.isIdleTimerDisabled = false
         }
         .onChange(of: scenePhase) { _, phase in
             // Never keep the camera or speaker running in the background -
@@ -734,6 +761,7 @@ struct LiveCameraView: View {
             case .active:
                 guard !lock.isLocked else { return }
                 camera.resume()
+                UIApplication.shared.isIdleTimerDisabled = true
             case .inactive:
                 // Control Center, a call banner, Siri, a system alert: the
                 // camera is still on screen, so it stays on. Stopping it
@@ -744,6 +772,7 @@ struct LiveCameraView: View {
                 generationTask?.cancel()
                 camera.stop()
                 voice.stopSpeaking()
+                UIApplication.shared.isIdleTimerDisabled = false
             @unknown default:
                 break
             }
@@ -752,6 +781,7 @@ struct LiveCameraView: View {
             // Unlocked after the `.active` turn that was skipped above.
             guard !locked, scenePhase != .background else { return }
             camera.resume()
+            UIApplication.shared.isIdleTimerDisabled = true
         }
     }
 
@@ -794,6 +824,9 @@ struct LiveCameraView: View {
         } else {
             CameraPreview(camera: camera)
                 .ignoresSafeArea()
+                // An unlabelled full-screen element VoiceOver stopped on; the
+                // other two camera screens already hide theirs.
+                .accessibilityHidden(true)
         }
     }
 
@@ -908,7 +941,20 @@ struct LiveCameraView: View {
                     return
                 }
                 defer { engine.releaseUtility() }
+                // The first question after opening can wait up to half a
+                // minute on loading the vision model; say why, once per
+                // visit, instead of a silent empty answer panel.
+                var loadingCue: String?
+                if !announcedModelLoad, model.backend != .appleIntelligence,
+                   !engine.hasSession(for: model), engine.mlx.loadedModelId != model.id {
+                    announcedModelLoad = true
+                    let cue = L10n.text("Loading the vision model, one moment.")
+                    loadingCue = cue
+                    notice = cue
+                    if speakAnswers { voice.speak(cue) }
+                }
                 try await engine.startCleanSession(model: model)
+                if let loadingCue, notice == loadingCue { notice = nil }
 
                 var final = ""
                 let stream = engine.respondStream(model: model, prompt: text, image: frame)
@@ -922,7 +968,9 @@ struct LiveCameraView: View {
             } catch let error as ChatEngine.RouteError {
                 notice = routeNotice(for: error)
             } catch is CancellationError {
-                // stopped by user
+                // Stopped by the user. The only notice this task can have set
+                // is the loading one, which no longer applies.
+                notice = nil
             } catch {
                 if !Task.isCancelled {
                     notice = error.localizedDescription

@@ -20,9 +20,15 @@ enum LegalText {
         L10n.text("Private, on-device AI. Works offline, no subscriptions, your conversations never leave your device.")
     }
 
-    /// The sections rendered as cards in onboarding and reused anywhere the
-    /// app explains itself. Order matters: privacy first, contact last.
+    /// Every section, as About & Legal shows them. Order matters: privacy
+    /// first, contact last.
     static var sections: [(title: String, body: String, icon: String)] {
+        onboardingSections + [contact]
+    }
+
+    /// The consent screen's cards: everything except Contact, which asks
+    /// nothing of someone deciding whether to start and stays in About.
+    static var onboardingSections: [(title: String, body: String, icon: String)] {
         [
             (
                 title: L10n.text("Your Conversations: 100% On Device"),
@@ -48,12 +54,15 @@ enum LegalText {
                 title: L10n.text("Your Purchase"),
                 body: L10n.text("AiGoodbye is a one-time purchase. There are no subscriptions and no hidden fees - pay once and it is yours."),
                 icon: "checkmark.seal.fill"
-            ),
-            (
-                title: L10n.text("Contact"),
-                body: L10n.text("Questions or ideas? Visit aigoodbye.ai or email marketing@dealerofhappiness.com. We would love to hear from you."),
-                icon: "envelope.fill"
             )
         ]
+    }
+
+    private static var contact: (title: String, body: String, icon: String) {
+        (
+            title: L10n.text("Contact"),
+            body: L10n.text("Questions or ideas? Visit aigoodbye.ai or email marketing@dealerofhappiness.com. We would love to hear from you."),
+            icon: "envelope.fill"
+        )
     }
 }

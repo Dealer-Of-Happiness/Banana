@@ -16,6 +16,10 @@ struct PrivacyCenterView: View {
     @ObservedObject private var audit = NetworkAudit.shared
     @StateObject private var reachability = Reachability()
     @State private var showAllEvents = false
+    /// Icon column widths, scaled with Dynamic Type so icons are not
+    /// clipped at accessibility sizes.
+    @ScaledMetric(relativeTo: .title3) private var statusIconWidth: CGFloat = 28
+    @ScaledMetric(relativeTo: .body) private var rowIconWidth: CGFloat = 26
 
     var body: some View {
         List {
@@ -66,7 +70,7 @@ struct PrivacyCenterView: View {
                 Image(systemName: reachability.isOnline ? "wifi" : "airplane")
                     .font(.title3)
                     .foregroundStyle(reachability.isOnline ? .blue : .green)
-                    .frame(width: 28)
+                    .frame(width: statusIconWidth)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(reachability.isOnline
@@ -100,8 +104,13 @@ struct PrivacyCenterView: View {
             .accessibilityElement(children: .combine)
 
             if audit.events.isEmpty {
-                Label("No network requests this session", systemImage: "checkmark.circle")
-                    .foregroundStyle(.green)
+                // Green on the icon only: green text on white is ~2:1.
+                Label {
+                    Text("No network requests this session")
+                } icon: {
+                    Image(systemName: "checkmark.circle")
+                        .foregroundStyle(.green)
+                }
             } else {
                 ForEach(showAllEvents ? audit.events : Array(audit.events.prefix(5))) { event in
                     VStack(alignment: .leading, spacing: 2) {
@@ -110,7 +119,7 @@ struct PrivacyCenterView: View {
                         Text(event.purpose)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text(event.date.formatted(date: .omitted, time: .standard))
+                        Text(event.date.aigFormatted(date: .omitted, time: .standard))
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
                     }
@@ -136,6 +145,13 @@ struct PrivacyCenterView: View {
             dataRow("Photos and documents you attach", L10n.text("Kept with the chat on this device, never uploaded"), "doc.on.doc")
             dataRow("Voice", L10n.text("Recognized on this device by Apple's offline engine"), "waveform")
             dataRow("Memory and library", L10n.text("Stored on this device (included in your iCloud backup, if you use one)"), "brain.head.profile")
+            // The most sensitive data the app holds, and the one place the
+            // backup story differs: someone restoring a phone should know
+            // beforehand that recordings do not come back.
+            dataRow("Recordings", L10n.text("Audio and transcripts stay on this device and are left out of iCloud backup"), "waveform.badge.mic")
+            // iOS fetches these itself, so they never appear in the network
+            // log above; saying so keeps that log honest.
+            dataRow("Speech language packs", L10n.text("Downloaded by iOS from Apple the first time you speak or record in a language"), "arrow.down.circle")
             dataRow("Analytics", L10n.text("None collected"), "chart.bar.xaxis")
             dataRow("Advertising", L10n.text("None, ever"), "megaphone")
         } header: {
@@ -147,7 +163,7 @@ struct PrivacyCenterView: View {
         HStack(spacing: 12) {
             Image(systemName: symbol)
                 .foregroundStyle(.blue)
-                .frame(width: 26)
+                .frame(width: rowIconWidth)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.subheadline)

@@ -26,6 +26,15 @@ final class Conversation {
     var attachedDocumentIds: [UUID] = []
     var attachedImageIds: [UUID] = []
 
+    /// What a list row shows, kept current by ConversationManager whenever
+    /// messages are added or deleted. Rows used to read `messages` to find
+    /// the newest one, which loaded every message of every visible chat.
+    /// Additive with defaults, so existing stores migrate on their own; a
+    /// row saved before these existed reads "" / 0 until `previewText` (or
+    /// the empty-chat lookup) fills them in once.
+    var lastPreview: String = ""
+    var messageCount: Int = 0
+
     init(
         id: UUID = UUID(),
         title: String = "New Chat",
@@ -44,8 +53,26 @@ final class Conversation {
     }
 
     var previewText: String {
-        guard let content = lastMessage?.content else { return L10n.text("No messages") }
-        return Self.plainPreview(content)
+        if messageCount == 0 && lastPreview.isEmpty {
+            // Genuinely empty, or saved before the summary existed. Look
+            // once: a chat with messages comes out with a non-zero count and
+            // never takes this path again; an empty one finds an empty,
+            // already-loaded relationship and writes nothing.
+            refreshListSummary()
+        }
+        return messageCount == 0 ? L10n.text("No messages") : lastPreview
+    }
+
+    /// Recompute the list summary from `remaining` (by default the stored
+    /// messages). Pass the survivors when deleting, so a message that is
+    /// about to be deleted is never read afterwards. Writes only what
+    /// changed, so rows are not redrawn for nothing.
+    func refreshListSummary(from remaining: [Message]? = nil) {
+        let source = remaining ?? messages
+        let newest = source.max(by: { $0.timestamp < $1.timestamp })
+        let preview = newest.map { Self.plainPreview($0.content) } ?? ""
+        if lastPreview != preview { lastPreview = preview }
+        if messageCount != source.count { messageCount = source.count }
     }
 
     /// One line of readable text for list rows: answers are Markdown, and
@@ -116,8 +143,13 @@ final class Conversation {
 
 // MARK: - Message
 
+/// Deliberately `nonisolated` (like AppLanguage), and so are the two enums
+/// it stores: chat search reads messages on a background ModelActor
+/// (ChatSearchIndex), and under the target's main-actor default isolation
+/// an unmarked model - and the Codable conformances of its enums - could
+/// only be read on the main thread. @Model already makes it Sendable.
 @Model
-final class Message {
+nonisolated final class Message {
     @Attribute(.unique) var id: UUID
     var role: MessageRole
     var content: String
@@ -158,7 +190,7 @@ final class Message {
 
 // MARK: - Message Role
 
-enum MessageRole: String, Codable {
+nonisolated enum MessageRole: String, Codable {
     case user
     case assistant
     case system
@@ -166,7 +198,7 @@ enum MessageRole: String, Codable {
 
 // MARK: - Attachment Type
 
-enum AttachmentType: String, Codable {
+nonisolated enum AttachmentType: String, Codable {
     case document
     case image
     case voice

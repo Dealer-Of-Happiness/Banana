@@ -12,6 +12,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct VoiceModeView: View {
     @EnvironmentObject var appState: AppState
@@ -39,6 +40,9 @@ struct VoiceModeView: View {
     /// `pause()` within milliseconds, and the phone then read the answer out
     /// from the lock screen and opened the microphone with no screen.
     @State private var inForeground = true
+    /// Speaks the model-loading notice if a turn sits in `.thinking` while a
+    /// model loads. Cancelled whenever the turn moves on.
+    @State private var loadingCueTask: Task<Void, Never>?
     #if DEBUG
     /// Store-screenshot stand-in for a spoken question (AIG_DEMO_VOICE=1):
     /// the Simulator has no microphone, so a real turn can't be staged.
@@ -74,6 +78,16 @@ struct VoiceModeView: View {
                 }
             }
         }
+        // VoiceOver's two-finger double tap: the screen's primary action
+        // from anywhere, without hunting for the circle - interrupt, talk,
+        // or send what was said, depending on the turn.
+        .accessibilityAction(.magicTap) {
+            if case .blocked = turn {
+                beginListening()
+            } else {
+                indicatorTapped()
+            }
+        }
         .onAppear(perform: start)
         .onDisappear(perform: teardown)
         .onChange(of: scenePhase) { _, phase in
@@ -85,6 +99,7 @@ struct VoiceModeView: View {
                 // on return; the user taps to resume.
                 voice.pause()
                 if isActive { turn = .idle }
+                UIApplication.shared.isIdleTimerDisabled = false
             case .inactive:
                 // Control Center, the app switcher, a system alert - including
                 // the one-time Speech Recognition prompt a first listen in
@@ -102,6 +117,21 @@ struct VoiceModeView: View {
         }
         .onChange(of: voice.listeningState) { _, state in
             listeningStateChanged(state)
+        }
+        .onChange(of: turn) { _, newTurn in
+            turnChanged(to: newTurn)
+        }
+        // Something to feel when your turn starts and when you were heard,
+        // behind the existing Haptic Feedback setting, which until now did
+        // nothing on this screen.
+        .sensoryFeedback(trigger: turn) { _, newTurn in
+            guard isActive, appState.settings.hapticFeedbackEnabled else { return nil }
+            switch newTurn {
+            case .listening: return .start
+            case .thinking: return .success
+            case .blocked: return .error
+            default: return nil
+            }
         }
         .onChange(of: viewModel.streamingText) { _, text in
             // Only an answer to THIS screen's current turn is spoken. After a
@@ -237,17 +267,42 @@ struct VoiceModeView: View {
         }
         .contentShape(Circle())
         .onTapGesture {
-            // Barge-in: interrupt the answer (including any generation still
-            // streaming, which would otherwise speak over the user) and talk.
-            if turn == .speaking || turn == .thinking || voice.isSpeaking {
-                bargeIn()
-            } else if turn == .idle {
-                beginListening()
-            }
+            indicatorTapped()
         }
+        // The screen's main control, and the one place VoiceOver can learn
+        // the state: it is a button, its value is the status line (which
+        // VoiceOver was never told to re-read), and that value changes.
         .accessibilityElement()
         .accessibilityLabel(Text("Voice status"))
-        .accessibilityHint(Text("Double tap to interrupt and speak"))
+        .accessibilityValue(Text(verbatim: statusDescription))
+        .accessibilityHint(turn == .listening
+                           ? Text("Double tap to send now")
+                           : Text("Double tap to interrupt and speak"))
+        .accessibilityAddTraits([.isButton, .updatesFrequently])
+        .accessibilityAction { indicatorTapped() }
+    }
+
+    /// `statusText` as one string, for VoiceOver.
+    private var statusDescription: String {
+        if permissionDenied {
+            return L10n.text("AiGoodbye needs microphone access for voice conversations. You can enable it in the Settings app.")
+        }
+        switch turn {
+        case .blocked(let reason):
+            return reason
+        case .speaking:
+            return L10n.text("Speaking · tap the circle to interrupt")
+        case .thinking:
+            return appState.engine.mlx.isPreparingModel ? modelLoadingMessage : L10n.text("Thinking...")
+        case .listening where voice.listeningState == .preparing:
+            return voice.preparingProgress > 0
+                ? L10n.text("Downloading the speech model for this language...")
+                : L10n.text("Getting ready to listen...")
+        case .listening:
+            return L10n.text("Listening · pause to send")
+        case .starting, .idle:
+            return L10n.text("Tap to talk")
+        }
     }
 
     private var indicatorColor: Color {
@@ -279,6 +334,14 @@ struct VoiceModeView: View {
                 switch turn {
                 case .speaking:
                     Text("Speaking · tap the circle to interrupt")
+                case .thinking where appState.engine.mlx.isPreparingModel:
+                    // A first answer from a downloaded model can take ten to
+                    // thirty seconds of loading; "Thinking..." for all of it
+                    // invited a second tap, which cancels the load.
+                    VStack(spacing: 6) {
+                        Text(modelLoadingMessage)
+                        ProgressView()
+                    }
                 case .thinking:
                     Text("Thinking...")
                 case .listening where voice.listeningState == .preparing:
@@ -307,6 +370,11 @@ struct VoiceModeView: View {
         // had to wrap.
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal)
+    }
+
+    private var modelLoadingMessage: String {
+        let name = appState.engine.mlx.loadingModelName ?? appState.engine.selectedModel.name
+        return L10n.text("Loading \(name) - the first answer takes a moment")
     }
 
     private var shownTranscript: String {
@@ -354,6 +422,8 @@ struct VoiceModeView: View {
     // MARK: - Flow
 
     private func start() {
+        voice.playsListeningSounds = appState.settings.listeningSounds
+        voice.speechRate = Float(appState.settings.speechRate)
         voice.onFinalTranscript = { text in
             Task { @MainActor in
                 guard isActive else { return }
@@ -365,8 +435,15 @@ struct VoiceModeView: View {
         }
         voice.onFinishedSpeaking = {
             Task { @MainActor in
-                guard isActive, inForeground, !viewModel.isGenerating, turn == .speaking else { return }
-                beginListening()
+                guard isActive, inForeground, !viewModel.isGenerating else { return }
+                if turn == .speaking {
+                    beginListening()
+                } else if turn == .thinking {
+                    // Only the model-loading notice was playing, and the turn
+                    // ended without an answer to speak (`finishAssistantTurn`
+                    // leaves `.thinking` alone while something is speaking).
+                    turn = .idle
+                }
             }
         }
         voice.onListeningEnded = {
@@ -405,7 +482,73 @@ struct VoiceModeView: View {
 
     private func teardown() {
         isActive = false
+        loadingCueTask?.cancel()
+        loadingCueTask = nil
         voice.shutdown()   // also clears the callbacks (no retain cycle)
+        UIApplication.shared.isIdleTimerDisabled = false
+    }
+
+    /// Side effects of a turn change that belong to the turn itself rather
+    /// than to whichever path caused it.
+    private func turnChanged(to newTurn: Turn) {
+        // Awake only while the conversation is actually doing something. A
+        // hands-free conversation has nobody touching the screen, so the
+        // default 30-second auto-lock used to cut an answer off mid-sentence
+        // (backgrounding stops all audio) and the microphone never reopened.
+        // Idle and blocked let the phone lock as usual.
+        let working = newTurn == .listening || newTurn == .thinking || newTurn == .speaking
+        UIApplication.shared.isIdleTimerDisabled = isActive && working
+
+        loadingCueTask?.cancel()
+        loadingCueTask = nil
+        guard isActive else { return }
+        if newTurn == .thinking { scheduleLoadingCue() }
+        // VoiceOver users were told nothing when the microphone opened.
+        // "Listening" is posted as the listen is requested, while the
+        // microphone is still being readied, so VoiceOver's own voice is not
+        // what the recognizer hears first; the begin tone marks the moment
+        // it is actually live.
+        switch newTurn {
+        case .listening: announceForVoiceOver(L10n.text("Listening"))
+        case .thinking: announceForVoiceOver(L10n.text("Thinking..."))
+        default: break
+        }
+    }
+
+    /// Say out loud that a model is loading, once, if thinking has lasted
+    /// three seconds and a load is the reason. Eyes-off there is otherwise
+    /// nothing at all for up to half a minute, and the natural reaction -
+    /// tapping or talking again - cancels the load and starts it over.
+    private func scheduleLoadingCue() {
+        loadingCueTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            guard !Task.isCancelled, isActive, inForeground, turn == .thinking,
+                  appState.engine.mlx.isPreparingModel, !voice.isSpeaking else { return }
+            voice.speak(modelLoadingMessage)
+        }
+    }
+
+    /// The app's own voice stays out of this: with VoiceOver off, the status
+    /// text, the tones and the haptics carry the same information.
+    private func announceForVoiceOver(_ text: String) {
+        guard UIAccessibility.isVoiceOverRunning else { return }
+        UIAccessibility.post(notification: .announcement, argument: text)
+    }
+
+    /// The circle is the screen's one big control.
+    private func indicatorTapped() {
+        if turn == .speaking || turn == .thinking || voice.isSpeaking {
+            // Barge-in: interrupt the answer (including any generation still
+            // streaming, which would otherwise speak over the user) and talk.
+            bargeIn()
+        } else if turn == .listening {
+            // Tap to send: don't wait for the pause. This used to do nothing,
+            // and "Tap to talk" is disabled while listening, so there was no
+            // way to say "that's all" except to stop talking and wait.
+            voice.finishListeningNow()
+        } else if turn == .idle {
+            beginListening()
+        }
     }
 
     private func beginListening() {

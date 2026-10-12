@@ -90,7 +90,7 @@ enum RecordingSummarizer {
             .split(whereSeparator: { $0.isWhitespace })
             .prefix(7)
         if words.isEmpty {
-            return L10n.text("Recording \(date.formatted(date: .abbreviated, time: .shortened))")
+            return L10n.text("Recording \(date.aigFormatted(date: .abbreviated, time: .shortened))")
         }
         var title = words.joined(separator: " ")
         if title.count > 60 { title = String(title.prefix(60)) }
@@ -147,9 +147,12 @@ enum RecordingSummarizer {
     }
 
     /// Condense a transcript into Markdown notes. `progress` reports 0...1.
+    /// `languageCode` is the recording's `languageCode` (the language it was
+    /// recognized in); the whole summary is asked for in that language.
     @MainActor
     static func summarize(
         transcript: String,
+        languageCode: String? = nil,
         engine: ChatEngine,
         progress: @MainActor (Double, String) -> Void = { _, _ in }
     ) async throws -> Result {
@@ -227,21 +230,32 @@ enum RecordingSummarizer {
         progress(0.85, L10n.text("Writing the summary"))
 
         let combined = notes.joined(separator: "\n\n")
+        // Headings and "None" in the user's language. Hard-coded English
+        // headings gave Russian or Japanese users mixed-language minutes,
+        // and contradicted the session's own "always respond in <language>"
+        // instruction, so a small model followed one or the other at random.
+        let summaryHeading = L10n.text("Summary")
+        let keyPointsHeading = L10n.text("Key points")
+        let actionItemsHeading = L10n.text("Action items")
+        let noneWord = L10n.text("None")
+        let languageLine = languageCode
+            .flatMap(Self.language(forCode:))
+            .map { " Write the whole result in \($0.englishName)." } ?? ""
         let finalPrompt = """
         Below are notes from a recording. Write the result in Markdown with exactly these three \
         sections and nothing else:
 
-        ## Summary
+        ## \(summaryHeading)
         Two or three sentences describing what the recording was about.
 
-        ## Key points
+        ## \(keyPointsHeading)
         Bullet points of the most important content.
 
-        ## Action items
+        ## \(actionItemsHeading)
         Bullet points in the form "Who - what - when" for anything someone said they would do. \
-        Write "None" if there are none.
+        Write "\(noneWord)" if there are none.
 
-        Use only what is in the notes. Do not invent names, dates or tasks.
+        Use only what is in the notes. Do not invent names, dates or tasks.\(languageLine)
 
         \(combined)
         """
@@ -282,6 +296,26 @@ enum RecordingSummarizer {
             case .nothingAvailable:
                 throw error
             }
+        }
+    }
+
+    /// The app language a recording's `languageCode` names. Codes come from
+    /// `VoiceService.voiceLocale` ("ru", "zh-Hans", "pt-BR", or a device
+    /// preference such as "en-GB" / "zh-Hant-HK" when the app follows the
+    /// device). Nil when none of the app's languages matches.
+    nonisolated static func language(forCode code: String) -> AppLanguage? {
+        let normalized = code.replacingOccurrences(of: "_", with: "-")
+        if let exact = AppLanguage(rawValue: normalized), exact != .automatic { return exact }
+        let lower = normalized.lowercased()
+        let parts = lower.split(separator: "-").map(String.init)
+        guard let base = parts.first else { return nil }
+        if base == "yue" { return .cantonese }
+        if base == "zh" {
+            return parts.contains("hk") || parts.contains("mo") ? .cantonese : .mandarin
+        }
+        return AppLanguage.allCases.first { language in
+            language != .automatic
+                && language.rawValue.lowercased().split(separator: "-").first.map(String.init) == base
         }
     }
 

@@ -272,6 +272,66 @@ PLUS
 
 As always: 100% private, 100% on-device. Your conversations never leave your iPhone.
 
+## Store listing refresh (PROPOSED Oct 11, 2026 - not live; for the next version)
+
+The live description predates the recorder, translate and Describe Surroundings. Paste these into
+the next version once Dmitry approves them.
+
+Subtitle (30 max): Private AI. Offline. No cloud.
+
+Keywords (100 max, no spaces, no words already in the name): offline,private,local,llm,chat,voice,translator,recorder,transcribe,summarize,pdf,ocr,siri,qwen
+
+Promotional Text (170 max): New: made for iPhone Duo. Record meetings and get private summaries, translate face to face, and hear what your camera sees. All on your device, even in airplane mode.
+
+Description:
+
+Your private AI that lives on your device. No cloud. No accounts. No subscriptions.
+
+AiGoodbye runs powerful AI models entirely on your iPhone and iPad. Talk to it, record a meeting, translate a conversation, scan a document or point the camera at the world. Nothing you type, say or show it ever leaves your device.
+
+TALK
+- Hands-free voice conversations, fully offline
+- Interrupt any time; it listens again on its own
+
+RECORD MEETINGS
+- Transcribes on your device as you speak, for hours
+- One tap for a summary with key points and action items
+- Keeps going with the screen locked; nothing is uploaded
+
+TRANSLATE
+- Two-way spoken translation between 13 languages, offline
+- Hands-free mode for real conversations across a table
+
+SEE
+- Ask about photos, screenshots and handwritten notes
+- Scan paper documents into text
+- Describe Surroundings: hear what the camera sees, built with blind and low-vision users
+
+READ YOUR DOCUMENTS
+- Ask questions about PDFs and text files
+- A private Knowledge Library the AI can draw on in every chat
+
+MAKE IT YOURS
+- Personas change how it answers
+- Private memory: say "Remember that..." and it stays on this device
+- Siri, Shortcuts, widgets, Control Center and the share sheet
+
+PRIVATE BY CONSTRUCTION
+- Privacy Center shows every network request the app makes
+- Face ID lock
+- App Privacy label: Data Not Collected
+
+CHOOSE YOUR AI
+- Apple Intelligence: instant, no download, on supported devices
+- Qwen3 Vision 2B: recommended, understands images, 30+ languages
+- Qwen3 Vision 8B Pro: maximum intelligence for 12 GB devices
+- Smol Vision 500M: light and fast for older iPhones
+- Or bring your own model from Hugging Face
+
+Downloaded models need 1 to 6 GB of free space (one-time download, Wi-Fi recommended). Apple Intelligence requires a supported device with Apple Intelligence turned on.
+
+Say goodbye to subscriptions, data tracking and cloud dependency. Say hello to AI that is truly yours.
+
 ## Description (replaces current, fixes the "Free to use forever" wording)
 
 Your private AI that lives on your iPhone. No cloud. No accounts. No subscriptions.

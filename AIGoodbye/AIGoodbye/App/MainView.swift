@@ -103,11 +103,18 @@ struct MainView: View {
                     .frame(width: chatWidth)
                     .frame(maxWidth: .infinity, alignment: twoPane ? .trailing : .leading)
                     .offset(x: twoPane ? 0 : reveal)
-                    .disabled(!twoPane && appState.showSideMenu)
+                    // Not `.disabled`: a disabled chat whose composer had
+                    // keyboard focus left the drawer's alerts (New Folder,
+                    // Rename) with buttons that ignored taps. The dim overlay
+                    // already takes every touch; this only makes sure.
+                    .allowsHitTesting(twoPane || !appState.showSideMenu)
                     .accessibilityHidden(!twoPane && appState.showSideMenu)
 
                 // Dimmed overlay while the drawer is open (or being dragged
                 // open). Never for the sidebar: the chat stays usable.
+                // Hidden from VoiceOver: it was a second "Close menu" beside
+                // the drawer's own X, and VoiceOver users also have the
+                // escape gesture on the drawer.
                 if !twoPane, reveal > 0 {
                     Color.black.opacity(0.3 * (reveal / menuWidth))
                         .ignoresSafeArea()
@@ -115,8 +122,7 @@ struct MainView: View {
                         .onTapGesture {
                             appState.toggleSideMenu()
                         }
-                        .accessibilityLabel(Text("Close menu"))
-                        .accessibilityAddTraits(.isButton)
+                        .accessibilityHidden(true)
                 }
 
                 // The list. Hidden from VoiceOver while off-screen - offset

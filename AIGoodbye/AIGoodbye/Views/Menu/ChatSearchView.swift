@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ChatSearchView: View {
     @EnvironmentObject var appState: AppState
@@ -17,6 +18,9 @@ struct ChatSearchView: View {
     /// faulting the whole store into memory each time.
     @State private var hits: [Hit] = []
     @State private var isSearching = false
+    /// Made on first use and kept while the sheet is open, so each
+    /// keystroke reuses one background context.
+    @State private var cachedIndex: ChatSearchIndex?
 
     private struct Hit: Identifiable {
         let id: UUID
@@ -57,9 +61,9 @@ struct ChatSearchView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(2)
-                                Text(hit.conversation.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                                Text(hit.conversation.updatedAt.aigRelative())
                                     .font(.caption2)
-                                    .foregroundStyle(.tertiary)
+                                    .foregroundStyle(.secondary)
                             }
                             .contentShape(Rectangle())
                         }
@@ -89,57 +93,71 @@ struct ChatSearchView: View {
                 // Let typing settle before scanning everything.
                 try? await Task.sleep(nanoseconds: 200_000_000)
                 guard !Task.isCancelled else { return }
-                hits = await search(needle)
+                let found = await search(needle)
+                // A newer keystroke owns the results now.
+                guard !Task.isCancelled else { return }
+                hits = found
                 isSearching = false
             }
         }
     }
 
-    /// Plain copies of the text to search, so the comparison of every
-    /// message in every chat (the slow part) can leave the main actor.
-    private struct Haystack: Sendable {
-        let id: UUID
-        let title: String
-        let preview: String
-        let messages: [String]
-    }
-
+    /// The matching itself runs in SQLite on a background context
+    /// (ChatSearchIndex): building plain copies of every message on the
+    /// main actor first - the previous approach - loaded the whole store
+    /// into memory on each keystroke and was the slow part. Only the ids
+    /// of the hits come back here, to be matched to the list's objects.
     private func search(_ needle: String) async -> [Hit] {
-        let conversations = appState.conversationManager.conversations
-        let haystacks = conversations.map { conversation in
-            Haystack(
+        let manager = appState.conversationManager
+        guard let container = manager.modelContainer else { return [] }
+        let searchIndex = await makeSearchIndex(for: container)
+
+        // Built here, not in the actor: the key paths belong to the models'
+        // own isolation. `localizedStandardContains` is what the Search
+        // field in Files and Mail does - case and diacritic insensitive.
+        let titles = FetchDescriptor<Conversation>(
+            predicate: #Predicate<Conversation> { $0.title.localizedStandardContains(needle) }
+        )
+        var messages = FetchDescriptor<Message>(
+            predicate: #Predicate<Message> { $0.content.localizedStandardContains(needle) },
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        )
+        // Enough for any realistic history; one chat with thousands of
+        // matches must not hold every other chat's hit hostage.
+        messages.fetchLimit = 2_000
+
+        let found = await searchIndex.search(needle: needle, titles: titles, messages: messages)
+        let byConversation = Dictionary(found.map { ($0.conversationID, $0) }, uniquingKeysWith: { first, _ in first })
+        // Back to the main context's objects, in the list's own order (most
+        // recent first), as before.
+        return manager.conversations.compactMap { conversation in
+            guard let match = byConversation[conversation.persistentModelID] else { return nil }
+            return Hit(
                 id: conversation.id,
-                title: conversation.title,
-                preview: conversation.previewText,
-                messages: conversation.messages.map(\.content)
+                conversation: conversation,
+                snippet: match.snippet ?? conversation.previewText,
+                isTitleMatch: match.snippet == nil
             )
         }
-        let matches = await Task.detached(priority: .userInitiated) { () -> [(UUID, String, Bool)] in
-            var results: [(UUID, String, Bool)] = []
-            for hay in haystacks {
-                if Task.isCancelled { break }
-                if hay.title.localizedCaseInsensitiveContains(needle) {
-                    results.append((hay.id, hay.preview, true))
-                    continue
-                }
-                if let message = hay.messages.first(where: { $0.localizedCaseInsensitiveContains(needle) }) {
-                    results.append((hay.id, Self.excerpt(of: message, around: needle), false))
-                }
-            }
-            return results
+    }
+
+    /// The background index, created off the main thread: a ModelActor's
+    /// context made on the main thread can end up running its work there,
+    /// which is the very thing this is for avoiding.
+    private func makeSearchIndex(for container: ModelContainer) async -> ChatSearchIndex {
+        if let cachedIndex { return cachedIndex }
+        let created = await Task.detached(priority: .userInitiated) {
+            ChatSearchIndex(modelContainer: container)
         }.value
-        let byId = Dictionary(uniqueKeysWithValues: conversations.map { ($0.id, $0) })
-        return matches.compactMap { id, snippet, isTitle in
-            guard let conversation = byId[id] else { return nil }
-            return Hit(id: id, conversation: conversation, snippet: snippet, isTitleMatch: isTitle)
-        }
+        cachedIndex = created
+        return created
     }
 
     /// A short window of text around the match, so the user sees context.
     /// Searches the ORIGINAL string: indices from `lowercased()` belong to a
     /// different string and can trap on characters whose case mapping
     /// changes length.
-    nonisolated private static func excerpt(of text: String, around needle: String, window: Int = 70) -> String {
+    nonisolated static func excerpt(of text: String, around needle: String, window: Int = 70) -> String {
         guard let range = text.range(of: needle, options: [.caseInsensitive, .diacriticInsensitive]) else {
             return String(text.prefix(120))
         }
@@ -149,5 +167,50 @@ struct ChatSearchView: View {
         if start > text.startIndex { snippet = "..." + snippet }
         if end < text.endIndex { snippet += "..." }
         return snippet
+    }
+}
+
+// MARK: - Background search
+
+/// One search result as plain values. Model objects belong to the context
+/// that fetched them and never cross to the main actor.
+nonisolated struct ChatSearchMatch: Sendable {
+    let conversationID: PersistentIdentifier
+    /// Text around the first match in a message; nil for a title match
+    /// (the row shows the chat's preview instead).
+    let snippet: String?
+}
+
+/// Runs chat search on its own context over the app's store, so SQLite
+/// does the matching and only hits are ever loaded.
+@ModelActor
+actor ChatSearchIndex {
+    func search(
+        needle: String,
+        titles: FetchDescriptor<Conversation>,
+        messages: FetchDescriptor<Message>
+    ) -> [ChatSearchMatch] {
+        var results: [ChatSearchMatch] = []
+        var seen = Set<PersistentIdentifier>()
+
+        // Identifiers only: a title match needs nothing else from the row.
+        if let ids = try? modelContext.fetchIdentifiers(titles) {
+            for id in ids where seen.insert(id).inserted {
+                results.append(ChatSearchMatch(conversationID: id, snippet: nil))
+            }
+        }
+
+        guard !Task.isCancelled, let matches = try? modelContext.fetch(messages) else { return results }
+        // Newest first, so each chat's snippet comes from its latest match.
+        for message in matches {
+            if Task.isCancelled { break }
+            guard let conversationID = message.conversation?.persistentModelID,
+                  seen.insert(conversationID).inserted else { continue }
+            results.append(ChatSearchMatch(
+                conversationID: conversationID,
+                snippet: ChatSearchView.excerpt(of: message.content, around: needle)
+            ))
+        }
+        return results
     }
 }

@@ -16,7 +16,9 @@ import CryptoKit
 
 @MainActor
 class ConversationManager: ObservableObject {
-    private var modelContainer: ModelContainer?
+    /// Readable so background work (ChatSearchIndex) can open its own
+    /// context on the same store; nil until `initialize` succeeds.
+    private(set) var modelContainer: ModelContainer?
     private var modelContext: ModelContext?
 
     @Published var conversations: [Conversation] = []
@@ -111,11 +113,33 @@ class ConversationManager: ObservableObject {
         resortConversations()
     }
 
+    /// Naming a chat is not activity in it: `updatedAt` stays put, so a
+    /// renamed old chat does not jump to the top of Recent Chats.
+    func renameConversation(_ conversation: Conversation, to name: String) {
+        let trimmed = name
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed != conversation.title else { return }
+        conversation.title = trimmed
+        save()
+        // The list holds the same objects, so `conversations` does not
+        // change; AppState forwards this to the views that show titles.
+        objectWillChange.send()
+    }
+
     func deleteConversation(_ conversation: Conversation) {
         deleteAttachmentFiles(for: conversation)
+        // The composer keeps an unsent draft per chat (ChatViewModel); it
+        // must not outlive the chat it belongs to.
+        UserDefaults.standard.removeObject(forKey: Self.draftKey(for: conversation.id))
         modelContext?.delete(conversation)
         save()
         conversations.removeAll { $0.id == conversation.id }
+    }
+
+    /// The UserDefaults key ChatViewModel stores a conversation's draft under.
+    nonisolated static func draftKey(for id: UUID) -> String {
+        "draft.\(id.uuidString)"
     }
 
     func getConversations(in folder: Folder? = nil) -> [Conversation] {
@@ -171,12 +195,59 @@ class ConversationManager: ObservableObject {
     /// of "New Chat" used to create a permanent row whether or not the user
     /// said anything.
     func sweepEmptyConversations() {
-        let empties = conversations.filter { $0.messages.isEmpty && $0.folderId == nil }
+        let empties = emptyRootConversations()
         guard empties.count > 1 else { return }
         // Keep the most recent one so the user still lands on a blank chat.
-        for conversation in empties.sorted(by: { $0.updatedAt > $1.updatedAt }).dropFirst() {
+        for conversation in empties.dropFirst() {
             deleteConversation(conversation)
         }
+    }
+
+    /// The newest untitled, message-less chat outside any folder: the one
+    /// New Chat should reuse instead of stacking up identical blank rows.
+    func emptyRootConversation() -> Conversation? {
+        emptyRootConversations(limit: 1).first
+    }
+
+    /// Blank root chats, newest first.
+    ///
+    /// The candidates come from the stored counters in one SQLite query, so
+    /// no chat that has messages gets its messages loaded - this ran over
+    /// every conversation at launch and on every New Chat. A
+    /// `messages.isEmpty` predicate would be the direct query, but a to-many
+    /// `isEmpty` is not a translation SwiftData documents, and getting this
+    /// query wrong deletes conversations. So the relationship still has the
+    /// final word, for the candidates only.
+    ///
+    /// Untitled only: a chat the user named, or one that was cleared but
+    /// kept its title, is theirs - not a leftover to reuse or sweep.
+    private func emptyRootConversations(limit: Int? = nil) -> [Conversation] {
+        guard let context = modelContext else { return [] }
+        let descriptor = FetchDescriptor<Conversation>(
+            predicate: #Predicate<Conversation> { conversation in
+                conversation.folderId == nil
+                    && conversation.messageCount == 0
+                    && conversation.lastPreview == ""
+                    && conversation.title == "New Chat"
+            },
+            sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+        )
+        guard let candidates = try? context.fetch(descriptor) else { return [] }
+        var empties: [Conversation] = []
+        var healed = false
+        for conversation in candidates {
+            if conversation.messages.isEmpty {
+                empties.append(conversation)
+                if let limit, empties.count >= limit { break }
+            } else {
+                // Saved before the counters existed: fill them in, so this
+                // chat is never a candidate again.
+                conversation.refreshListSummary()
+                healed = true
+            }
+        }
+        if healed { save() }
+        return empties
     }
 
     /// Delete image files no conversation references anymore - left behind by
@@ -243,12 +314,15 @@ class ConversationManager: ObservableObject {
         message.conversation = conversation
         conversation.messages.append(message)
         conversation.updatedAt = Date()
+        // The new message is the newest, so the row summary is just this
+        // (the relationship is loaded anyway after the append).
+        conversation.lastPreview = Conversation.plainPreview(content)
+        conversation.messageCount = conversation.messages.count
 
-        // Auto-update title from first user message
-        if role == .user && conversation.messages.count == 1 {
-            // Don't include "[Image attached]" prefix in title
-            let titleContent = content.replacingOccurrences(of: "[Image attached] ", with: "")
-            conversation.updateTitle(from: titleContent)
+        // Title from the first thing the user says, while the chat is still
+        // untitled - a chat the user renamed keeps its name.
+        if role == .user && conversation.title == "New Chat" {
+            conversation.updateTitle(from: Self.titleSource(for: content))
         }
 
         save()
@@ -256,9 +330,21 @@ class ConversationManager: ObservableObject {
         return message
     }
 
+    /// The text a chat title is made from. Document questions are stored
+    /// as "[lease.pdf] Summarize the key terms" (the bubble and exports read
+    /// that format), which made the title "[lease.pdf] Summarize the...".
+    nonisolated static func titleSource(for content: String) -> String {
+        guard let prefix = content.range(of: #"^\[(.+?)\] "#, options: .regularExpression) else {
+            return content
+        }
+        let question = content[prefix.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
+        if !question.isEmpty { return question }
+        // Only a file was sent: its name is the best title there is.
+        return String(content[prefix].dropFirst().dropLast(2))
+    }
+
     func deleteMessage(_ message: Message) {
-        modelContext?.delete(message)
-        save()
+        deleteMessages([message])
     }
 
     /// Delete many messages with one save: Clear Chat on a long
@@ -266,6 +352,20 @@ class ConversationManager: ObservableObject {
     /// the app for seconds.
     func deleteMessages(_ messages: [Message]) {
         guard !messages.isEmpty else { return }
+        // Each chat's row summary is worked out from the survivors BEFORE
+        // deleting: a deleted model must not be read again.
+        let doomed: Set<UUID> = Set(messages.map { $0.id })
+        var affected: [Conversation] = []
+        for message in messages {
+            guard let conversation = message.conversation,
+                  !affected.contains(where: { $0 === conversation }) else { continue }
+            affected.append(conversation)
+        }
+        for conversation in affected {
+            conversation.refreshListSummary(
+                from: conversation.messages.filter { !doomed.contains($0.id) }
+            )
+        }
         for message in messages {
             modelContext?.delete(message)
         }
@@ -395,6 +495,12 @@ class ConversationManager: ObservableObject {
             for name in names {
                 try? FileManager.default.removeItem(at: Self.imagesDirectory.appendingPathComponent(name))
             }
+        }
+
+        // Unsent drafts are conversation text too.
+        let defaults = UserDefaults.standard
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix("draft.") {
+            defaults.removeObject(forKey: key)
         }
 
         conversations.removeAll()

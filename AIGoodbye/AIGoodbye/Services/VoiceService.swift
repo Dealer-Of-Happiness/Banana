@@ -15,8 +15,10 @@
 
 import Foundation
 import AVFoundation
+import AudioToolbox
 import Speech
 import Combine
+import UIKit
 
 /// Thread-safe level meter written from the audio render thread.
 final class MicLevelBox: @unchecked Sendable {
@@ -60,6 +62,16 @@ final class VoiceService: NSObject, ObservableObject {
     /// "Speaking" forever with nothing playing. `onFinishedSpeaking` is NOT
     /// called in this case.
     var onSpeechInterrupted: (() -> Void)?
+
+    /// Play the system begin/end-recording tones when the microphone opens
+    /// and closes. Set by the owning screen from `settings.listeningSounds`;
+    /// the service deliberately doesn't reach into app state itself.
+    var playsListeningSounds = false
+
+    /// Speaking rate for everything this service says. Set by the owning
+    /// screen from `settings.speechRate`; blind and low-vision users often
+    /// listen far faster than the default.
+    var speechRate: Float = AVSpeechUtteranceDefaultSpeechRate
 
     /// `var`, not `let`: after a media-services reset every audio object is
     /// invalid and the engine has to be built again, or every later start
@@ -260,6 +272,10 @@ final class VoiceService: NSObject, ObservableObject {
             listenStartedAt = Date()
             listeningState = .listening
             startTimers()
+            // The moment the microphone is really live, not when the listen
+            // was asked for: eyes-off (walking, a phone on the table, a blind
+            // user) this tone is the only way to know when to start talking.
+            playListeningSound(Self.beginListeningSound)
         } catch {
             guard generation == listenGeneration else { return }
             failStart()
@@ -337,11 +353,30 @@ final class VoiceService: NSObject, ObservableObject {
         levelTimer = level
     }
 
+    /// "Tap to send": end the user's turn now instead of waiting for the
+    /// pause. What was heard so far is delivered through
+    /// `onFinalTranscript`; with nothing heard (or the engine still getting
+    /// ready) the listen simply ends through `onListeningEnded`. Tapping the
+    /// lit microphone used to call `stopListening`, which threw the sentence
+    /// away and made the speaker say it all again.
+    func finishListeningNow() {
+        switch listeningState {
+        case .listening:
+            finishListening()
+        case .preparing:
+            stopListening(notify: true)
+        case .idle, .unavailable:
+            break
+        }
+    }
+
     /// Ends the turn and delivers the final transcript.
     private func finishListening() {
         guard listeningState == .listening else { return }
         let text = liveTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
         stopListening(notify: false)
+        // "Heard you, the microphone is closed" - before the answer starts.
+        playListeningSound(Self.endListeningSound)
         if !text.isEmpty {
             onFinalTranscript?(text)
         } else {
@@ -359,6 +394,16 @@ final class VoiceService: NSObject, ObservableObject {
             listeningState = .idle
             if notify { onListeningEnded?() }
         }
+    }
+
+    /// The system's own begin/end dictation tones, so they sound like the
+    /// rest of iOS rather than something the app invented.
+    private static let beginListeningSound: SystemSoundID = 1113
+    private static let endListeningSound: SystemSoundID = 1114
+
+    private func playListeningSound(_ sound: SystemSoundID) {
+        guard playsListeningSounds else { return }
+        AudioServicesPlaySystemSound(sound)
     }
 
     /// Tear down recognition + audio graph. Safe to call repeatedly.
@@ -385,6 +430,10 @@ final class VoiceService: NSObject, ObservableObject {
         case .record:
             try session.setCategory(.playAndRecord, mode: .spokenAudio,
                                     options: [.defaultToSpeaker, .duckOthers, .allowBluetoothHFP])
+            // iOS mutes system sounds and haptics while an app records, which
+            // would swallow the listening tones and the screens' haptics at
+            // exactly the moments they exist for. Best effort.
+            try? session.setAllowHapticsAndSystemSoundsDuringRecording(true)
         case .playback:
             try session.setCategory(.playback, mode: .spokenAudio,
                                     options: [.duckOthers])
@@ -526,7 +575,13 @@ final class VoiceService: NSObject, ObservableObject {
 
         let utterance = AVSpeechUtterance(string: spoken)
         utterance.voice = AVSpeechSynthesisVoice(language: voiceLanguageCode)
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        utterance.rate = min(max(speechRate, AVSpeechUtteranceMinimumSpeechRate), AVSpeechUtteranceMaximumSpeechRate)
+        // A VoiceOver user has usually spent years tuning VoiceOver's voice
+        // and rate; when it is running, those win over ours, so the app does
+        // not suddenly speak in a different, slower voice.
+        if UIAccessibility.isVoiceOverRunning {
+            utterance.prefersAssistiveTechnologySettings = true
+        }
         pendingUtterances += 1
         isSpeaking = true
         synthesizer.speak(utterance)
@@ -614,6 +669,9 @@ final class VoiceService: NSObject, ObservableObject {
             if cleaned.hasPrefix("- ") || cleaned.hasPrefix("* ") || cleaned.hasPrefix("+ ") {
                 cleaned = String(cleaned.dropFirst(2))
             }
+            // Before the marker stripping below: an address can contain "*"
+            // or "__", and the link syntax needs its brackets intact.
+            cleaned = speakableLinks(in: cleaned)
             // Table pipes and emphasis/inline-code markers.
             cleaned = cleaned.replacingOccurrences(of: "|", with: " ")
             cleaned = cleaned.replacingOccurrences(of: "**", with: "")
@@ -625,6 +683,28 @@ final class VoiceService: NSObject, ObservableObject {
             result += cleaned + (cleaned.hasSuffix(".") ? " " : ". ")
         }
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// "[the guide](https://...)" is read as "the guide", and a bare address
+    /// as the word "link" - spelling one out ("h t t p s colon slash
+    /// slash...") took ten seconds of every answer that contained one.
+    nonisolated private static func speakableLinks(in line: String) -> String {
+        guard line.contains("](") || line.contains("://") else { return line }
+        // Markdown links and images: keep the label (or alt text).
+        var result = line.replacingOccurrences(
+            of: #"!?\[([^\]]*)\]\([^)]*\)"#,
+            with: "$1",
+            options: .regularExpression
+        )
+        // Bare and <angle-bracketed> addresses. Escaped, because a
+        // translated word is used as a regex replacement template.
+        let word = NSRegularExpression.escapedTemplate(for: L10n.text("link"))
+        result = result.replacingOccurrences(
+            of: #"<?https?://[^\s<>)\]]+>?"#,
+            with: word,
+            options: [.regularExpression, .caseInsensitive]
+        )
+        return result
     }
 }
 
@@ -667,15 +747,30 @@ enum SpeechChunker {
         var lastBoundary: String.Index?
         var index = start
         while index < text.endIndex {
-            if boundaries.contains(text[index]) {
+            let next = text.index(after: index)
+            if boundaries.contains(text[index]), endsSentence(text, at: index, next: next) {
                 lastBoundary = index
             }
-            index = text.index(after: index)
+            index = next
         }
         guard let boundary = lastBoundary else { return nil }
         let end = text.index(after: boundary)
         // Avoid speaking tiny fragments like "1." mid-list.
         if text.distance(from: start, to: end) < 12 { return nil }
         return start..<end
+    }
+
+    /// A Latin full stop ends a sentence only when whitespace follows it.
+    /// Without the look-ahead a snapshot ending in "costs 3." was spoken
+    /// before "5 dollars" streamed in ("three. five dollars"), and decimals
+    /// like "3.14" split the same way. A full stop at the very end of the text
+    /// waits for the next snapshot - or for the end of the answer, whose
+    /// remainder the caller speaks anyway. "。" and the other marks never
+    /// appear inside numbers, so they need no look-ahead (and CJK text has
+    /// no space after "。" to look for).
+    private static func endsSentence(_ text: String, at index: String.Index, next: String.Index) -> Bool {
+        guard text[index] == "." else { return true }
+        guard next < text.endIndex else { return false }
+        return text[next].isWhitespace
     }
 }

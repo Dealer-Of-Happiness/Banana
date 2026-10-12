@@ -36,7 +36,7 @@ enum ModelValidationError: LocalizedError {
         case .missingFiles:
             return L10n.text("This repository isn't an MLX model. Look for a version converted for MLX - the mlx-community organization publishes thousands of them.")
         case .tooLargeForDevice(let neededGB, let deviceGB):
-            return L10n.text("This model needs about \(neededGB) GB of memory and this device has \(deviceGB) GB. It would run out of memory.")
+            return L10n.text("This model needs about \(neededGB) GB of memory, and apps on this iPhone can use about \(deviceGB) GB. It would run out of memory.")
         case .notEnoughSpace(let needed, let free):
             return L10n.text("This model needs \(needed) and only \(free) is free.")
         case .alreadyAdded:
@@ -195,23 +195,23 @@ enum HuggingFaceValidator {
         guard sizeBytes > 0 else { throw ModelValidationError.missingFiles }
 
         // Memory: refuse before the download rather than crashing after it.
-        // Compared against the device's stable budget, and the message quotes
-        // the same number - it used to compare against instantaneous free
-        // memory and then report physical RAM, so a 12 GB phone was told a
-        // 2 GB model wouldn't fit on a device with 12 GB.
+        // The same gate as the picker and the load preflight
+        // (`AIModel.fitsThisDevice`), and the message quotes the number that
+        // gate used. A stricter budget here once refused a 5.8 GB model on
+        // the 12 GB phones that run the built-in 8B Pro of the same size.
         let neededGB = AIModel.workingSetGB(forModelBytes: sizeBytes)
-        let budgetGB = DeviceCapability.memoryBudgetGB
-        if neededGB > budgetGB {
+        let ceilingGB = DeviceCapability.memoryCeilingGB
+        if neededGB > ceilingGB {
             throw ModelValidationError.tooLargeForDevice(
-                neededGB: neededGB, deviceGB: budgetGB
+                neededGB: neededGB, deviceGB: ceilingGB
             )
         }
 
         // Disk: leave a gigabyte of headroom for iOS itself.
         if let free = freeDiskBytes(), free < sizeBytes + 1_000_000_000 {
             throw ModelValidationError.notEnoughSpace(
-                needed: ByteCountFormatter.string(fromByteCount: sizeBytes, countStyle: .file),
-                free: ByteCountFormatter.string(fromByteCount: free, countStyle: .file)
+                needed: AIModel.formattedBytes(sizeBytes),
+                free: AIModel.formattedBytes(free)
             )
         }
 

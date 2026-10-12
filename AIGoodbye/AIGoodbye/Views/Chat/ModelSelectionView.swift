@@ -12,6 +12,11 @@ struct ModelSelectionView: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject private var modelManager = ModelManager.shared
     @Environment(\.dismiss) private var dismiss
+    /// Lines the download control up with the row text, past the checkmark
+    /// column; scaled so it stays aligned at large text sizes.
+    @ScaledMetric(relativeTo: .body) private var checkmarkIndent: CGFloat = 29
+    /// Rows whose full description is open.
+    @State private var expandedIds: Set<String> = []
 
     var body: some View {
         NavigationStack {
@@ -31,6 +36,11 @@ struct ModelSelectionView: View {
                 }
             }
         }
+        // The unavailable row tells people to turn Apple Intelligence on in
+        // Settings; when they come back having done it, the row must say so.
+        // (A flip to available also moves a selection that could not answer
+        // yet - see `ChatEngine.adoptAppleIntelligenceIfNothingDownloaded`.)
+        .onAppear { appState.engine.appleIntelligence.refreshAvailability() }
     }
 
     // MARK: - Sections
@@ -52,6 +62,14 @@ struct ModelSelectionView: View {
             ForEach(downloadableChoices) { model in
                 modelRow(for: model)
             }
+
+            // Where people look for more models; it used to live only under
+            // Settings > Manage Storage > Your Models.
+            NavigationLink {
+                AddCustomModelView()
+            } label: {
+                Label("Add a model from Hugging Face", systemImage: "plus.circle")
+            }
         } header: {
             Text("Downloadable")
         } footer: {
@@ -59,25 +77,73 @@ struct ModelSelectionView: View {
         }
     }
 
-    /// Picker choices minus the built-in entry, which has its own section.
+    /// Every downloadable model, including the ones too large for this
+    /// device - shown disabled with the reason, so nobody goes looking for
+    /// the Pro model the store page mentions. Legacy models only when they
+    /// are still on disk.
     private var downloadableChoices: [AIModel] {
-        appState.engine.availableChoices.filter { $0.backend != .appleIntelligence }
+        let models = AIModel.allModels.filter { !$0.isLegacy || $0.isDownloaded }
+        // The Recommended model first: on a 12 GB phone the catalog order
+        // put the 8B Pro above it, so the first thing offered was the
+        // slowest, largest download.
+        let recommendedId = AIModel.recommendedDownloadModel.id
+        return models.filter { $0.id == recommendedId } + models.filter { $0.id != recommendedId }
     }
 
     // MARK: - Rows
 
     private func modelRow(for model: AIModel) -> some View {
         let isSelected = appState.engine.selectedModel.id == model.id
-        return Button {
-            appState.engine.select(model)
-            dismiss()
-        } label: {
-            ModelChoiceRow(model: model, isSelected: isSelected)
-                .contentShape(Rectangle())
+        let fits = model.fitsThisDevice()
+        let isExpanded = expandedIds.contains(model.id)
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 4) {
+                Button {
+                    appState.engine.select(model)
+                    dismiss()
+                } label: {
+                    ModelChoiceRow(model: model, isSelected: isSelected, fits: fits, notice: notice(for: model))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(!fits)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(accessibilityLabel(for: model, isSelected: isSelected, fits: fits))
+
+                // The catalog's long description ("Requires a phone with
+                // 12 GB of RAM... slower than the 2B model") is the only
+                // place "Pro" is explained; it was translated and never shown.
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        if isExpanded { expandedIds.remove(model.id) } else { expandedIds.insert(model.id) }
+                    }
+                } label: {
+                    Image(systemName: isExpanded ? "info.circle.fill" : "info.circle")
+                        .foregroundStyle(.blue)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(Text("Details"))
+                .accessibilityAddTraits(isExpanded ? [.isSelected] : [])
+            }
+
+            if isExpanded {
+                Text(model.fullDescription)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, checkmarkIndent)
+            }
+
+            // A sibling of the row's button, not inside it: a button nested
+            // in another button's label fires both.
+            if fits, model.backend == .mlx,
+               !model.isDownloaded || appState.engine.mlx.loadingModelId == model.id {
+                ModelDownloadControl(model: model, engine: appState.engine)
+                    .padding(.leading, checkmarkIndent)
+            }
         }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityLabel(for: model, isSelected: isSelected))
     }
 
     /// Shown when Apple Intelligence is not usable on this device. Not tappable.
@@ -107,10 +173,25 @@ struct ModelSelectionView: View {
         return ""
     }
 
+    /// A limitation worth knowing before choosing: Apple Intelligence does
+    /// not speak every language the app does.
+    private func notice(for model: AIModel) -> String? {
+        guard model.backend == .appleIntelligence,
+              let language = appState.engine.appleIntelligence.unsupportedLanguageName else { return nil }
+        return L10n.text("Doesn't support \(language)")
+    }
+
     // MARK: - Accessibility
 
-    private func accessibilityLabel(for model: AIModel, isSelected: Bool) -> String {
+    private func accessibilityLabel(for model: AIModel, isSelected: Bool, fits: Bool) -> String {
         var parts: [String] = [model.name, model.shortDescription, model.size, model.memoryRequired]
+        if let notice = notice(for: model) {
+            parts.append(notice)
+        }
+        if !fits {
+            parts.append(L10n.text("Too large for this iPhone"))
+            return parts.joined(separator: ", ")
+        }
         if model.id == AIModel.recommendedDownloadModel.id {
             parts.append(L10n.text("Recommended"))
         }
@@ -131,6 +212,9 @@ struct ModelSelectionView: View {
 private struct ModelChoiceRow: View {
     let model: AIModel
     let isSelected: Bool
+    /// False for a model this device can never run: shown, but not choosable.
+    var fits: Bool = true
+    var notice: String?
 
     private var isRecommended: Bool {
         model.id == AIModel.recommendedDownloadModel.id
@@ -150,6 +234,7 @@ private struct ModelChoiceRow: View {
                 HStack(spacing: 8) {
                     Text(model.name)
                         .font(.headline)
+                        .foregroundStyle(fits ? Color.primary : Color.secondary)
 
                     if isRecommended {
                         Text("Recommended")
@@ -178,10 +263,34 @@ private struct ModelChoiceRow: View {
                 }
                 .accessibilityHidden(true)
 
-                if model.backend == .mlx && !model.isDownloaded {
-                    HStack(spacing: 4) {
-                        Text("Not downloaded")
+                if let notice {
+                    Label {
+                        Text(notice)
+                            .foregroundStyle(.secondary)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
+                    }
+                    .font(.caption)
+                }
+
+                if !fits {
+                    Label {
+                        Text("Too large for this iPhone")
+                            .foregroundStyle(.secondary)
+                    } icon: {
+                        Image(systemName: "nosign")
+                            .foregroundStyle(.secondary)
+                    }
+                    .font(.caption)
+                } else if model.backend == .mlx && !model.isDownloaded {
+                    // Colour on the icon only: orange caption text on white
+                    // is about 2:1, unreadable for low vision.
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.down.circle")
+                            .foregroundStyle(.orange)
+                        Text("Not downloaded")
+                            .foregroundStyle(.secondary)
                         Text("Downloads on first use")
                             .foregroundStyle(.secondary)
                     }
@@ -198,6 +307,116 @@ private struct ModelChoiceRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Download Control
+
+/// "Download" for a model that is not on this device yet, with its progress
+/// and any failure shown in place. Never changes the selection: this is for
+/// fetching a model ahead of time - the vision model before a trip, the Pro
+/// model on home Wi-Fi - not for switching to it. Used by the picker and by
+/// the storage screen.
+struct ModelDownloadControl: View {
+    let model: AIModel
+    @ObservedObject var engine: ChatEngine
+    @State private var errorMessage: String?
+
+    private var mlx: MLXService { engine.mlx }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if mlx.loadingModelId == model.id {
+                progress
+            } else if !model.isDownloaded {
+                Button {
+                    startDownload()
+                } label: {
+                    Label("Download", systemImage: "arrow.down.circle")
+                        .font(.subheadline.weight(.medium))
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
+                // One model moves at a time: starting a load now would cancel
+                // whatever is loading, or pull the weights out from under an
+                // answer being written.
+                .disabled(mlx.isBusy)
+            }
+
+            if let errorMessage {
+                Label {
+                    Text(errorMessage)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
+                .font(.caption)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var progress: some View {
+        if mlx.isPreparingModel && !mlx.isDownloading {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Preparing \(model.name)...")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 4) {
+                ProgressView(value: mlx.downloadProgress)
+                Text(progressText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                if mlx.isWaitingForWiFi {
+                    Text("Waiting for Wi-Fi. Connect to Wi-Fi, or turn off \"Download over Wi-Fi only\" in Settings.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if mlx.isDownloadStalled {
+                    Text("Download stalled. Check your internet connection.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.updatesFrequently)
+        }
+    }
+
+    private var progressText: String {
+        if mlx.totalDownloadBytes > 1, mlx.downloadedBytes > 0 {
+            let done = AIModel.formattedBytes(mlx.downloadedBytes)
+            let total = AIModel.formattedBytes(mlx.totalDownloadBytes)
+            return L10n.text("Downloading \(model.name) · \(done) of \(total)")
+        }
+        return L10n.text("Downloading...")
+    }
+
+    private func startDownload() {
+        errorMessage = nil
+        let engine = self.engine
+        let model = self.model
+        engine.approveDownload(for: model)
+        Task {
+            do {
+                try await engine.prepare(model)
+                // Fetched ahead of time, not chosen: don't keep gigabytes of
+                // weights resident for a model nothing is using.
+                engine.releaseBorrowedVisionModel(model)
+            } catch is CancellationError {
+                // Stopped on purpose; nothing to explain.
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 }
 

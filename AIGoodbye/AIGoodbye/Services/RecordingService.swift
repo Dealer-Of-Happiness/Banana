@@ -322,6 +322,9 @@ final class RecordingService: NSObject, ObservableObject {
         // accurate on long recordings than the older recognizer.
         let locale = VoiceService.voiceLocale(for: language)
         transcriber.customVocabulary = customVocabulary
+        // A recording is read later as a document: paragraphs where the
+        // speaker paused, instead of one wall of text.
+        transcriber.breaksParagraphsOnPauses = true
         transcriber.onText = { [weak self] text in
             self?.transcript = text
         }
@@ -620,12 +623,9 @@ final class RecordingService: NSObject, ObservableObject {
             // A stall dropped some audio. That is a gap, not a dead file, and
             // saying so is better than an ominous silence.
             let seconds = max(1, Int((Double(dropped) * 4096 / 48_000).rounded()))
-            // Two keys rather than one plural rule: not every catalog
-            // language has the rule filled in, and "1 seconds" is wrong in
-            // all of them.
-            notice = seconds == 1
-                ? L10n.text("About 1 second of audio was dropped because the device couldn't keep up. The transcript is unaffected.")
-                : L10n.text("About \(seconds) seconds of audio were dropped because the device couldn't keep up. The transcript is unaffected.")
+            // One key with plural variations in every language (Russian and
+            // Ukrainian need three forms: 1, 2-4 and 5+ seconds).
+            notice = L10n.text("About \(seconds) seconds of audio were dropped because the device couldn't keep up. The transcript is unaffected.")
         }
 
         transcript = text

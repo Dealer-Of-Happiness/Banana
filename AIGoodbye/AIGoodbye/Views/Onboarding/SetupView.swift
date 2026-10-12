@@ -36,18 +36,12 @@ struct SetupView: View {
         modelManager.isModelDownloaded(chosen)
     }
 
-    /// Models this device can actually run.
-    ///
-    /// Filtered by the memory the app can really have, not by physical RAM -
-    /// otherwise the button offers a download that `performLoad` will refuse
-    /// the moment it starts, and the sheet just closes with nothing
-    /// happening.
+    /// Models this device can run - the same gate as the picker and the
+    /// load preflight (`AIModel.fitsThisDevice`). Not filtered by what is
+    /// free at this instant: that hid models the picker offered, and a
+    /// momentary shortage is reported at load time with what to do about it.
     private var choices: [AIModel] {
-        AIModel.builtInModels.filter {
-            !$0.isLegacy
-                && $0.fitsThisDevice()
-                && DeviceCapability.canLoad(workingSetGB: AIModel.workingSetGB(forModelBytes: $0.sizeBytes))
-        }
+        AIModel.builtInModels.filter { !$0.isLegacy && $0.fitsThisDevice() }
     }
 
     var body: some View {
@@ -75,7 +69,12 @@ struct SetupView: View {
                 }
             }
         }
-        .onAppear(perform: startWatchingNetwork)
+        .onAppear {
+            startWatchingNetwork()
+            // Apple Intelligence may have been switched on, or finished
+            // preparing, since launch; the "ready" card depends on it.
+            appState.engine.appleIntelligence.refreshAvailability()
+        }
         .onDisappear {
             monitor?.cancel()
             monitor = nil
@@ -101,9 +100,15 @@ struct SetupView: View {
 
     private var readyCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("You're ready to go", systemImage: "checkmark.circle.fill")
-                .font(.headline)
-                .foregroundStyle(.green)
+            // Green on the icon only: green headline text on white is
+            // about 2:1.
+            Label {
+                Text("You're ready to go")
+            } icon: {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            }
+            .font(.headline)
             Text("Apple Intelligence is built into this device, so you can start chatting straight away with no download at all.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -180,7 +185,18 @@ struct SetupView: View {
             }
 
             Button {
-                appState.engine.select(chosen)
+                // With Apple Intelligence available the download is an add-on
+                // for photos: text keeps going to the instant built-in model
+                // (image questions already borrow the vision model). Selecting
+                // the download here used to route every plain question to it
+                // and lock the composer for the whole 1.8 GB. Someone who
+                // already chose a downloaded model (and is here because it
+                // failed to load) still gets the one they pick now.
+                let keepsAppleIntelligence = appleIntelligenceReady
+                    && appState.engine.selectedModel.backend == .appleIntelligence
+                if !keepsAppleIntelligence {
+                    appState.engine.select(chosen)
+                }
                 appState.engine.approveDownload(for: chosen)
                 let engine = appState.engine
                 let chat = appState.chatViewModel

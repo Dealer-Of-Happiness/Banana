@@ -45,6 +45,14 @@ final class MLXService: ObservableObject {
     /// cellular or another expensive path. The system waits silently (for
     /// hours) in that state, so the chip has to say what is going on.
     @Published private(set) var isWaitingForWiFi: Bool = false
+    /// Seconds left in the running download, from the last ten seconds of
+    /// throughput. Nil until there is enough data for an honest figure, and
+    /// whenever the transfer is parked or stalled - "about 4 min left" on a
+    /// frozen bar is worse than no estimate.
+    @Published private(set) var estimatedSecondsRemaining: TimeInterval?
+
+    /// Recent (time, bytes) samples for the estimate.
+    private var throughputSamples: [(time: Date, bytes: Int64)] = []
 
     /// Last moment download bytes moved; drives the stall warning.
     private var lastDownloadActivity = Date()
@@ -86,8 +94,13 @@ final class MLXService: ObservableObject {
 
     /// Full system prompt: brand and behavior, the response-language rule,
     /// the active persona, and anything the user asked the app to remember.
+    ///
+    /// - Parameter memoryTokens: how much of the window remembered facts may
+    ///   take (the newest that fit go in). Apple Intelligence passes
+    ///   `AppleIntelligenceService.memoryBudgetTokens`; downloaded models an
+    ///   eighth of the window they actually get.
     @MainActor
-    static func systemPrompt(for language: AppLanguage) -> String {
+    static func systemPrompt(for language: AppLanguage, memoryTokens: Int) -> String {
         var prompt = basePrompt + " " + language.modelInstruction
 
         let persona = PersonaStore.shared.activeInstructions
@@ -95,7 +108,7 @@ final class MLXService: ObservableObject {
             prompt += "\n\n" + persona
         }
 
-        let memory = MemoryStore.shared.promptBlock
+        let memory = MemoryStore.shared.promptBlock(maxTokens: memoryTokens)
         if !memory.isEmpty {
             prompt += "\n\n" + memory
         }
@@ -125,11 +138,23 @@ final class MLXService: ObservableObject {
         }
         monitor.start(queue: DispatchQueue.global(qos: .utility))
         pathMonitor = monitor
+    }
 
+    /// Whether MLX's Metal allocator has been configured in this process.
+    private static var metalConfigured = false
+
+    /// Cap the MLX GPU cache to prevent memory accumulation during inference
+    /// (20 MB follows the official mlx-swift-examples guidance for iOS).
+    ///
+    /// Done on the first load, not at launch: setting the limit creates
+    /// MLX's Metal device and allocator, which cost launch time and a few MB
+    /// for every user - most of whom, on Apple Intelligence, never load a
+    /// downloaded model in a given session. (Never touch MLX's Metal device
+    /// in the simulator; it aborts.)
+    private static func configureMetalIfNeeded() {
+        guard !metalConfigured else { return }
+        metalConfigured = true
         #if !targetEnvironment(simulator)
-        // Cap the MLX GPU cache to prevent memory accumulation during inference.
-        // 20 MB follows the official mlx-swift-examples guidance for iOS.
-        // (Never touch MLX's Metal device in the simulator; it aborts.)
         Memory.cacheLimit = 20 * 1024 * 1024
         #endif
     }
@@ -225,18 +250,32 @@ final class MLXService: ObservableObject {
             throw MLXError.unsupportedBackend(model.name)
         }
 
+        // Before any weights exist, so the cache limit is in place for them.
+        Self.configureMetalIfNeeded()
+
+        // Memory preflight, before spending minutes downloading something
+        // that would be killed the moment it loads. Two different answers:
+        // a model that can never fit this device says so (closing apps
+        // cannot help) - checked before unloading, so refusing it costs the
+        // working model nothing - and one that fits but finds too little
+        // free right now says what would help.
+        if !model.fitsThisDevice() {
+            throw MLXError.modelLoadFailed(
+                L10n.text("\(model.name) is too large for this iPhone. Choose a smaller model.")
+            )
+        }
+
         // Switching models: free the previous one first.
         unload()
 
-        // Memory preflight. `fitsThisDevice()` compares against physical RAM,
-        // which is not what iOS gives an app - so check the real budget here,
-        // before spending several minutes downloading something that will be
-        // killed the moment it loads.
         let needsGB = AIModel.workingSetGB(forModelBytes: model.sizeBytes)
         if !DeviceCapability.canLoad(workingSetGB: needsGB) {
+            // In the app language's number style ("3,5" in German), not
+            // printf's fixed "3.5".
             let hasGB = DeviceCapability.usableMemoryGBExact
+                .formatted(.number.precision(.fractionLength(1)).locale(L10n.locale))
             throw MLXError.modelLoadFailed(
-                L10n.text("\(model.name) needs about \(needsGB) GB of memory and this device can only give the app about \(String(format: "%.1f", hasGB)) GB right now. Close other apps and try again, or choose a smaller model.")
+                L10n.text("\(model.name) needs about \(needsGB) GB of memory and this device can only give the app about \(hasGB) GB right now. Close other apps and try again, or choose a smaller model.")
             )
         }
 
@@ -251,7 +290,7 @@ final class MLXService: ObservableObject {
                 .resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
                 .volumeAvailableCapacityForImportantUsage,
                free < needed {
-                let neededText = ByteCountFormatter.string(fromByteCount: needed, countStyle: .file)
+                let neededText = AIModel.formattedBytes(needed)
                 throw MLXError.modelLoadFailed(
                     L10n.text("Not enough free space. \(model.name) needs about \(neededText) free. Free up space and try again.")
                 )
@@ -259,6 +298,9 @@ final class MLXService: ObservableObject {
         }
         loadingModelId = model.id
         loadingModelName = model.name
+        // So the Privacy Center labels this load's listing and file requests
+        // as the download they are.
+        NetworkAudit.shared.downloadingRepo = hfId
         if !wasDownloaded {
             beginDownloadState(expectedBytes: model.sizeBytes)
             if settings.wifiOnlyDownloads { startWiFiWatch() }
@@ -270,6 +312,7 @@ final class MLXService: ObservableObject {
             isPreparingModel = false
             loadingModelId = nil
             loadingModelName = nil
+            NetworkAudit.shared.downloadingRepo = nil
         }
 
         // Fast path: download the files ourselves at full network speed with
@@ -399,6 +442,15 @@ final class MLXService: ObservableObject {
             }
         }
 
+        // A download that finishes while the phone is locked or another app
+        // is in front lands here in the background. iOS does not allow GPU
+        // work from the background and aborts the process when it is tried,
+        // so the weights wait until the user is back. (The library fallback
+        // below downloads and loads in one call and cannot be split; this
+        // only covers its start. It is reached only when the fast path
+        // failed.)
+        try await waitUntilActive()
+
         let hubConfiguration = ModelConfiguration(id: hfId)
         do {
             if filesOnDisk, let repoDir = ModelManager.shared.modelDirectory(for: model) {
@@ -440,6 +492,35 @@ final class MLXService: ObservableObject {
         ModelManager.shared.noteModelInstalled(model)
     }
 
+    /// Suspends until the app is active. Returns at once when it already is;
+    /// throws `CancellationError` if the load is cancelled while waiting.
+    private func waitUntilActive() async throws {
+        guard UIApplication.shared.applicationState != .active else { return }
+        isAwaitingForeground = true
+        defer { isAwaitingForeground = false }
+
+        let (activations, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let observer = NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            continuation.yield()
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+
+        // Checked again now that the observer is in place, so an activation
+        // between the first check and the subscription is not missed.
+        if UIApplication.shared.applicationState == .active { return }
+
+        await withTaskCancellationHandler {
+            for await _ in activations { break }
+        } onCancel: {
+            continuation.finish()
+        }
+        try Task.checkCancellation()
+    }
+
     // MARK: - Download progress bookkeeping
 
     private func beginDownloadState(expectedBytes: Int64) {
@@ -449,6 +530,8 @@ final class MLXService: ObservableObject {
         totalDownloadBytes = expectedBytes
         isDownloadStalled = false
         lastDownloadActivity = Date()
+        throughputSamples = []
+        estimatedSecondsRemaining = nil
 
         // Warn when no bytes have moved for a while (bad Wi-Fi, captive
         // portal, etc.) so the user is never stuck staring at a frozen bar.
@@ -462,6 +545,10 @@ final class MLXService: ObservableObject {
                    Date().timeIntervalSince(self.lastDownloadActivity) > 45 {
                     self.isDownloadStalled = true
                 }
+                // No progress callbacks arrive while nothing moves, so the
+                // estimate is refreshed here too: it must not keep promising
+                // "2 min left" through a stall.
+                self.updateEstimate(now: Date())
             }
         }
     }
@@ -470,6 +557,8 @@ final class MLXService: ObservableObject {
         isDownloading = false
         isDownloadStalled = false
         isWaitingForWiFi = false
+        throughputSamples = []
+        estimatedSecondsRemaining = nil
         stallMonitor?.cancel()
         stallMonitor = nil
         diskPollTask?.cancel()
@@ -509,6 +598,9 @@ final class MLXService: ObservableObject {
         if waiting {
             lastDownloadActivity = Date()
             isDownloadStalled = false
+            // Parked: the old throughput says nothing about when it resumes.
+            throughputSamples = []
+            if estimatedSecondsRemaining != nil { estimatedSecondsRemaining = nil }
         }
     }
 
@@ -520,6 +612,39 @@ final class MLXService: ObservableObject {
         downloadedBytes = done
         totalDownloadBytes = max(total, 1)
         downloadProgress = min(Double(done) / Double(max(total, 1)), 0.999)
+
+        let now = Date()
+        // A restart (Wi-Fi toggle, fallback downloader) can report fewer
+        // bytes than before; the old samples would then describe a
+        // different transfer.
+        if let last = throughputSamples.last, done < last.bytes { throughputSamples = [] }
+        // Callbacks can arrive hundreds of times a second; two samples a
+        // second are plenty for a ten-second window.
+        if let last = throughputSamples.last, now.timeIntervalSince(last.time) < 0.5 { return }
+        throughputSamples.append((time: now, bytes: done))
+        updateEstimate(now: now)
+    }
+
+    /// Recompute `estimatedSecondsRemaining` from the last ten seconds.
+    private func updateEstimate(now: Date) {
+        let window: TimeInterval = 10
+        throughputSamples.removeAll { now.timeIntervalSince($0.time) > window }
+
+        var estimate: TimeInterval?
+        if isDownloading, !isWaitingForWiFi, !isDownloadStalled,
+           let first = throughputSamples.first, let last = throughputSamples.last {
+            let span = last.time.timeIntervalSince(first.time)
+            let moved = Double(last.bytes - first.bytes)
+            // Three seconds of data at least: the first callbacks after a
+            // resume arrive in a burst and would promise seconds for gigabytes.
+            if span >= 3, moved > 0 {
+                let remainingBytes = Double(max(totalDownloadBytes - last.bytes, 0))
+                estimate = (remainingBytes / (moved / span)).rounded()
+            }
+        }
+        // Whole seconds only, so a progress callback that changes nothing
+        // visible does not republish.
+        if estimate != estimatedSecondsRemaining { estimatedSecondsRemaining = estimate }
     }
 
     /// Fallback progress source: watch bytes appear on disk while the
@@ -602,6 +727,19 @@ final class MLXService: ObservableObject {
         inFlightLoad != nil || isDownloading || isPreparingModel || activeGenerations > 0
     }
 
+    /// True only while Metal is in use: weights going onto the GPU, or a
+    /// generation running. A pure transfer is not - it runs on a background
+    /// URLSession that is built to survive the app leaving the foreground,
+    /// so going to the background must not cancel it. A load parked in
+    /// `waitUntilActive` is not using the GPU either.
+    var isUsingGPU: Bool {
+        (isPreparingModel && !isAwaitingForeground) || activeGenerations > 0
+    }
+
+    /// Set while `performLoad` waits for the app to come back to the
+    /// foreground before touching Metal.
+    private var isAwaitingForeground = false
+
     // MARK: - Conversation session
 
     /// Start (or restart) the chat session for a conversation.
@@ -667,7 +805,8 @@ final class MLXService: ObservableObject {
             }
         }
 
-        let instructions = overrideInstructions ?? Self.systemPrompt(for: settings.appLanguage)
+        let instructions = overrideInstructions
+            ?? Self.systemPrompt(for: settings.appLanguage, memoryTokens: budget / 8)
 
         // What the cache starts out holding. Seeding this with the history
         // matters: a reopened conversation used to start its count at zero

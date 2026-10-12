@@ -223,7 +223,9 @@ struct RecorderView: View {
                 .font(.system(size: verticalSizeClass == .compact ? 34 : 46, weight: .light, design: .rounded))
                 .monospacedDigit()
                 .contentTransition(.numericText())
-                .accessibilityLabel(Text("Recorded so far: \(ConversationExporter.durationText(recorder.elapsed))"))
+                // "1 minute, 23 seconds": VoiceOver reads "1:23" as a time
+                // of day.
+                .accessibilityLabel(Text("Recorded so far: \(Recording.spokenDuration(recorder.elapsed))"))
                 // Changes four times a second: VoiceOver should not announce
                 // every tick, and should re-read it when the user asks.
                 .accessibilityAddTraits(.updatesFrequently)
@@ -452,7 +454,7 @@ struct RecorderView: View {
                     Text(saved.title)
                         .font(.title2.bold())
 
-                    Text("\(saved.createdAt.formatted(date: .abbreviated, time: .shortened)) · \(ConversationExporter.durationText(saved.duration))")
+                    Text("\(saved.createdAt.aigFormatted(date: .abbreviated, time: .shortened)) · \(ConversationExporter.durationText(saved.duration))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -575,10 +577,12 @@ struct RecorderView: View {
         summaryFailed = nil
         let id = recording.id
         let transcript = recording.transcript
+        let languageCode = recording.languageCode
         summaryTask = Task {
             do {
                 let outcome = try await RecordingSummarizer.summarize(
                     transcript: transcript,
+                    languageCode: languageCode,
                     engine: appState.engine,
                     progress: { value, step in
                         summaryProgress = value

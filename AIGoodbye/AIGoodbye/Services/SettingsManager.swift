@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import AVFoundation
 
 class SettingsManager: ObservableObject {
     private let defaults = UserDefaults.standard
@@ -20,6 +21,8 @@ class SettingsManager: ObservableObject {
         static let hapticFeedback = "haptic_feedback"
         static let appLanguage = "app_language"
         static let wifiOnlyDownloads = "wifi_only_downloads"
+        static let speechRate = "speech_rate"
+        static let listeningSounds = "listening_sounds"
     }
 
     // MARK: - AI Settings
@@ -43,6 +46,24 @@ class SettingsManager: ObservableObject {
     /// Only download models over Wi-Fi (models are 1-6 GB).
     @Published var wifiOnlyDownloads: Bool {
         didSet { defaults.set(wifiOnlyDownloads, forKey: Keys.wifiOnlyDownloads) }
+    }
+
+    // MARK: - Speech
+
+    /// The rate spoken answers use. AVSpeechUtterance's scale, where the
+    /// default (0.5) is a normal pace; the range stops short of the extremes,
+    /// which are unintelligible.
+    static let speechRateRange: ClosedRange<Double> = 0.35...0.65
+    static var defaultSpeechRate: Double { Double(AVSpeechUtteranceDefaultSpeechRate) }
+
+    @Published var speechRate: Double {
+        didSet { defaults.set(speechRate, forKey: Keys.speechRate) }
+    }
+
+    /// Short system tones when the microphone opens and closes, so eyes-free
+    /// use knows when to talk.
+    @Published var listeningSounds: Bool {
+        didSet { defaults.set(listeningSounds, forKey: Keys.listeningSounds) }
     }
 
     // MARK: - Language
@@ -88,6 +109,17 @@ class SettingsManager: ObservableObject {
             ? true
             : defaults.bool(forKey: Keys.wifiOnlyDownloads)
 
+        // Clamped on the way in: a value stored by a build with a wider
+        // range must not put the slider outside its track.
+        self.speechRate = defaults.object(forKey: Keys.speechRate) == nil
+            ? Self.defaultSpeechRate
+            : min(max(defaults.double(forKey: Keys.speechRate), Self.speechRateRange.lowerBound),
+                  Self.speechRateRange.upperBound)
+
+        self.listeningSounds = defaults.object(forKey: Keys.listeningSounds) == nil
+            ? true
+            : defaults.bool(forKey: Keys.listeningSounds)
+
         let storedLanguage = AppLanguage(
             rawValue: defaults.string(forKey: Keys.appLanguage) ?? AppLanguage.automatic.rawValue
         ) ?? .automatic
@@ -102,6 +134,8 @@ class SettingsManager: ObservableObject {
         contextWindow = 8192
         hapticFeedbackEnabled = true
         wifiOnlyDownloads = true
+        speechRate = Self.defaultSpeechRate
+        listeningSounds = true
         appLanguage = .automatic
     }
 }

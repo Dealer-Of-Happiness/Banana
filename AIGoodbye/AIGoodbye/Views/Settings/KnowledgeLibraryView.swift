@@ -17,6 +17,8 @@ struct KnowledgeLibraryView: View {
     @State private var importError: String?
     @State private var isImporting = false
     @State private var showDeleteAll = false
+    /// Icon column width, scaled with Dynamic Type.
+    @ScaledMetric(relativeTo: .body) private var iconWidth: CGFloat = 24
 
     var body: some View {
         List {
@@ -93,7 +95,7 @@ struct KnowledgeLibraryView: View {
         HStack(spacing: 12) {
             Image(systemName: "doc.text")
                 .foregroundStyle(.blue)
-                .frame(width: 24)
+                .frame(width: iconWidth)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(document.name)
@@ -117,9 +119,10 @@ struct KnowledgeLibraryView: View {
     }
 
     private func sizeText(for document: LibraryDocument) -> String {
-        // String(), not Int: an Int interpolation generates a "%lld" key,
-        // which wouldn't match the catalog's "%@" entry.
-        let approxPages = String(max(1, document.characterCount / 1800))
+        // An Int, so the key is "About %lld pages" and the catalog can carry
+        // plural forms ("About 1 page", Russian few/many). With a String it
+        // could only ever say "About 1 pages".
+        let approxPages = max(1, document.characterCount / 1800)
         return L10n.text("About \(approxPages) pages")
     }
 
@@ -138,7 +141,7 @@ struct KnowledgeLibraryView: View {
 
         if let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
            size > 25 * 1024 * 1024 {
-            importError = L10n.text("This file is too large to import. The limit is \(ByteCountFormatter.string(fromByteCount: 25 * 1024 * 1024, countStyle: .file)).")
+            importError = L10n.text("This file is too large to import. The limit is \(AIModel.formattedBytes(25 * 1024 * 1024)).")
             return
         }
 

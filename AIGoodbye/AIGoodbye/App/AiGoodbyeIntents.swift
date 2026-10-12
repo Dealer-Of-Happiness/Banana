@@ -11,6 +11,7 @@
 
 import AppIntents
 import Foundation
+import SwiftUI
 
 // MARK: - Ask intent
 
@@ -27,10 +28,72 @@ struct AskAiGoodbyeIntent: AppIntent {
         Summary("Ask AiGoodbye \(\.$question)")
     }
 
+    /// Background first: Apple Intelligence answers right inside Siri.
+    /// Foreground on demand for phones where only a downloaded model can
+    /// answer - that model only runs in the open app.
+    static let supportedModes: IntentModes = [.background, .foreground(.dynamic)]
+
     @MainActor
-    func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
-        let answer = try await IntentAnswering.answer(prompt: question)
-        return .result(value: answer, dialog: IntentDialog(stringLiteral: String(answer.prefix(900))))
+    func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog & ShowsSnippetView {
+        do {
+            let answer = try await IntentAnswering.answer(prompt: question)
+            // Spoken without Markdown symbols. Read in full when there is no
+            // screen, as before; beside the card, which shows everything,
+            // only the opening paragraph is read.
+            let spoken = AnswerSnippet.plainText(answer)
+            let dialog = IntentDialog(
+                full: LocalizedStringResource(stringLiteral: String(spoken.prefix(900))),
+                supporting: LocalizedStringResource(stringLiteral: AnswerSnippet.firstParagraph(of: spoken))
+            )
+            return .result(value: answer, dialog: dialog, view: AnswerSnippet(answer: answer))
+        } catch IntentAnsweringError.needsApp where systemContext.currentMode.canContinueInForeground {
+            let ask: IntentDialog = "Your downloaded model answers inside AiGoodbye. Continue there?"
+            try await continueInForeground(ask)
+            // Only after the user said yes: a question parked in the inbox
+            // and declined would surface in the composer days later.
+            SharedInbox.write(SharedInbox.Item(kind: .text, text: question))
+            AppState.deliverIfReady()
+            return .result(
+                value: "",
+                dialog: "Your question is ready in AiGoodbye. Tap Send to ask it.",
+                view: EmptyView()
+            )
+        }
+    }
+}
+
+/// Siri's card for an answer: the Markdown rendered (bold, italics, code,
+/// links) instead of shown as literal asterisks. Plain Text only: snippets
+/// are drawn outside the app, where the chat's Markdown view, with its copy
+/// buttons and text selection, has nothing to work with.
+struct AnswerSnippet: View {
+    let answer: String
+
+    var body: some View {
+        Text(Self.rendered(String(answer.prefix(1_500))))
+            .font(.body)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+    }
+
+    nonisolated static func rendered(_ markdown: String) -> AttributedString {
+        // Block syntax the inline parser would leave as literal characters.
+        let text = markdown
+            .replacingOccurrences(of: #"(?m)^#{1,6}[ \t]+"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"(?m)^[ \t]*[-*+][ \t]+"#, with: "• ", options: .regularExpression)
+        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        return (try? AttributedString(markdown: text, options: options)) ?? AttributedString(markdown)
+    }
+
+    nonisolated static func plainText(_ markdown: String) -> String {
+        String(rendered(markdown).characters)
+    }
+
+    nonisolated static func firstParagraph(of text: String) -> String {
+        let paragraph = text
+            .components(separatedBy: "\n\n")
+            .first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ?? text
+        return String(paragraph.trimmingCharacters(in: .whitespacesAndNewlines).prefix(400))
     }
 }
 
@@ -59,6 +122,129 @@ struct SummarizeWithAiGoodbyeIntent: AppIntent {
     }
 }
 
+// MARK: - Translate intent (offline translation as a Shortcuts building block)
+
+/// A language to translate into: the app's languages minus Automatic, which
+/// names no language. Raw values are AppLanguage's. Names are localized
+/// (unlike the in-app language picker's native names) because Siri matches
+/// what the user says - "French" or "francés" - against these.
+nonisolated enum TranslationLanguage: String, AppEnum {
+    case english = "en"
+    case mandarin = "zh-Hans"
+    case cantonese = "zh-HK"
+    case russian = "ru"
+    case ukrainian = "uk"
+    case korean = "ko"
+    case japanese = "ja"
+    case french = "fr"
+    case german = "de"
+    case greek = "el"
+    case italian = "it"
+    case spanish = "es"
+    case portuguese = "pt-BR"
+
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Language"
+
+    // Literal on purpose: App Intents reads this at build time, so it cannot
+    // be computed from AppLanguage.
+    static let caseDisplayRepresentations: [TranslationLanguage: DisplayRepresentation] = [
+        .english: "English",
+        .mandarin: "Mandarin Chinese",
+        .cantonese: "Cantonese",
+        .russian: "Russian",
+        .ukrainian: "Ukrainian",
+        .korean: "Korean",
+        .japanese: "Japanese",
+        .french: "French",
+        .german: "German",
+        .greek: "Greek",
+        .italian: "Italian",
+        .spanish: "Spanish",
+        .portuguese: "Portuguese (Brazil)"
+    ]
+
+    var appLanguage: AppLanguage { AppLanguage(rawValue: rawValue) ?? .english }
+}
+
+struct TranslateWithAiGoodbyeIntent: AppIntent {
+    static let title: LocalizedStringResource = "Translate with AiGoodbye"
+    static let description = IntentDescription(
+        "Translate text privately, on-device, with no internet connection. Great after 'Get Clipboard' in a shortcut."
+    )
+
+    @Parameter(title: "Text", requestValueDialog: "What text should I translate?")
+    var text: String
+
+    @Parameter(title: "Language", requestValueDialog: "Which language should I translate into?")
+    var language: TranslationLanguage
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Translate \(\.$text) into \(\.$language) with AiGoodbye")
+    }
+
+    /// The translation is as long as the original, and both must fit the
+    /// on-device window together. Refusing is better than the Summarize
+    /// intent's quiet cut: a translation that silently stops halfway reads
+    /// as complete.
+    private static let maxCharacters = 3_000
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
+        guard text.count <= Self.maxCharacters else {
+            throw IntentAnsweringError.tooLongToTranslate
+        }
+        let target = language.appLanguage
+        // The in-app translator's wording, minus the source language: text
+        // from a shortcut can be in anything, and the model recognises it.
+        let prompt = """
+        Translate the following text into \(target.englishName).
+        Reply with the translation only - no quotes, no explanation, no transliteration.
+
+        \(text)
+        """
+        // No "always respond in <app language>" line: it would fight the
+        // target language and win, on the smaller models.
+        let raw = try await IntentAnswering.answer(prompt: prompt, languageInstruction: false)
+        let translation = TranslateModeView.cleanTranslation(raw)
+        return .result(value: translation, dialog: IntentDialog(stringLiteral: String(translation.prefix(900))))
+    }
+}
+
+// MARK: - Open-the-app intents (Action Button, Siri, Shortcuts)
+//
+// Each of these is ALSO defined, identically, in AiGoodbyeWidgets.swift. A
+// Control Center / Action Button control can only name an intent its own
+// extension contains, and an App Shortcut phrase only one the app contains;
+// an intent with the same type name in the app and its extension is one
+// intent to the system (the documented way to share a control's action).
+// Keep both copies' type names, titles and descriptions in step.
+
+/// Opens the app on the meeting recorder.
+struct StartRecordingIntent: AppIntent {
+    static let title: LocalizedStringResource = "Record a meeting"
+    static let description = IntentDescription("Opens the meeting recorder in AiGoodbye.")
+    static let openAppWhenRun = true
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        AppState.open(route: "recorder")
+        return .result()
+    }
+}
+
+/// Opens the app on Describe Surroundings, which starts describing aloud.
+struct DescribeSurroundingsIntent: AppIntent {
+    static let title: LocalizedStringResource = "Describe surroundings"
+    static let description = IntentDescription("Opens AiGoodbye and describes what the camera sees, out loud.")
+    static let openAppWhenRun = true
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        AppState.open(route: "describe")
+        return .result()
+    }
+}
+
 // MARK: - Shared answering path
 
 enum IntentAnsweringError: Error, CustomLocalizedStringResourceConvertible {
@@ -66,10 +252,21 @@ enum IntentAnsweringError: Error, CustomLocalizedStringResourceConvertible {
     case timedOut
     case locked
     case busy
+    case tooLongToTranslate
+    /// A downloaded model is there, but it can only run inside the open
+    /// app: loading gigabytes into a background Siri process gets it killed.
+    case needsApp
 
     var localizedStringResource: LocalizedStringResource {
         switch self {
+        case .tooLongToTranslate:
+            return "That text is too long to translate in one go. Split it into shorter parts and try again."
+        case .needsApp:
+            return "Your downloaded model answers only while AiGoodbye is open. Open the app, then try again."
         case .noEngine:
+            // Only for "no model at all". Saying this to someone whose model
+            // is downloaded (as it used to, whenever the app wasn't running)
+            // sent them off to set up something they already had.
             return "Open AiGoodbye once to set up an AI model, then try again."
         case .timedOut:
             return "That took too long to answer. Try a shorter question, or ask in the app."
@@ -87,7 +284,11 @@ enum IntentAnswering {
     /// One-shot answer using the app's engines. Prefers the instantly
     /// available backend so Siri feels fast. Works without a running scene
     /// because the engine lives in EngineHost, not in the view tree.
-    static func answer(prompt: String) async throws -> String {
+    ///
+    /// - Parameter languageInstruction: false for prompts that name their
+    ///   own output language (translation), where the session's "always
+    ///   respond in <app language>" line would contradict them.
+    static func answer(prompt: String, languageInstruction: Bool = true) async throws -> String {
         let engine = EngineHost.shared.engine
 
         // App Lock has to cover Siri too. Otherwise anyone holding the phone
@@ -107,11 +308,11 @@ enum IntentAnswering {
         } else if let loadedId = engine.mlx.loadedModelId,
                   let loaded = AIModel.model(withId: loadedId) {
             model = loaded   // already resident: cheap to reuse
-        } else if AppState.shared != nil,
-                  engine.selectedModel.backend == .mlx,
-                  engine.selectedModel.isDownloaded,
-                  engine.selectedModel.fitsThisDevice() {
-            model = engine.selectedModel   // app is running: safe to load
+        } else if let downloaded = downloadedModel(engine) {
+            // Safe to load only while the app is running; otherwise the
+            // caller can hand the question to the app.
+            guard AppState.shared != nil else { throw IntentAnsweringError.needsApp }
+            model = downloaded
         } else {
             throw IntentAnsweringError.noEngine
         }
@@ -135,7 +336,7 @@ enum IntentAnswering {
             group.addTask { @MainActor in
                 // A base prompt, not the personalized one: a Siri answer
                 // must not be shaped by private memory facts.
-                try await engine.startCleanSession(model: model)
+                try await engine.startCleanSession(model: model, languageInstruction: languageInstruction)
                 var final = ""
                 let stream = engine.respondStream(model: model, prompt: prompt, image: nil)
                 for try await snapshot in stream {
@@ -151,6 +352,19 @@ enum IntentAnswering {
             group.cancelAll()
             let cleaned = first.trimmingCharacters(in: .whitespacesAndNewlines)
             return cleaned.isEmpty ? L10n.text("No answer was generated. Please try again.") : cleaned
+        }
+    }
+
+    /// The downloaded model the chat would answer with when Apple
+    /// Intelligence can't: the selected one, else the first one on disk
+    /// (the same fallback `ChatEngine.route` uses).
+    private static func downloadedModel(_ engine: ChatEngine) -> AIModel? {
+        let selected = engine.selectedModel
+        if selected.backend == .mlx, selected.isDownloaded, selected.fitsThisDevice() {
+            return selected
+        }
+        return AIModel.allModels.first {
+            $0.backend == .mlx && $0.isDownloaded && $0.fitsThisDevice()
         }
     }
 }
@@ -175,6 +389,30 @@ struct AiGoodbyeShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Summarize",
             systemImageName: "doc.plaintext"
+        )
+        AppShortcut(
+            intent: TranslateWithAiGoodbyeIntent(),
+            phrases: [
+                "Translate with \(.applicationName)"
+            ],
+            shortTitle: "Translate",
+            systemImageName: "character.bubble"
+        )
+        AppShortcut(
+            intent: StartRecordingIntent(),
+            phrases: [
+                "Start recording with \(.applicationName)"
+            ],
+            shortTitle: "Record a meeting",
+            systemImageName: "waveform.badge.mic"
+        )
+        AppShortcut(
+            intent: DescribeSurroundingsIntent(),
+            phrases: [
+                "Describe my surroundings with \(.applicationName)"
+            ],
+            shortTitle: "Describe surroundings",
+            systemImageName: "eye"
         )
     }
 }

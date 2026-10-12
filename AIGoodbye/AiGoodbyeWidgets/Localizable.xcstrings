@@ -1,81 +1,84 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "Private AI, offline": {
+    "100% on device": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Private KI, offline"
+            "value": "100 % auf dem Gerät"
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ιδιωτικό AI, εκτός σύνδεσης"
+            "value": "100% στη συσκευή"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "IA privada, sin conexión"
+            "value": "100 % en el dispositivo"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "IA privée, hors ligne"
+            "value": "100 % sur l'appareil"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "IA privata, offline"
+            "value": "100% sul dispositivo"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "プライベート AI、オフライン"
+            "value": "100% 端末内で処理"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "비공개 AI, 오프라인"
+            "value": "100% 기기 내 처리"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "IA privada, off-line"
+            "value": "100% no dispositivo"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Приватный ИИ, офлайн"
+            "value": "100% на устройстве"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Приватний ШІ, офлайн"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "私密 AI，离线运行"
+            "value": "100% на пристрої"
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "私密 AI，離線運行"
+            "value": "100% 裝置本機"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "100% 设备本地"
           }
         }
       }
+    },
+    "AiGoodbye": {
+      "shouldTranslate": false
     },
     "Ask privately": {
       "localizations": {
@@ -139,320 +142,16 @@
             "value": "Запитати приватно"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "私密提问"
-          }
-        },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
             "value": "私密提問"
           }
-        }
-      }
-    },
-    "100% on device": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100 % auf dem Gerät"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100% στη συσκευή"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100 % en el dispositivo"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100 % sur l'appareil"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100% sul dispositivo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100% 端末内で処理"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100% 기기 내 처리"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100% no dispositivo"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100% на устройстве"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100% на пристрої"
-          }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "100% 设备本地"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100% 裝置本機"
-          }
-        }
-      }
-    },
-    "Private AI that works offline": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Private KI, die offline funktioniert"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ιδιωτικό AI που λειτουργεί εκτός σύνδεσης"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IA privada que funciona sin conexión"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IA privée qui fonctionne hors ligne"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IA privata che funziona offline"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "オフラインで動くプライベート AI"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오프라인에서 작동하는 비공개 AI"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IA privada que funciona off-line"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Приватный ИИ, работающий офлайн"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Приватний ШІ, що працює офлайн"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "可离线运行的私密 AI"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "可離線運行的私密 AI"
-          }
-        }
-      }
-    },
-    "Chat": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chat"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Συνομιλία"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chat"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Discussion"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chat"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チャット"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "채팅"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Conversa"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Чат"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Чат"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "聊天"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "聊天"
-          }
-        }
-      }
-    },
-    "Voice": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sprache"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Φωνή"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Voz"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Voix"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Voce"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音声"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "음성"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Voz"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Голос"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Голос"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "语音"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "語音"
+            "value": "私密提问"
           }
         }
       }
@@ -519,244 +218,396 @@
             "value": "Камера"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "相机"
-          }
-        },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
             "value": "相機"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "相机"
+          }
         }
       }
     },
-    "Start a private conversation, instantly.": {
+    "Chat": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Starte sofort eine private Unterhaltung."
+            "value": "Chat"
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ξεκίνησε αμέσως μια ιδιωτική συνομιλία."
+            "value": "Συνομιλία"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Empieza una conversación privada al instante."
+            "value": "Chat"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Démarrez une conversation privée instantanément."
+            "value": "Discussion"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inizia subito una conversazione privata."
+            "value": "Chat"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "プライベートな会話をすぐに始められます。"
+            "value": "チャット"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "비공개 대화를 바로 시작하세요."
+            "value": "채팅"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Comece uma conversa privada na hora."
+            "value": "Conversa"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Мгновенно начните приватный разговор."
+            "value": "Чат"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Миттєво почніть приватну розмову."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "立即开始一段私密对话。"
+            "value": "Чат"
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "立即開始一段私密對話。"
+            "value": "聊天"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聊天"
           }
         }
       }
     },
-    "Talk to AiGoodbye": {
+    "Describe surroundings": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mit AiGoodbye sprechen"
+            "value": "Umgebung beschreiben"
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Μίλησε στο AiGoodbye"
+            "value": "Περιγραφή περιβάλλοντος"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hablar con AiGoodbye"
+            "value": "Describir el entorno"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Parler à AiGoodbye"
+            "value": "Décrire l'environnement"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Parla con AiGoodbye"
+            "value": "Descrivi l'ambiente"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye と話す"
+            "value": "周囲を説明"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye와 대화"
+            "value": "주변 설명"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Falar com o AiGoodbye"
+            "value": "Descrever o ambiente"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Поговорить с AiGoodbye"
+            "value": "Описать окружение"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Поговорити з AiGoodbye"
+            "value": "Описати оточення"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "与 AiGoodbye 对话"
+            "value": "描述周围环境"
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "與 AiGoodbye 對話"
+            "value": "描述周遭環境"
           }
         }
       }
     },
-    "Start a private voice conversation.": {
+    "Hear what the camera sees.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Starte eine private Sprachunterhaltung."
+            "value": "Hör, was die Kamera sieht."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ξεκίνησε μια ιδιωτική φωνητική συνομιλία."
+            "value": "Άκου τι βλέπει η κάμερα."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Empieza una conversación de voz privada."
+            "value": "Escucha lo que ve la cámara."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Démarrez une conversation vocale privée."
+            "value": "Écoutez ce que voit l'appareil photo."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inizia una conversazione vocale privata."
+            "value": "Ascolta ciò che vede la fotocamera."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "プライベートな音声会話を始めます。"
+            "value": "カメラに映るものを音声で聞けます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "비공개 음성 대화를 시작합니다."
+            "value": "카메라에 보이는 것을 들어 보세요."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Comece uma conversa por voz privada."
+            "value": "Ouça o que a câmera vê."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Начните приватный голосовой разговор."
+            "value": "Слушайте, что видит камера."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Почніть приватну голосову розмову."
+            "value": "Слухайте, що бачить камера."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "开始一段私密语音对话。"
+            "value": "听听相机看到了什么。"
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "開始一段私密語音對話。"
+            "value": "聽吓相機見到乜嘢。"
+          }
+        }
+      }
+    },
+    "Open the meeting recorder.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffne die Meeting-Aufnahme."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Άνοιξε την εγγραφή συσκέψεων."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre la grabadora de reuniones."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrez l'enregistreur de réunions."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri il registratore di riunioni."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会議レコーダーを開きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회의 녹음기를 엽니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abra o gravador de reuniões."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Откройте диктофон для встреч."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Відкрийте диктофон для зустрічей."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开会议录音。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟會議錄音。"
+          }
+        }
+      }
+    },
+    "Opens AiGoodbye and describes what the camera sees, out loud.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet AiGoodbye und beschreibt laut, was die Kamera sieht."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ανοίγει το AiGoodbye και περιγράφει φωναχτά ό,τι βλέπει η κάμερα."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre AiGoodbye y describe en voz alta lo que ve la cámara."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvre AiGoodbye et décrit à voix haute ce que voit l'appareil photo."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apre AiGoodbye e descrive ad alta voce ciò che vede la fotocamera."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbyeを開き、カメラに映っているものを声で説明します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye를 열고 카메라에 보이는 것을 소리 내어 설명합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre o AiGoodbye e descreve em voz alta o que a câmera vê."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открывает AiGoodbye и вслух описывает то, что видит камера."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Відкриває AiGoodbye і вголос описує те, що бачить камера."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开 AiGoodbye，并朗读描述相机看到的内容。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟 AiGoodbye，讀出相機見到嘅嘢。"
           }
         }
       }
@@ -823,22 +674,703 @@
             "value": "Відкриває AiGoodbye і починає голосову розмову."
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打开 AiGoodbye 并开始语音对话。"
-          }
-        },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
             "value": "開啟 AiGoodbye 並開始語音對話。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开 AiGoodbye 并开始语音对话。"
+          }
         }
       }
     },
-    "AiGoodbye": {
-      "shouldTranslate": false
+    "Opens the meeting recorder in AiGoodbye.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet die Meeting-Aufnahme in AiGoodbye."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ανοίγει την εγγραφή συσκέψεων στο AiGoodbye."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre la grabadora de reuniones en AiGoodbye."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvre l'enregistreur de réunions dans AiGoodbye."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apre il registratore di riunioni in AiGoodbye."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbyeの会議レコーダーを開きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye의 회의 녹음기를 엽니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre o gravador de reuniões no AiGoodbye."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открывает диктофон для встреч в AiGoodbye."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Відкриває диктофон для зустрічей в AiGoodbye."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开 AiGoodbye 的会议录音。"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟 AiGoodbye 嘅會議錄音。"
+          }
+        }
+      }
+    },
+    "Private AI that works offline": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private KI, die offline funktioniert"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ιδιωτικό AI που λειτουργεί εκτός σύνδεσης"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IA privada que funciona sin conexión"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IA privée qui fonctionne hors ligne"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IA privata che funziona offline"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オフラインで動くプライベート AI"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오프라인에서 작동하는 비공개 AI"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IA privada que funciona off-line"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Приватный ИИ, работающий офлайн"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Приватний ШІ, що працює офлайн"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可離線運行的私密 AI"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可离线运行的私密 AI"
+          }
+        }
+      }
+    },
+    "Private AI, offline": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private KI, offline"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ιδιωτικό AI, εκτός σύνδεσης"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IA privada, sin conexión"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IA privée, hors ligne"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IA privata, offline"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プライベート AI、オフライン"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비공개 AI, 오프라인"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IA privada, off-line"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Приватный ИИ, офлайн"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Приватний ШІ, офлайн"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "私密 AI，離線運行"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "私密 AI，离线运行"
+          }
+        }
+      }
+    },
+    "Record": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufnehmen"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Εγγραφή"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録音"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gravar"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запись"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запис"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "錄音"
+          }
+        }
+      }
+    },
+    "Record a meeting": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Meeting aufnehmen"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ηχογράφησε μια σύσκεψη"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabar una reunión"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer une réunion"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra una riunione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会議を録音"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회의 녹음"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gravar uma reunião"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Записать встречу"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Записати зустріч"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录制会议"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "錄製會議"
+          }
+        }
+      }
+    },
+    "Start a private conversation, instantly.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starte sofort eine private Unterhaltung."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ξεκίνησε αμέσως μια ιδιωτική συνομιλία."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empieza una conversación privada al instante."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Démarrez une conversation privée instantanément."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inizia subito una conversazione privata."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プライベートな会話をすぐに始められます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비공개 대화를 바로 시작하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comece uma conversa privada na hora."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Мгновенно начните приватный разговор."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Миттєво почніть приватну розмову."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即開始一段私密對話。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即开始一段私密对话。"
+          }
+        }
+      }
+    },
+    "Start a private voice conversation.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starte eine private Sprachunterhaltung."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ξεκίνησε μια ιδιωτική φωνητική συνομιλία."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empieza una conversación de voz privada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Démarrez une conversation vocale privée."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inizia una conversazione vocale privata."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プライベートな音声会話を始めます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비공개 음성 대화를 시작합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comece uma conversa por voz privada."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Начните приватный голосовой разговор."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Почніть приватну голосову розмову."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開始一段私密語音對話。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始一段私密语音对话。"
+          }
+        }
+      }
+    },
+    "Talk to AiGoodbye": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit AiGoodbye sprechen"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Μίλησε στο AiGoodbye"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hablar con AiGoodbye"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parler à AiGoodbye"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parla con AiGoodbye"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye と話す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye와 대화"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Falar com o AiGoodbye"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поговорить с AiGoodbye"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поговорити з AiGoodbye"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "與 AiGoodbye 對話"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "与 AiGoodbye 对话"
+          }
+        }
+      }
+    },
+    "Voice": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprache"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Φωνή"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voz"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voix"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voce"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音声"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음성"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voz"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Голос"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Голос"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "語音"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语音"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

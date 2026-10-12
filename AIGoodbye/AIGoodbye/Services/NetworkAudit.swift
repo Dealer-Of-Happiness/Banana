@@ -20,18 +20,34 @@ struct NetworkEvent: Identifiable, Equatable {
     let path: String
     let date: Date
     let method: String
+    /// Human explanation of what this request was for. Decided when the
+    /// request is made, because the same path means different things then:
+    /// a file listing is part of a download in progress, or a check of a
+    /// model the user typed in.
+    let purpose: String
 
-    /// Human explanation of what this request was for.
-    var purpose: String {
-        if host.contains("huggingface") || host.contains("hf.co") {
-            // Checking a model the user typed in is a few kilobytes of JSON,
-            // not a download; the log should say which one this was.
-            if path.contains("/api/models/") || path.hasSuffix("config.json") {
-                return L10n.text("Checking a model you asked to add")
-            }
-            return L10n.text("Downloading AI model files")
+    /// - Parameter downloadingRepo: the Hugging Face repository a model
+    ///   download is fetching right now, if any.
+    nonisolated static func purpose(host: String, path: String, downloadingRepo: String?) -> String {
+        guard host.contains("huggingface") || host.contains("hf.co") else {
+            return L10n.text("Other")
         }
-        return L10n.text("Other")
+        let lowered = path.lowercased()
+        let isListing = lowered.contains("/api/models/")
+        // Part of a download: the downloader lists the repository's files
+        // before fetching them, and fetches config.json like any file. Both
+        // used to be logged as "checking a model you asked to add".
+        if let repo = downloadingRepo?.lowercased(), lowered.contains("/\(repo)") {
+            return isListing
+                ? L10n.text("Listing model files")
+                : L10n.text("Downloading AI model files")
+        }
+        // Checking a model the user typed in is a few kilobytes of JSON,
+        // not a download; the log should say which one this was.
+        if isListing || lowered.hasSuffix("config.json") {
+            return L10n.text("Checking a model you asked to add")
+        }
+        return L10n.text("Downloading AI model files")
     }
 }
 
@@ -42,6 +58,9 @@ final class NetworkAudit: ObservableObject {
     @Published private(set) var events: [NetworkEvent] = []
     /// Count since install, so the number survives log trimming.
     @Published private(set) var totalCount: Int
+    /// The repository a model load is fetching, set by `MLXService` for the
+    /// length of the load, so its requests are labelled as a download.
+    var downloadingRepo: String?
 
     private static let countKey = "network_audit_total"
     private static let maxEvents = 100
@@ -97,11 +116,13 @@ final class NetworkAudit: ObservableObject {
 
     fileprivate func record(_ request: URLRequest) {
         guard let url = request.url, let host = url.host() else { return }
+        let path = url.path().isEmpty ? "/" : url.path()
         let event = NetworkEvent(
             host: host,
-            path: url.path().isEmpty ? "/" : url.path(),
+            path: path,
             date: Date(),
-            method: request.httpMethod ?? "GET"
+            method: request.httpMethod ?? "GET",
+            purpose: NetworkEvent.purpose(host: host, path: path, downloadingRepo: downloadingRepo)
         )
         events.insert(event, at: 0)
         if events.count > Self.maxEvents { events.removeLast(events.count - Self.maxEvents) }

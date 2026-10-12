@@ -80,11 +80,36 @@ final class MemoryStore: ObservableObject {
         save()
     }
 
-    /// Block of remembered facts for the system prompt, or empty.
-    var promptBlock: String {
+    /// Block of remembered facts for the system prompt, or empty: the newest
+    /// facts that fit in `maxTokens`, listed oldest first.
+    ///
+    /// Capped because the whole store - 50 facts of up to 300 characters, a
+    /// few thousand tokens - went into every prompt. On Apple Intelligence's
+    /// 4K window that failed every turn with "too long", advice ("start a new
+    /// chat") that could not help; on a downloaded model it crowded out the
+    /// conversation itself.
+    func promptBlock(maxTokens: Int) -> String {
         guard isEnabled, !facts.isEmpty else { return "" }
-        let list = facts.map { "- \($0.text)" }.joined(separator: "\n")
-        return "Things the user has asked you to remember about them:\n\(list)"
+        return Self.promptBlock(for: facts.map(\.text), maxTokens: maxTokens)
+    }
+
+    nonisolated static let promptHeader = "Things the user has asked you to remember about them:"
+
+    /// Pure, so the budget is testable. Costs use the same script-aware
+    /// estimate as the history budget (`MLXService.weightedLength`, ~3
+    /// characters per token).
+    nonisolated static func promptBlock(for facts: [String], maxTokens: Int) -> String {
+        var budget = maxTokens - MLXService.weightedLength(of: promptHeader) / 3
+        var kept: [String] = []
+        for fact in facts.reversed() {
+            let line = "- \(fact)"
+            let cost = max(1, MLXService.weightedLength(of: line) / 3)
+            guard cost <= budget else { break }
+            budget -= cost
+            kept.append(line)
+        }
+        guard !kept.isEmpty else { return "" }
+        return promptHeader + "\n" + kept.reversed().joined(separator: "\n")
     }
 
     // MARK: - Detecting "remember this"
@@ -137,7 +162,11 @@ final class MemoryStore: ObservableObject {
         // Korean
         "기억해 줘: ", "기억해: ", "기억해줘: ",
         // Chinese (Simplified and Traditional)
-        "记住：", "记住:", "记住，", "记住,", "請記住：", "請記住:", "記住：", "記住:", "記住，", "記住,"
+        "记住：", "记住:", "记住，", "记住,", "請記住：", "請記住:", "記住：", "記住:", "記住，", "記住,",
+        // ...and bare, the way people write it ("记住我对花生过敏") and the
+        // way the Memory tip shows it. After the punctuated forms, which
+        // must win so the punctuation is not left on the fact.
+        "记住", "記住", "請記住"
     ]
 
     /// Verb-final languages put the request at the end.
@@ -145,7 +174,11 @@ final class MemoryStore: ObservableObject {
         // Japanese
         "を覚えておいてください", "を覚えておいて", "を覚えておいてね", "を覚えて",
         // Korean
-        "를 기억해 줘", "을 기억해 줘", "를 기억해줘", "을 기억해줘", "를 기억해", "을 기억해"
+        "를 기억해 줘", "을 기억해 줘", "를 기억해줘", "을 기억해줘", "를 기억해", "을 기억해",
+        // Without an object particle ("...라는 걸 기억해 줘", "...다고
+        // 기억해줘"). Space-led, so the particle stays with the fact; after
+        // the forms above so those still strip their particle.
+        " 기억해 줘", " 기억해줘", " 기억해"
     ]
 
     // MARK: - Persistence

@@ -115,7 +115,7 @@ final class CustomModelStore: ObservableObject {
 extension AIModel {
 
     nonisolated init(custom spec: CustomModelSpec) {
-        let sizeText = ByteCountFormatter.string(fromByteCount: spec.sizeBytes, countStyle: .file)
+        let sizeText = AIModel.formattedBytes(spec.sizeBytes)
         let ramGB = AIModel.recommendedRAMGB(forModelBytes: spec.sizeBytes)
         self.init(
             id: spec.id,

@@ -31,6 +31,17 @@ struct Recording: Identifiable, Codable, Equatable {
     var libraryDocumentId: UUID?
 }
 
+extension Recording {
+    /// A length for VoiceOver: "1 minute, 23 seconds", in the app's language.
+    /// The on-screen "1:23" is read as a time of day.
+    static func spokenDuration(_ seconds: TimeInterval) -> String {
+        let whole = Int(max(seconds, 0).rounded())
+        return Duration.seconds(whole).formatted(
+            .units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(L10n.locale)
+        )
+    }
+}
+
 /// A recording in progress, written to disk every few seconds.
 ///
 /// Without this, a crash, a jetsam kill or a force-quit at minute 179 of a

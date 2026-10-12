@@ -8,6 +8,9 @@
 
 import SwiftUI
 import UIKit
+import AVFoundation
+import AppIntents
+import Combine
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
@@ -19,7 +22,9 @@ struct SettingsView: View {
             ModelSection(engine: appState.engine, settings: appState.settings, showModelPicker: $showModelPicker)
             PersonalizationSection()
             LanguageSection(settings: appState.settings)
-            BehaviorSection(settings: appState.settings)
+            BehaviorSection(settings: appState.settings, engine: appState.engine)
+            SpeechSection(settings: appState.settings)
+            SiriSection()
             FeedbackSection(settings: appState.settings)
             PrivacySection()
             DataSection()
@@ -146,7 +151,11 @@ private struct PersonalizationSection: View {
 
 private struct BehaviorSection: View {
     @ObservedObject var settings: SettingsManager
-    @EnvironmentObject var appState: AppState
+    @ObservedObject var engine: ChatEngine
+
+    private static let minimumWindow = 4096
+    private static let maximumWindow = 32768
+    private static let windowStep = 4096
 
     private var temperatureText: String {
         settings.temperature.formatted(.number.precision(.fractionLength(1)))
@@ -156,9 +165,44 @@ private struct BehaviorSection: View {
         L10n.text("\(settings.contextWindow / 1024)K tokens")
     }
 
+    private var usesAppleIntelligence: Bool {
+        engine.selectedModel.backend == .appleIntelligence
+    }
+
+    /// The downloaded model the context setting applies to: the selected one,
+    /// or - with Apple Intelligence selected - the vision model a photo
+    /// would be answered with (the smallest downloaded one, as routing does).
+    private var contextModel: AIModel {
+        if engine.selectedModel.backend == .mlx { return engine.selectedModel }
+        return AIModel.allModels
+            .filter { $0.supportsVision && $0.fitsThisDevice() && $0.isDownloaded }
+            .min { $0.sizeBytes < $1.sizeBytes }
+            ?? AIModel.recommendedDownloadModel
+    }
+
+    /// The slider's upper end: the largest 4K step this iPhone can give the
+    /// model's cache. Never below 8K, so the slider always has a track to
+    /// move along (on a 6 GB phone the 2B model affords about 6.9K).
+    private var sliderUpperBound: Int {
+        let affordable = MLXService.effectiveContextWindow(for: contextModel, requested: Self.maximumWindow)
+        let stepped = (affordable / Self.windowStep) * Self.windowStep
+        return min(Self.maximumWindow, max(Self.minimumWindow * 2, stepped))
+    }
+
+    /// What the model will really get when that is less than the setting.
+    private var effectiveWindowNote: String? {
+        let effective = MLXService.effectiveContextWindow(for: contextModel, requested: settings.contextWindow)
+        guard effective < settings.contextWindow else { return nil }
+        let thousands = String(effective / 1024)
+        return L10n.text("Up to \(thousands)K on this iPhone with \(contextModel.name)")
+    }
+
     private var contextWindowBinding: Binding<Double> {
-        Binding(
-            get: { Double(settings.contextWindow) },
+        let upper = sliderUpperBound
+        return Binding(
+            // Clamped for display: a value saved on another device, or before
+            // the cap existed, must not put the thumb off the track.
+            get: { Double(min(max(settings.contextWindow, Self.minimumWindow), upper)) },
             set: { settings.contextWindow = Int($0) }
         )
     }
@@ -181,7 +225,7 @@ private struct BehaviorSection: View {
                     onEditingChanged: { editing in
                         // Rebuild sessions once, when the drag ends — not on
                         // every tick.
-                        if !editing { appState.engine.resetSessions() }
+                        if !editing { engine.resetSessions() }
                     }
                 )
                 .accessibilityLabel(Text("Creativity"))
@@ -193,9 +237,25 @@ private struct BehaviorSection: View {
             }
             .padding(.vertical, 4)
 
+            if usesAppleIntelligence {
+                // Apple Intelligence's window is fixed by the system; the
+                // slider below still governs the downloaded models (photo
+                // questions, or after switching).
+                Label {
+                    Text("Apple Intelligence always uses a 4K window. Downloaded models use the setting below.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(.blue)
+                }
+                .padding(.vertical, 2)
+            }
+
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Conversation Memory")
+                    Text("Context length")
                     Spacer()
                     Text(contextWindowText)
                         .foregroundStyle(.secondary)
@@ -207,18 +267,25 @@ private struct BehaviorSection: View {
                         .font(.caption2)
                     Slider(
                         value: contextWindowBinding,
-                        in: 4096...32768,
-                        step: 4096,
+                        in: Double(Self.minimumWindow)...Double(sliderUpperBound),
+                        step: Double(Self.windowStep),
                         onEditingChanged: { editing in
-                            if !editing { appState.engine.resetSessions() }
+                            if !editing { engine.resetSessions() }
                         }
                     )
-                    Text("32K")
+                    Text(verbatim: "\(sliderUpperBound / 1024)K")
                         .font(.caption2)
                 }
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel(Text("Conversation Memory"))
+                .accessibilityLabel(Text("Context length"))
                 .accessibilityValue(contextWindowText)
+
+                if let note = effectiveWindowNote {
+                    Text(note)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
                 Text("How much of the conversation the AI re-reads. Higher remembers more but uses more memory and can be slower on older devices.")
                     .font(.caption)
@@ -259,6 +326,98 @@ private struct LanguageSection: View {
         }
         .onChange(of: settings.appLanguage) { _, _ in
             appState.engine.resetSessions()
+        }
+    }
+}
+
+// MARK: - Speech Section
+
+/// How spoken answers sound in voice mode, Translate and Describe
+/// Surroundings. Blind and low-vision users routinely listen faster than the
+/// default; everyone else may want it slower.
+private struct SpeechSection: View {
+    @ObservedObject var settings: SettingsManager
+    @StateObject private var preview = SpeechPreview()
+
+    var body: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Speaking rate")
+                    Spacer()
+                    Button {
+                        preview.speak(rate: settings.speechRate, language: settings.appLanguage)
+                    } label: {
+                        Label("Preview", systemImage: "speaker.wave.2")
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.borderless)
+                }
+
+                HStack(spacing: 8) {
+                    Text("Slower")
+                        .font(.caption2)
+                    Slider(value: $settings.speechRate, in: SettingsManager.speechRateRange)
+                    Text("Faster")
+                        .font(.caption2)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(Text("Speaking rate"))
+            }
+            .padding(.vertical, 4)
+
+            Toggle("Listening sounds", isOn: $settings.listeningSounds)
+        } header: {
+            Text("Speech")
+        } footer: {
+            Text("Plays a short tone when the microphone opens and closes.")
+        }
+        .onDisappear { preview.stop() }
+    }
+}
+
+/// Speaks one sample sentence at the chosen rate. A synthesizer of its own,
+/// so a preview never interrupts or queues behind the voice conversation's.
+@MainActor
+private final class SpeechPreview: ObservableObject {
+    private let synthesizer = AVSpeechSynthesizer()
+
+    func speak(rate: Double, language: AppLanguage) {
+        stop()
+        let utterance = AVSpeechUtterance(string: L10n.text("This is how spoken answers will sound."))
+        utterance.voice = AVSpeechSynthesisVoice(language: VoiceService.speechCode(for: language))
+        utterance.rate = Float(rate)
+        // The same rule spoken answers follow: with VoiceOver running, the
+        // user's own VoiceOver voice and rate win.
+        utterance.prefersAssistiveTechnologySettings = UIAccessibility.isVoiceOverRunning
+        synthesizer.speak(utterance)
+    }
+
+    func stop() {
+        if synthesizer.isSpeaking {
+            synthesizer.stopSpeaking(at: .immediate)
+        }
+    }
+}
+
+// MARK: - Siri & Shortcuts Section
+
+/// "Hey Siri, ask AiGoodbye" shipped with no pointer to it anywhere in the
+/// app; this is where people look for it.
+private struct SiriSection: View {
+    /// The tip can be dismissed with its close button, and stays dismissed.
+    @AppStorage("settings_siri_tip_visible") private var showsSiriTip = true
+
+    var body: some View {
+        Section {
+            if showsSiriTip {
+                SiriTipView(intent: AskAiGoodbyeIntent(), isVisible: $showsSiriTip)
+            }
+            ShortcutsLink()
+                .frame(maxWidth: .infinity)
+        } header: {
+            Text("Siri & Shortcuts")
         }
     }
 }
@@ -379,7 +538,7 @@ private struct DataSection: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Restores creativity, conversation memory, language, haptics and download settings to their defaults. Your conversations are not affected.")
+                Text("Restores creativity, context length, language, speech, haptics and download settings to their defaults. Your conversations are not affected.")
             }
         } header: {
             Text("Data")
@@ -394,6 +553,13 @@ private struct DataSection: View {
 struct AboutView: View {
     private let appVersion =
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "3.0.1"
+    /// The build number, so a support email can say exactly which build.
+    private let buildNumber =
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+
+    private static let termsURL = URL(string: "https://aigoodbye.ai/terms.html")
+    /// Opens the App Store's "Write a Review" sheet for this app.
+    private static let reviewURL = URL(string: "itms-apps://apps.apple.com/app/id6757513032?action=write-review")
 
     var body: some View {
         ScrollView {
@@ -422,7 +588,7 @@ struct AboutView: View {
             Text(LegalText.appName)
                 .font(.title2.bold())
 
-            Text("Version \(appVersion)")
+            Text("Version \(appVersion) (\(buildNumber))")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -462,6 +628,21 @@ struct AboutView: View {
         VStack(spacing: 12) {
             Link(destination: URL(string: "https://aigoodbye.ai/privacy-policy.html")!) {
                 Label("Privacy Policy", systemImage: "hand.raised")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if let termsURL = Self.termsURL {
+                Link(destination: termsURL) {
+                    Label("Terms of Use", systemImage: "doc.text")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+
+            if let reviewURL = Self.reviewURL {
+                Link(destination: reviewURL) {
+                    Label("Rate AiGoodbye", systemImage: "star")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
 
             Link(destination: URL(string: "https://aigoodbye.ai")!) {

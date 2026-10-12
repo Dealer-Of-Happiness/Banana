@@ -759,8 +759,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = AiGoodbye;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSCameraUsageDescription = "AiGoodbye uses the camera so you can take photos or ask about a live view. Images are analyzed on your device and never recorded or uploaded.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AiGoodbye uses the microphone for private voice conversations. Audio is processed entirely on your device.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AiGoodbye uses the camera so you can take photos, scan documents and ask about what the camera sees, including Describe Surroundings. Images are analyzed on your device and never recorded or uploaded.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AiGoodbye uses the microphone for voice conversations, translation and the meeting recorder. Audio is processed entirely on your device and never uploaded.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "AiGoodbye converts your speech to text on this device only. Nothing is sent anywhere.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "AiGoodbye uses Face ID to unlock your private conversations. Nothing about your face ever leaves the device.";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -804,8 +804,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = AiGoodbye;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSCameraUsageDescription = "AiGoodbye uses the camera so you can take photos or ask about a live view. Images are analyzed on your device and never recorded or uploaded.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AiGoodbye uses the microphone for private voice conversations. Audio is processed entirely on your device.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AiGoodbye uses the camera so you can take photos, scan documents and ask about what the camera sees, including Describe Surroundings. Images are analyzed on your device and never recorded or uploaded.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AiGoodbye uses the microphone for voice conversations, translation and the meeting recorder. Audio is processed entirely on your device and never uploaded.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "AiGoodbye converts your speech to text on this device only. Nothing is sent anywhere.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "AiGoodbye uses Face ID to unlock your private conversations. Nothing about your face ever leaves the device.";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;

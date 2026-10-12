@@ -59,12 +59,36 @@ final class AppleIntelligenceService: ObservableObject {
 
     var isAvailable: Bool { availability == .available }
 
+    /// The app language's name when Apple Intelligence cannot answer in it
+    /// (it does not speak Russian, Ukrainian or Greek, for example), else
+    /// nil. The picker shows it so nobody discovers it from an English
+    /// answer or a system error.
+    var unsupportedLanguageName: String? {
+        #if canImport(FoundationModels)
+        guard isAvailable else { return nil }
+        let locale = L10n.locale
+        guard !SystemLanguageModel.default.supportsLocale(locale) else { return nil }
+        return Self.languageName(of: locale)
+        #else
+        return nil
+        #endif
+    }
+
+    /// A locale's language, named in the app's own language ("Ukrainian").
+    nonisolated static func languageName(of locale: Locale) -> String {
+        let code = locale.language.languageCode?.identifier ?? locale.identifier
+        return L10n.locale.localizedString(forLanguageCode: code) ?? code
+    }
+
     /// Tokens of the 4096-token window given to instructions plus seeded
     /// history, leaving room for a few turns before the session is rebuilt.
     nonisolated static let seedBudgetTokens = 2000
     /// The window Apple Intelligence works in; used by callers that size
     /// retrieved document passages to the backend.
     nonisolated static let contextWindowTokens = 4096
+    /// What remembered facts may take of that window: roughly a fifth,
+    /// leaving the persona, the seeded history and the answer their room.
+    nonisolated static let memoryBudgetTokens = 900
 
     // MARK: - Session
 
@@ -116,7 +140,10 @@ final class AppleIntelligenceService: ObservableObject {
 
     /// Stream a response with snapshot semantics (each event is the full text so far).
     /// Only the newest snapshot is buffered; older ones are superseded anyway.
-    func respondStream(prompt: String) -> AsyncThrowingStream<String, Error> {
+    ///
+    /// - Parameter temperature: the Creativity setting. Passed per request
+    ///   because the session outlives a change to the slider.
+    func respondStream(prompt: String, temperature: Double) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
             #if canImport(FoundationModels)
             guard let session = self.session else {
@@ -124,10 +151,11 @@ final class AppleIntelligenceService: ObservableObject {
                 return
             }
 
+            let options = GenerationOptions(temperature: temperature)
             let task = Task {
                 do {
                     var lastText = ""
-                    let stream = session.streamResponse(to: prompt)
+                    let stream = session.streamResponse(to: prompt, options: options)
                     for try await partial in stream {
                         if Task.isCancelled { break }
                         let text = String(describing: partial.content)
@@ -177,13 +205,24 @@ final class AppleIntelligenceService: ObservableObject {
         }
     }
 
+    /// The system's own wording for these errors names no next step, so each
+    /// case the user can act on gets a sentence that says what to do.
     private static func friendlyMessage(_ error: Error) -> String {
         if let generationError = error as? LanguageModelSession.GenerationError {
             switch generationError {
-            case .guardrailViolation:
+            case .guardrailViolation, .refusal:
                 return L10n.text("Apple Intelligence declined this request. Try rephrasing, or switch to a downloaded model in Settings.")
             case .exceededContextWindowSize:
                 return L10n.text("This conversation is too long for Apple Intelligence. Start a new chat or switch to a downloaded model.")
+            case .unsupportedLanguageOrLocale:
+                let language = languageName(of: L10n.locale)
+                return L10n.text("Apple Intelligence doesn't support \(language). Switch to a downloaded model - they answer in 30+ languages.")
+            case .rateLimited, .concurrentRequests:
+                // Voice mode and a chat answer at once, or a burst of
+                // Shortcuts: transient, and Try Again is the right move.
+                return L10n.text("Apple Intelligence is busy. Try again in a moment.")
+            case .assetsUnavailable:
+                return L10n.text("Apple Intelligence is still preparing on this device. Try again in a few minutes.")
             default:
                 return error.localizedDescription
             }

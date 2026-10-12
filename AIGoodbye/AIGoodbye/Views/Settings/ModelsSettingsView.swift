@@ -15,6 +15,10 @@ struct ModelsSettingsView: View {
 
     @State private var showDeleteConfirmation = false
     @State private var modelToDelete: AIModel?
+    /// Space left on the device, read when the screen appears and after a
+    /// delete - the question this screen exists to answer is "do I have room
+    /// for that model?".
+    @State private var freeBytes: Int64?
 
     var body: some View {
         List {
@@ -23,10 +27,18 @@ struct ModelsSettingsView: View {
             customSection
             builtInSection
         }
-        .navigationTitle("AI Models")
+        // The Settings row that leads here says "Manage Storage"; a screen
+        // titled differently reads as a wrong turn.
+        .navigationTitle("Manage Storage")
         // Sizes come from cached values; refresh them once on appear rather
         // than walking gigabytes of directories on every render.
-        .task { modelManager.refreshDiskState() }
+        .task {
+            modelManager.refreshDiskState()
+            freeBytes = Self.currentFreeBytes()
+        }
+        .onChange(of: modelManager.revision) { _, _ in
+            freeBytes = Self.currentFreeBytes()
+        }
         .alert(
             deleteDialogTitle,
             isPresented: $showDeleteConfirmation,
@@ -57,14 +69,35 @@ struct ModelsSettingsView: View {
                     .foregroundStyle(.secondary)
             }
             .accessibilityElement(children: .combine)
+
+            if let freeBytes {
+                HStack {
+                    Label("Free on this iPhone", systemImage: "externaldrive.badge.checkmark")
+                    Spacer()
+                    Text(AIModel.formattedBytes(freeBytes))
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityElement(children: .combine)
+            }
         } header: {
             Text("Storage")
         }
     }
 
+    /// Built-in models worth a row here: ones this device can run, plus
+    /// anything that occupies space (even a legacy or too-large model must
+    /// stay deletable). A 6 GB phone used to list the 8B Pro it can never
+    /// get, and everyone saw the retired Qwen2 model as "Not downloaded".
+    private var listedBuiltInModels: [AIModel] {
+        AIModel.builtInModels.filter { model in
+            let hasFiles = modelManager.downloadedSizeBytes(for: model) > 0
+            return hasFiles || (model.fitsThisDevice() && !model.isLegacy)
+        }
+    }
+
     private var modelsSection: some View {
         Section {
-            ForEach(AIModel.builtInModels) { model in
+            ForEach(listedBuiltInModels) { model in
                 modelRow(for: model)
             }
         } header: {
@@ -131,6 +164,21 @@ struct ModelsSettingsView: View {
 
     private func modelRow(for model: AIModel) -> some View {
         let isDownloaded = modelManager.isModelDownloaded(model)
+        let isLoading = appState.engine.mlx.loadingModelId == model.id
+        return VStack(alignment: .leading, spacing: 6) {
+            modelSummary(for: model)
+            // Below the summary rather than inside it: the summary is one
+            // combined VoiceOver element, which would swallow the button.
+            // Not for a model this device can never run: it is listed only
+            // so its leftover files can be deleted.
+            if isLoading || (!isDownloaded && model.fitsThisDevice()) {
+                ModelDownloadControl(model: model, engine: appState.engine)
+            }
+        }
+    }
+
+    private func modelSummary(for model: AIModel) -> some View {
+        let isDownloaded = modelManager.isModelDownloaded(model)
         let bytesOnDisk = modelManager.downloadedSizeBytes(for: model)
         return HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
@@ -147,10 +195,16 @@ struct ModelsSettingsView: View {
                         .foregroundStyle(.secondary)
                 } else if bytesOnDisk > 0 {
                     // Interrupted download: show what it occupies so it can
-                    // be reclaimed.
-                    Text("Partial download · \(onDiskSize(for: model))")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
+                    // be reclaimed. Colour on the icon only: orange caption
+                    // text fails contrast in light mode.
+                    Label {
+                        Text("Partial download · \(onDiskSize(for: model))")
+                            .foregroundStyle(.secondary)
+                    } icon: {
+                        Image(systemName: "exclamationmark.circle")
+                            .foregroundStyle(.orange)
+                    }
+                    .font(.caption)
                 } else {
                     Text("Not downloaded")
                         .font(.caption)
@@ -195,10 +249,14 @@ struct ModelsSettingsView: View {
     // MARK: - Helpers
 
     private func onDiskSize(for model: AIModel) -> String {
-        ByteCountFormatter.string(
-            fromByteCount: modelManager.downloadedSizeBytes(for: model),
-            countStyle: .file
-        )
+        AIModel.formattedBytes(modelManager.downloadedSizeBytes(for: model))
+    }
+
+    /// Off the cached disk state on purpose: it is one cheap volume query.
+    private static func currentFreeBytes() -> Int64? {
+        try? URL.documentsDirectory
+            .resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+            .volumeAvailableCapacityForImportantUsage
     }
 
     private var deleteDialogTitle: String {

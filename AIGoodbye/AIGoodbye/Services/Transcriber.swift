@@ -23,6 +23,7 @@ import Foundation
 // but it is invoked synchronously inside `convert(to:error:)` on the calling
 // thread, so handing it the tap's buffer is safe and the warning is noise.
 @preconcurrency import AVFoundation
+import CoreMedia
 import Speech
 
 @MainActor
@@ -84,6 +85,18 @@ final class Transcriber {
     /// in the user's meetings, product names, jargon. This is the single
     /// biggest accuracy lever a recorder has.
     var customVocabulary: [String] = []
+
+    /// Start a new paragraph where the speaker paused (SpeechAnalyzer) or at
+    /// each rotated request (the older recognizer). For the recorder: a
+    /// two-hour meeting used to be one unbroken 100 KB paragraph. Off for a
+    /// single spoken turn, which is a prompt, not a document.
+    var breaksParagraphsOnPauses = false
+    /// A silence longer than this between two finished results is a new
+    /// paragraph.
+    private let paragraphPause: TimeInterval = 2.0
+    /// Where in the audio the last finished result's last word ended, from
+    /// the word timings SpeechAnalyzer attaches (`.audioTimeRange`).
+    private var lastFinalEnd: TimeInterval?
 
     // MARK: - Setup
 
@@ -177,6 +190,7 @@ final class Transcriber {
         finalizedText = ""
         volatileText = ""
         lastVolatilePublish = .distantPast
+        lastFinalEnd = nil
 
         switch engine {
         case .analyzer:
@@ -210,6 +224,9 @@ final class Transcriber {
         // promises the list is applied to every recording, and the languages
         // this engine serves are exactly the ones with the weakest models.
         legacy.setContextualStrings(customVocabulary)
+        // This engine reports no pauses; its 45-second requests are the only
+        // structure there is, so each becomes a paragraph.
+        legacy.setParagraphPerSegment(breaksParagraphsOnPauses)
         try legacy.start(locale: locale)
     }
 
@@ -283,8 +300,23 @@ final class Transcriber {
                 for try await result in transcriber.results {
                     let text = String(result.text.characters)
                     let isFinal = result.isFinal
+                    // Where the words of a finished result start and end in
+                    // the audio, from the `.audioTimeRange` attribute this
+                    // module is created with - the pause between two results
+                    // is what decides a paragraph break.
+                    var speechStart: TimeInterval?
+                    var speechEnd: TimeInterval?
+                    if isFinal {
+                        for run in result.text.runs {
+                            guard let range = run.audioTimeRange else { continue }
+                            if speechStart == nil { speechStart = range.start.seconds }
+                            speechEnd = range.end.seconds
+                        }
+                    }
                     await MainActor.run {
-                        self.apply(text: text, isFinal: isFinal, generation: generation)
+                        self.apply(text: text, isFinal: isFinal,
+                                   speechStart: speechStart, speechEnd: speechEnd,
+                                   generation: generation)
                     }
                 }
             } catch {
@@ -300,8 +332,12 @@ final class Transcriber {
         }
     }
 
-    /// Fold one recognition result into the transcript.
-    private func apply(text: String, isFinal: Bool, generation: UUID) {
+    /// Fold one recognition result into the transcript. `speechStart` and
+    /// `speechEnd` are the audio times of a final result's first and last
+    /// word, when the engine reported them.
+    private func apply(text: String, isFinal: Bool,
+                       speechStart: TimeInterval? = nil, speechEnd: TimeInterval? = nil,
+                       generation: UUID) {
         // A result that arrives after cancel() must not resurrect a
         // transcript the caller discarded.
         guard currentGeneration == generation else { return }
@@ -309,7 +345,12 @@ final class Transcriber {
             // Committed: append and clear the live tail.
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             if !trimmed.isEmpty {
-                finalizedText += finalizedText.isEmpty ? trimmed : " " + trimmed
+                if finalizedText.isEmpty {
+                    finalizedText = trimmed
+                } else {
+                    finalizedText += separator(beforeSpeechAt: speechStart) + trimmed
+                }
+                if let speechEnd { lastFinalEnd = speechEnd }
             }
             volatileText = ""
             lastVolatilePublish = .distantPast
@@ -322,6 +363,16 @@ final class Transcriber {
         guard now.timeIntervalSince(lastVolatilePublish) >= volatilePublishInterval else { return }
         lastVolatilePublish = now
         onText?(currentText)
+    }
+
+    /// What goes between the transcript so far and a newly finished result:
+    /// a paragraph break after a real pause, otherwise a space. The audio
+    /// clock stops while the recorder is paused (no audio is fed), so only
+    /// silence while recording counts - never the pause button.
+    private func separator(beforeSpeechAt start: TimeInterval?) -> String {
+        guard breaksParagraphsOnPauses, let start, let lastFinalEnd,
+              start - lastFinalEnd > paragraphPause else { return " " }
+        return "\n\n"
     }
 
     var currentText: String {
@@ -398,6 +449,7 @@ final class Transcriber {
         legacy.cancel()
         finalizedText = ""
         volatileText = ""
+        lastFinalEnd = nil
     }
 
     /// Tear the modern session down without waiting for it. Whatever it was
@@ -559,11 +611,18 @@ nonisolated final class LegacyTranscriber: @unchecked Sendable {
     /// Names and jargon handed to every request (`contextualStrings`).
     /// Lock-guarded: segments begin on a background queue after a back-off.
     private var contextualStrings: [String] = []
+    /// Join segments with a paragraph break rather than a space. Lock-guarded
+    /// like everything the recognition callbacks read.
+    private var paragraphPerSegment = false
 
     private let segmentSeconds: TimeInterval = 45
 
     func setContextualStrings(_ strings: [String]) {
         lock.lock(); contextualStrings = strings; lock.unlock()
+    }
+
+    func setParagraphPerSegment(_ on: Bool) {
+        lock.lock(); paragraphPerSegment = on; lock.unlock()
     }
 
     func isAvailable(for locale: Locale) -> Bool {
@@ -608,7 +667,7 @@ nonisolated final class LegacyTranscriber: @unchecked Sendable {
         cachedText = segments.keys.sorted()
             .compactMap { segments[$0]?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
-            .joined(separator: " ")
+            .joined(separator: paragraphPerSegment ? "\n\n" : " ")
     }
 
     private func beginSegment() {

@@ -138,20 +138,37 @@ enum SharedInbox {
     }
 }
 
-/// Shared flag set by the Control Center control so the app can open
-/// straight into voice mode. Lives here so both the app and the widget
-/// target can see it.
+/// The screen a Control Center control, the Action Button or an
+/// open-the-app intent asked for, handed to the app through App Group
+/// defaults. A control's action is an intent, and that intent may run in
+/// the widget extension rather than the app, so a shared value is the one
+/// channel both sides see. Lives here because this file is compiled into
+/// the app and both extensions.
+///
+/// Route names are the deep-link hosts: "voice", "camera", "translate",
+/// "describe", "recorder", "new".
 enum WidgetLaunchBridge {
-    private static let key = "launch_into_voice"
+    private static let key = "launch_route"
+    /// Written by the voice-only control in 3.5 and earlier. An update
+    /// replaces app and extension together, so this can only be a tap made
+    /// just before the update; it is honoured once and then gone.
+    private static let legacyVoiceKey = "launch_into_voice"
 
-    static func requestVoiceMode() {
-        UserDefaults(suiteName: SharedInbox.appGroup)?.set(true, forKey: key)
+    static func requestLaunch(route: String) {
+        UserDefaults(suiteName: SharedInbox.appGroup)?.set(route, forKey: key)
     }
 
-    static func consumeVoiceRequest() -> Bool {
-        let defaults = UserDefaults(suiteName: SharedInbox.appGroup)
-        guard defaults?.bool(forKey: key) == true else { return false }
-        defaults?.set(false, forKey: key)
-        return true
+    /// Takes the requested route, if any, and clears it.
+    static func consumeLaunchRoute() -> String? {
+        guard let defaults = UserDefaults(suiteName: SharedInbox.appGroup) else { return nil }
+        if let route = defaults.string(forKey: key) {
+            defaults.removeObject(forKey: key)
+            return route
+        }
+        if defaults.bool(forKey: legacyVoiceKey) {
+            defaults.removeObject(forKey: legacyVoiceKey)
+            return "voice"
+        }
+        return nil
     }
 }

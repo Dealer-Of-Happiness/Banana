@@ -16,13 +16,23 @@ import PhotosUI
 import UniformTypeIdentifiers
 import PDFKit
 import VisionKit
+import QuickLook
+import StoreKit
+import Network
 
 struct ChatView: View {
     @EnvironmentObject var appState: AppState
     /// Owned by AppState so drafts and in-flight answers survive the
     /// language-change rebuild of the view tree.
     @ObservedObject var viewModel: ChatViewModel
+    /// The persona is part of the chat's identity (subtitle, overflow menu);
+    /// observed here so a change made in Settings shows up without a reload.
+    @ObservedObject private var personaStore = PersonaStore.shared
     @FocusState private var isInputFocused: Bool
+    /// Moves VoiceOver onto the newest answer when it completes. "Answer
+    /// complete" alone left the user sitting on the composer, swiping back
+    /// through Send and the attachments menu to find the reply.
+    @AccessibilityFocusState private var focusedMessage: UUID?
 
     // Attachment state
     @State private var showingPhotoPicker = false
@@ -38,6 +48,17 @@ struct ChatView: View {
     @State private var showingRecorder = false
     @State private var showingScanner = false
     @State private var showingSceneDescription = false
+    @State private var showingRenameAlert = false
+    @State private var renameText = ""
+    /// A Markdown or PDF export waiting for the share sheet.
+    @State private var exportURL: URL?
+    @State private var exportFailed = false
+    /// A message opened in the selectable-text sheet (VoiceOver's Share
+    /// action uses the same share sheet as the export).
+    @State private var selectableText: SelectableText?
+    @State private var shareText: SelectableText?
+    /// An attached image opened full screen.
+    @State private var previewURL: URL?
     /// Whether the transcript is scrolled to the bottom, so a streaming
     /// answer follows along without stealing the scroll from the user.
     @State private var isPinnedToBottom = true
@@ -57,12 +78,30 @@ struct ChatView: View {
     }
     @State private var showingSetup = false
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.requestReview) private var requestReview
     /// Drawer or sidebar, decided by `MainView` for this window.
     @Environment(\.conversationListStyle) private var listStyle
     /// Shown once, right after the terms, so a new user knows where they
     /// stand before typing anything.
     @AppStorage("hasSeenSetup") private var hasSeenSetup = false
+
+    /// A full-screen feature is up. Nothing from the chat (a review prompt,
+    /// focus moves) should interrupt the recorder or a voice conversation.
+    private var coveringFeatureIsUp: Bool {
+        showingVoiceMode || showingRecorder || showingLiveCamera
+            || showingSceneDescription || showingScanner || showingCamera || showingSetup
+    }
+
+    /// The consent copy has four bullets App Review and privacy-minded users
+    /// actually read. At accessibility sizes, and on a landscape phone, the
+    /// medium detent showed two lines and hid the rest with no scroll hint.
+    private var consentDetents: Set<PresentationDetent> {
+        dynamicTypeSize.isAccessibilitySize || verticalSizeClass == .compact
+            ? [.large]
+            : [.medium, .large]
+    }
 
     var body: some View {
         NavigationStack {
@@ -158,11 +197,14 @@ struct ChatView: View {
 
                 inputArea
             }
+            .background { keyboardShortcutButtons }
             .navigationTitle(chatTitle)
             // The model is the one thing worth knowing about a chat at a
             // glance; it used to live in a custom title view, which the
-            // iPhone Duo vertical bar cannot show at all.
-            .navigationSubtitle(appState.engine.selectedModel.name)
+            // iPhone Duo vertical bar cannot show at all. A persona chosen
+            // last week silently turns today's recipe question into a
+            // translation, so it is named here too.
+            .navigationSubtitle(chatSubtitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .photosPicker(
@@ -236,6 +278,44 @@ struct ChatView: View {
                 SetupView()
                     .environmentObject(appState)
             }
+            .sheet(item: $exportURL) { url in
+                ShareSheet(items: [url])
+            }
+            .sheet(item: $shareText) { item in
+                ShareSheet(items: [item.text])
+            }
+            .sheet(item: $selectableText) { item in
+                SelectableTextSheet(text: item.text)
+            }
+            // Quick Look (QLPreviewController, presented by the system):
+            // zoom, share and markup come with it, and a photographed form
+            // or label is read full size.
+            .quickLookPreview($previewURL)
+            .onChange(of: previewURL) { old, new in
+                // The composer's copy was only for this preview.
+                if new == nil, let old, old.lastPathComponent.hasPrefix(Self.composerPreviewPrefix) {
+                    try? FileManager.default.removeItem(at: old)
+                }
+            }
+            .alert("Couldn't export this chat", isPresented: $exportFailed) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Please try again.")
+            }
+            .sheet(isPresented: $showingRenameAlert, onDismiss: { renameText = "" }) {
+                TextEntrySheet(
+                    title: "Rename Chat",
+                    message: "Enter a new name for this chat",
+                    placeholder: "Chat name",
+                    actionTitle: "Rename",
+                    initialText: renameText
+                ) { name in
+                    if let conversation = appState.currentConversation {
+                        appState.conversationManager.renameConversation(conversation, to: name)
+                        appState.objectWillChange.send()
+                    }
+                }
+            }
             // onDismiss matters: swiping the sheet away nils the binding
             // without running "Not Now", which used to leave the message
             // sitting unanswered with no banner and no explanation.
@@ -256,7 +336,7 @@ struct ChatView: View {
                         viewModel.declineConsent()
                     }
                 )
-                .presentationDetents([.medium, .large])
+                .presentationDetents(consentDetents)
             }
             .alert("Camera Unavailable", isPresented: $showingCameraUnavailableAlert) {
                 Button("OK", role: .cancel) {}
@@ -318,6 +398,29 @@ struct ChatView: View {
         .onChange(of: appState.pendingRoute) { _, _ in
             applyPendingRoute()
         }
+        // The composer keeps its focus between messages. When the drawer
+        // opens over the chat, this screen is disabled; a disabled view that
+        // still held focus swallowed the taps of the drawer's own alerts
+        // (Create in New Folder did nothing). Let go of it here.
+        .onChange(of: appState.showSideMenu) { _, isOpen in
+            if isOpen, listStyle == .drawer { isInputFocused = false }
+        }
+        // An answer finished in THIS chat (not a chat being loaded, whose
+        // message count also jumps): move VoiceOver onto it, and consider
+        // asking for a rating now that the user has something to rate.
+        .onChange(of: viewModel.lastCompletedAnswerId) { _, id in
+            // Voice mode answers through this same chat; its own screen is
+            // in front and keeps VoiceOver.
+            guard let id, !coveringFeatureIsUp else { return }
+            // Only with VoiceOver on. Without it nothing ever takes the
+            // focus, so the request stayed pinned to the bubble - and once
+            // the drawer covered the chat, the drawer's own alerts (New
+            // Folder, Rename) stopped responding to taps.
+            if UIAccessibility.isVoiceOverRunning {
+                focusedMessage = id
+            }
+            maybeRequestReview()
+        }
         // A downloaded model must not keep generating from the background
         // (see `pauseForBackground`). `.inactive` is left alone: Control
         // Center and the Face ID prompt pass through it.
@@ -337,16 +440,58 @@ struct ChatView: View {
         case .voice: showingVoiceMode = true
         case .camera: showingLiveCamera = true
         case .translate: showingTranslate = true
+        case .describe: showingSceneDescription = true
+        case .recorder: showingRecorder = true
         case .newChat:
             appState.createNewConversation()
             isInputFocused = true
         }
     }
 
+    /// Asks for a rating only after a completed answer, never on top of an
+    /// error, and never while the recorder, voice mode or onboarding is up:
+    /// the system prompt would land on the wrong screen.
+    private func maybeRequestReview() {
+        guard hasSeenSetup, !coveringFeatureIsUp, viewModel.errorBanner == nil,
+              viewModel.lastAnswerFinishedNormally else { return }
+        guard ReviewPrompter.shouldAskAfterAnswer() else { return }
+        ReviewPrompter.markAsked()
+        requestReview()
+    }
+
     // MARK: - Toolbar
 
     private var chatTitle: String {
         appState.currentConversation?.displayTitle ?? L10n.text("New Chat")
+    }
+
+    /// The default persona is implied; any other one is named next to the
+    /// model, because it changes every answer.
+    private var chatSubtitle: String {
+        let model = appState.engine.selectedModel.name
+        guard let persona = personaStore.selected, !isDefaultPersona(persona) else { return model }
+        return L10n.text("\(model) · \(persona.name)")
+    }
+
+    private func isDefaultPersona(_ persona: Persona) -> Bool {
+        persona.isBuiltIn && persona.instructions.isEmpty
+    }
+
+    /// Picker selection for the persona submenu. The store uses nil for the
+    /// plain assistant; the picker needs a concrete id, so the built-in
+    /// "General Assistant" stands in for nil both ways.
+    private var personaSelection: Binding<UUID?> {
+        Binding(
+            get: {
+                personaStore.selectedId ?? personaStore.all.first(where: isDefaultPersona)?.id
+            },
+            set: { newId in
+                let chosen = personaStore.all.first { $0.id == newId }
+                personaStore.selectedId = chosen.map(isDefaultPersona) == true ? nil : newId
+                // The system prompt changed; sessions rebuild on the next turn.
+                appState.engine.resetSessions()
+            }
+        )
     }
 
     /// Every item has an icon and a title. On iPhone Duo the system lays
@@ -359,6 +504,7 @@ struct ChatView: View {
             Button("Conversations", systemImage: "line.3.horizontal") {
                 appState.toggleSideMenu(twoPane: listStyle == .sidebar)
             }
+            .keyboardShortcut("s", modifiers: [.command, .shift])
             .accessibilityLabel(Text("Conversations menu"))
         }
 
@@ -372,6 +518,7 @@ struct ChatView: View {
                 Button("Choose Model", systemImage: "cpu") {
                     showingModelPicker = true
                 }
+                .keyboardShortcut("m", modifiers: [.command, .shift])
             }
             .visibilityPriority(.high)
 
@@ -379,33 +526,131 @@ struct ChatView: View {
             // one place when space is tight, rather than an app-specific
             // ellipsis beside the system's.
             ToolbarOverflowMenu {
-                Button("Regenerate", systemImage: "arrow.clockwise") {
-                    viewModel.regenerateLastResponse()
-                }
-                .disabled(viewModel.isGenerating)
-
-                Button("Clear Chat", systemImage: "trash", role: .destructive) {
-                    showingClearConfirmation = true
-                }
+                chatMenuItems(includeModelPicker: false)
             }
         } else {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu("Chat Options", systemImage: "ellipsis.circle") {
-                    Button("Regenerate", systemImage: "arrow.clockwise") {
-                        viewModel.regenerateLastResponse()
-                    }
-                    .disabled(viewModel.isGenerating)
-
-                    Button("Choose Model", systemImage: "cpu") {
-                        showingModelPicker = true
-                    }
-
-                    Button("Clear Chat", systemImage: "trash", role: .destructive) {
-                        showingClearConfirmation = true
-                    }
+                    chatMenuItems(includeModelPicker: true)
                 }
                 .accessibilityLabel(Text("Chat options"))
             }
+        }
+    }
+
+    /// Hardware-keyboard shortcuts for commands that otherwise sit inside a
+    /// menu. On iPadOS a shortcut on a button in a closed `Menu` does not
+    /// fire, so these are zero-size buttons that are always in the view
+    /// tree; their titles are what the Command-key overlay lists. (Send,
+    /// Stop, Conversations and the iOS 27 Choose Model button carry theirs.)
+    @ViewBuilder
+    private var keyboardShortcutButtons: some View {
+        // Each button is hidden from accessibility on its own: hiding only
+        // the container left them visible to VoiceOver (and UI tests) as
+        // invisible duplicates of the real Stop and Regenerate controls.
+        ZStack {
+            Button("Regenerate") {
+                viewModel.regenerateLastResponse()
+            }
+            .keyboardShortcut("r", modifiers: [.command, .shift])
+            .disabled(viewModel.isGenerating || viewModel.messages.isEmpty)
+            .accessibilityHidden(true)
+
+            if #available(iOS 27, *) {
+                EmptyView()
+            } else {
+                Button("Choose Model") {
+                    showingModelPicker = true
+                }
+                .keyboardShortcut("m", modifiers: [.command, .shift])
+                .accessibilityHidden(true)
+            }
+
+            // Escape is on the Stop button itself; Command-period is the
+            // other "stop" every Mac and iPad user knows.
+            if viewModel.isGenerating {
+                Button("Stop") {
+                    viewModel.stopGeneration()
+                }
+                .keyboardShortcut(".", modifiers: .command)
+                .accessibilityHidden(true)
+            }
+        }
+        .frame(width: 0, height: 0)
+        .opacity(0)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    /// One list for both overflow menus (iOS 27's system menu and the
+    /// pre-27 ellipsis), so they can never drift apart.
+    @ViewBuilder
+    private func chatMenuItems(includeModelPicker: Bool) -> some View {
+        // Keyboard shortcuts for these two live in `keyboardShortcutButtons`:
+        // inside a closed menu they never fire.
+        Button("Regenerate", systemImage: "arrow.clockwise") {
+            viewModel.regenerateLastResponse()
+        }
+        .disabled(viewModel.isGenerating)
+
+        if includeModelPicker {
+            Button("Choose Model", systemImage: "cpu") {
+                showingModelPicker = true
+            }
+        }
+
+        // A submenu with checkmarks: the persona applies to every answer,
+        // and it used to be visible only three taps deep in Settings.
+        Menu("Persona", systemImage: "person.crop.circle") {
+            Picker("Persona", selection: personaSelection) {
+                ForEach(personaStore.all) { persona in
+                    Label(persona.name, systemImage: persona.symbol)
+                        .tag(Optional(persona.id))
+                }
+            }
+            .pickerStyle(.inline)
+        }
+
+        Button("Rename", systemImage: "pencil") {
+            renameText = appState.currentConversation?.displayTitle ?? ""
+            showingRenameAlert = true
+        }
+        .disabled(appState.currentConversation == nil)
+
+        Divider()
+
+        Button("Export as Markdown", systemImage: "doc.text") {
+            guard let conversation = appState.currentConversation else { return }
+            if let url = ConversationExporter.markdownFile(for: conversation) {
+                exportURL = url
+            } else {
+                exportFailed = true
+            }
+        }
+        .disabled(viewModel.messages.isEmpty)
+
+        Button("Export as PDF", systemImage: "doc.richtext") {
+            guard let conversation = appState.currentConversation else { return }
+            if let url = ConversationExporter.pdfFile(for: conversation) {
+                exportURL = url
+            } else {
+                exportFailed = true
+            }
+        }
+        .disabled(viewModel.messages.isEmpty)
+
+        // For the "paste it into Notes" case, where a file is one step too many.
+        Button("Copy Conversation", systemImage: "doc.on.doc") {
+            guard let conversation = appState.currentConversation else { return }
+            UIPasteboard.general.string = ConversationExporter.markdown(for: conversation)
+            viewModel.confirmCopy()
+        }
+        .disabled(viewModel.messages.isEmpty)
+
+        Divider()
+
+        Button("Clear Chat", systemImage: "trash", role: .destructive) {
+            showingClearConfirmation = true
         }
     }
 
@@ -418,33 +663,77 @@ struct ChatView: View {
                 // bubble is ~200 characters per line, which is unreadable.
                 // Every other screen already caps; the chat did not.
                 LazyVStack(spacing: 16) {
+                    let lastMessageId = viewModel.messages.last?.id
                     ForEach(viewModel.messages, id: \.id) { message in
+                        // Only an answer that ends the chat: with an
+                        // unanswered question after it, the new answer
+                        // would land under the wrong question.
+                        let canRegenerate = message.role == .assistant && !viewModel.isGenerating
+                            && message.id == lastMessageId
+                        let attachedImageId = message.attachmentType == .image ? message.attachmentId : nil
+
                         MessageBubble(
                             message: message,
-                            image: message.attachmentId.flatMap { viewModel.getImage(for: $0) }
+                            image: message.attachmentId.flatMap { viewModel.getImage(for: $0) },
+                            onTapImage: imagePreviewAction(for: attachedImageId)
                         )
                         .id(message.id.uuidString)
+                        .accessibilityFocused($focusedMessage, equals: message.id)
                         .contextMenu {
                             Button {
-                                UIPasteboard.general.string = message.content
+                                UIPasteboard.general.string = visibleText(of: message)
+                                viewModel.confirmCopy()
                             } label: {
                                 Label("Copy", systemImage: "doc.on.doc")
                             }
 
-                            ShareLink(item: message.content) {
+                            // iOS text selection is all-or-nothing on a
+                            // bubble; a sentence or a number out of a long
+                            // answer needs a real text view.
+                            Button {
+                                selectableText = SelectableText(text: selectableContent(of: message))
+                            } label: {
+                                Label("Select Text", systemImage: "text.cursor")
+                            }
+
+                            ShareLink(item: visibleText(of: message)) {
                                 Label("Share", systemImage: "square.and.arrow.up")
                             }
 
                             // Regenerate only the LAST answer: regenerating a
                             // middle-of-chat reply would append the new answer
                             // at the bottom, out of context.
-                            if message.role == .assistant && !viewModel.isGenerating
-                                && message.id == viewModel.messages.last(where: { $0.role == .assistant })?.id {
+                            if canRegenerate {
                                 Button {
                                     viewModel.regenerateResponse(for: message)
                                 } label: {
                                     Label("Regenerate", systemImage: "arrow.clockwise")
                                 }
+                            }
+                        }
+                        // The bubble is one combined element, so its context
+                        // menu is reachable only by knowing to double-tap and
+                        // hold. The same actions, as VoiceOver actions. A
+                        // builder, not a conditional modifier, so the bubble
+                        // keeps its identity when Regenerate comes and goes.
+                        .accessibilityActions {
+                            Button("Copy") {
+                                UIPasteboard.general.string = visibleText(of: message)
+                                viewModel.confirmCopy()
+                            }
+                            Button("Share") {
+                                shareText = SelectableText(text: visibleText(of: message))
+                            }
+                            Button("Select Text") {
+                                selectableText = SelectableText(text: selectableContent(of: message))
+                            }
+                            if canRegenerate {
+                                Button("Regenerate") {
+                                    viewModel.regenerateResponse(for: message)
+                                }
+                            }
+                            if let open = imagePreviewAction(for: attachedImageId) {
+                                Button("View full screen", action: open)
                             }
                         }
                     }
@@ -454,7 +743,10 @@ struct ChatView: View {
                         StreamingBubble(text: streaming)
                             .id("streaming")
                     } else if viewModel.isGenerating {
-                        TypingIndicator()
+                        // While the model is still being fetched or loaded
+                        // the chip explains the wait; the indicator's own
+                        // "reading the conversation" copy would be wrong.
+                        TypingIndicator(modelIsLoading: engineIsLoadingModel)
                             .id("typing")
                     }
                 }
@@ -462,6 +754,10 @@ struct ChatView: View {
                 .frame(maxWidth: 760)
                 .frame(maxWidth: .infinity)
             }
+            // Dragging the transcript pulls the keyboard down with it, as in
+            // Messages; before this there was no gesture to get it out of
+            // the way once Send stopped dismissing it.
+            .scrollDismissesKeyboard(.interactively)
             // Scrolling up while an answer streams used to be impossible:
             // every token yanked the view back down. Follow the answer only
             // while the user is still at the bottom.
@@ -549,40 +845,152 @@ struct ChatView: View {
         }
     }
 
+    /// The engine is still fetching or loading weights for this answer.
+    private var engineIsLoadingModel: Bool {
+        appState.engine.mlx.isDownloading || appState.engine.mlx.isPreparingModel
+    }
+
+    // MARK: - Message actions
+
+    /// What the bubble shows: a document question without its "[file] "
+    /// prefix. Copy and Share hand over this, not the stored form.
+    private func visibleText(of message: Message) -> String {
+        MessageBubble.displayParts(
+            of: message.content, isDocument: message.attachmentType == .document
+        ).text
+    }
+
+    /// For the Select Text sheet: an answer without its Markdown markers, so
+    /// a selected sentence pastes as the sentence.
+    private func selectableContent(of message: Message) -> String {
+        message.role == .assistant
+            ? MarkdownText.plainText(message.content)
+            : visibleText(of: message)
+    }
+
+    private static let composerPreviewPrefix = "composer-preview-"
+
+    /// The photo waiting in the composer, full screen. It has no file yet
+    /// (attachments are written when sent), and Quick Look needs one: a
+    /// protected temporary copy, removed when the preview closes. A fresh
+    /// name each time, because Quick Look caches by URL.
+    private func previewPendingImage(_ image: UIImage) {
+        guard let data = image.jpegData(compressionQuality: 0.9) else { return }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(Self.composerPreviewPrefix + UUID().uuidString + ".jpg")
+        do {
+            try data.write(to: url, options: [.atomic, .completeFileProtection])
+            previewURL = url
+        } catch {
+            // Nothing to show; the attachment itself is unaffected.
+        }
+    }
+
+    /// Opens an attached photo full screen from its saved JPEG. The file is
+    /// only checked on tap, not on every redraw of the transcript.
+    private func imagePreviewAction(for imageId: UUID?) -> (() -> Void)? {
+        guard let imageId else { return nil }
+        let url = ConversationManager.imagePath(for: imageId)
+        return {
+            guard FileManager.default.fileExists(atPath: url.path) else { return }
+            previewURL = url
+        }
+    }
+
     // MARK: - Engine status chip
 
     @ViewBuilder
     private var engineStatusChip: some View {
+        if let paused = viewModel.pausedDownload, !appState.engine.mlx.isDownloading {
+            pausedDownloadChip(paused)
+        } else {
+            activeEngineStatusChip
+        }
+    }
+
+    /// A download paused from the chip. The partial files are kept, so
+    /// Resume continues rather than starting over.
+    private func pausedDownloadChip(_ model: AIModel) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "pause.circle.fill")
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            Text(L10n.text("\(model.name) · \(L10n.text("Paused"))"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            Button {
+                viewModel.resumeDownload()
+            } label: {
+                Label("Resume", systemImage: "play.circle")
+                    .font(.caption.weight(.medium))
+                    .frame(minHeight: 44)
+            }
+        }
+        .padding(.horizontal)
+        .frame(maxWidth: .infinity)
+        .background(Color(.systemGray6))
+    }
+
+    @ViewBuilder
+    private var activeEngineStatusChip: some View {
         switch appState.engine.status {
         case .downloading(let progress):
-            VStack(spacing: 4) {
-                HStack(spacing: 8) {
-                    ProgressView(value: progress)
-                        .frame(maxWidth: 120)
-                    Text(downloadStatusText(progress: progress))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
-                if appState.engine.mlx.isWaitingForWiFi {
-                    // Parked, not stalled: the Wi-Fi-only setting is doing
-                    // its job on cellular, and the system waits silently.
-                    Text("Waiting for Wi-Fi. Connect to Wi-Fi, or turn off \"Download over Wi-Fi only\" in Settings.")
+            HStack(spacing: 4) {
+                VStack(spacing: 4) {
+                    HStack(spacing: 8) {
+                        ProgressView(value: progress)
+                            .frame(maxWidth: 120)
+                        Text(downloadStatusText(progress: progress))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                    // Orange on the icon only: orange caption text on gray is
+                    // about 2:1, unreadable for the people who most need it.
+                    if appState.engine.mlx.isWaitingForWiFi {
+                        // Parked, not stalled: the Wi-Fi-only setting is doing
+                        // its job on cellular, and the system waits silently.
+                        Label {
+                            Text("Waiting for Wi-Fi. Connect to Wi-Fi, or turn off \"Download over Wi-Fi only\" in Settings.")
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } icon: {
+                            Image(systemName: "wifi.slash")
+                                .foregroundStyle(.orange)
+                        }
                         .font(.caption2)
-                        .foregroundStyle(.orange)
-                        .fixedSize(horizontal: false, vertical: true)
-                } else if appState.engine.mlx.isDownloadStalled {
-                    Text("Download stalled. Check your internet connection.")
+                    } else if appState.engine.mlx.isDownloadStalled {
+                        Label {
+                            Text("Download stalled. Check your internet connection.")
+                                .foregroundStyle(.secondary)
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                        }
                         .font(.caption2)
-                        .foregroundStyle(.orange)
+                    }
                 }
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.updatesFrequently)
+
+                // The only way to stop a transfer used to be the composer's
+                // red Stop, which reads as "stop generating". Outside the
+                // combined element so VoiceOver reaches it.
+                Button {
+                    viewModel.pauseDownload()
+                } label: {
+                    Image(systemName: "pause.circle")
+                        .font(.title3)
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                .accessibilityLabel(Text("Pause"))
             }
             .padding(.horizontal)
-            .padding(.vertical, 6)
+            .padding(.vertical, 2)
             .frame(maxWidth: .infinity)
             .background(Color(.systemGray6))
-            .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.updatesFrequently)
         case .preparing:
             HStack(spacing: 8) {
                 ProgressView()
@@ -633,12 +1041,40 @@ struct ChatView: View {
     private func downloadStatusText(progress: Double) -> String {
         let mlx = appState.engine.mlx
         let name = loadingModelName
+        var text: String
         if mlx.totalDownloadBytes > 1, mlx.downloadedBytes > 0 {
             let done = ByteCountFormatter.string(fromByteCount: mlx.downloadedBytes, countStyle: .file)
             let total = ByteCountFormatter.string(fromByteCount: mlx.totalDownloadBytes, countStyle: .file)
-            return L10n.text("Downloading \(name) · \(done) of \(total)")
+            text = L10n.text("Downloading \(name) · \(done) of \(total)")
+        } else {
+            // Locale-aware: "45 %" in French, "%45" in Turkish.
+            let percent = progress.formatted(.percent.precision(.fractionLength(0)).locale(L10n.locale))
+            text = L10n.text("Downloading \(name)") + " · " + percent
         }
-        return L10n.text("Downloading \(name)") + " · \(Int(progress * 100))%"
+        // "213 MB of 1.8 GB" says nothing about whether to wait or walk away.
+        if let eta = remainingTimeText {
+            text += " · " + L10n.text("about \(eta) left")
+        }
+        return text
+    }
+
+    /// "4 min" / "40 sec" from the download's measured speed; nil until the
+    /// service has enough data for an honest estimate.
+    private var remainingTimeText: String? {
+        guard let seconds = appState.engine.mlx.estimatedSecondsRemaining,
+              seconds.isFinite, seconds > 0 else { return nil }
+        let whole = Int64(seconds.rounded())
+        // Minutes are precise enough past one; seconds tick distractingly.
+        let duration: Duration
+        let units: Set<Duration.UnitsFormatStyle.Unit>
+        if whole >= 60 {
+            duration = .seconds(max(60, (whole + 30) / 60 * 60))
+            units = [.hours, .minutes]
+        } else {
+            duration = .seconds(max(1, whole))
+            units = [.seconds]
+        }
+        return duration.formatted(.units(allowed: units, width: .abbreviated).locale(L10n.locale))
     }
 
     // MARK: - Error banner
@@ -760,6 +1196,21 @@ struct ChatView: View {
                         showingTranslate = true
                     }
 
+                    // The feature blind and low-vision users come for; it
+                    // was reachable only through the plus menu. Same
+                    // availability rule as that menu.
+                    #if !targetEnvironment(simulator)
+                    if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                        QuickActionButton(
+                            icon: "eye",
+                            title: L10n.text("Describe Surroundings"),
+                            subtitle: L10n.text("Describes what the camera is pointed at right now")
+                        ) {
+                            showingSceneDescription = true
+                        }
+                    }
+                    #endif
+
                     QuickActionButton(
                         icon: "photo.fill",
                         title: L10n.text("Analyze an Image"),
@@ -790,16 +1241,22 @@ struct ChatView: View {
 
     private func attachmentPreview(image: UIImage) -> some View {
         HStack(spacing: 12) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(width: 60, height: 60)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.blue, lineWidth: 2)
-                )
-                .accessibilityLabel(Text("Attached image"))
+            Button {
+                previewPendingImage(image)
+            } label: {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 60, height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.blue, lineWidth: 2)
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Attached image"))
+            .accessibilityHint(Text("Double-tap to view full screen"))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Image attached")
@@ -875,14 +1332,7 @@ struct ChatView: View {
     }
 
     private func documentIcon(for filename: String) -> String {
-        let ext = (filename as NSString).pathExtension.lowercased()
-        switch ext {
-        case "pdf": return "doc.fill"
-        case "txt", "md": return "doc.text.fill"
-        case "json": return "curlybraces"
-        case "swift", "py", "js", "html", "css": return "chevron.left.forwardslash.chevron.right"
-        default: return "doc.fill"
-        }
+        documentSymbol(for: filename)
     }
 
     // MARK: - Input Area
@@ -911,6 +1361,18 @@ struct ChatView: View {
                         showingDocumentPicker = true
                     } label: {
                         Label("Document", systemImage: "doc")
+                    }
+
+                    // A screenshot copied in Safari or Messages, without a
+                    // detour through Photos. `hasImages` does not read the
+                    // pasteboard, so the system paste notice appears only on
+                    // tap, where it is expected.
+                    if UIPasteboard.general.hasImages {
+                        Button {
+                            Task { await viewModel.pasteImage() }
+                        } label: {
+                            Label("Paste Image", systemImage: "doc.on.clipboard")
+                        }
                     }
 
                     if DocumentScannerView.isAvailable {
@@ -965,9 +1427,7 @@ struct ChatView: View {
                 .accessibilityHint(Text("Photos, documents, scanning, live camera, describe surroundings, translate and record"))
 
                 TextField(
-                    viewModel.pendingImage != nil
-                        ? L10n.text("Ask about this image...")
-                        : L10n.text("Message..."),
+                    composerPlaceholder,
                     text: $viewModel.inputText,
                     axis: .vertical
                 )
@@ -992,10 +1452,13 @@ struct ChatView: View {
                             .foregroundStyle(.red)
                             .frame(minWidth: 44, minHeight: 44)
                     }
+                    .keyboardShortcut(.escape, modifiers: [])
                     .accessibilityLabel(Text("Stop generating"))
                 } else if canSend {
                     Button {
-                        isInputFocused = false
+                        // Focus is left alone: the next message usually
+                        // follows the answer, as in Messages. A drag on the
+                        // transcript puts the keyboard away.
                         Task { await viewModel.sendMessage() }
                     } label: {
                         Image(systemName: "arrow.up.circle.fill")
@@ -1003,6 +1466,9 @@ struct ChatView: View {
                             .foregroundStyle(.blue)
                             .frame(minWidth: 44, minHeight: 44)
                     }
+                    // Return inserts a newline in a multi-line field, so a
+                    // hardware keyboard had no way to send at all.
+                    .keyboardShortcut(.return, modifiers: .command)
                     .accessibilityLabel(Text("Send message"))
                 } else {
                     // Empty composer: offer hands-free voice conversation.
@@ -1028,12 +1494,61 @@ struct ChatView: View {
         .background(.bar)
     }
 
+    /// Says what Send will do with what is attached.
+    private var composerPlaceholder: String {
+        if viewModel.pendingImage != nil { return L10n.text("Ask about this image...") }
+        if viewModel.pendingDocumentName != nil { return L10n.text("Ask about this document...") }
+        return L10n.text("Message...")
+    }
+
     private var canSend: Bool {
         !viewModel.isGenerating && (
             !viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
             viewModel.pendingImage != nil ||
             viewModel.pendingDocumentName != nil
         )
+    }
+}
+
+// MARK: - Review prompt
+
+/// When to ask for an App Store rating: after a completed answer, once at
+/// least five answers have completed on at least two different days, and
+/// only once per app version. A paid app with no nag lives on ratings, and
+/// until now only unhappy users found the rating page. Counters stay in
+/// UserDefaults on the device.
+enum ReviewPrompter {
+    private static let answersKey = "review.completedAnswers"
+    private static let daysKey = "review.answerDays"
+    private static let askedVersionKey = "review.askedVersion"
+
+    static func noteCompletedAnswer() {
+        let defaults = UserDefaults.standard
+        defaults.set(defaults.integer(forKey: answersKey) + 1, forKey: answersKey)
+        let today = Int(Calendar.current.startOfDay(for: Date()).timeIntervalSince1970)
+        var days = defaults.array(forKey: daysKey) as? [Int] ?? []
+        if !days.contains(today) {
+            days.append(today)
+            // Only "at least two" is ever asked; a week is plenty.
+            defaults.set(Array(days.suffix(7)), forKey: daysKey)
+        }
+    }
+
+    static func shouldAskAfterAnswer() -> Bool {
+        let defaults = UserDefaults.standard
+        guard let version = currentVersion, defaults.string(forKey: askedVersionKey) != version else {
+            return false
+        }
+        let days = defaults.array(forKey: daysKey) as? [Int] ?? []
+        return defaults.integer(forKey: answersKey) >= 5 && days.count >= 2
+    }
+
+    static func markAsked() {
+        UserDefaults.standard.set(currentVersion, forKey: askedVersionKey)
+    }
+
+    private static var currentVersion: String? {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
     }
 }
 
@@ -1045,13 +1560,17 @@ struct QuickActionButton: View {
     let subtitle: String
     let action: () -> Void
 
+    /// Grows with the `.title2` icon: a fixed 40 pt column clipped the
+    /// symbol at accessibility sizes.
+    @ScaledMetric(relativeTo: .title2) private var iconWidth: CGFloat = 40
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.title2)
                     .foregroundStyle(.blue)
-                    .frame(width: 40)
+                    .frame(width: iconWidth)
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -1105,6 +1624,10 @@ class ChatViewModel: ObservableObject {
         var documentId: UUID? = nil
         /// Extra material for THIS generation only (never persisted).
         var transientContext: String? = nil
+        /// The answer this request regenerates. It stays saved - and comes
+        /// back on screen after a failure, a Stop before the first token or a
+        /// declined download - until a non-empty replacement exists.
+        var replacingMessageId: UUID? = nil
     }
 
     @Published var messages: [Message] = []
@@ -1120,8 +1643,20 @@ class ChatViewModel: ObservableObject {
     @Published var consentRequest: ConsentRequest?
     @Published var showingImportError = false
     @Published private(set) var importErrorMessage = ""
-    /// Shown briefly when something is added to private memory.
-    @Published var memoryNotice: String?
+    /// Shown briefly when something is added to private memory (or could
+    /// not be, because memory is off). Spoken too: the notice appears above
+    /// the composer, far from VoiceOver's focus.
+    @Published var memoryNotice: String? {
+        didSet {
+            if let memoryNotice, memoryNotice != oldValue { Self.announce(memoryNotice) }
+        }
+    }
+    /// The answer that just finished in the chat on screen - not one loaded
+    /// with a chat, whose arrival also grows `messages`. The view moves
+    /// VoiceOver to it and considers asking for a rating.
+    @Published private(set) var lastCompletedAnswerId: UUID?
+    /// Whether that answer ran to the end (not stopped, not a partial).
+    private(set) var lastAnswerFinishedNormally = false
     /// True while Vision is reading a scan or an image-only PDF.
     @Published var isRecognizingText = false
     /// 0...1 through a multi-page scan.
@@ -1139,18 +1674,36 @@ class ChatViewModel: ObservableObject {
     private var currentConversationId: UUID?
     private var imageCache: [UUID: UIImage] = [:]
     private var generationTask: Task<Void, Never>?
+    /// Identifies the run that owns `isGenerating`, `streamingText` and
+    /// `generationTask` (see `perform`).
+    private var generationToken: UUID?
     private var lastRequest: PendingRequest?
 
     // MARK: - Conversation loading
 
     func loadConversation(_ conversation: Conversation?) {
-        guard conversation?.id != currentConversationId else { return }
+        guard conversation?.id != currentConversationId else {
+            // First appearance (and a cold launch that stays on "New Chat"):
+            // nothing switched, but the draft saved for this chat still has
+            // to come back.
+            adoptDraftIfNeeded()
+            return
+        }
+
+        // The half-written message belongs to the chat it was typed in.
+        // Carried along, it was sent to whichever chat was opened next.
+        saveDraft()
 
         stopGeneration()
-        // Cleared here, not left to the cancelled task's finalizer: that
-        // can be seconds away when it is parked in a model load, and
-        // meanwhile the old chat's partial answer rendered in the new one.
+        // Released here, not left to the cancelled task's finalizer: that
+        // can be seconds away when it is parked in retrieval or a model
+        // load, and meanwhile the new chat showed the old one's partial
+        // answer, its typing dots and a Stop button, and ignored Send.
+        // The token keeps that finalizer away from this chat's state.
         streamingText = nil
+        isGenerating = false
+        generationTask = nil
+        generationToken = nil
         messages.removeAll()
         // Bitmaps from every chat visited used to accumulate here until a
         // memory warning. `getImage` refills from disk on demand.
@@ -1167,7 +1720,10 @@ class ChatViewModel: ObservableObject {
         errorBanner = nil
         consentRequest = nil
         lastRequest = nil
+        modelWaitTask?.cancel()
+        modelWaitTask = nil
         currentConversationId = conversation?.id
+        restoreDraft()
 
         // Sessions rebuild lazily on the next message.
         appState?.engine.resetSessions()
@@ -1176,6 +1732,51 @@ class ChatViewModel: ObservableObject {
             messages = conversation.messages.sorted { $0.timestamp < $1.timestamp }
             loadCachedImages(for: conversation)
         }
+    }
+
+    // MARK: - Drafts
+
+    /// Longest draft kept. A pasted article is not a draft worth persisting.
+    private static let draftLimit = 4000
+    /// True once `inputText` holds the draft of `currentConversationId`, so
+    /// an empty composer is never written over a draft that was not loaded.
+    private var draftAdopted = false
+
+    /// `"draft.<conversation id>"`, or `"draft.new"` before a chat exists.
+    /// Shared with ConversationManager, which removes it with the chat.
+    nonisolated static func draftKey(for conversationId: UUID?) -> String {
+        conversationId.map { "draft.\($0.uuidString)" } ?? "draft.new"
+    }
+
+    /// Writes the composer to the open chat's draft (or clears it when
+    /// empty). Called on a switch and when the app goes to the background.
+    func saveDraft() {
+        guard draftAdopted else { return }
+        // A chat deleted while open: its key was removed with it, and
+        // writing here would bring it back as an orphan.
+        if let id = currentConversationId,
+           appState?.conversationManager.conversations.contains(where: { $0.id == id }) != true {
+            return
+        }
+        let key = Self.draftKey(for: currentConversationId)
+        if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            UserDefaults.standard.removeObject(forKey: key)
+        } else {
+            UserDefaults.standard.set(String(inputText.prefix(Self.draftLimit)), forKey: key)
+        }
+    }
+
+    private func restoreDraft() {
+        draftAdopted = true
+        inputText = UserDefaults.standard.string(forKey: Self.draftKey(for: currentConversationId)) ?? ""
+    }
+
+    private func adoptDraftIfNeeded() {
+        guard !draftAdopted else { return }
+        draftAdopted = true
+        // Text placed here before the first load (a share) wins over a draft.
+        guard inputText.isEmpty else { return }
+        inputText = UserDefaults.standard.string(forKey: Self.draftKey(for: currentConversationId)) ?? ""
     }
 
     private func loadCachedImages(for conversation: Conversation) {
@@ -1237,6 +1838,20 @@ class ChatViewModel: ObservableObject {
         } catch {
             presentImportError(L10n.text("Couldn't load the photo: \(error.localizedDescription)"))
         }
+    }
+
+    /// The image on the pasteboard, through the same normalizer as a
+    /// picked photo.
+    func pasteImage() async {
+        guard let pasted = UIPasteboard.general.image else {
+            presentImportError(L10n.text("This photo couldn't be read. Try a different one."))
+            return
+        }
+        let processed = await Task.detached(priority: .userInitiated) {
+            ImageNormalizer.attachment(pasted)
+        }.value
+        pendingImage = processed
+        pendingImageId = UUID()
     }
 
     // MARK: - Document Handling
@@ -1446,7 +2061,8 @@ class ChatViewModel: ObservableObject {
             return
         }
 
-        let name = L10n.text("Scan \(Date().formatted(date: .abbreviated, time: .shortened))")
+        // In the app's language, not the device's.
+        let name = L10n.text("Scan \(Date().aigFormatted(date: .abbreviated, time: .shortened))")
         pendingDocumentName = name
         pendingDocumentContent = String(trimmed.prefix(4000))
         do {
@@ -1506,8 +2122,9 @@ class ChatViewModel: ObservableObject {
         // always tells the user what was saved.
         captureMemoryIfRequested(text)
 
-        // Clear composer state.
+        // Clear composer state, and the saved draft with it.
         inputText = ""
+        UserDefaults.standard.removeObject(forKey: Self.draftKey(for: currentConversationId))
         pendingImage = nil
         pendingImageId = nil
         pendingDocumentName = nil
@@ -1562,8 +2179,13 @@ class ChatViewModel: ObservableObject {
     /// Returns true when something was saved, so the UI can confirm it.
     @discardableResult
     private func captureMemoryIfRequested(_ message: String) -> Bool {
-        guard MemoryStore.shared.isEnabled,
-              let fact = MemoryStore.requestedFact(in: message) else { return false }
+        guard let fact = MemoryStore.requestedFact(in: message) else { return false }
+        guard MemoryStore.shared.isEnabled else {
+            // "Remember that..." with memory off used to do nothing at all,
+            // while the model cheerfully answered that it would remember.
+            memoryNotice = L10n.text("Memory is off, so this wasn't saved. Turn it on in Settings.")
+            return false
+        }
         MemoryStore.shared.add(fact)
         // The system prompt changed, so the live session must be rebuilt.
         appState?.engine.resetSessions()
@@ -1603,6 +2225,11 @@ class ChatViewModel: ObservableObject {
         // concurrent run that orphans the first one's task.
         guard !isGenerating else { return }
         isGenerating = true
+        // This run's identity. Switching chats releases the composer at once
+        // (see `loadConversation`); the cancelled run then finishes on its
+        // own time and must not touch the state of the chat now on screen.
+        let token = UUID()
+        generationToken = token
 
         // Ensure a conversation exists.
         var conversation = appState.currentConversation
@@ -1610,6 +2237,18 @@ class ChatViewModel: ObservableObject {
             conversation = appState.conversationManager.createConversation()
             appState.currentConversation = conversation
             currentConversationId = conversation?.id
+        }
+
+        // Regenerate: take the old answer off screen (and out of the history
+        // the session is rebuilt from) but leave it saved. Deleting it up
+        // front lost a good answer whenever the new one never came - a
+        // failure, Stop before the first token, or "Not Now" on a download.
+        let replaced: ReplacedAnswer?
+        if let id = request.replacingMessageId, let index = messages.firstIndex(where: { $0.id == id }) {
+            replaced = ReplacedAnswer(id: id, message: messages[index], index: index)
+            messages.remove(at: index)
+        } else {
+            replaced = nil
         }
 
         // Newly attached document becomes part of the conversation, so every
@@ -1660,10 +2299,16 @@ class ChatViewModel: ObservableObject {
             routedModel = try appState.engine.route(hasImage: request.image != nil)
         } catch let error as ChatEngine.RouteError {
             isGenerating = false
+            generationToken = nil
+            // The old answer is shown again while the consent sheet is up;
+            // approving re-runs this request, which hides it once more.
+            restore(replaced, in: conversation?.id)
             handleRouteError(error)
             return
         } catch {
             isGenerating = false
+            generationToken = nil
+            restore(replaced, in: conversation?.id)
             errorBanner = ErrorBanner(message: error.localizedDescription, canRetry: true)
             return
         }
@@ -1680,7 +2325,7 @@ class ChatViewModel: ObservableObject {
         // traps.
         let conversationId = conversation?.id
 
-        generationTask = Task {
+        let task = Task {
             var finalText = ""
             var failure: String?
             var cancelledDownload = false
@@ -1751,10 +2396,26 @@ class ChatViewModel: ObservableObject {
                     )
 
                     do {
+                        // Every snapshot is kept, but the bubble is redrawn at
+                        // most every 80 ms: each redraw re-parses the Markdown
+                        // of the growing paragraph, and at 30+ tokens a second
+                        // that work, not the model, was what made scrolling and
+                        // typing stutter on older phones.
+                        let clock = ContinuousClock()
+                        var lastShown: ContinuousClock.Instant?
                         for try await snapshot in stream {
                             if Task.isCancelled { break }
-                            streamingText = snapshot
                             finalText = snapshot
+                            let now = clock.now
+                            if lastShown.map({ now - $0 >= .milliseconds(80) }) ?? true,
+                               generationToken == token {
+                                streamingText = snapshot
+                                lastShown = now
+                            }
+                        }
+                        // Final flush, so the last tokens are never skipped.
+                        if generationToken == token, !finalText.isEmpty {
+                            streamingText = finalText
                         }
                         break
                     } catch AppleIntelligenceError.contextExceeded where attempts == 1 && finalText.isEmpty {
@@ -1772,7 +2433,9 @@ class ChatViewModel: ObservableObject {
                 // Stop during generation is self-explanatory: the partial
                 // answer is on screen. Stop during a multi-gigabyte DOWNLOAD
                 // leaves nothing at all - no answer, no error, no chip - so
-                // say what happened and offer a way back.
+                // say what happened and offer a way back (or, when the
+                // download is in fact still running, that it will be answered;
+                // see `explainStoppedDownload`).
                 if wasDownloading && finalText.isEmpty {
                     cancelledDownload = true
                 }
@@ -1804,11 +2467,19 @@ class ChatViewModel: ObservableObject {
             let onScreen = conversationId != nil && currentConversationId == conversationId
 
             if !cleaned.isEmpty, conversationAlive, let conv = conversation {
+                // The replacement exists, so the answer it replaces can go.
+                if let replaced {
+                    appState.conversationManager.deleteMessage(replaced.message)
+                    if onScreen { messages.removeAll { $0.id == replaced.id } }
+                }
                 let assistantMessage = appState.conversationManager.addMessage(
                     to: conv,
                     role: .assistant,
                     content: cleaned
                 )
+                if !wasCancelled {
+                    ReviewPrompter.noteCompletedAnswer()
+                }
                 // Only show the bubble if this conversation is still the one
                 // on screen — the user may have switched chats mid-answer.
                 if onScreen {
@@ -1817,25 +2488,36 @@ class ChatViewModel: ObservableObject {
                     if appState.settings.hapticFeedbackEnabled {
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
                     }
+                    // Kept alongside the focus move: it is what a user whose
+                    // focus is elsewhere (a sheet, another app) hears.
                     Self.announce(L10n.text("Answer complete"))
+                    lastAnswerFinishedNormally = !wasCancelled
+                    lastCompletedAnswerId = assistantMessage.id
                 }
+            } else if conversationAlive {
+                // Nothing replaced it: the previous answer is still saved, so
+                // put it back where it was.
+                restore(replaced, in: conversationId)
             }
 
-            if wasCancelled {
+            // A newer run owns the engine session and the composer now; it
+            // already started from a fresh session. Nor is an outcome
+            // banner this run's to show: switching chats dropped its
+            // `lastRequest`, so its Try Again would do nothing.
+            let isCurrentRun = generationToken == token
+            let showsOutcome = onScreen && isCurrentRun
+            if wasCancelled, isCurrentRun {
                 appState.engine.resetSessions()
             }
 
-            if let failure, onScreen {
+            if let failure, showsOutcome {
                 errorBanner = ErrorBanner(message: failure, canRetry: true)
                 Self.announce(failure)
                 // The session may be mid-turn; rebuild next time.
                 appState.engine.resetSessions()
-            } else if cancelledDownload, onScreen {
-                errorBanner = ErrorBanner(
-                    message: L10n.text("Download cancelled, so your message wasn't answered. What was already downloaded is kept - tap Try Again to continue."),
-                    canRetry: true
-                )
-            } else if cleaned.isEmpty, !wasCancelled, onScreen {
+            } else if cancelledDownload, showsOutcome {
+                explainStoppedDownload(of: routedModel, conversationId: conversationId)
+            } else if cleaned.isEmpty, !wasCancelled, showsOutcome {
                 // The stream ended cleanly with nothing in it. Without this
                 // the question simply sat there unanswered, with no bubble
                 // and no error, which reads as the app having ignored it.
@@ -1847,12 +2529,33 @@ class ChatViewModel: ObservableObject {
                 appState.engine.resetSessions()
             }
 
-            streamingText = nil
-            isGenerating = false
-            generationTask = nil
+            if isCurrentRun {
+                streamingText = nil
+                isGenerating = false
+                generationTask = nil
+                generationToken = nil
+            }
         }
+        generationTask = task
+        await task.value
+    }
 
-        await generationTask?.value
+    /// An answer being regenerated: hidden while the new one is produced,
+    /// deleted only once that one is saved. The id is kept separately so it
+    /// can be compared without touching the model object.
+    private struct ReplacedAnswer {
+        let id: UUID
+        let message: Message
+        let index: Int
+    }
+
+    /// Puts a regenerate target back on screen where it was, provided its
+    /// chat is still the one showing and it isn't already there (a reload
+    /// from the store while it was hidden brings it back by itself).
+    private func restore(_ replaced: ReplacedAnswer?, in conversationId: UUID?) {
+        guard let replaced, conversationId != nil, currentConversationId == conversationId,
+              !messages.contains(where: { $0.id == replaced.id }) else { return }
+        messages.insert(replaced.message, at: min(replaced.index, messages.count))
     }
 
     private func handleRouteError(_ error: ChatEngine.RouteError) {
@@ -1893,7 +2596,10 @@ class ChatViewModel: ObservableObject {
     }
 
     private func showDeclinedBanner() {
-        guard lastRequest != nil, errorBanner == nil, !isGenerating else { return }
+        guard let last = lastRequest, errorBanner == nil, !isGenerating else { return }
+        // A declined Regenerate leaves the previous answer in place; "your
+        // message wasn't answered" would be untrue.
+        guard last.replacingMessageId == nil else { return }
         errorBanner = ErrorBanner(
             message: L10n.text("The model isn't downloaded yet, so your message wasn't answered."),
             canRetry: true
@@ -1916,17 +2622,10 @@ class ChatViewModel: ObservableObject {
         consentRequest = nil
 
         if let last = lastRequest {
-            // Re-run without duplicating the user message if it was persisted.
-            let retry = PendingRequest(
-                prompt: last.prompt,
-                displayMessage: last.displayMessage,
-                hiddenContext: last.hiddenContext,
-                image: last.image,
-                imageId: last.imageId,
-                attachmentType: last.attachmentType,
-                persistUserMessage: false
-            )
-            Task { await perform(retry) }
+            // Already marked not to persist the user message again, and it
+            // carries every field (document id, summary seed, the answer a
+            // Regenerate replaces).
+            Task { await perform(last) }
         }
     }
 
@@ -1940,10 +2639,121 @@ class ChatViewModel: ObservableObject {
     /// GPU work from the background, which iOS refuses and MLX turns into
     /// an uncaught exception - the app simply disappeared. Apple
     /// Intelligence answers run in a system process and are left alone.
+    ///
+    /// Only GPU work is stopped. A pure download needs no Metal, and the
+    /// background URL session exists so a multi-gigabyte model keeps coming
+    /// while the phone is locked; cancelling on `isBusy` killed it on every
+    /// lock and the user came back to "Download cancelled".
     func pauseForBackground() {
-        guard isGenerating, let appState, appState.engine.mlx.isBusy else { return }
+        // The app may never come back to the foreground; keep the draft.
+        saveDraft()
+        guard isGenerating, let appState, appState.engine.mlx.isUsingGPU else { return }
         generationTask?.cancel()
         backgroundStoppedAnswer = true
+    }
+
+    /// A download paused from the chip (`pauseDownload`); Resume continues it.
+    @Published private(set) var pausedDownload: AIModel?
+    /// Waits for a model still downloading after this chat's turn stopped,
+    /// then asks the question (`answerWhenModelLoads`).
+    private var modelWaitTask: Task<Void, Never>?
+
+    /// Stops the transfer the chip shows. What was downloaded is kept, so
+    /// `resumeDownload` continues from there. A turn waiting on it stops
+    /// quietly (`explainStoppedDownload`): the paused chip says what happened.
+    func pauseDownload() {
+        guard let mlx = appState?.engine.mlx, mlx.isDownloading, let id = mlx.loadingModelId,
+              let model = AIModel.model(withId: id) else { return }
+        pausedDownload = model
+        mlx.cancelLoad(of: id)
+    }
+
+    func resumeDownload() {
+        guard let model = pausedDownload, let appState else { return }
+        pausedDownload = nil
+        // A question left waiting for this model is answered once it loads.
+        if lastRequest != nil, messages.last?.role == .user {
+            answerWhenModelLoads(model, conversationId: currentConversationId)
+        }
+        let engine = appState.engine
+        Task { [weak self] in
+            do {
+                try await engine.prepare(model)
+            } catch is CancellationError {
+                // Paused again, or the model was removed meanwhile.
+            } catch {
+                self?.errorBanner = ErrorBanner(message: error.localizedDescription, canRetry: false)
+            }
+        }
+    }
+
+    /// The turn waiting on `model`'s download was stopped. Whether the
+    /// download stopped with it is only known a moment later: the loader
+    /// cancels the transfer from its own main-actor hop, and only when no
+    /// other screen (Setup) is still waiting for it. Saying "Download
+    /// cancelled" while the chip kept counting up was simply untrue.
+    private func explainStoppedDownload(of model: AIModel, conversationId: UUID?) {
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard let self, let appState = self.appState,
+                  self.currentConversationId == conversationId,
+                  !self.isGenerating, self.errorBanner == nil else { return }
+            // Paused from the chip, which says so; Resume answers it.
+            if self.pausedDownload?.id == model.id { return }
+            let mlx = appState.engine.mlx
+            if mlx.loadingModelId == model.id || mlx.loadedModelId == model.id {
+                self.answerWhenModelLoads(model, conversationId: conversationId)
+            } else {
+                self.errorBanner = Self.downloadCancelledBanner
+            }
+        }
+    }
+
+    private static var downloadCancelledBanner: ErrorBanner {
+        ErrorBanner(
+            message: L10n.text("Download cancelled, so your message wasn't answered. What was already downloaded is kept - tap Try Again to continue."),
+            canRetry: true
+        )
+    }
+
+    private static var waitingForDownloadBanner: ErrorBanner {
+        ErrorBanner(
+            message: L10n.text("Downloading in the background. Your message will be answered when it finishes."),
+            canRetry: false
+        )
+    }
+
+    /// Keeps `lastRequest` and asks it as soon as `model` is loaded, in the
+    /// same chat. If the download ends without loading (failed, or cancelled
+    /// from Settings), falls back to the retryable "Download cancelled".
+    private func answerWhenModelLoads(_ model: AIModel, conversationId: UUID?) {
+        guard lastRequest != nil else { return }
+        errorBanner = Self.waitingForDownloadBanner
+        modelWaitTask?.cancel()
+        modelWaitTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard let self, !Task.isCancelled, let mlx = self.appState?.engine.mlx else { return }
+                // Another chat is open now: its composer is not this
+                // question's place, and `loadConversation` dropped it.
+                guard self.currentConversationId == conversationId else { return }
+                if mlx.loadedModelId == model.id {
+                    self.modelWaitTask = nil
+                    if self.errorBanner == Self.waitingForDownloadBanner { self.errorBanner = nil }
+                    if let last = self.lastRequest, !self.isGenerating {
+                        await self.perform(last)
+                    }
+                    return
+                }
+                if mlx.loadingModelId != model.id, self.pausedDownload?.id != model.id {
+                    self.modelWaitTask = nil
+                    if self.errorBanner == Self.waitingForDownloadBanner {
+                        self.errorBanner = Self.downloadCancelledBanner
+                    }
+                    return
+                }
+            }
+        }
     }
 
     /// Set when `pauseForBackground` cut an answer short, so the user is
@@ -1959,6 +2769,15 @@ class ChatViewModel: ObservableObject {
                 canRetry: true
             )
         }
+    }
+
+    /// Copy used to change nothing on screen, so people tapped again and
+    /// VoiceOver users heard nothing at all.
+    func confirmCopy() {
+        if appState?.settings.hapticFeedbackEnabled ?? true {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
+        Self.announce(L10n.text("Copied"))
     }
 
     /// VoiceOver users get no other signal that an answer or an error has
@@ -1981,16 +2800,32 @@ class ChatViewModel: ObservableObject {
     func retryLastRequest() {
         guard !isGenerating, let last = lastRequest else { return }
         errorBanner = nil
-        let retry = PendingRequest(
-            prompt: last.prompt,
-            displayMessage: last.displayMessage,
-            hiddenContext: last.hiddenContext,
-            image: last.image,
-            imageId: last.imageId,
-            attachmentType: last.attachmentType,
+        Task { await perform(last) }
+    }
+
+    /// The one way to re-ask a question already in the chat. Fields only the
+    /// original send knew - the document id and the summary seed for a
+    /// "summarize this" with no keywords to retrieve on - are taken from
+    /// `lastRequest` when it was this same question; hand-built copies in
+    /// three places used to drop them.
+    private func reaskRequest(for userMessage: Message, replacing answerId: UUID?) -> PendingRequest {
+        var request = PendingRequest(
+            prompt: userMessage.modelFacingContent,
+            displayMessage: userMessage.content,
+            hiddenContext: userMessage.hiddenContext,
+            // From disk if the cache was dropped by a memory warning;
+            // otherwise the picture quietly vanished from the question.
+            image: userMessage.attachmentId.flatMap { getImage(for: $0) },
+            imageId: nil,
+            attachmentType: nil,
             persistUserMessage: false
         )
-        Task { await perform(retry) }
+        if let last = lastRequest, last.displayMessage == userMessage.content {
+            request.documentId = last.documentId
+            request.transientContext = last.transientContext
+        }
+        request.replacingMessageId = answerId
+        return request
     }
 
     func regenerateLastResponse() {
@@ -2002,15 +2837,7 @@ class ChatViewModel: ObservableObject {
         if let last = messages.last, last.role == .user {
             errorBanner = nil
             appState?.engine.resetSessions()
-            let retry = PendingRequest(
-                prompt: last.modelFacingContent,
-                displayMessage: last.content,
-                hiddenContext: last.hiddenContext,
-                image: last.attachmentId.flatMap { getImage(for: $0) },
-                imageId: nil,
-                attachmentType: nil,
-                persistUserMessage: false
-            )
+            let retry = reaskRequest(for: last, replacing: nil)
             Task { await perform(retry) }
             return
         }
@@ -2031,24 +2858,12 @@ class ChatViewModel: ObservableObject {
         }
         guard let userMessage = sourceUser else { return }
 
-        // From disk if the cache was dropped by a memory warning; otherwise
-        // the picture quietly vanished from the regenerated question.
-        let image = userMessage.attachmentId.flatMap { getImage(for: $0) }
-
-        // Remove the old answer, rebuild the session from the edited history.
-        appState?.conversationManager.deleteMessage(message)
-        messages.removeAll { $0.id == message.id }
+        // The old answer is NOT deleted here: `perform` hides it and deletes
+        // it only once a non-empty replacement has been saved. The session
+        // is rebuilt from the history without it.
+        errorBanner = nil
         appState?.engine.resetSessions()
-
-        let retry = PendingRequest(
-            prompt: userMessage.modelFacingContent,
-            displayMessage: userMessage.content,
-            hiddenContext: userMessage.hiddenContext,
-            image: image,
-            imageId: nil,
-            attachmentType: nil,
-            persistUserMessage: false
-        )
+        let retry = reaskRequest(for: userMessage, replacing: message.id)
         Task { await perform(retry) }
     }
 
@@ -2105,9 +2920,11 @@ class ChatViewModel: ObservableObject {
         errorBanner = nil
         imageCache.removeAll()
         // Otherwise "Try Again" - or approving a consent sheet that is still
-        // open - regenerates an answer into the chat just emptied.
+        // open, or a download finishing - answers into the chat just emptied.
         lastRequest = nil
         consentRequest = nil
+        modelWaitTask?.cancel()
+        modelWaitTask = nil
         appState?.engine.resetSessions()
     }
 
@@ -2147,32 +2964,59 @@ class ChatViewModel: ObservableObject {
 
 // MARK: - Message Bubble
 
+/// SF Symbol for an attached file, by extension.
+private func documentSymbol(for filename: String) -> String {
+    let ext = (filename as NSString).pathExtension.lowercased()
+    switch ext {
+    case "pdf": return "doc.fill"
+    case "txt", "md": return "doc.text.fill"
+    case "json": return "curlybraces"
+    case "swift", "py", "js", "html", "css": return "chevron.left.forwardslash.chevron.right"
+    default: return "doc.fill"
+    }
+}
+
 struct MessageBubble: View {
     let message: Message
     var image: UIImage? = nil
+    /// Opens the attached image full screen; nil when there is none.
+    var onTapImage: (() -> Void)? = nil
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
+
+    /// A document question is stored as "[file name] question" - older chats
+    /// and the exports depend on that - and shown as a chip naming the file
+    /// above the question alone, instead of a chip reading just "Document"
+    /// and the brackets in the bubble.
+    nonisolated static func displayParts(of content: String, isDocument: Bool) -> (documentName: String?, text: String) {
+        guard isDocument, content.hasPrefix("["), let close = content.range(of: "] ") else {
+            return (nil, content)
+        }
+        let name = String(content[content.index(after: content.startIndex)..<close.lowerBound])
+        guard !name.isEmpty else { return (nil, content) }
+        return (name, String(content[close.upperBound...]))
+    }
 
     var body: some View {
+        let parts = Self.displayParts(of: message.content, isDocument: message.attachmentType == .document)
+
         HStack {
             if message.role == .user { Spacer(minLength: 60) }
 
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
                 if let image = image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: 250, maxHeight: 200)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.blue.opacity(0.3), lineWidth: 1)
-                        )
-                        .accessibilityLabel(Text("Attached image"))
+                    attachedImage(image)
                 }
 
-                if let attachmentType = message.attachmentType, attachmentType != .image {
+                if message.attachmentType == .document {
                     HStack(spacing: 4) {
-                        Image(systemName: "doc.fill")
-                        Text("Document")
+                        Image(systemName: documentSymbol(for: parts.documentName ?? ""))
+                        if let name = parts.documentName {
+                            Text(verbatim: name)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        } else {
+                            Text("Document")
+                        }
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -2182,7 +3026,7 @@ struct MessageBubble: View {
                     if message.role == .assistant {
                         MarkdownText(content: message.content)
                     } else {
-                        Text(message.content)
+                        Text(parts.text)
                             .textSelection(.enabled)
                     }
                 }
@@ -2191,7 +3035,7 @@ struct MessageBubble: View {
                 .foregroundStyle(foregroundColor)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
 
-                Text(message.timestamp.formatted(date: .omitted, time: .shortened))
+                Text(message.timestamp.aigFormatted(date: .omitted, time: .shortened))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -2199,15 +3043,53 @@ struct MessageBubble: View {
             if message.role != .user { Spacer(minLength: 60) }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(
-            (message.role == .user
-                // Markdown stripped first, or VoiceOver announces "asterisk
-                // asterisk important asterisk asterisk" and reads entire
-                // code blocks aloud as character soup.
-                ? L10n.text("You said: \(VoiceService.plainSpeech(from: message.content))")
-                : L10n.text("Assistant said: \(VoiceService.plainSpeech(from: message.content))"))
-            + " " + message.timestamp.formatted(date: .omitted, time: .shortened)
-        ))
+        .accessibilityLabel(Text(spokenLabel(text: parts.text)))
+    }
+
+    @ViewBuilder
+    private func attachedImage(_ image: UIImage) -> some View {
+        let picture = Image(uiImage: image)
+            .resizable()
+            .scaledToFit()
+            .frame(maxWidth: 250, maxHeight: 200)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+            )
+        if let onTapImage {
+            // A photo of a form or a label has to be readable again later;
+            // 250 x 200 is not that.
+            Button(action: onTapImage) {
+                picture
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Attached image"))
+            .accessibilityHint(Text("Double-tap to view full screen"))
+        } else {
+            picture
+                .accessibilityLabel(Text("Attached image"))
+        }
+    }
+
+    /// What VoiceOver reads for the whole bubble. The Markdown is stripped
+    /// only when VoiceOver is actually on: that is six string passes per line,
+    /// and the transcript re-evaluates bubbles while an answer streams.
+    /// Stripped, because "asterisk asterisk important asterisk asterisk" and
+    /// code blocks read as character soup were the top complaint.
+    private func spokenLabel(text: String) -> String {
+        let spoken = voiceOverEnabled ? VoiceService.plainSpeech(from: text) : text
+        var label = message.role == .user
+            ? L10n.text("You said: \(spoken)")
+            : L10n.text("Assistant said: \(spoken)")
+        // The attachment is part of what was said; the combined element
+        // otherwise hides it.
+        if image != nil || message.attachmentType == .image {
+            label += L10n.text(", with image")
+        } else if message.attachmentType == .document {
+            label += L10n.text(", with document")
+        }
+        return label + " " + message.timestamp.aigFormatted(date: .omitted, time: .shortened)
     }
 
     private var backgroundColor: Color {
@@ -2227,6 +3109,7 @@ struct MessageBubble: View {
 
 struct StreamingBubble: View {
     let text: String
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
 
     var body: some View {
         HStack {
@@ -2240,8 +3123,64 @@ struct StreamingBubble: View {
         }
         // Spoken without its Markdown: VoiceOver reading "asterisk asterisk
         // important asterisk asterisk" is the single most reported complaint
-        // about AI chat apps from screen reader users.
-        .accessibilityLabel(Text("Assistant is responding: \(VoiceService.plainSpeech(from: text))"))
+        // about AI chat apps from screen reader users. Stripped only while
+        // VoiceOver runs - this label is rebuilt on every streamed update.
+        .accessibilityLabel(Text("Assistant is responding: \(spokenText)"))
+    }
+
+    private var spokenText: String {
+        voiceOverEnabled ? VoiceService.plainSpeech(from: text) : text
+    }
+}
+
+// MARK: - Select Text
+
+/// Text handed to the Select Text sheet or the share sheet.
+struct SelectableText: Identifiable {
+    let id = UUID()
+    let text: String
+}
+
+/// A message in a real text view, with selection handles, so one sentence,
+/// one bullet or one number can be copied out of a long answer.
+struct SelectableTextSheet: View {
+    let text: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            SelectableTextView(text: text)
+                .ignoresSafeArea(edges: .bottom)
+                .navigationTitle(Text("Select Text"))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done", systemImage: "checkmark") { dismiss() }
+                    }
+                }
+        }
+    }
+}
+
+private struct SelectableTextView: UIViewRepresentable {
+    let text: String
+
+    func makeUIView(context: Context) -> UITextView {
+        let view = UITextView()
+        view.isEditable = false
+        view.isSelectable = true
+        view.font = .preferredFont(forTextStyle: .body)
+        view.adjustsFontForContentSizeCategory = true
+        view.textColor = .label
+        view.backgroundColor = .systemBackground
+        view.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        view.alwaysBounceVertical = true
+        view.text = text
+        return view
+    }
+
+    func updateUIView(_ view: UITextView, context: Context) {
+        if view.text != text { view.text = text }
     }
 }
 
@@ -2252,6 +3191,23 @@ struct ModelDownloadConsentSheet: View {
     let reason: String
     let onApprove: () -> Void
     let onCancel: () -> Void
+
+    /// Live, like Setup's: "Wi-Fi recommended" told a cellular user nothing,
+    /// and they learned the download was parked only after agreeing to it.
+    @State private var isOnWiFi = true
+    @State private var monitor: NWPathMonitor?
+    /// Free space for important use, read when the sheet opens.
+    @State private var freeBytes: Int64?
+    /// What the download still needs, with the same headroom as the
+    /// loader's own preflight - which otherwise refuses only after consent.
+    @State private var neededBytes: Int64 = 0
+    /// Same key as `SettingsManager.wifiOnlyDownloads`.
+    @AppStorage("wifi_only_downloads") private var wifiOnlyDownloads = true
+
+    private var lacksSpace: Bool {
+        guard let freeBytes else { return false }
+        return freeBytes < neededBytes
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -2281,10 +3237,26 @@ struct ModelDownloadConsentSheet: View {
                         } icon: {
                             Image(systemName: "arrow.down.circle")
                         }
-                        Label {
-                            Text("Wi-Fi recommended")
-                        } icon: {
-                            Image(systemName: "wifi")
+                        if isOnWiFi {
+                            Label {
+                                Text("Wi-Fi recommended")
+                            } icon: {
+                                Image(systemName: "wifi")
+                            }
+                        } else {
+                            // Colour on the icon only: orange caption text
+                            // fails contrast in light mode.
+                            Label {
+                                if wifiOnlyDownloads {
+                                    Text("You're not on Wi-Fi. This is a large download - it will wait until you are, unless you turn that off in Settings.")
+                                } else {
+                                    Text("You're not on Wi-Fi. This large download will use mobile data.")
+                                }
+                            } icon: {
+                                Image(systemName: "wifi.slash")
+                                    .foregroundStyle(.orange)
+                            }
+                            .fixedSize(horizontal: false, vertical: true)
                         }
                         Label {
                             Text("Works fully offline afterward")
@@ -2296,6 +3268,22 @@ struct ModelDownloadConsentSheet: View {
                         } icon: {
                             Image(systemName: "trash")
                         }
+                        if let freeBytes {
+                            Label {
+                                Text(L10n.text("\(Self.formatted(freeBytes)) free on this iPhone"))
+                            } icon: {
+                                Image(systemName: "internaldrive")
+                            }
+                            if lacksSpace {
+                                Label {
+                                    Text(L10n.text("Free up about \(Self.formatted(neededBytes - freeBytes)) first."))
+                                } icon: {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundStyle(.orange)
+                                }
+                                .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
                     }
                     .font(.subheadline)
                     .padding(.horizontal)
@@ -2304,6 +3292,9 @@ struct ModelDownloadConsentSheet: View {
                 .frame(maxWidth: 500)
                 .frame(maxWidth: .infinity)
             }
+            // No rubber-band when everything fits, so a scroll that does
+            // happen (accessibility sizes) reads as "there is more".
+            .scrollBounceBehavior(.basedOnSize)
 
             VStack(spacing: 10) {
                 Button {
@@ -2315,6 +3306,9 @@ struct ModelDownloadConsentSheet: View {
                         .padding(.vertical, 4)
                 }
                 .buttonStyle(.borderedProminent)
+                // Agreeing to a download that the loader then refuses for
+                // lack of space only produced a failure banner.
+                .disabled(lacksSpace)
 
                 Button(action: onCancel) {
                     // The frame lives inside the label: applied to the
@@ -2333,6 +3327,46 @@ struct ModelDownloadConsentSheet: View {
         // sheet on a phone, but a centered form on a wide window and a
         // full-height one in landscape, where a painted capsule would lie.
         .presentationDragIndicator(.visible)
+        .onAppear {
+            measureSpace()
+            startWatchingNetwork()
+        }
+        .onDisappear {
+            monitor?.cancel()
+            monitor = nil
+        }
+    }
+
+    private static func formatted(_ bytes: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: max(bytes, 0), countStyle: .file)
+    }
+
+    private func measureSpace() {
+        // A resumed download needs only what is still missing.
+        let have = model.backend == .mlx ? ModelManager.shared.downloadedSizeBytes(for: model) : 0
+        neededBytes = max(model.sizeBytes - have, 0) + 300_000_000
+        freeBytes = try? URL.documentsDirectory
+            .resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+            .volumeAvailableCapacityForImportantUsage
+    }
+
+    /// Same pattern as SetupView's.
+    private func startWatchingNetwork() {
+        // onAppear can fire more than once; a second monitor would leak the
+        // first along with its queue and callback.
+        monitor?.cancel()
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { path in
+            Task { @MainActor in
+                isOnWiFi = !path.isExpensive && path.status == .satisfied
+            }
+        }
+        monitor.start(queue: DispatchQueue(label: "aig.consent.network"))
+        self.monitor = monitor
+        // Seed from the current path, with the same test as the handler, so
+        // "no network at all" doesn't render as "on Wi-Fi".
+        let path = monitor.currentPath
+        isOnWiFi = !path.isExpensive && path.status == .satisfied
     }
 }
 
@@ -2384,37 +3418,76 @@ struct DocumentPickerView: UIViewControllerRepresentable {
 // MARK: - Typing Indicator
 
 struct TypingIndicator: View {
+    /// The model is still being downloaded or loaded; the status chip
+    /// explains that wait, so no "reading the conversation" caption.
+    var modelIsLoading = false
+
     @State private var animating = false
+    /// 0 at first, 1 after 4 s, 2 after 15 s without a first token.
+    @State private var waitStage = 0
     /// An infinite repeating animation is exactly what Reduce Motion asks
     /// apps not to do.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// Rebuilding a session for a long chat on a 2B vision model takes tens
+    /// of seconds before the first token, and three dots alone for that long
+    /// read as a hang.
+    private var caption: LocalizedStringKey? {
+        guard !modelIsLoading else { return nil }
+        switch waitStage {
+        case 1: return "Reading the conversation..."
+        case 2: return "Long conversations take a while to start"
+        default: return nil
+        }
+    }
+
     var body: some View {
         HStack {
-            HStack(spacing: 4) {
-                ForEach(0..<3) { i in
-                    Circle()
-                        .fill(.gray)
-                        .frame(width: 8, height: 8)
-                        .scaleEffect(animating && !reduceMotion ? 1 : 0.5)
-                        .animation(
-                            reduceMotion
-                                ? nil
-                                : .easeInOut(duration: 0.6)
-                                    .repeatForever()
-                                    .delay(Double(i) * 0.2),
-                            value: animating
-                        )
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 4) {
+                    ForEach(0..<3) { i in
+                        Circle()
+                            .fill(.gray)
+                            .frame(width: 8, height: 8)
+                            .scaleEffect(animating && !reduceMotion ? 1 : 0.5)
+                            .animation(
+                                reduceMotion
+                                    ? nil
+                                    : .easeInOut(duration: 0.6)
+                                        .repeatForever()
+                                        .delay(Double(i) * 0.2),
+                                value: animating
+                            )
+                    }
+                }
+                .padding(12)
+                .background(Color(.systemGray5))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                if let caption {
+                    Text(caption)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .padding(12)
-            .background(Color(.systemGray5))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
 
             Spacer()
         }
         .onAppear { animating = true }
-        .accessibilityLabel(Text("Assistant is thinking"))
+        // Restarted when loading ends: the wait that matters is the one
+        // after the model is ready.
+        .task(id: modelIsLoading) {
+            waitStage = 0
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            waitStage = 1
+            try? await Task.sleep(for: .seconds(11))
+            guard !Task.isCancelled else { return }
+            waitStage = 2
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(caption.map { Text($0) } ?? Text("Assistant is thinking"))
     }
 }
 

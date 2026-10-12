@@ -144,7 +144,8 @@ final class AIGoodbyeEndToEndTests: XCTestCase {
             return text.exists ? text : nil
         }
         // Rows further down a Form only exist once scrolled into view.
-        for _ in 0..<4 {
+        // Settings grew Speech and Siri sections, so allow a longer scroll.
+        for _ in 0..<8 {
             if let found = find(), found.isHittable { return found }
             app.swipeUp()
             usleep(400_000)
@@ -416,6 +417,25 @@ final class AIGoodbyeEndToEndTests: XCTestCase {
         XCTAssertNotNil(listRow(app, containing: "A note to file"), "The chat survived the folder")
     }
 
+    /// Once the composer had shown the keyboard, an alert's buttons ignored
+    /// taps on iOS 27 (Return still worked): New Folder's Create did nothing.
+    /// Name prompts are sheets now; this keeps it that way.
+    @MainActor
+    func testNewFolderWorksAfterTheKeyboardWasUp() throws {
+        let app = launch()
+        let field = app.textFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        sleep(1)
+        openList(app)
+        app.buttons["New Folder"].firstMatch.tap()
+        let name = app.textFields["Folder name"].firstMatch
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.typeText("Receipts")
+        app.buttons["Create"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Receipts"].firstMatch.waitForExistence(timeout: 5), "Create works after the keyboard was up")
+    }
+
     @MainActor
     func testExportMarkdownOpensShareSheet() throws {
         let app = launch()
@@ -491,7 +511,7 @@ final class AIGoodbyeEndToEndTests: XCTestCase {
         let app = launch()
         openSettings(app)
 
-        for (button, title) in [("Manage Storage", "AI Models"), ("Personas", "Personas"), ("Memory", "Memory"),
+        for (button, title) in [("Manage Storage", "Manage Storage"), ("Personas", "Personas"), ("Memory", "Memory"),
                                 ("Knowledge Library", "Knowledge Library"), ("Privacy Center", "Privacy Center"),
                                 ("About & Legal", "About & Legal")] {
             let link = row(app, button)

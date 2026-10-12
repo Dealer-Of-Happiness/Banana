@@ -18,6 +18,8 @@
 
 import SwiftUI
 import UIKit
+// For `AVCaptureDevice.Position` (front/back) under member-import visibility.
+import AVFoundation
 
 struct SceneDescriptionView: View {
     @EnvironmentObject var appState: AppState
@@ -54,8 +56,15 @@ struct SceneDescriptionView: View {
         }
     }
 
-    @State private var mode: Mode = .brief
-    @State private var isContinuous = true
+    /// Remembered: someone who reads labels with "Read text" every day had
+    /// to pick it again on every visit.
+    @AppStorage("describe.mode") private var mode: Mode = .brief
+    /// The user's last choice of "Keep describing", read once per visit.
+    /// Kept apart from the stored preference on purpose: the loop also
+    /// switches itself off on errors (`stopLoop`), and that must not become
+    /// the user's choice for next time.
+    @State private var isContinuous = UserDefaults.standard.object(forKey: "describe.continuous") as? Bool ?? true
+    @AppStorage("describe.continuous") private var prefersContinuous = true
     @State private var isDescribing = false
     @State private var latest = ""
     @State private var notice: String?
@@ -79,6 +88,8 @@ struct SceneDescriptionView: View {
     /// "Looks like..." answer is built from Vision's classifier labels,
     /// which exist only in English; in any other voice they are noise.
     @State private var speaksEnglish = false
+    /// Whether "Loading the vision model" has been said on this visit.
+    @State private var announcedModelLoad = false
 
     /// Quiet gap between one description finishing and the next starting.
     private let pauseBetween: TimeInterval = 1.5
@@ -114,12 +125,25 @@ struct SceneDescriptionView: View {
                     }
                     .accessibilityLabel(Text("Close describe surroundings"))
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    // "Is my collar straight, what colour is my shirt": the
+                    // camera facing the user is half of what people ask a
+                    // describer. By direction, as in PhotoCaptureView - on
+                    // iPhone Duo "front" depends on the display in use.
+                    Button("Flip Camera", systemImage: "arrow.triangle.2.circlepath.camera") {
+                        camera.setPosition(camera.position == .back ? .front : .back)
+                    }
+                    .disabled(!camera.isReady || camera.isSwitchingCamera)
+                }
             }
         }
         // The system toolbar item is a smaller target than the old 56 pt
         // X; the two-finger scrub gesture still closes the screen for
         // anyone who finds it by feel.
         .accessibilityAction(.escape) { dismiss() }
+        // Two-finger double tap: "Describe now" from anywhere, the way it
+        // plays and pauses in Music, without finding the button first.
+        .accessibilityAction(.magicTap) { describeNow() }
         .onAppear(perform: start)
         .onDisappear {
             isActive = false
@@ -181,6 +205,19 @@ struct SceneDescriptionView: View {
                 // give it a moment to deliver a frame.
                 if isContinuous { scheduleNext(after: 0.6) }
             }
+        }
+        .onChange(of: camera.position) { _, position in
+            // Only once the switch has really happened. Whatever was being
+            // described is now behind the user, so it is dropped, the user
+            // is told which way the camera faces, and the repeat suppressor
+            // is reset so the next description is always spoken.
+            describeTask?.cancel()
+            voice.stopSpeaking()
+            spokeQuickImpression = false
+            lastSpoken = ""
+            suppressedInARow = 0
+            announce(position == .front ? L10n.text("Front camera") : L10n.text("Back camera"))
+            if isContinuous { scheduleNext(after: 1.0) }
         }
         .onChange(of: mode) { _, _ in
             voice.stopSpeaking()
@@ -352,7 +389,13 @@ struct SceneDescriptionView: View {
                 .accessibilityHint(Text("Says the last description again"))
             }
 
-            Toggle(isOn: $isContinuous) {
+            Toggle(isOn: Binding(
+                get: { isContinuous },
+                set: { on in
+                    isContinuous = on
+                    prefersContinuous = on
+                }
+            )) {
                 Text("Keep describing")
             }
             .tint(.blue)
@@ -368,6 +411,7 @@ struct SceneDescriptionView: View {
         // reusing this view would give a permanently silent screen.
         isActive = true
         voice.setSpeechLanguage(appState.settings.appLanguage)
+        voice.speechRate = Float(appState.settings.speechRate)
         // Judged on the voice that will actually speak, not the UI language:
         // a Greek UI with no Greek voice installed speaks English anyway.
         speaksEnglish = VoiceService.speechCode(for: appState.settings.appLanguage)
@@ -602,6 +646,15 @@ struct SceneDescriptionView: View {
 
         do {
             let model = try engine.route(hasImage: true, requiresDownloaded: true)
+            // The first description after opening can wait up to half a
+            // minute on loading the vision model, and silence that long is
+            // indistinguishable from a dead app to someone who cannot see
+            // the screen. Said once per visit, before the wait starts.
+            if !announcedModelLoad, model.backend != .appleIntelligence,
+               !engine.hasSession(for: model), engine.mlx.loadedModelId != model.id {
+                announcedModelLoad = true
+                voice.speak(L10n.text("Loading the vision model, one moment."))
+            }
             try await engine.startCleanSession(model: model)
             try Task.checkCancellation()
 

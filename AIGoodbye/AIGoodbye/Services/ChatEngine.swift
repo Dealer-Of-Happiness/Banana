@@ -85,6 +85,35 @@ final class ChatEngine: ObservableObject {
         appleIntelligence.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
+
+        // Apple Intelligence can become available after launch - switched on
+        // in Settings, or its assets finished downloading - and the default
+        // chosen at first launch then pointed at a model that still needs
+        // gigabytes. Re-checked whenever availability is refreshed (scene
+        // activation, the picker, Setup).
+        appleIntelligence.$availability
+            .removeDuplicates()
+            .dropFirst()
+            .filter { $0 == .available }
+            .sink { [weak self] _ in
+                // Deferred: `$availability` fires before the new value is
+                // stored, and selecting from inside that emission would read
+                // the old one.
+                Task { @MainActor [weak self] in self?.adoptAppleIntelligenceIfNothingDownloaded() }
+            }
+            .store(in: &cancellables)
+    }
+
+    /// Switch to Apple Intelligence when it is usable and the selected
+    /// downloadable model could not answer anyway: nothing is on disk and
+    /// nothing is on its way. A user who has a model, or is downloading one,
+    /// keeps their choice.
+    func adoptAppleIntelligenceIfNothingDownloaded() {
+        guard appleIntelligence.isAvailable,
+              selectedModel.backend == .mlx,
+              mlx.loadingModelId == nil,
+              !AIModel.allModels.contains(where: { $0.isDownloaded }) else { return }
+        select(.appleIntelligence)
     }
 
     // MARK: - Selection
@@ -219,9 +248,14 @@ final class ChatEngine: ObservableObject {
 
     // MARK: - Session lifecycle
 
-    /// System instructions for the currently selected app language.
+    /// System instructions for an Apple Intelligence session in the current
+    /// app language. (MLX sessions build their own, sized to the model's
+    /// window.)
     var currentInstructions: String {
-        MLXService.systemPrompt(for: settings.appLanguage)
+        MLXService.systemPrompt(
+            for: settings.appLanguage,
+            memoryTokens: AppleIntelligenceService.memoryBudgetTokens
+        )
     }
 
     /// Prepare the backend for a conversation (loads model if needed, builds
@@ -296,8 +330,15 @@ final class ChatEngine: ObservableObject {
     /// translation and summarization, where personalization would corrupt the
     /// output (a "Brainstorm Partner" persona must not answer a translation
     /// with a discussion, or meeting minutes with opinions).
-    func startCleanSession(model: AIModel) async throws {
-        let plain = MLXService.basePrompt(for: settings.appLanguage)
+    ///
+    /// - Parameter languageInstruction: false leaves out the "always respond
+    ///   in <app language>" rule, for callers whose prompt names the output
+    ///   language itself (translation): two competing language instructions
+    ///   are a coin toss for a 2B model.
+    func startCleanSession(model: AIModel, languageInstruction: Bool = true) async throws {
+        let plain: String = languageInstruction
+            ? MLXService.basePrompt(for: settings.appLanguage)
+            : MLXService.basePrompt
         #if targetEnvironment(simulator)
         if model.backend == .appleIntelligence {
             appleIntelligence.startSession(history: [], instructions: plain)
@@ -345,10 +386,10 @@ final class ChatEngine: ObservableObject {
         if model.backend != .appleIntelligence || !appleIntelligence.isAvailable {
             return Self.simulatorEchoStream(prompt: prompt, hasImage: image != nil)
         }
-        return appleIntelligence.respondStream(prompt: prompt)
+        return appleIntelligence.respondStream(prompt: prompt, temperature: settings.temperature)
         #else
         if model.backend == .appleIntelligence {
-            return appleIntelligence.respondStream(prompt: prompt)
+            return appleIntelligence.respondStream(prompt: prompt, temperature: settings.temperature)
         }
         return mlx.respondStream(prompt: prompt, image: image)
         #endif

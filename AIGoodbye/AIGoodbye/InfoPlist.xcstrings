@@ -6,79 +6,79 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye nutzt die Kamera, damit du Fotos aufnehmen oder Fragen zum Live-Bild stellen kannst. Bilder werden auf deinem Gerät ausgewertet und nie hochgeladen. Gesendete Fotos bleiben nur in dieser Unterhaltung auf diesem Gerät."
+            "value": "AiGoodbye nutzt die Kamera, damit du Fotos aufnehmen, Dokumente scannen und Fragen dazu stellen kannst, was die Kamera sieht – auch mit „Umgebung beschreiben“. Bilder werden auf deinem Gerät ausgewertet und nie aufgezeichnet oder hochgeladen."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Το AiGoodbye χρησιμοποιεί την κάμερα για να τραβάτε φωτογραφίες ή να ρωτάτε για τη ζωντανή εικόνα. Οι εικόνες αναλύονται στη συσκευή σας και δεν ανεβαίνουν ποτέ. Οι φωτογραφίες που στέλνετε μένουν μόνο μέσα σε αυτή τη συνομιλία, σε αυτή τη συσκευή."
+            "value": "Το AiGoodbye χρησιμοποιεί την κάμερα για να τραβάς φωτογραφίες, να σαρώνεις έγγραφα και να ρωτάς για ό,τι βλέπει η κάμερα, και με την «Περιγραφή περιβάλλοντος». Οι εικόνες αναλύονται στη συσκευή σου και δεν καταγράφονται ούτε ανεβαίνουν ποτέ."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye uses the camera so you can take photos or ask about a live view. Images are analyzed on your device and never uploaded. Photos you send are kept only inside that conversation on this device."
+            "value": "AiGoodbye uses the camera so you can take photos, scan documents and ask about what the camera sees, including Describe Surroundings. Images are analyzed on your device and never recorded or uploaded."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye usa la cámara para que puedas hacer fotos o preguntar sobre la imagen en directo. Las imágenes se analizan en tu dispositivo y nunca se suben. Las fotos que envías se guardan solo dentro de esa conversación en este dispositivo."
+            "value": "AiGoodbye usa la cámara para que puedas hacer fotos, escanear documentos y preguntar sobre lo que ve la cámara, también con «Describir el entorno». Las imágenes se analizan en tu dispositivo y nunca se graban ni se suben."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye utilise l'appareil photo pour que vous puissiez prendre des photos ou poser des questions sur l'image en direct. Les images sont analysées sur votre appareil et jamais envoyées. Les photos que vous envoyez restent uniquement dans cette conversation, sur cet appareil."
+            "value": "AiGoodbye utilise l'appareil photo pour que vous puissiez prendre des photos, numériser des documents et poser des questions sur ce que voit l'appareil photo, y compris avec « Décrire l'environnement ». Les images sont analysées sur votre appareil et ne sont jamais enregistrées ni envoyées."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye usa la fotocamera per scattare foto o fare domande sull'inquadratura in tempo reale. Le immagini vengono analizzate sul tuo dispositivo e non vengono mai caricate. Le foto che invii restano solo in quella conversazione, su questo dispositivo."
+            "value": "AiGoodbye usa la fotocamera per scattare foto, scansionare documenti e fare domande su ciò che inquadra, anche con «Descrivi l'ambiente». Le immagini vengono analizzate sul tuo dispositivo e non vengono mai registrate né caricate."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbyeは、写真を撮ったりライブ映像について質問したりするためにカメラを使用します。画像はデバイス上で解析され、アップロードされることはありません。送信した写真はこのデバイスのその会話内にのみ保存されます。"
+            "value": "AiGoodbyeは、写真の撮影、書類のスキャン、そして「周囲を説明」を含め、カメラに映っているものについて質問するためにカメラを使用します。画像はデバイス上で解析され、記録やアップロードされることはありません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye는 사진을 찍거나 실시간 화면에 대해 질문할 수 있도록 카메라를 사용합니다. 이미지는 기기에서 분석되며 절대 업로드되지 않습니다. 보낸 사진은 이 기기의 해당 대화 안에만 보관됩니다."
+            "value": "AiGoodbye는 사진 촬영, 문서 스캔, 그리고 ‘주변 설명’을 포함해 카메라에 보이는 것에 대해 질문할 수 있도록 카메라를 사용합니다. 이미지는 기기에서 분석되며 절대 기록되거나 업로드되지 않습니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O AiGoodbye usa a câmera para você tirar fotos ou perguntar sobre a imagem ao vivo. As imagens são analisadas no seu aparelho e nunca enviadas. As fotos que você envia ficam apenas naquela conversa, neste aparelho."
+            "value": "O AiGoodbye usa a câmera para você tirar fotos, digitalizar documentos e perguntar sobre o que a câmera vê, inclusive com “Descrever o ambiente”. As imagens são analisadas no seu dispositivo e nunca são gravadas nem enviadas."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye использует камеру, чтобы вы могли делать фото или задавать вопросы о том, что она видит. Изображения анализируются на вашем устройстве и никогда не отправляются в интернет. Отправленные фото хранятся только в этом чате на этом устройстве."
+            "value": "AiGoodbye использует камеру, чтобы вы могли делать фото, сканировать документы и задавать вопросы о том, что видит камера, в том числе в режиме «Описать окружение». Изображения анализируются на вашем устройстве и никогда не записываются и не отправляются в интернет."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye використовує камеру, щоб ви могли робити фото або запитувати про те, що вона бачить. Зображення аналізуються на вашому пристрої й ніколи не надсилаються в інтернет. Надіслані фото зберігаються лише в цьому чаті на цьому пристрої."
+            "value": "AiGoodbye використовує камеру, щоб ви могли робити фото, сканувати документи й запитувати про те, що бачить камера, зокрема в режимі «Описати оточення». Зображення аналізуються на вашому пристрої й ніколи не записуються та не надсилаються в інтернет."
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye 使用相機，讓你可以影相或查詢即時畫面。影像會喺你嘅裝置上分析，絕不會上載。你傳送嘅相片只會保存喺本裝置嘅該對話入面。"
+            "value": "AiGoodbye 使用相機，等你可以影相、掃描文件，同埋查詢相機見到嘅嘢，包括「描述周遭環境」功能。影像會喺你嘅裝置上分析，絕不會錄低或者上載。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye 使用相机，让你可以拍照或询问实时画面。图像在你的设备上分析，绝不会上传。你发送的照片只保存在本设备的该对话中。"
+            "value": "AiGoodbye 使用相机，让你可以拍照、扫描文稿，并询问相机看到的内容，包括“描述周围环境”功能。图像在你的设备上分析，绝不会被录制或上传。"
           }
         }
       }
@@ -88,79 +88,79 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye nutzt das Mikrofon für private Sprachunterhaltungen. Audio wird ausschließlich auf deinem Gerät verarbeitet."
+            "value": "AiGoodbye nutzt das Mikrofon für Sprachunterhaltungen, Übersetzungen und die Meeting-Aufnahme. Audio wird ausschließlich auf deinem Gerät verarbeitet und nie hochgeladen."
           }
         },
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Το AiGoodbye χρησιμοποιεί το μικρόφωνο για ιδιωτικές φωνητικές συνομιλίες. Ο ήχος επεξεργάζεται μόνο στη συσκευή σας."
+            "value": "Το AiGoodbye χρησιμοποιεί το μικρόφωνο για φωνητικές συνομιλίες, μετάφραση και την εγγραφή συσκέψεων. Η επεξεργασία του ήχου γίνεται αποκλειστικά στη συσκευή σου και ο ήχος δεν ανεβαίνει ποτέ."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye uses the microphone for private voice conversations. Audio is processed entirely on your device."
+            "value": "AiGoodbye uses the microphone for voice conversations, translation and the meeting recorder. Audio is processed entirely on your device and never uploaded."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye usa el micrófono para conversaciones de voz privadas. El audio se procesa únicamente en tu dispositivo."
+            "value": "AiGoodbye usa el micrófono para conversaciones de voz, traducción y la grabadora de reuniones. El audio se procesa únicamente en tu dispositivo y nunca se sube."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye utilise le micro pour des conversations vocales privées. L'audio est traité uniquement sur votre appareil."
+            "value": "AiGoodbye utilise le micro pour les conversations vocales, la traduction et l'enregistreur de réunions. L'audio est traité entièrement sur votre appareil et n'est jamais envoyé."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye usa il microfono per conversazioni vocali private. L'audio viene elaborato solo sul tuo dispositivo."
+            "value": "AiGoodbye usa il microfono per le conversazioni vocali, la traduzione e il registratore di riunioni. L'audio viene elaborato interamente sul tuo dispositivo e non viene mai caricato."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbyeはプライベートな音声会話のためにマイクを使用します。音声はデバイス上でのみ処理されます。"
+            "value": "AiGoodbyeは、音声会話、翻訳、会議レコーダーのためにマイクを使用します。音声はすべてデバイス上で処理され、アップロードされることはありません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye는 프라이빗 음성 대화를 위해 마이크를 사용합니다. 오디오는 기기에서만 처리됩니다."
+            "value": "AiGoodbye는 음성 대화, 번역, 회의 녹음을 위해 마이크를 사용합니다. 오디오는 전적으로 기기에서 처리되며 절대 업로드되지 않습니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O AiGoodbye usa o microfone para conversas de voz privadas. O áudio é processado somente no seu dispositivo."
+            "value": "O AiGoodbye usa o microfone para conversas por voz, tradução e o gravador de reuniões. O áudio é processado inteiramente no seu dispositivo e nunca é enviado."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye использует микрофон для приватных голосовых бесед. Звук обрабатывается только на вашем устройстве."
+            "value": "AiGoodbye использует микрофон для голосовых разговоров, перевода и диктофона для встреч. Звук обрабатывается только на вашем устройстве и никогда не отправляется в интернет."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye використовує мікрофон для приватних голосових розмов. Звук обробляється лише на вашому пристрої."
+            "value": "AiGoodbye використовує мікрофон для голосових розмов, перекладу та диктофона для зустрічей. Звук обробляється лише на вашому пристрої й ніколи не надсилається в інтернет."
           }
         },
         "zh-HK": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye 用麥克風進行私密語音對話。音訊只會喺你部裝置上處理。"
+            "value": "AiGoodbye 用麥克風嚟進行語音對話、翻譯同會議錄音。音訊全部喺你部裝置上處理，絕對唔會上載。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye 使用麦克风进行私密语音对话。音频仅在您的设备上处理。"
+            "value": "AiGoodbye 使用麦克风进行语音对话、翻译和会议录音。音频完全在你的设备上处理，绝不会上传。"
           }
         }
       }
@@ -176,7 +176,7 @@
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Το AiGoodbye μετατρέπει την ομιλία σας σε κείμενο μόνο σε αυτήν τη συσκευή. Τίποτα δεν αποστέλλεται πουθενά."
+            "value": "Το AiGoodbye μετατρέπει την ομιλία σου σε κείμενο μόνο σε αυτήν τη συσκευή. Τίποτα δεν αποστέλλεται πουθενά."
           }
         },
         "en": {
@@ -242,7 +242,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "AiGoodbye 仅在本设备上将您的语音转换为文字。不会发送任何内容。"
+            "value": "AiGoodbye 仅在本设备上将你的语音转换为文字。不会发送任何内容。"
           }
         }
       }
@@ -264,7 +264,7 @@
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "Το AiGoodbye χρησιμοποιεί το Face ID για να ξεκλειδώνει τις ιδιωτικές σας συνομιλίες. Τίποτα σχετικό με το πρόσωπό σας δεν φεύγει ποτέ από τη συσκευή."
+            "value": "Το AiGoodbye χρησιμοποιεί το Face ID για να ξεκλειδώνει τις ιδιωτικές σου συνομιλίες. Τίποτα σχετικό με το πρόσωπό σου δεν φεύγει ποτέ από τη συσκευή."
           }
         },
         "es": {

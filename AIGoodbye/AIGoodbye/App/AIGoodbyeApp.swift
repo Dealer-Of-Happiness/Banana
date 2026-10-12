@@ -39,6 +39,11 @@ struct AIGoodbyeApp: App {
                     lock.lockIfNeeded()
                 case .active:
                     Task { await lock.unlockOnForeground() }
+                    // Apple Intelligence can finish downloading its model, or
+                    // be switched on in Settings, while the app sits in the
+                    // background; without this the app kept saying it was
+                    // unavailable until the next cold launch.
+                    appState.engine.appleIntelligence.refreshAvailability()
                 default:
                     break
                 }
@@ -76,6 +81,21 @@ struct AIGoodbyeApp: App {
                 for: UIApplication.didReceiveMemoryWarningNotification
             )) { _ in
                 appState.releaseMemory()
+            }
+        }
+        // The menu bar on Mac and iPad, and the ⌘-hold shortcut list on an
+        // iPad keyboard. Replacing .newItem drops the system's "New Window",
+        // which this single-window app has no use for. Routed like a
+        // widget's "new" so ChatView reuses an empty chat and focuses the
+        // composer. Disabled behind the terms wall and the lock: a key
+        // press is no way around Face ID either.
+        .commands {
+            CommandGroup(replacing: .newItem) {
+                Button("New Chat") {
+                    appState.pendingRoute = .newChat
+                }
+                .keyboardShortcut("n")
+                .disabled(!hasAcceptedTerms || lock.isLocked)
             }
         }
     }
@@ -355,14 +375,31 @@ class AppState: ObservableObject {
         // the process the moment it touches one, so this warm-up took the
         // whole app down about twenty seconds after every launch with a
         // downloaded model. The chat path already knows this and echoes.
+        //
+        // Not on a hot phone or in Low Power Mode either: the warm-up is
+        // seconds of GPU and gigabytes of reads the user may never need
+        // (they may have opened the app to read a chat or record), and on a
+        // phone that is already throttling it only makes things worse. The
+        // first message loads the model on demand, as it would anyway.
         #if !targetEnvironment(simulator)
         let model = engine.selectedModel
-        if model.backend == .mlx && model.isDownloaded {
+        if model.backend == .mlx && model.isDownloaded && !Self.shouldSpareEnergy {
             Task { [engine] in
                 try? await engine.mlx.loadModel(model)
             }
         }
         #endif
+    }
+
+    /// Low Power Mode, or a phone already at `.serious` / `.critical`
+    /// thermal state.
+    private static var shouldSpareEnergy: Bool {
+        let info = ProcessInfo.processInfo
+        if info.isLowPowerModeEnabled { return true }
+        switch info.thermalState {
+        case .serious, .critical: return true
+        default: return false
+        }
     }
 
     func createNewConversation() {
@@ -372,9 +409,10 @@ class AppState: ObservableObject {
         if let current = currentConversation, current.messages.isEmpty {
             return
         }
-        if let existingEmpty = conversationManager.conversations.first(where: {
-            $0.messages.isEmpty && $0.folderId == nil
-        }) {
+        // A store query, not a scan: walking `conversations` read every
+        // chat's messages relationship, faulting in each one's full history
+        // just to find a blank row.
+        if let existingEmpty = conversationManager.emptyRootConversation() {
             currentConversation = existingEmpty
             return
         }
@@ -392,7 +430,35 @@ class AppState: ObservableObject {
         case voice
         case camera
         case translate
+        case describe
+        case recorder
+
+        /// The deep-link host (`aigoodbye://<host>`), which is also the
+        /// name a control or intent writes through `WidgetLaunchBridge`.
+        init?(host: String?) {
+            switch host {
+            case "voice": self = .voice
+            case "camera": self = .camera
+            case "translate": self = .translate
+            case "describe": self = .describe
+            case "recorder": self = .recorder
+            case "new": self = .newChat
+            default: return nil
+            }
+        }
     }
+
+    /// A route that arrived behind the terms wall or the lock, with when it
+    /// arrived. With App Lock on the app is ALWAYS locked at the moment a
+    /// widget URL lands (it locks on every trip to the background), so
+    /// dropping these turned every widget button into plain "open the app".
+    /// Replayed by `consumeSharedContent()` once the user is in.
+    private var deferredRoute: (route: Route, at: Date)?
+
+    /// A deferred route older than this is stale: a Face ID prompt that was
+    /// cancelled and an unlock much later must not spring the recorder or
+    /// voice mode on someone who has long forgotten the widget tap.
+    private static let deferredRouteLifetime: TimeInterval = 10 * 60
 
     func handleDeepLink(_ url: URL) {
         guard url.scheme == SharedInbox.urlScheme else { return }
@@ -402,15 +468,45 @@ class AppState: ObservableObject {
         // does not exist for yet. Shared content stays in the inbox and is
         // delivered by the `.active` / unlock paths once the app is ready.
         let ready = UserDefaults.standard.bool(forKey: "hasAcceptedTerms") && !AppLock.shared.isLocked
-        switch url.host() {
-        case "voice": if ready { pendingRoute = .voice }
-        case "camera": if ready { pendingRoute = .camera }
-        case "translate": if ready { pendingRoute = .translate }
-        case "new": if ready { pendingRoute = .newChat }
-        case "shared": if ready { consumeSharedContent() }
-        default: break
+        if url.host() == "shared" {
+            if ready { consumeSharedContent() }
+            return
+        }
+        guard let route = Route(host: url.host()) else { return }
+        if ready {
+            deferredRoute = nil
+            pendingRoute = route
+        } else {
+            deferredRoute = (route, Date())
         }
     }
+
+    /// For an open-the-app intent that runs in this process (Siri,
+    /// Shortcuts, the Action Button). By the time `perform()` runs the app
+    /// can already be active, so no `.active` transition would deliver the
+    /// request: hand it over now when the user can see the result.
+    /// Otherwise it waits in the App Group, like a control's request, for
+    /// the unlock and terms paths to pick up.
+    static func open(route: String) {
+        WidgetLaunchBridge.requestLaunch(route: route)
+        deliverIfReady()
+    }
+
+    /// Delivers what an intent just left in the App Group (a route, or a
+    /// question for the composer) if the user can see it now. When there is
+    /// no scene yet, `initialize()` delivers it; behind the lock or the
+    /// terms wall, the unlock and terms paths do.
+    static func deliverIfReady() {
+        guard let state = shared,
+              UserDefaults.standard.bool(forKey: "hasAcceptedTerms"),
+              !AppLock.shared.isLocked else { return }
+        state.consumeSharedContent()
+    }
+
+    /// Shared text longer than this becomes a document instead of a prompt.
+    /// Matches the Summarize intent's cap: well inside Apple Intelligence's
+    /// 4,096-token window once instructions and the answer are counted.
+    private static let sharedTextDocumentThreshold = 3_000
 
     /// Pick up anything the share extension left for us and drop it into the
     /// composer of a fresh chat.
@@ -418,8 +514,16 @@ class AppState: ObservableObject {
         // Not before storage is ready: a conversation created with no model
         // context is never persisted and vanishes with the shared file.
         guard isInitialized else { return }
-        if WidgetLaunchBridge.consumeVoiceRequest() {
-            pendingRoute = .voice
+        if let deferred = deferredRoute {
+            deferredRoute = nil
+            if Date().timeIntervalSince(deferred.at) < Self.deferredRouteLifetime {
+                pendingRoute = deferred.route
+            }
+        }
+        // A control's request is newer than anything deferred above: the
+        // control was the user's last tap.
+        if let name = WidgetLaunchBridge.consumeLaunchRoute(), let route = Route(host: name) {
+            pendingRoute = route
         }
         guard let item = SharedInbox.takePending() else { return }
 
@@ -432,6 +536,20 @@ class AppState: ObservableObject {
             await Task.yield()
 
             switch item.kind {
+            case .text where (item.text?.count ?? 0) > AppState.sharedTextDocumentThreshold:
+                // A long selection (an article, an email thread, a Notes
+                // page) pasted into the composer became one giant prompt:
+                // Apple Intelligence rejected it as "too long" on a brand-new
+                // chat, and a downloaded model lost most of it. As a document
+                // it goes through retrieval like any shared file.
+                let text = item.text ?? ""
+                if let name = SharedInbox.writeIntoContainer(Data(text.utf8), suggestedName: "Shared text.txt"),
+                   let url = SharedInbox.fileURL(named: name) {
+                    await chatViewModel.processSharedFile(url, displayName: L10n.text("Shared text"))
+                    SharedInbox.cleanUp(fileName: name)
+                } else {
+                    chatViewModel.inputText = text
+                }
             case .text, .url:
                 chatViewModel.inputText = item.text ?? ""
             case .file:

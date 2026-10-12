@@ -154,8 +154,10 @@ final class ModelManager: ObservableObject {
         }
     }
 
+    /// "0 bytes" when nothing is installed, never the formatter's default
+    /// "Zero KB" - the shared formatter disallows non-numeric output.
     var formattedTotalSize: String {
-        ByteCountFormatter.string(fromByteCount: totalDownloadedBytes, countStyle: .file)
+        AIModel.formattedBytes(totalDownloadedBytes)
     }
 
     // MARK: - Mutations

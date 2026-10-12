@@ -9,6 +9,7 @@
 //
 
 import SwiftUI
+import UIKit
 import NaturalLanguage
 
 struct TranslateModeView: View {
@@ -22,10 +23,15 @@ struct TranslateModeView: View {
         let original: String
         var translation: String
         let fromMine: Bool     // true = spoken by the phone's owner
+        /// The language the translation is in, so a replay uses the right
+        /// voice even after the pair has been changed or swapped.
+        var target: AppLanguage? = nil
     }
 
-    @State private var myLanguage: AppLanguage = .english
-    @State private var theirLanguage: AppLanguage = .spanish
+    /// Remembered between visits: a traveller in Japan used to pick Japanese
+    /// out of a thirteen-item menu every time the sheet opened.
+    @AppStorage("translate.mine") private var myLanguage: AppLanguage = .english
+    @AppStorage("translate.theirs") private var theirLanguage: AppLanguage = .spanish
     @State private var turns: [Turn] = []
     @State private var listeningForMine: Bool?     // nil = idle
     @State private var isTranslating = false
@@ -44,6 +50,13 @@ struct TranslateModeView: View {
     @State private var isHandsFree = false
     /// Whose turn hands-free mode expects next.
     @State private var handsFreeExpectsMine = true
+    /// Hands-free listens that ended with nothing said, in a row. Each one
+    /// is about 30 seconds of silence (`VoiceService.emptyListenLimit`).
+    @State private var emptyListens = 0
+    /// About two minutes of silence. A session forgotten on a table must not
+    /// keep the microphone - and, with the screen held awake, the display -
+    /// on indefinitely.
+    private let emptyListenCap = 4
 
     private var languageChoices: [AppLanguage] {
         AppLanguage.pickerOrder.filter { $0 != .automatic }
@@ -71,6 +84,12 @@ struct TranslateModeView: View {
                 }
             }
         }
+        // VoiceOver's two-finger double tap starts or stops hands-free from
+        // anywhere on the screen.
+        .accessibilityAction(.magicTap) {
+            guard !permissionDenied else { return }
+            toggleHandsFree()
+        }
         .onAppear(perform: start)
         .onDisappear {
             isActive = false
@@ -79,15 +98,19 @@ struct TranslateModeView: View {
             translateTask?.cancel()
             translateTask = nil
             voice.shutdown()
+            UIApplication.shared.isIdleTimerDisabled = false
         }
         .onChange(of: scenePhase) { _, phase in
             inForeground = (phase == .active)
             switch phase {
+            case .active:
+                updateIdleTimer()
             case .background:
                 voice.pause()
                 listeningForMine = nil
                 // Don't keep the microphone running in the background.
                 isHandsFree = false
+                UIApplication.shared.isIdleTimerDisabled = false
             case .inactive:
                 // Control Center, the app switcher, a system alert - including
                 // the one-time Speech Recognition prompt a first listen in
@@ -105,6 +128,29 @@ struct TranslateModeView: View {
         }
         .onChange(of: voice.listeningState) { _, state in
             listeningStateChanged(state)
+        }
+        .onChange(of: isHandsFree) { _, _ in updateIdleTimer() }
+        .onChange(of: listeningForMine) { old, new in
+            updateIdleTimer()
+            // Announced as the listen is requested, before the microphone is
+            // live, so VoiceOver's own voice isn't the first thing the
+            // recognizer hears; the begin tone marks the live moment.
+            if old == nil, new != nil { announceForVoiceOver(L10n.text("Listening")) }
+        }
+        .onChange(of: isTranslating) { _, translating in
+            updateIdleTimer()
+            if translating { announceForVoiceOver(L10n.text("Translating")) }
+        }
+        .onChange(of: voice.isSpeaking) { _, _ in updateIdleTimer() }
+        // Felt rather than seen: the phone is often on a table between two
+        // people. Behind the Haptic Feedback setting.
+        .sensoryFeedback(trigger: listeningForMine) { old, new in
+            guard old == nil, new != nil, appState.settings.hapticFeedbackEnabled else { return nil }
+            return .start
+        }
+        .sensoryFeedback(trigger: isTranslating) { wasTranslating, translating in
+            guard wasTranslating, !translating, appState.settings.hapticFeedbackEnabled else { return nil }
+            return .success
         }
         // A swipe would otherwise close the sheet under a live microphone or
         // a translation in progress; Close still works.
@@ -214,28 +260,65 @@ struct TranslateModeView: View {
     }
 
     private func bubble(for turn: Turn) -> some View {
-        HStack {
+        // Not the line still streaming in: it is spoken by itself the moment
+        // it is done.
+        let canReplay = !turn.translation.isEmpty && !(isTranslating && turn.id == turns.last?.id)
+        return HStack {
             if turn.fromMine { Spacer(minLength: 40) }
 
             VStack(alignment: turn.fromMine ? .trailing : .leading, spacing: 6) {
                 Text(turn.original)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                Text(turn.translation.isEmpty ? "..." : turn.translation)
-                    .font(.title3.weight(.medium))
-                    .textSelection(.enabled)
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(turn.translation.isEmpty ? "..." : turn.translation)
+                        .font(.title3.weight(.medium))
+                        .textSelection(.enabled)
+                    if canReplay {
+                        Image(systemName: "speaker.wave.2")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                    }
+                }
             }
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(turn.fromMine ? Color.blue.opacity(0.12) : Color(.secondarySystemGroupedBackground))
             )
+            .contentShape(RoundedRectangle(cornerRadius: 16))
+            // A noisy counter means the other person often missed it; this
+            // replays the line instead of making someone say it again.
+            .onTapGesture {
+                if canReplay { replay(turn) }
+            }
             .frame(maxWidth: .infinity, alignment: turn.fromMine ? .trailing : .leading)
 
             if !turn.fromMine { Spacer(minLength: 40) }
         }
         .padding(.horizontal)
         .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(canReplay ? .isButton : [])
+        .accessibilityHint(Text(verbatim: canReplay ? L10n.text("Double tap to hear the translation again") : ""))
+        .accessibilityAction {
+            if canReplay { replay(turn) }
+        }
+    }
+
+    /// Say a translation again, in the voice of the language it is in.
+    private func replay(_ turn: Turn) {
+        guard isActive, inForeground, !turn.translation.isEmpty else { return }
+        // Speaking cuts a live listen off without telling anyone, which left
+        // a talk button lit over a dead microphone. End it properly instead;
+        // hands-free listens again when the replay finishes.
+        if voice.isListeningOrPreparing || listeningForMine != nil {
+            voice.stopListening(notify: false)
+            listeningForMine = nil
+        }
+        voice.stopSpeaking()
+        voice.setSpeechLanguage(turn.target ?? (turn.fromMine ? theirLanguage : myLanguage))
+        voice.speak(turn.translation)
     }
 
     /// Stacked on a phone held upright; one row when the window is short
@@ -300,8 +383,15 @@ struct TranslateModeView: View {
         let isListening = listeningForMine == mine
         return Button {
             if isListening {
-                voice.stopListening()
-                listeningForMine = nil
+                // Tap to send, as in Apple Translate: what was said so far is
+                // translated now. `listeningForMine` is left for the
+                // callbacks - `onFinalTranscript` reads it to know whose
+                // words these were, then clears it.
+                if voice.isListeningOrPreparing {
+                    voice.finishListeningNow()
+                } else {
+                    listeningForMine = nil
+                }
             } else {
                 beginListening(mine: mine)
             }
@@ -321,23 +411,38 @@ struct TranslateModeView: View {
         }
         .buttonStyle(.plain)
         .disabled(isTranslating || permissionDenied)
-        .accessibilityLabel(Text(mine ? L10n.text("Speak in your language") : L10n.text("Speak in their language")))
+        // Which language this button listens in (the visible text, which the
+        // old label replaced), and whether the microphone is open now.
+        .accessibilityLabel(Text(verbatim: mine
+            ? L10n.text("Speak in your language, \(language.displayName)")
+            : L10n.text("Speak in their language, \(language.displayName)")))
+        .accessibilityValue(Text(verbatim: isListening ? L10n.text("Listening") : ""))
+        .accessibilityAddTraits(isListening ? .isSelected : [])
     }
 
     // MARK: - Flow
 
     private func start() {
-        // Default the user's side to the app language when it's a real one.
-        if appState.settings.appLanguage != .automatic {
+        voice.playsListeningSounds = appState.settings.listeningSounds
+        voice.speechRate = Float(appState.settings.speechRate)
+        // First visit only: the user's side defaults to the app language
+        // when it's a real one. After that the remembered pair stands.
+        if UserDefaults.standard.string(forKey: "translate.mine") == nil,
+           appState.settings.appLanguage != .automatic {
             myLanguage = appState.settings.appLanguage
-            if theirLanguage == myLanguage {
-                theirLanguage = myLanguage == .english ? .spanish : .english
-            }
+        }
+        // "Automatic" is not a language anyone speaks, and one language on
+        // both sides translates nothing.
+        if myLanguage == .automatic { myLanguage = .english }
+        if theirLanguage == .automatic || theirLanguage == myLanguage {
+            theirLanguage = myLanguage == .english ? .spanish : .english
         }
 
         voice.onFinalTranscript = { text in
             translateTask = Task { @MainActor in
                 guard isActive else { return }
+                // Somebody spoke: the silence count starts over.
+                emptyListens = 0
                 var wasMine = listeningForMine ?? true
                 listeningForMine = nil
 
@@ -361,6 +466,14 @@ struct TranslateModeView: View {
         voice.onListeningEnded = {
             Task { @MainActor in
                 if listeningForMine != nil { listeningForMine = nil }
+                guard isActive else { return }
+                if isHandsFree {
+                    emptyListens += 1
+                    if emptyListens >= emptyListenCap {
+                        stopHandsFreeAfterSilence()
+                        return
+                    }
+                }
                 // Nothing was said (silence timeout): keep the conversation
                 // alive by listening again.
                 resumeHandsFreeIfIdle()
@@ -421,7 +534,7 @@ struct TranslateModeView: View {
         let target = fromMine ? theirLanguage : myLanguage
         let source = fromMine ? myLanguage : theirLanguage
 
-        var turn = Turn(original: text, translation: "", fromMine: fromMine)
+        var turn = Turn(original: text, translation: "", fromMine: fromMine, target: target)
         turns.append(turn)
         isTranslating = true
         defer { isTranslating = false }
@@ -444,7 +557,11 @@ struct TranslateModeView: View {
                 return
             }
             defer { engine.releaseUtility() }
-            try await engine.startCleanSession(model: model)
+            // Without the app-language line: the system prompt saying
+            // "always respond in <app language>" contradicted the prompt's
+            // own target language, and a 2B model sometimes obeyed the wrong
+            // one.
+            try await engine.startCleanSession(model: model, languageInstruction: false)
 
             let prompt = """
             Translate the following text from \(source.englishName) into \(target.englishName).
@@ -510,6 +627,23 @@ struct TranslateModeView: View {
 
     // MARK: - Hands-free
 
+    /// Keep the screen on while the translator is working. Hands-free is made
+    /// for a phone lying on a table between two people that nobody touches,
+    /// and the default auto-lock backgrounded the app half a minute in, which
+    /// stops the microphone and switched hands-free off mid-conversation.
+    /// Released as soon as nothing is listening, translating or speaking.
+    private func updateIdleTimer() {
+        let working = isHandsFree || listeningForMine != nil || isTranslating || voice.isSpeaking
+        UIApplication.shared.isIdleTimerDisabled = isActive && scenePhase != .background && working
+    }
+
+    /// VoiceOver only; without it the status on screen, the tones and the
+    /// haptics say the same thing.
+    private func announceForVoiceOver(_ text: String) {
+        guard isActive, UIAccessibility.isVoiceOverRunning else { return }
+        UIAccessibility.post(notification: .announcement, argument: text)
+    }
+
     /// Listen again if hands-free is on and nothing else is happening: no
     /// translation running, nothing being spoken, no listen already under
     /// way. Every path that ends a hands-free step funnels through here, so a
@@ -521,10 +655,28 @@ struct TranslateModeView: View {
         beginListening(mine: handsFreeExpectsMine, clearingNotice: false)
     }
 
+    /// Two minutes with nobody speaking: switch hands-free off and say so,
+    /// out loud as well, because the phone is probably lying on a table and
+    /// nobody is looking at it.
+    private func stopHandsFreeAfterSilence() {
+        isHandsFree = false
+        emptyListens = 0
+        listeningForMine = nil
+        voice.stopListening(notify: false)
+        let message = L10n.text("Hands-free stopped after two minutes of silence. Tap to start again.")
+        notice = message
+        guard inForeground else { return }
+        // In the app's language: the notice is UI text, whichever pair of
+        // languages the conversation was in.
+        voice.setSpeechLanguage(appState.settings.appLanguage)
+        voice.speak(message)
+    }
+
     private func toggleHandsFree() {
         isHandsFree.toggle()
         if isHandsFree {
             notice = nil
+            emptyListens = 0
             handsFreeExpectsMine = true
             beginListening(mine: true)
         } else {
@@ -567,21 +719,30 @@ struct TranslateModeView: View {
         language.rawValue.split(separator: "-").first.map(String.init)
     }
 
+    /// Labels a model puts in front of a translation, in the languages the
+    /// translator offers, lowercased.
+    nonisolated private static let translationLabels: Set<String> = [
+        "translation", "traducción", "übersetzung", "traduction", "traduzione", "tradução",
+        "перевод", "переклад", "μετάφραση", "翻訳", "译文", "翻譯", "번역"
+    ]
+
     /// Models sometimes wrap translations in quotes or add a preamble.
-    static func cleanTranslation(_ raw: String) -> String {
+    nonisolated static func cleanTranslation(_ raw: String) -> String {
         var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Drop a leading "Translation:" style label - but never a colon that
-        // belongs to the content itself ("It's 10:30", "Ratio 3:1").
-        if let colon = text.firstIndex(of: ":") {
-            let prefix = text[text.startIndex..<colon]
-            let looksLikeLabel =
-                prefix.count < 20 &&
-                prefix.rangeOfCharacter(from: .newlines) == nil &&
-                prefix.rangeOfCharacter(from: .decimalDigits) == nil &&
-                prefix.split(separator: " ").count <= 2 &&
-                !text.hasPrefix("http")
-            if looksLikeLabel {
-                let after = text[text.index(after: colon)...].trimmingCharacters(in: .whitespacesAndNewlines)
+        // Drop a leading "Translation:" label - only a known one. Any short
+        // phrase before a colon used to go, which ate real content: "Warning:
+        // wet floor" was spoken as "wet floor", "Note: bring ID" as "bring
+        // ID". A colon inside the content ("It's 10:30") is never a label.
+        if let colon = text.firstIndex(where: { $0 == ":" || $0 == "：" }) {
+            // "**Translation:**" is the same label in Markdown bold.
+            let label = text[text.startIndex..<colon]
+                .trimmingCharacters(in: CharacterSet(charactersIn: "*_ "))
+                .lowercased()
+            if translationLabels.contains(label) {
+                // Only the bold markers right after the label go; the end of
+                // the translation is left as the model wrote it.
+                let after = String(text[text.index(after: colon)...].drop { $0 == "*" })
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
                 if !after.isEmpty { text = after }
             }
         }

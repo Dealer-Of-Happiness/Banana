@@ -278,9 +278,9 @@ As always: 100% private, 100% on-device. Your conversations never leave your iPh
 The live description predates the recorder, translate and Describe Surroundings. Paste these into
 the next version once Dmitry approves them.
 
-Subtitle (30 max): Private AI. Offline. No cloud.
+Subtitle: kept the existing "Private, offline AI assistant" (already search-friendly).
 
-Keywords (100 max, no spaces, no trademarks per guideline 2.3.7): offline,private,local,llm,chatbot,assistant,voice,translator,recorder,transcribe,summarize,pdf,ocr
+Keywords (live, 93 chars; no trademarks per guideline 2.3.7, and no words already in the name or subtitle "Private, offline AI assistant", which Apple indexes too): local,llm,chatbot,voice,translator,recorder,transcribe,summarize,pdf,ocr,meeting,notes,vision
 
 Promotional Text (170 max): New: made for iPhone Duo. Record meetings and get private summaries, translate face to face, and hear what your camera sees. All on your device, even in airplane mode.
 

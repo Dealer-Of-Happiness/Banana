@@ -2,50 +2,51 @@
 
 Paste-ready text for App Store Connect.
 
-## What's New (version 3.5.0, build 20) - October 11, 2026
+## What's New (version 3.5.0, build 21) - October 11, 2026
 
-Ready for iPhone Duo, a top-to-bottom quality pass, plus everything from 3.4.1.
+The biggest AiGoodbye update yet: made for iPhone Duo, and polished from top to bottom.
 
 MADE FOR IPHONE DUO
-- Opens up with you: open it like a book and your conversations sit in a
-  sidebar beside the chat, with the fold between them; the app keeps whatever
-  you were doing when you fold or unfold - a recording in progress included
-- Buttons move to the side bar beside the display, where iPhone Duo keeps them
-- Half open, voice conversations, the live camera and Describe Surroundings
-  put their content on one side of the fold and the controls on the other
-- Take Photo is new: it follows the way you hold the phone and offers the
-  camera facing you on either display
+- Open it like a book: your conversations sit beside the chat, with the fold between them
+- Buttons move to the bar beside the display; half open, voice, live camera and Describe Surroundings split around the fold
+- Every screen now works on its side on any iPhone
 
-ROTATES NOW
-- Every screen works on its side on any iPhone, not just upright
+CHAT
+- Rename chats, select any part of an answer, tap an image to see it full screen
+- Export or copy a conversation right from the chat, and paste images
+- Unsent messages are kept for each chat; Regenerate keeps the old answer until the new one is ready
+- Chats are grouped by Today, Yesterday and earlier, and search is faster
+- Keyboard shortcuts on iPad and Mac
 
-MORE RELIABLE EVERYWHERE
-- Photo questions on Apple Intelligence now download the vision model once
-  instead of asking again and again
-- Stop really stops: the next answer no longer continues the one you stopped
-- Downloads keep what they fetched when you stop them, say when they are
-  waiting for Wi-Fi, and explain the real reason when something goes wrong
-- "Remember that..." works in all 13 languages, not just English
-- The Face ID lock now covers every screen, including open settings
-- Voice conversations stop talking and listening the moment you leave the app;
-  tapping to interrupt no longer gets talked over
-- The recorder keeps your transcript if recognition drops mid-meeting, and
-  never overwrites an interrupted recording
-- Photos you attach stay with the chat and come back after a restore
-- Conversations open at the newest message; the keyboard no longer hides the
-  last answer
-- Text files in older encodings import; Siri phrases in 12 more languages
+MODELS
+- Download a model whenever you like from the model list, with Pause and Resume
+- Downloads keep going when you lock the phone, show the time left and check free space first
+- Creativity now works with Apple Intelligence, and the context setting shows what your iPhone can really use
+- See and switch your persona right from the chat
 
-FIXES (from 3.4.1)
-- A downloaded model could go unrecognized, so chat waited forever or asked you
-  to download it again. It now loads straight from your phone, even on Wi-Fi
-  with no internet
-- Voice conversation and Translate now say what went wrong instead of quietly
-  giving up
-- The recorder no longer spins at full CPU or throws away a recording with a
-  false "check your microphone"
-- A crash after a number of photo questions in one conversation
-- Model downloads continue if the app is closed and pick up where they left off
+VOICE, RECORDER, TRANSLATE
+- The screen stays awake while you talk, and a soft tone tells you when the mic opens
+- Choose the speaking speed; tap the mic to send what you said
+- Recordings are split into paragraphs, with scrubbing, playback speed, lock-screen controls and audio sharing
+- Translate remembers your languages and replays any line with a tap
+
+SEE AND SHORTCUTS
+- Flip to the front camera in Live Camera and Describe Surroundings
+- Start a recording or Describe Surroundings from Control Center, the Action Button or Siri
+- New Translate shortcut, and widgets now work with the Face ID lock on
+
+ACCESSIBILITY AND LANGUAGES
+- VoiceOver moves to each new answer; magic tap works on the voice screens
+- More natural German, Chinese and Greek, and every new screen in all 13 languages
+
+FIXES
+- New Folder and Rename could stop responding after you had typed a message
+- A downloaded model could go unrecognized, so chat waited forever or asked to download again
+- Stop really stops, and the Face ID lock now covers every screen
+- Photo questions on Apple Intelligence download the vision model once, not every time
+- "Remember that..." works in all 13 languages
+- A crash after many photo questions in one conversation
+- Downloads continue if the app is closed and pick up where they left off
 
 100% on device. No cloud, no accounts, no subscriptions.
 
@@ -272,14 +273,14 @@ PLUS
 
 As always: 100% private, 100% on-device. Your conversations never leave your iPhone.
 
-## Store listing refresh (PROPOSED Oct 11, 2026 - not live; for the next version)
+## Store listing refresh (approved by Dmitry Oct 11, 2026; applied with 3.5.0 build 21)
 
 The live description predates the recorder, translate and Describe Surroundings. Paste these into
 the next version once Dmitry approves them.
 
 Subtitle (30 max): Private AI. Offline. No cloud.
 
-Keywords (100 max, no spaces, no words already in the name): offline,private,local,llm,chat,voice,translator,recorder,transcribe,summarize,pdf,ocr,siri,qwen
+Keywords (100 max, no spaces, no trademarks per guideline 2.3.7): offline,private,local,llm,chatbot,assistant,voice,translator,recorder,transcribe,summarize,pdf,ocr
 
 Promotional Text (170 max): New: made for iPhone Duo. Record meetings and get private summaries, translate face to face, and hear what your camera sees. All on your device, even in airplane mode.
 

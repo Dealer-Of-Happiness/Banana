@@ -4339,82 +4339,6 @@
     "AiGoodbye": {
       "shouldTranslate": false
     },
-    "AiGoodbye is a one-time purchase. There are no subscriptions and no hidden fees - pay once and it is yours.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye ist ein Einmalkauf. Es gibt keine Abos und keine versteckten Kosten – einmal zahlen, und die App gehört dir."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Το AiGoodbye είναι μια εφάπαξ αγορά. Δεν υπάρχουν συνδρομές ούτε κρυφές χρεώσεις – πληρώνεις μία φορά και είναι δικό σου."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye es una compra única. No hay suscripciones ni cargos ocultos: pagas una vez y la app es tuya."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye est un achat unique. Pas d'abonnement ni de frais cachés : vous payez une fois et l'app est à vous."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye è un acquisto una tantum. Nessun abbonamento e nessun costo nascosto: paghi una volta e l'app è tua."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbyeは買い切りアプリです。サブスクリプションも隠れた料金もありません。一度支払えば、ずっとあなたのものです。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye는 한 번만 구입하면 되는 앱입니다. 구독도 숨겨진 요금도 없습니다. 한 번 결제하면 평생 사용할 수 있습니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O AiGoodbye é uma compra única. Não há assinaturas nem taxas ocultas: você paga uma vez e o app é seu."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye — это разовая покупка. Никаких подписок и скрытых платежей: заплатите один раз, и приложение ваше."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye — це разова покупка. Жодних підписок і прихованих платежів: заплатіть один раз, і застосунок ваш."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye 是一次性買斷的應用程式。沒有訂閱，亦沒有隱藏收費——畀一次錢，就永遠屬於你。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AiGoodbye 是一次性买断的应用。没有订阅，也没有隐藏费用——付款一次，永久使用。"
-          }
-        }
-      }
-    },
     "AiGoodbye is busy with another task. Try again in a moment.": {
       "localizations": {
         "de": {
@@ -52180,82 +52104,6 @@
         }
       }
     },
-    "Your Purchase": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dein Kauf"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Η αγορά σου"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tu compra"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Votre achat"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Il tuo acquisto"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "購入について"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "구입 정보"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sua compra"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваша покупка"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваша покупка"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的購買"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的购买"
-          }
-        }
-      }
-    },
     "Your conversations are locked": {
       "localizations": {
         "de": {
@@ -53027,6 +52875,158 @@
     },
     "·": {
       "shouldTranslate": false
+    },
+    "Free to Use": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kostenlos"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δωρεάν"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gratis"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gratuit"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gratis"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無料で使えます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무료로 사용"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gratuito"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Бесплатно"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Безкоштовно"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "免費使用"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "免费使用"
+          }
+        }
+      }
+    },
+    "AiGoodbye is free. There are no subscriptions, no in-app purchases and no ads.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye ist kostenlos. Keine Abos, keine In-App-Käufe und keine Werbung."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το AiGoodbye είναι δωρεάν. Χωρίς συνδρομές, χωρίς αγορές μέσα στην εφαρμογή και χωρίς διαφημίσεις."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye es gratis. Sin suscripciones, sin compras dentro de la app y sin anuncios."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye est gratuit. Pas d’abonnement, pas d’achats intégrés et pas de publicité."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye è gratis. Niente abbonamenti, niente acquisti in-app e niente pubblicità."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbyeは無料です。サブスクリプションも、App内課金も、広告もありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye는 무료입니다. 구독도, 앱 내 구입도, 광고도 없습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O AiGoodbye é gratuito. Sem assinaturas, sem compras no app e sem anúncios."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye бесплатен. Никаких подписок, встроенных покупок и рекламы."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye безкоштовний. Жодних підписок, вбудованих покупок і реклами."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye 免費使用，冇訂閱、冇 App 內購買，亦冇廣告。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AiGoodbye 免费使用，没有订阅，没有 App 内购买，也没有广告。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

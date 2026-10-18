@@ -51,8 +51,8 @@ enum LegalText {
                 icon: "exclamationmark.triangle.fill"
             ),
             (
-                title: L10n.text("Your Purchase"),
-                body: L10n.text("AiGoodbye is a one-time purchase. There are no subscriptions and no hidden fees - pay once and it is yours."),
+                title: L10n.text("Free to Use"),
+                body: L10n.text("AiGoodbye is free. There are no subscriptions, no in-app purchases and no ads."),
                 icon: "checkmark.seal.fill"
             )
         ]

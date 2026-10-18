@@ -2,6 +2,23 @@
 
 Paste-ready text for App Store Connect.
 
+## Version 3.5.1, build 22 - October 18, 2026: free, store page in 13 languages
+
+Price changed to Free in all 175 regions on October 18, 2026 (immediate). No in-app purchases, no ads.
+The full store copy for all 13 languages (subtitle, keywords, promotional text, What's New, description)
+is in docs/store-copy/3.5.1/*.json. English:
+
+Subtitle: Private, offline AI assistant
+Keywords: local,llm,chatbot,voice,translator,recorder,transcribe,summarize,pdf,ocr,meeting,notes,vision
+Promotional text: Now completely free. Chat, talk, record meetings, translate and hear what your camera sees, all on your device, even in airplane mode.
+
+What's New:
+AiGoodbye is now completely free: every feature, with no subscriptions, no in-app purchases and no ads.
+
+The App Store page is now available in all 13 languages the app speaks.
+
+Featuring nomination submitted October 18, 2026 ("AiGoodbye: now free, made for iPhone Duo", App Enhancements, publish date Oct 23, 2026).
+
 ## What's New (version 3.5.0, build 21) - October 11, 2026
 
 The biggest AiGoodbye update yet: made for iPhone Duo, and polished from top to bottom.

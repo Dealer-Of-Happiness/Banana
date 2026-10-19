@@ -126,6 +126,29 @@ struct ModelCatalogTests {
     }
 }
 
+struct ThinkingTests {
+
+    /// Every template is told not to think; Qwen3.5 4B and 9B do by default.
+    @Test func templatesAreToldNotToThink() {
+        #expect(ChatTemplateOptions.context["enable_thinking"] as? Bool == false)
+    }
+
+    @Test func reasoningIsNeverShown() {
+        // Still thinking: nothing to show yet.
+        #expect(ChatTemplateOptions.visibleAnswer("<think>\nLet me work this out") == "")
+        #expect(ChatTemplateOptions.visibleAnswer("  <think>") == "")
+        // Done thinking: only the answer.
+        #expect(ChatTemplateOptions.visibleAnswer("<think>\nhmm\n</think>\n\nParis.") == "Paris.")
+        // The template opened the block, so only the close tag arrives.
+        #expect(ChatTemplateOptions.visibleAnswer("Thinking Process: ...\n</think>\n\nParis.") == "Paris.")
+        // An empty block, as Qwen3.5 writes when thinking is off.
+        #expect(ChatTemplateOptions.visibleAnswer("<think>\n\n</think>\n\nHello") == "Hello")
+        // Ordinary answers pass through untouched.
+        #expect(ChatTemplateOptions.visibleAnswer("Paris is on the Seine.") == "Paris is on the Seine.")
+        #expect(ChatTemplateOptions.visibleAnswer("") == "")
+    }
+}
+
 struct LegalTextTests {
 
     @Test func legalCopyIsCompleteAndOffline() {

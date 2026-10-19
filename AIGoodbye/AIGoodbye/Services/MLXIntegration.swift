@@ -89,3 +89,36 @@ nonisolated struct AppHubDownloader: MLXLMCommon.Downloader {
         )
     }
 }
+
+/// What every chat template is rendered with, and the guard on what comes
+/// back.
+nonisolated enum ChatTemplateOptions {
+
+    /// Qwen3.5 4B and 9B think out loud by default - pages of "Thinking
+    /// Process:" before a one-line answer, half a minute on a phone - while
+    /// 0.8B and 2B don't; their templates differ only in that default.
+    /// Thinking is never wanted here (voice, translation and Describe
+    /// Surroundings need the answer now), and templates that don't know the
+    /// flag ignore it.
+    static let context: [String: any Sendable] = ["enable_thinking": false]
+
+    /// The part of a model's output a person should see. A model whose
+    /// template ignores the flag above (one added from Hugging Face, say)
+    /// can still reason first: hide a leading `<think>` block while it is
+    /// open, and everything up to its `</think>` once it closes.
+    static func visibleAnswer(_ raw: String) -> String {
+        if let close = raw.range(of: "</think>", options: .backwards) {
+            return String(raw[close.upperBound...]).trimmingLeadingWhitespace()
+        }
+        if raw.trimmingLeadingWhitespace().hasPrefix("<think>") {
+            return ""
+        }
+        return raw
+    }
+}
+
+private extension String {
+    nonisolated func trimmingLeadingWhitespace() -> String {
+        String(drop(while: { $0.isWhitespace }))
+    }
+}

@@ -829,7 +829,8 @@ final class MLXService: ObservableObject {
                 container,
                 instructions: instructions,
                 generateParameters: parameters,
-                processing: processing
+                processing: processing,
+                additionalContext: Self.chatTemplateContext
             )
         } else {
             session = ChatSession(
@@ -837,11 +838,15 @@ final class MLXService: ObservableObject {
                 instructions: instructions,
                 history: chatHistory,
                 generateParameters: parameters,
-                processing: processing
+                processing: processing,
+                additionalContext: Self.chatTemplateContext
             )
         }
         sessionModelId = model.id
     }
+
+    /// See `ChatTemplateOptions.context` (MLXIntegration.swift).
+    nonisolated static var chatTemplateContext: [String: any Sendable] { ChatTemplateOptions.context }
 
     /// Whether a live session exists for the given model.
     func hasSession(for model: AIModel) -> Bool {
@@ -931,7 +936,7 @@ final class MLXService: ObservableObject {
                     for try await chunk in stream {
                         if Task.isCancelled { break }
                         accumulated += chunk
-                        continuation.yield(accumulated)
+                        continuation.yield(ChatTemplateOptions.visibleAnswer(accumulated))
                     }
                     continuation.finish()
                 } catch {

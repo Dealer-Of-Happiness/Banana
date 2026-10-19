@@ -53712,82 +53712,6 @@
         }
       }
     },
-    "Qwen3.5 2B (4-bit). The newest Qwen generation: better reasoning and image understanding than Qwen3 Vision 2B at about the same size, in many languages. Needs a device with 6 GB of RAM or more.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 2B (4-bit). Die neueste Qwen-Generation: besseres logisches Denken und Bildverständnis als Qwen3 Vision 2B bei etwa gleicher Größe, in vielen Sprachen. Erfordert ein Gerät mit mindestens 6 GB RAM."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 2B (4-bit). Η νεότερη γενιά Qwen: καλύτερος συλλογισμός και κατανόηση εικόνων από το Qwen3 Vision 2B σε περίπου ίδιο μέγεθος, σε πολλές γλώσσες. Απαιτεί συσκευή με τουλάχιστον 6 GB RAM."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 2B (4-bit). La generación más nueva de Qwen: mejor razonamiento y comprensión de imágenes que Qwen3 Vision 2B con un tamaño similar, en muchos idiomas. Requiere un dispositivo con 6 GB de RAM o más."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 2B (4-bit). La dernière génération Qwen : meilleur raisonnement et meilleure compréhension des images que Qwen3 Vision 2B pour une taille similaire, dans de nombreuses langues. Nécessite un appareil avec au moins 6 GB de RAM."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 2B (4-bit). L'ultima generazione di Qwen: ragionamento e comprensione delle immagini migliori di Qwen3 Vision 2B con dimensioni simili, in molte lingue. Richiede un dispositivo con almeno 6 GB di RAM."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 2B（4-bit）。最新世代のQwen。ほぼ同じサイズで、Qwen3 Vision 2Bより推論と画像理解が向上し、多くの言語に対応します。6 GB以上のRAMを搭載したデバイスが必要です。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 2B(4-bit). 최신 세대 Qwen으로, 비슷한 크기에서 Qwen3 Vision 2B보다 추론과 이미지 이해가 뛰어나며 여러 언어를 지원합니다. 6 GB 이상의 RAM을 갖춘 기기가 필요합니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 2B (4-bit). A geração mais recente do Qwen: raciocínio e compreensão de imagens melhores que o Qwen3 Vision 2B com tamanho parecido, em muitos idiomas. Exige um dispositivo com 6 GB de RAM ou mais."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 2B (4-bit). Новейшее поколение Qwen: рассуждает и понимает изображения лучше, чем Qwen3 Vision 2B, при почти том же размере, и знает многие языки. Требуется устройство с 6 ГБ ОЗУ или больше."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 2B (4-bit). Найновіше покоління Qwen: міркує й розуміє зображення краще, ніж Qwen3 Vision 2B, за майже того самого розміру, і знає багато мов. Потрібен пристрій із 6 ГБ ОЗП або більше."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 2B（4-bit）。最新一代 Qwen：大小相若，推理和圖像理解卻比 Qwen3 Vision 2B 更好，並支援多種語言。需要配備 6 GB 或以上 RAM 的裝置。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 2B（4-bit）。最新一代 Qwen：体积相近，推理和图像理解却优于 Qwen3 Vision 2B，并支持多种语言。需要配备 6 GB 或以上 RAM 的设备。"
-          }
-        }
-      }
-    },
     "Proven vision model - 30+ languages": {
       "localizations": {
         "de": {
@@ -54316,6 +54240,82 @@
           "stringUnit": {
             "state": "translated",
             "value": "运行时占用约 6 GB RAM"
+          }
+        }
+      }
+    },
+    "Qwen3.5 2B (4-bit). The newest Qwen generation at about the same size as Qwen3 Vision 2B: quick, keeps track of the conversation well, and works in many languages. Needs a device with 6 GB of RAM or more.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B (4-bit). Die neueste Qwen-Generation in etwa so groß wie Qwen3 Vision 2B: schnell, behält den Gesprächsverlauf gut im Blick und funktioniert in vielen Sprachen. Erfordert ein Gerät mit mindestens 6 GB RAM."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B (4-bit). Η νεότερη γενιά Qwen σε περίπου ίδιο μέγεθος με το Qwen3 Vision 2B: γρήγορο, παρακολουθεί καλά τη συζήτηση και λειτουργεί σε πολλές γλώσσες. Απαιτεί συσκευή με τουλάχιστον 6 GB RAM."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B (4-bit). La generación más nueva de Qwen, con un tamaño similar al de Qwen3 Vision 2B: rápido, sigue bien el hilo de la conversación y funciona en muchos idiomas. Requiere un dispositivo con 6 GB de RAM o más."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B (4-bit). La dernière génération Qwen, d'une taille proche de Qwen3 Vision 2B : rapide, suit bien le fil de la conversation et fonctionne dans de nombreuses langues. Nécessite un appareil avec au moins 6 GB de RAM."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B (4-bit). L'ultima generazione di Qwen, con dimensioni simili a Qwen3 Vision 2B: veloce, segue bene il filo della conversazione e funziona in molte lingue. Richiede un dispositivo con almeno 6 GB di RAM."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B（4-bit）。Qwen3 Vision 2Bとほぼ同じサイズの最新世代Qwen。高速で、会話の流れをしっかり把握し、多くの言語で使えます。6 GB以上のRAMを搭載したデバイスが必要です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B(4-bit). Qwen3 Vision 2B와 비슷한 크기의 최신 세대 Qwen입니다. 빠르고, 대화 흐름을 잘 기억하며, 여러 언어에서 작동합니다. 6 GB 이상의 RAM을 갖춘 기기가 필요합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B (4-bit). A geração mais recente do Qwen, com tamanho parecido ao do Qwen3 Vision 2B: rápido, acompanha bem a conversa e funciona em muitos idiomas. Exige um dispositivo com 6 GB de RAM ou mais."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B (4-bit). Новейшее поколение Qwen почти того же размера, что и Qwen3 Vision 2B: быстрая, хорошо следит за ходом разговора и работает на многих языках. Требуется устройство с 6 ГБ ОЗУ или больше."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B (4-bit). Найновіше покоління Qwen майже того самого розміру, що й Qwen3 Vision 2B: швидка, добре стежить за ходом розмови й працює багатьма мовами. Потрібен пристрій із 6 ГБ ОЗП або більше."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B（4-bit）。最新一代 Qwen，大小與 Qwen3 Vision 2B 相若：速度快，能清楚記住對話內容，並支援多種語言。需要配備 6 GB 或以上 RAM 的裝置。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B（4-bit）。最新一代 Qwen，体积与 Qwen3 Vision 2B 相近：速度快，能很好地记住对话内容，并支持多种语言。需要配备 6 GB 或以上 RAM 的设备。"
           }
         }
       }

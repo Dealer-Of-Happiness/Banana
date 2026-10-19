@@ -70,7 +70,7 @@ struct ModelCatalogTests {
     @Test func recommendedModelMatchesDeviceTier() {
         let recommended = AIModel.recommendedDownloadModel
         if DeviceCapability.physicalMemoryGB >= 6 {
-            #expect(recommended.id == AIModel.qwen35_2B.id)
+            #expect(recommended.id == AIModel.qwen3VL2B.id)
         } else {
             #expect(recommended.id == AIModel.smolVLM2.id)
         }

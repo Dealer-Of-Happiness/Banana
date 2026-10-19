@@ -789,7 +789,7 @@ final class MLXService: ObservableObject {
             maxTokens: budget >= 16384 ? 2048 : 1200,
             temperature: Float(settings.temperature),
             topP: 0.9,
-            repetitionPenalty: 1.15,
+            repetitionPenalty: model.repetitionPenalty,
             repetitionContextSize: 64
         )
 

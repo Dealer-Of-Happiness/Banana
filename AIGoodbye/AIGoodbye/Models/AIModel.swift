@@ -50,6 +50,15 @@ struct AIModel: Identifiable, Codable, Equatable {
     }
 
     var canProcessImages: Bool { supportsVision }
+
+    /// Repetition penalty for this model's answers. 1.15 keeps the small
+    /// Qwen3-VL and SmolVLM models from looping. The Qwen3.5 family was less
+    /// accurate with it - it pushed words a sentence needs, like "blue" and
+    /// "wavelength" in an answer about why the sky is blue, out of the
+    /// sentence - and in long answers it doesn't loop at 1.05.
+    var repetitionPenalty: Float {
+        (huggingFaceId ?? "").localizedCaseInsensitiveContains("qwen3.5") ? 1.05 : 1.15
+    }
 }
 
 // MARK: - Model Capability
@@ -76,8 +85,7 @@ enum ModelCapability: String, Codable, CaseIterable {
 
 extension AIModel {
 
-    /// Qwen3-VL 2B: the previous default for devices with 6 GB of RAM or more,
-    /// kept for everyone who has it and anyone who prefers it.
+    /// Qwen3-VL 2B: the default for devices with 6 GB of RAM or more.
     static var qwen3VL2B: AIModel {
         let bytes: Int64 = 1_780_000_000
         return AIModel(
@@ -198,7 +206,7 @@ extension AIModel {
             id: "qwen3.5-2b",
             name: "Qwen3.5 Vision 2B",
             shortDescription: L10n.text("Fast all-rounder - newest generation"),
-            fullDescription: L10n.text("Qwen3.5 2B (4-bit). The newest Qwen generation: better reasoning and image understanding than Qwen3 Vision 2B at about the same size, in many languages. Needs a device with 6 GB of RAM or more."),
+            fullDescription: L10n.text("Qwen3.5 2B (4-bit). The newest Qwen generation at about the same size as Qwen3 Vision 2B: quick, keeps track of the conversation well, and works in many languages. Needs a device with 6 GB of RAM or more."),
             size: AIModel.formattedCatalogSize(bytes),
             sizeBytes: bytes,
             capabilities: [.chat, .vision, .multilingual, .documentAnalysis],
@@ -364,11 +372,11 @@ extension AIModel {
     /// download that answers well. Bigger models are a choice in the picker,
     /// not the default - on a 12 GB phone the 9B Pro is a 6 GB download
     /// and noticeably slower, which is the wrong first impression.
-    /// Qwen3.5 2B replaced Qwen3-VL 2B here: in side-by-side runs it kept
-    /// the conversation better and read text in photos as well, at a
-    /// slightly smaller size.
+    /// Still Qwen3-VL 2B, not Qwen3.5 2B: side by side they were even (the
+    /// newer one followed the conversation better, the older one got facts
+    /// right more often), and only the older one has run on real phones.
     static var recommendedDownloadModel: AIModel {
-        DeviceCapability.physicalMemoryGB >= 6 ? qwen35_2B : smolVLM2
+        DeviceCapability.physicalMemoryGB >= 6 ? qwen3VL2B : smolVLM2
     }
 
     // MARK: - Sizes

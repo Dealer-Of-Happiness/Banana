@@ -231,7 +231,7 @@ extension AIModel {
             size: AIModel.formattedCatalogSize(bytes),
             sizeBytes: bytes,
             capabilities: [.chat, .vision, .multilingual, .documentAnalysis],
-            memoryRequired: L10n.text("About 4 GB RAM while active"),
+            memoryRequired: L10n.text("About 4.5 GB RAM while active"),
             backend: .mlx,
             supportsVision: true,
             huggingFaceId: "mlx-community/Qwen3.5-4B-4bit",

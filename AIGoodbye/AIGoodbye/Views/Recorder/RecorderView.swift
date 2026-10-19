@@ -210,7 +210,11 @@ struct RecorderView: View {
 
                     Divider()
 
+                    // Its full height first: at accessibility text sizes the
+                    // transcript took the space and squeezed "Start
+                    // recording" and the toggle to one truncated line.
                     controlBlock
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
@@ -358,7 +362,7 @@ struct RecorderView: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity, minHeight: 54)
                         .background(RoundedRectangle(cornerRadius: 14).fill(Color.red.opacity(0.15)))
-                        .foregroundStyle(isPreparing ? Color.secondary : Color.red)
+                        .foregroundStyle(isPreparing ? Color.secondary : Color.tintedRed)
                     }
                     .buttonStyle(.plain)
                     // Two taps used to start two sessions on top of each
@@ -387,7 +391,7 @@ struct RecorderView: View {
                             .font(.headline)
                             .frame(maxWidth: .infinity, minHeight: 54)
                             .background(RoundedRectangle(cornerRadius: 14).fill(Color.blue.opacity(0.15)))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(Color.tintedBlue)
                     }
                     .buttonStyle(.plain)
                     .disabled(isStopping)
@@ -402,9 +406,11 @@ struct RecorderView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Keep the audio")
                         if verticalSizeClass != .compact {
+                            // Primary: secondary gray on the bar material
+                            // measured below 4.5:1.
                             Text("Off by default. The transcript is kept either way.")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.primary)
                         }
                     }
                 }

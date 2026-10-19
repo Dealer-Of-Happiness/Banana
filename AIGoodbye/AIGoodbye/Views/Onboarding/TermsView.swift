@@ -135,9 +135,11 @@ struct TermsView: View {
 
     private var agreeArea: some View {
         VStack(spacing: 12) {
+            // Primary, not secondary: over the translucent bar the gray
+            // measured below 4.5:1 in both appearances.
             Text("By continuing you agree to use AiGoodbye at your own discretion.")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.primary)
                 .multilineTextAlignment(.center)
 
             Button {

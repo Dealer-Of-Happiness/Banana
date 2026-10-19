@@ -362,7 +362,9 @@ struct VoiceModeView: View {
             }
         }
         .font(.subheadline)
-        .foregroundStyle(.secondary)
+        // Primary: secondary gray on the voice screen's light gradient
+        // measured below 4.5:1, and this line is the screen's state.
+        .foregroundStyle(.primary)
         .multilineTextAlignment(.center)
         // Claims its full height at the width it is given. Inside an
         // arrangement view the parts are measured first and the status
@@ -415,6 +417,9 @@ struct VoiceModeView: View {
                 .font(.subheadline.weight(.medium))
                 .frame(minHeight: 44)
         }
+        // Darker than the default blue in light mode: plain systemBlue on
+        // the screen's pale gradient measured below 4.5:1.
+        .tint(Color.tintedBlue)
         .disabled(turn == .listening || permissionDenied)
         .padding(.bottom, 8)
     }

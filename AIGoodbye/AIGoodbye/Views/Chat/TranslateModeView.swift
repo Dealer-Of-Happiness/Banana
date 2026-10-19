@@ -372,7 +372,7 @@ struct TranslateModeView: View {
                 RoundedRectangle(cornerRadius: 14)
                     .fill(isHandsFree ? Color.red.opacity(0.15) : Color.blue.opacity(0.15))
             )
-            .foregroundStyle(isHandsFree ? .red : .blue)
+            .foregroundStyle(isHandsFree ? Color.tintedRed : Color.tintedBlue)
         }
         .buttonStyle(.plain)
         .disabled(permissionDenied)

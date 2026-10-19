@@ -239,10 +239,11 @@ private struct ModelChoiceRow: View {
                     if isRecommended {
                         Text("Recommended")
                             .font(.caption2.bold())
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
-                            .background(Capsule().fill(Color.blue))
+                            .background(Capsule().fill(Color.blue.opacity(0.15)))
+                            .overlay(Capsule().strokeBorder(Color.blue, lineWidth: 1))
                     }
                 }
 

@@ -16,6 +16,7 @@ struct SideMenuView: View {
     var isSidebar = false
 
     @EnvironmentObject var appState: AppState
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ObservedObject private var recordingStore = RecordingStore.shared
     @State private var showNewFolderAlert = false
     @State private var newFolderName = ""
@@ -50,34 +51,12 @@ struct SideMenuView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Header
-            header
-
-            Divider()
-
-            // New Chat/Folder buttons
-            actionButtons
-
-            Divider()
-
-            // One scroll region for folders + chats, so many folders can
-            // never push Recent Chats or Settings off-screen.
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    foldersSection
-
-                    Divider()
-                        .padding(.top, 8)
-
-                    recentChatsSection
-                }
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                accessibilitySizeLayout
+            } else {
+                standardLayout
             }
-
-            Divider()
-
-            // Settings button
-            settingsButton
         }
         // Under the status bar and the leading safe area too, so a landscape
         // phone doesn't show a bare strip beside the Dynamic Island.
@@ -240,6 +219,68 @@ struct SideMenuView: View {
         }
     }
 
+    /// Header and buttons fixed, folders and chats scrolling, Settings
+    /// pinned at the bottom.
+    private var standardLayout: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header
+
+            Divider()
+
+            // New Chat/Folder buttons
+            actionButtons
+
+            Divider()
+
+            // One scroll region for folders + chats, so many folders can
+            // never push Recent Chats or Settings off-screen.
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    foldersSection
+
+                    Divider()
+                        .padding(.top, 8)
+
+                    recentChatsSection
+                }
+            }
+
+            Divider()
+
+            // Settings button
+            settingsButton
+        }
+    }
+
+    /// At accessibility text sizes the fixed header, buttons and Settings
+    /// row no longer fit on the screen, and SwiftUI squeezed every label to
+    /// one truncated line ("New...", "Set ti..."). Everything scrolls
+    /// together instead, so each label can wrap.
+    private var accessibilitySizeLayout: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                header
+
+                Divider()
+
+                actionButtons
+
+                Divider()
+
+                foldersSection
+
+                Divider()
+                    .padding(.top, 8)
+
+                recentChatsSection
+
+                Divider()
+
+                settingsButton
+            }
+        }
+    }
+
     // MARK: - Header
 
     private var header: some View {
@@ -285,7 +326,7 @@ struct SideMenuView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                     .background(Color.blue.opacity(0.1))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(Color.tintedBlue)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             // No ⌘N here: the app's New Chat menu command (AIGoodbyeApp

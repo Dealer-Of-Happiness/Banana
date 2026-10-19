@@ -122,7 +122,7 @@ struct SetupView: View {
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: 48)
                     .background(RoundedRectangle(cornerRadius: 14).fill(Color.blue.opacity(0.15)))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(Color.tintedBlue)
             }
             .buttonStyle(.plain)
         }
@@ -228,7 +228,7 @@ struct SetupView: View {
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .background(RoundedRectangle(cornerRadius: 14).fill(Color.blue.opacity(0.15)))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(Color.tintedBlue)
             }
             .buttonStyle(.plain)
 
@@ -283,7 +283,8 @@ struct SetupView: View {
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .background(Capsule().fill(Color.blue.opacity(0.15)))
-                                .foregroundStyle(.blue)
+                                .overlay(Capsule().strokeBorder(Color.blue, lineWidth: 1))
+                                .foregroundStyle(.primary)
                         }
                     }
                     Text(model.shortDescription)

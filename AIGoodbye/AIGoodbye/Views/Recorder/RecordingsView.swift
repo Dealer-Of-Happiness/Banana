@@ -107,8 +107,10 @@ struct RecordingsView: View {
                     .font(.headline)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
-                    .background(RoundedRectangle(cornerRadius: 14).fill(Color.red.opacity(0.15)))
-                    .foregroundStyle(.red)
+                    // Solid red with white text: red on pale red measured
+                    // about 3.5:1, and this is the screen's main action.
+                    .background(RoundedRectangle(cornerRadius: 14).fill(Color.solidRed))
+                    .foregroundStyle(.white)
             }
             .buttonStyle(.plain)
             .padding(.top, 6)
@@ -337,7 +339,7 @@ struct RecordingDetailView: View {
                             .font(.headline)
                             .frame(maxWidth: .infinity, minHeight: 48)
                             .background(RoundedRectangle(cornerRadius: 14).fill(Color.blue.opacity(0.15)))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(Color.tintedBlue)
                     }
                     .buttonStyle(.plain)
                 }

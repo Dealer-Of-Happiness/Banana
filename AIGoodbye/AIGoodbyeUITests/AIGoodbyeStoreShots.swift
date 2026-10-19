@@ -81,7 +81,10 @@ final class AIGoodbyeStoreShots: XCTestCase {
     /// the catalog changes without re-shooting the rest.
     @MainActor
     func testModelPickerShot() throws {
-        let app = launch(conversation: sunday)
+        // The Simulator has the Mac's memory; shoot the picker as a 12 GB
+        // iPhone sees it (about 6.3 GB for the app) unless told otherwise.
+        let limit = ProcessInfo.processInfo.environment["AIG_MEMORY_LIMIT_GB"] ?? "6.3"
+        let app = launch(conversation: sunday, extraEnvironment: ["AIG_MEMORY_LIMIT_GB": limit])
         var chooseModel = app.buttons["Choose Model"].firstMatch
         // On a phone it lives in the chat options menu.
         if !(chooseModel.exists && chooseModel.isHittable) {
@@ -96,6 +99,12 @@ final class AIGoodbyeStoreShots: XCTestCase {
         chooseModel.tap()
         sleep(2)
         snap(app, "06-models")
+        // The rest of the list, to check which models are offered.
+        for page in 1...3 {
+            app.swipeUp()
+            sleep(1)
+            snap(app, "06-models-more-\(page)")
+        }
     }
 
     @MainActor

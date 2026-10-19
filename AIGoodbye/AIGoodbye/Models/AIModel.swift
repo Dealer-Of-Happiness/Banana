@@ -517,6 +517,14 @@ enum DeviceCapability {
     /// Pro Max reported about 6.3 GB for the whole app, so the model could
     /// never load there and people were told to close other apps.
     nonisolated static var appMemoryLimitBytes: UInt64? {
+        #if DEBUG
+        // Lets the Simulator stand in for a real phone's limit (store
+        // screenshots, picker checks): AIG_MEMORY_LIMIT_GB=6.3 is an iPhone
+        // 18 Pro Max, 2.5 a 4 GB iPhone. Debug builds only.
+        if let value = ProcessInfo.processInfo.environment["AIG_MEMORY_LIMIT_GB"].flatMap(Double.init) {
+            return UInt64(value * 1_000_000_000)
+        }
+        #endif
         #if targetEnvironment(simulator)
         return nil
         #else

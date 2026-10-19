@@ -77,6 +77,27 @@ final class AIGoodbyeStoreShots: XCTestCase {
         }
     }
 
+    /// Just the model picker, for refreshing that one store screenshot when
+    /// the catalog changes without re-shooting the rest.
+    @MainActor
+    func testModelPickerShot() throws {
+        let app = launch(conversation: sunday)
+        var chooseModel = app.buttons["Choose Model"].firstMatch
+        // On a phone it lives in the chat options menu.
+        if !(chooseModel.exists && chooseModel.isHittable) {
+            let options = app.buttons["Chat options"].firstMatch
+            if options.waitForExistence(timeout: 5) {
+                options.tap()
+                sleep(1)
+                chooseModel = app.buttons["Choose Model"].firstMatch
+            }
+        }
+        XCTAssertTrue(chooseModel.waitForExistence(timeout: 5))
+        chooseModel.tap()
+        sleep(2)
+        snap(app, "06-models")
+    }
+
     @MainActor
     private func launch(conversation: String, extraEnvironment: [String: String] = [:]) -> XCUIApplication {
         let app = XCUIApplication()

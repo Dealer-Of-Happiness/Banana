@@ -226,6 +226,22 @@ private struct ModelChoiceRow: View {
         model.id == AIModel.recommendedDownloadModel.id
     }
 
+    private var nameText: some View {
+        Text(model.name)
+            .font(.headline)
+            .foregroundStyle(fits ? Color.primary : Color.secondary)
+    }
+
+    private var recommendedBadge: some View {
+        Text("Recommended")
+            .font(.caption2.bold())
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(Color.blue.opacity(0.15)))
+            .overlay(Capsule().strokeBorder(Color.blue, lineWidth: 1))
+    }
+
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
             // Selection indicator on the leading edge. Kept in the layout even
@@ -237,20 +253,22 @@ private struct ModelChoiceRow: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Text(model.name)
-                        .font(.headline)
-                        .foregroundStyle(fits ? Color.primary : Color.secondary)
-
-                    if isRecommended {
-                        Text("Recommended")
-                            .font(.caption2.bold())
-                            .foregroundStyle(.primary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Capsule().fill(Color.blue.opacity(0.15)))
-                            .overlay(Capsule().strokeBorder(Color.blue, lineWidth: 1))
+                // Name and badge on one line when they fit; otherwise the
+                // badge goes underneath, rather than squeezing a name like
+                // "Qwen3.5 Vision 2B" onto two lines beside it.
+                if isRecommended {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 8) {
+                            nameText
+                            recommendedBadge
+                        }
+                        VStack(alignment: .leading, spacing: 4) {
+                            nameText
+                            recommendedBadge
+                        }
                     }
+                } else {
+                    nameText
                 }
 
                 Text(model.shortDescription)

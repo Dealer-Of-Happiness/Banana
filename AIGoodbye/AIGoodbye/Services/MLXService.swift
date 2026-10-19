@@ -261,21 +261,31 @@ final class MLXService: ObservableObject {
         // free right now says what would help.
         if !model.fitsThisDevice() {
             throw MLXError.modelLoadFailed(
-                L10n.text("\(model.name) is too large for this iPhone. Choose a smaller model.")
+                L10n.text("\(model.name) needs more memory than iOS lets an app use on this device. Choose a smaller model.")
             )
         }
 
-        // Switching models: free the previous one first.
+        // Switching models: free the previous one first, and give the
+        // allocator its cached buffers back before measuring.
         unload()
+        #if !targetEnvironment(simulator)
+        Memory.clearCache()
+        #endif
 
-        let needsGB = AIModel.workingSetGB(forModelBytes: model.sizeBytes)
-        if !DeviceCapability.canLoad(workingSetGB: needsGB) {
+        // Other apps don't count here: iOS gives each app its own limit. A
+        // shortfall now means this app is holding memory it shouldn't, which
+        // a restart clears - "close other apps" was advice that couldn't help.
+        // A model that has loaded here before is tried anyway: it fit then.
+        let neededGB = model.memoryNeededGB
+        if !DeviceCapability.canLoad(neededGB: neededGB),
+           !ModelManager.shared.hasLoadedBefore(model) {
             // In the app language's number style ("3,5" in German), not
             // printf's fixed "3.5".
-            let hasGB = DeviceCapability.usableMemoryGBExact
-                .formatted(.number.precision(.fractionLength(1)).locale(L10n.locale))
+            let style = FloatingPointFormatStyle<Double>.number.precision(.fractionLength(1)).locale(L10n.locale)
+            let needText = neededGB.formatted(style)
+            let hasText = DeviceCapability.usableMemoryGBExactDecimal.formatted(style)
             throw MLXError.modelLoadFailed(
-                L10n.text("\(model.name) needs about \(needsGB) GB of memory and this device can only give the app about \(hasGB) GB right now. Close other apps and try again, or choose a smaller model.")
+                L10n.text("\(model.name) needs about \(needText) GB of memory, but AiGoodbye has only about \(hasText) GB free right now. Quit and reopen AiGoodbye, then try again.")
             )
         }
 
@@ -787,7 +797,9 @@ final class MLXService: ObservableObject {
         sessionTokenBudget = budget
         let parameters = GenerateParameters(
             maxTokens: budget >= 16384 ? 2048 : 1200,
-            temperature: Float(settings.temperature),
+            // The smallest models get a fraction of the Creativity setting:
+            // see `AIModel.temperatureScale`.
+            temperature: Float(settings.temperature * model.temperatureScale),
             topP: 0.9,
             repetitionPenalty: model.repetitionPenalty,
             repetitionContextSize: 64

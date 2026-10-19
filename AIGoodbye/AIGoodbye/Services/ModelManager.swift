@@ -80,6 +80,7 @@ final class ModelManager: ObservableObject {
     private func invalidateCaches() {
         downloadedCache.removeAll()
         sizeCache.removeAll()
+        loadedBeforeCache.removeAll()
     }
 
     func isModelDownloaded(_ model: AIModel) -> Bool {
@@ -109,6 +110,21 @@ final class ModelManager: ObservableObject {
         }
         return downloadedSizeBytes(for: model) >= Int64(Double(model.sizeBytes) * 0.9)
     }
+
+    /// Whether this model has loaded on this device before (the marker below
+    /// is written only after a successful load). Used by the memory gate: a
+    /// model that has run here keeps its place even if the estimate says it
+    /// is close to the limit.
+    func hasLoadedBefore(_ model: AIModel) -> Bool {
+        if let cached = loadedBeforeCache[model.id] { return cached }
+        let result = modelDirectory(for: model).map {
+            FileManager.default.fileExists(atPath: $0.appendingPathComponent(Self.completeMarkerName).path)
+        } ?? false
+        loadedBeforeCache[model.id] = result
+        return result
+    }
+
+    private var loadedBeforeCache: [String: Bool] = [:]
 
     /// Record that this model's files are verified complete (called after the
     /// model successfully loads).

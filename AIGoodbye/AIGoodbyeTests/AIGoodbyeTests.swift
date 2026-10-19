@@ -67,45 +67,63 @@ struct ModelCatalogTests {
         }
     }
 
-    @Test func recommendedModelMatchesDeviceTier() {
+    @Test @MainActor func recommendedModelMatchesDeviceTier() {
         let recommended = AIModel.recommendedDownloadModel
         if DeviceCapability.physicalMemoryGB >= 6 {
             #expect(recommended.id == AIModel.qwen3VL2B.id)
         } else {
-            #expect(recommended.id == AIModel.smolVLM2.id)
+            // Not Smol Vision any more: it couldn't do "3 apples, give one
+            // away, buy four" at any setting.
+            #expect(recommended.id == AIModel.qwen35_08B.id)
         }
         #expect(!recommended.isLegacy)
     }
 
-    /// Every model must be offered on the devices its description names,
-    /// and never on smaller ones. Ceilings are `memoryCeilingGB` for 4, 6,
-    /// 8 and 12 GB devices.
-    @Test func modelsLandOnTheirDeviceTier() {
-        let ceiling4GB = 2, ceiling6GB = 4, ceiling8GB = 5, ceiling12GB = 8
+    /// Every model must be offered where it fits and nowhere else. Budgets
+    /// are what a model may use (`modelMemoryBudgetGB`): a 4 GB iPhone with
+    /// about 2.5 GB for the whole app; a 6 GB iPhone with about 4.2 GB; an
+    /// 8 or 12 GB iPhone with about 6.3 GB, as an iPhone 18 Pro Max
+    /// reported; a 16 GB iPad or Mac with far more.
+    @Test @MainActor func modelsLandOnTheirDeviceTier() {
+        let phone4GB = 2.5 - 0.3, phone6GB = 4.2 - 0.3, phone12GB = 6.3 - 0.3, big = 10.0
 
-        #expect(AIModel.qwen35_08B.fitsThisDevice(memoryCeilingGB: ceiling4GB))
-
-        #expect(AIModel.qwen35_2B.fitsThisDevice(memoryCeilingGB: ceiling6GB))
-        #expect(!AIModel.qwen35_2B.fitsThisDevice(memoryCeilingGB: ceiling4GB))
-
-        for model in [AIModel.qwen35_4B, .gemma4E2B] {
-            #expect(model.fitsThisDevice(memoryCeilingGB: ceiling8GB), "\(model.name) is for 8 GB devices")
-            #expect(!model.fitsThisDevice(memoryCeilingGB: ceiling6GB), "\(model.name) is too big for 6 GB devices")
+        for model in [AIModel.qwen35_08B, .smolVLM2] {
+            #expect(model.fitsThisDevice(budgetGB: phone4GB), "\(model.name) is for 4 GB iPhones")
         }
-
+        for model in [AIModel.qwen35_2B, .qwen3VL2B] {
+            #expect(model.fitsThisDevice(budgetGB: phone6GB), "\(model.name) is for 6 GB iPhones")
+            #expect(!model.fitsThisDevice(budgetGB: phone4GB), "\(model.name) is too big for 4 GB iPhones")
+        }
+        for model in [AIModel.qwen35_4B, .gemma4E2B] {
+            #expect(model.fitsThisDevice(budgetGB: phone12GB), "\(model.name) is for 8 and 12 GB iPhones")
+            #expect(!model.fitsThisDevice(budgetGB: phone6GB), "\(model.name) is too big for 6 GB iPhones")
+        }
+        // The reason for this test: these were offered to 12 GB iPhones,
+        // which give one app only about 6.3 GB, and could never load there.
         for model in [AIModel.qwen35_9BPro, .gemma4E4B, .qwen3VL8BPro] {
-            #expect(model.fitsThisDevice(memoryCeilingGB: ceiling12GB), "\(model.name) is for 12 GB devices")
-            #expect(!model.fitsThisDevice(memoryCeilingGB: ceiling8GB), "\(model.name) is too big for 8 GB devices")
+            #expect(model.fitsThisDevice(budgetGB: big), "\(model.name) is for 16 GB iPads and Macs")
+            #expect(!model.fitsThisDevice(budgetGB: phone12GB), "\(model.name) can't load on a 12 GB iPhone")
         }
     }
 
-    /// A model's own minimum RAM figure must agree with the memory gate,
-    /// or the description promises a device the picker then refuses.
-    @Test func minimumRAMAgreesWithTheMemoryGate() {
+    /// Every model we ship has a measured memory figure, not a guess from
+    /// its file size, and the figures order the way the models do.
+    @Test func everyBuiltInModelHasAMeasuredMemoryFigure() {
         for model in AIModel.builtInModels {
-            let ceiling = max(2, Int((Double(model.minRecommendedRAMGB) * 0.7).rounded(.down)))
-            #expect(model.fitsThisDevice(memoryCeilingGB: ceiling),
-                    "\(model.name) says \(model.minRecommendedRAMGB) GB but doesn't fit there")
+            #expect(AIModel.measuredMemoryGB[model.id] != nil, "\(model.name) has no measured memory figure")
+        }
+        #expect(AIModel.qwen35_08B.memoryNeededGB < AIModel.smolVLM2.memoryNeededGB,
+                "The 0.8B model peaks lower than Smol Vision despite the newer architecture")
+        #expect(AIModel.qwen35_9BPro.memoryNeededGB > AIModel.qwen35_4B.memoryNeededGB)
+    }
+
+    /// The smallest models answer simple questions reliably only with little
+    /// randomness; the larger ones keep the Creativity setting as it is.
+    @Test func smallModelsGetLessRandomness() {
+        #expect(AIModel.qwen35_08B.temperatureScale < 0.5)
+        #expect(AIModel.smolVLM2.temperatureScale < 0.5)
+        for model in [AIModel.qwen3VL2B, .qwen35_2B, .qwen35_4B, .qwen35_9BPro, .gemma4E2B] {
+            #expect(model.temperatureScale == 1.0, "\(model.name)")
         }
     }
 

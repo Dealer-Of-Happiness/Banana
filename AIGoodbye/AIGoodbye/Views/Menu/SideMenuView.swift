@@ -19,6 +19,7 @@ struct SideMenuView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ObservedObject private var recordingStore = RecordingStore.shared
     @State private var showNewFolderAlert = false
+    @State private var sendFeedback = false
     @State private var newFolderName = ""
     @State private var showSearch = false
     @State private var showRecordings = false
@@ -247,6 +248,8 @@ struct SideMenuView: View {
 
             Divider()
 
+            feedbackButton
+
             // Settings button
             settingsButton
         }
@@ -275,6 +278,8 @@ struct SideMenuView: View {
                 recentChatsSection
 
                 Divider()
+
+                feedbackButton
 
                 settingsButton
             }
@@ -632,6 +637,25 @@ struct SideMenuView: View {
             // Drag preview
             ChatDragPreview(title: chat.displayTitle)
         }
+    }
+
+    // MARK: - Send Feedback
+
+    /// One tap from the menu, not three screens deep: people who hit a
+    /// problem should find the way to tell us without looking for it.
+    private var feedbackButton: some View {
+        Button {
+            sendFeedback = true
+        } label: {
+            Label("Send Feedback", systemImage: "envelope")
+                .font(.subheadline)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.tintedBlue)
+        .padding(.horizontal, 16)
+        .sendFeedback(isPresented: $sendFeedback)
     }
 
     // MARK: - Settings Button (Liquid Glass Style)

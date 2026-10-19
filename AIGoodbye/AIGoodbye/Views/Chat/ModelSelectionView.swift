@@ -195,7 +195,7 @@ struct ModelSelectionView: View {
             parts.append(notice)
         }
         if !fits {
-            parts.append(L10n.text("Too large for this iPhone"))
+            parts.append(DeviceCapability.tooLargeText)
             return parts.joined(separator: ", ")
         }
         if model.id == AIModel.recommendedDownloadModel.id {
@@ -301,7 +301,7 @@ private struct ModelChoiceRow: View {
 
                 if !fits {
                     Label {
-                        Text("Too large for this iPhone")
+                        Text(DeviceCapability.tooLargeText)
                             .foregroundStyle(.secondary)
                     } icon: {
                         Image(systemName: "nosign")

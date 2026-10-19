@@ -20,6 +20,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             ModelSection(engine: appState.engine, settings: appState.settings, showModelPicker: $showModelPicker)
+            HelpSection()
             PersonalizationSection()
             LanguageSection(settings: appState.settings)
             BehaviorSection(settings: appState.settings, engine: appState.engine)
@@ -418,6 +419,29 @@ private struct SiriSection: View {
                 .frame(maxWidth: .infinity)
         } header: {
             Text("Siri & Shortcuts")
+        }
+    }
+}
+
+// MARK: - Help Section
+
+/// Near the top on purpose: people who hit a problem should not have to
+/// find the developer's address under About & Legal.
+private struct HelpSection: View {
+    @State private var sendFeedback = false
+
+    var body: some View {
+        Section {
+            Button {
+                sendFeedback = true
+            } label: {
+                Label("Send Feedback", systemImage: "envelope")
+            }
+            .sendFeedback(isPresented: $sendFeedback)
+        } header: {
+            Text("Help")
+        } footer: {
+            Text("Opens an email to the developer with your device, app version and model filled in. Your conversations are never included.")
         }
     }
 }

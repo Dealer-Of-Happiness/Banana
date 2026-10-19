@@ -8,6 +8,7 @@
 //
 
 import Foundation
+import UIKit
 import os
 
 // MARK: - Model Backend
@@ -115,7 +116,7 @@ extension AIModel {
             id: "qwen3-vl-8b",
             name: "Qwen3 Vision 8B",
             shortDescription: L10n.text("Previous-generation large model"),
-            fullDescription: L10n.text("Qwen3-VL 8B (4-bit). Deep reasoning and sharp image understanding from the previous Qwen generation. Requires a device with 12 GB of RAM. Qwen3.5 Vision 9B Pro is newer and usually gives better answers."),
+            fullDescription: L10n.text("Qwen3-VL 8B (4-bit). Deep reasoning and sharp image understanding from the previous Qwen generation. It needs more memory than iOS lets one app use on iPhone, so AiGoodbye offers it on iPads and Macs that can run it. Qwen3.5 Vision 9B Pro is newer and usually gives better answers."),
             size: AIModel.formattedCatalogSize(bytes),
             sizeBytes: bytes,
             capabilities: [.chat, .vision, .multilingual, .documentAnalysis],
@@ -123,7 +124,7 @@ extension AIModel {
             backend: .mlx,
             supportsVision: true,
             huggingFaceId: "mlx-community/Qwen3-VL-8B-Instruct-4bit",
-            minRecommendedRAMGB: 12,
+            minRecommendedRAMGB: 16,
             imageProcessingEdge: 768,
             isLegacy: false
         )
@@ -135,12 +136,12 @@ extension AIModel {
         return AIModel(
             id: "smolvlm2-500m",
             name: "Smol Vision 500M",
-            shortDescription: L10n.text("Light and fast - great for older iPhones"),
-            fullDescription: L10n.text("SmolVLM2 500M. A compact vision model that runs comfortably on older devices (iPhone 11-13). Faster responses and lower memory use, with simpler answers than the larger models."),
+            shortDescription: L10n.text("Compact vision model - simple answers"),
+            fullDescription: L10n.text("SmolVLM2 500M. A compact model that describes photos quickly. It often gets sums and reasoning wrong; Qwen3.5 Vision 0.8B answers better and needs less memory."),
             size: AIModel.formattedCatalogSize(bytes),
             sizeBytes: bytes,
             capabilities: [.chat, .vision, .fast],
-            memoryRequired: L10n.text("1.5 GB RAM while active"),
+            memoryRequired: L10n.text("About 2 GB RAM while active"),
             backend: .mlx,
             supportsVision: true,
             huggingFaceId: "mlx-community/SmolVLM2-500M-Video-Instruct-mlx",
@@ -220,14 +221,15 @@ extension AIModel {
         )
     }
 
-    /// Qwen3.5 4B: the sweet spot for 8 GB devices.
+    /// Qwen3.5 4B: the most capable model an iPhone can run (8 GB and up,
+    /// including the 12 GB iPhone 17 Pro, 18 Pro and Duo).
     static var qwen35_4B: AIModel {
         let bytes: Int64 = 3_061_129_077
         return AIModel(
             id: "qwen3.5-4b",
             name: "Qwen3.5 Vision 4B",
-            shortDescription: L10n.text("Smarter answers - for 8 GB devices"),
-            fullDescription: L10n.text("Qwen3.5 4B (4-bit). Noticeably smarter than the 2B models, with strong image understanding and reasoning. Needs a device with 8 GB of RAM or more, like iPhone 15 Pro, iPhone 16 or newer."),
+            shortDescription: L10n.text("Smartest for iPhone - 8 GB and up"),
+            fullDescription: L10n.text("Qwen3.5 4B (4-bit). Noticeably smarter than the 2B models, with strong image understanding and reasoning. The most capable model iOS lets an app run on iPhone. Needs 8 GB of RAM or more: iPhone 15 Pro, iPhone 16 and newer, including iPhone 17 Pro, iPhone 18 Pro and iPhone Duo."),
             size: AIModel.formattedCatalogSize(bytes),
             sizeBytes: bytes,
             capabilities: [.chat, .vision, .multilingual, .documentAnalysis],
@@ -241,16 +243,16 @@ extension AIModel {
         )
     }
 
-    /// Qwen3.5 9B "Pro": the most capable model we offer. Only for 12 GB
-    /// devices (iPhone 17 Pro, iPhone 18 Pro and the Duo class); shown
-    /// disabled elsewhere.
+    /// Qwen3.5 9B "Pro": the most capable model we offer. Needs more memory
+    /// than iOS gives one app on any iPhone (about 6.3 GB on 12 GB models),
+    /// so it is for iPads and Macs; shown disabled elsewhere.
     static var qwen35_9BPro: AIModel {
         let bytes: Int64 = 5_977_071_067
         return AIModel(
             id: "qwen3.5-9b",
             name: "Qwen3.5 Vision 9B Pro",
-            shortDescription: L10n.text("Our most capable model - for 12 GB devices"),
-            fullDescription: L10n.text("Qwen3.5 9B (4-bit). The most capable model we offer: deeper reasoning, richer answers and the sharpest image understanding. Made for devices with 12 GB of RAM, like iPhone 17 Pro and iPhone 18 Pro. Answers come more slowly than with the smaller models."),
+            shortDescription: L10n.text("Our most capable model - for iPad and Mac"),
+            fullDescription: L10n.text("Qwen3.5 9B (4-bit). The most capable model we offer: deeper reasoning, richer answers and the sharpest image understanding. It needs about 7.4 GB of memory while answering, more than iOS lets one app use on iPhone, so AiGoodbye offers it on iPads and Macs that can run it."),
             size: AIModel.formattedCatalogSize(bytes),
             sizeBytes: bytes,
             capabilities: [.chat, .vision, .multilingual, .documentAnalysis],
@@ -258,7 +260,7 @@ extension AIModel {
             backend: .mlx,
             supportsVision: true,
             huggingFaceId: "mlx-community/Qwen3.5-9B-4bit",
-            minRecommendedRAMGB: 12,
+            minRecommendedRAMGB: 16,
             imageProcessingEdge: 768,
             isLegacy: false
         )
@@ -287,14 +289,14 @@ extension AIModel {
         )
     }
 
-    /// Gemma 4 E4B: the larger efficient Gemma, for 12 GB devices.
+    /// Gemma 4 E4B: the larger efficient Gemma, for iPads and Macs.
     static var gemma4E4B: AIModel {
         let bytes: Int64 = 5_179_239_349
         return AIModel(
             id: "gemma4-e4b",
             name: "Gemma 4 E4B",
-            shortDescription: L10n.text("Google's Gemma 4 - richer answers, for 12 GB devices"),
-            fullDescription: L10n.text("Gemma 4 E4B (4-bit) from Google. Richer answers and sharper image understanding than E2B. Needs a device with 12 GB of RAM. Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms."),
+            shortDescription: L10n.text("Google's Gemma 4 - richer answers, for iPad and Mac"),
+            fullDescription: L10n.text("Gemma 4 E4B (4-bit) from Google. Richer answers and sharper image understanding than E2B. It needs about 6.3 GB of memory while answering, more than iOS lets one app use on iPhone, so AiGoodbye offers it on iPads and Macs that can run it. Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms."),
             size: AIModel.formattedCatalogSize(bytes),
             sizeBytes: bytes,
             capabilities: [.chat, .vision, .multilingual, .documentAnalysis],
@@ -302,7 +304,7 @@ extension AIModel {
             backend: .mlx,
             supportsVision: true,
             huggingFaceId: "mlx-community/gemma-4-e4b-it-4bit",
-            minRecommendedRAMGB: 12,
+            minRecommendedRAMGB: 16,
             imageProcessingEdge: 768,
             isLegacy: false
         )
@@ -351,16 +353,50 @@ extension AIModel {
     /// The picker, Setup, the custom-model check and the load preflight all
     /// ask this, so none of them can offer what another refuses.
     ///
-    /// It compares the model's working set with the most iOS will let this
-    /// app use (`memoryCeilingGB`), not with what happens to be free right
-    /// now - that is a separate, transient question (`DeviceCapability
-    /// .canLoad`) answered at load time with "close other apps". Three rules
-    /// used to disagree: the picker offered the 2B model to 4 GB phones that
-    /// can never hold it, while a 5.8 GB custom model was refused on the
-    /// 12 GB phones that run the built-in 8B Pro of the same size.
-    func fitsThisDevice(memoryCeilingGB: Int = DeviceCapability.memoryCeilingGB) -> Bool {
+    /// It compares what the model needs while answering with the memory
+    /// iOS actually gives this app on this device (`DeviceCapability
+    /// .modelMemoryBudgetGB`, measured at run time), not with what happens
+    /// to be free this instant - that transient question is answered at load
+    /// time. A model that has already loaded and answered on this device
+    /// keeps its place whatever the estimate says: that is better evidence.
+    func fitsThisDevice(budgetGB: Double = DeviceCapability.modelMemoryBudgetGB) -> Bool {
         guard backend == .mlx else { return true }
-        return AIModel.workingSetGB(forModelBytes: sizeBytes) <= memoryCeilingGB
+        if memoryNeededGB <= budgetGB { return true }
+        return ModelManager.shared.hasLoadedBefore(self)
+    }
+
+    /// Peak memory while answering, a photo included, in decimal GB.
+    ///
+    /// Measured for the models we ship: MLX's peak with the app's own
+    /// settings on a Mac running the same engine, plus 5% and 0.1 GB for
+    /// tokenizer and image buffers. The file size alone misleads: Smol
+    /// Vision's 1 GB file peaks higher than Qwen3.5's 0.65 GB one, and the
+    /// 9B's 6 GB file peaks at nearly 7 GB. Models people add themselves
+    /// fall back to the size-based estimate.
+    var memoryNeededGB: Double {
+        Self.measuredMemoryGB[id] ?? Double(AIModel.workingSetGB(forModelBytes: sizeBytes))
+    }
+
+    nonisolated static let measuredMemoryGB: [String: Double] = [
+        "qwen3.5-0.8b": 1.7,
+        "smolvlm2-500m": 2.0,
+        "qwen3.5-2b": 2.8,
+        "qwen3-vl-2b": 2.9,
+        "qwen2-vl-2b": 2.4,
+        "qwen3.5-4b": 4.5,
+        "gemma4-e2b": 4.7,
+        "gemma4-e4b": 6.3,
+        "qwen3-vl-8b": 7.1,
+        "qwen3.5-9b": 7.4,
+    ]
+
+    /// How much of the Creativity setting a model gets. The smallest models
+    /// answer simple questions far more reliably with little randomness: at
+    /// the default 0.7 the 0.8B model got "3 apples, give 1 away, buy 4" right
+    /// in 2 runs of 5; at 0.1, in 4 of 5 (and every time with none). The
+    /// 2B and larger models were right either way, so they keep the setting.
+    var temperatureScale: Double {
+        sizeBytes < 1_100_000_000 ? 0.15 : 1.0
     }
 
     static func model(withId id: String) -> AIModel? {
@@ -375,8 +411,14 @@ extension AIModel {
     /// Still Qwen3-VL 2B, not Qwen3.5 2B: side by side they were even (the
     /// newer one followed the conversation better, the older one got facts
     /// right more often), and only the older one has run on real phones.
+    ///
+    /// Below 6 GB, Qwen3.5 0.8B rather than Smol Vision: Smol could not say
+    /// how many apples are left after giving one away and buying four, at
+    /// any setting, while the 0.8B usually could - and it needs less memory.
     static var recommendedDownloadModel: AIModel {
-        DeviceCapability.physicalMemoryGB >= 6 ? qwen3VL2B : smolVLM2
+        if DeviceCapability.physicalMemoryGB >= 6, qwen3VL2B.fitsThisDevice() { return qwen3VL2B }
+        if qwen35_08B.fitsThisDevice() { return qwen35_08B }
+        return smolVLM2
     }
 
     // MARK: - Sizes
@@ -450,24 +492,80 @@ enum DeviceCapability {
         return max(1, available)
     }
 
-    /// Whether a model with this working set can be loaded right now.
-    ///
-    /// Allows a small shortfall: the working-set estimate is deliberately
-    /// conservative, and iOS reclaims caches under pressure, so a model that
-    /// is 10% over what is free at this instant still loads in practice.
-    nonisolated static func canLoad(workingSetGB: Int) -> Bool {
-        Double(workingSetGB) <= usableMemoryGBExact * 1.1
+    // MARK: Measured app memory limit
+
+    /// This process's physical footprint: the number iOS compares with the
+    /// app's memory limit before ending it.
+    nonisolated static var footprintBytes: UInt64? {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+            }
+        }
+        return result == KERN_SUCCESS ? info.phys_footprint : nil
     }
 
-    /// The most memory iOS lets this app use on this device, in whole
-    /// gigabytes: about 70% of physical RAM with the increased-memory-limit
-    /// entitlement the app carries (4 GB phone: 2, 6 GB: 4, 8 GB: 5,
-    /// 12 GB: 8). A model whose working set is above it can never load
-    /// here, however many apps are closed. Uses the nominal (rounded)
-    /// figure, so a 12 GB phone is not pushed below the 8B Pro's tier by
-    /// what iOS reserves for itself.
+    /// The most memory iOS lets this app use, in bytes, as the device itself
+    /// reports it: what is still available plus what the app already uses.
+    /// That sum is the same at any moment, model loaded or not. Nil where
+    /// iOS reports no limit (Simulator, Mac).
+    ///
+    /// Measured, not guessed. The old rule assumed an app gets about 70% of
+    /// the RAM, which offered the 8B model to 12 GB iPhones; an iPhone 18
+    /// Pro Max reported about 6.3 GB for the whole app, so the model could
+    /// never load there and people were told to close other apps.
+    nonisolated static var appMemoryLimitBytes: UInt64? {
+        #if targetEnvironment(simulator)
+        return nil
+        #else
+        let available = os_proc_available_memory()
+        guard available > 0, let footprint = footprintBytes else { return nil }
+        return UInt64(available) + footprint
+        #endif
+    }
+
+    /// "Too large for this iPhone", naming the device it is running on: the
+    /// same app runs on iPad and Mac, where "iPhone" was simply wrong.
+    @MainActor
+    static var tooLargeText: String {
+        if ProcessInfo.processInfo.isiOSAppOnMac { return L10n.text("Too large for this Mac") }
+        if UIDevice.current.userInterfaceIdiom == .pad { return L10n.text("Too large for this iPad") }
+        return L10n.text("Too large for this iPhone")
+    }
+
+    /// What the app needs for itself while a model answers: interface,
+    /// conversations, speech, the photo being looked at.
+    nonisolated static let appOverheadGB = 0.3
+
+    /// Memory a model may use on this device, in decimal GB: the measured
+    /// limit minus the app's own share. Falls back to the old 70%-of-RAM
+    /// rule only where iOS reports no limit (Simulator, Mac, where memory is
+    /// plentiful anyway).
+    nonisolated static var modelMemoryBudgetGB: Double {
+        if let limit = appMemoryLimitBytes {
+            return Double(limit) / 1_000_000_000 - appOverheadGB
+        }
+        return Double(physicalMemoryGB) * 0.7 - appOverheadGB
+    }
+
+    /// Kept for the custom-model check, which speaks in whole gigabytes.
     nonisolated static var memoryCeilingGB: Int {
-        max(2, Int((Double(physicalMemoryGB) * 0.7).rounded(.down)))
+        max(1, Int(modelMemoryBudgetGB.rounded(.down)))
+    }
+
+    /// Whether a model needing `neededGB` can load right now, with what is
+    /// actually free at this moment (after the previous model is released).
+    nonisolated static func canLoad(neededGB: Double) -> Bool {
+        neededGB <= usableMemoryGBExactDecimal - 0.1
+    }
+
+    /// What is free right now in decimal GB (`usableMemoryGBExact` is GiB).
+    nonisolated static var usableMemoryGBExactDecimal: Double {
+        let available = Double(os_proc_available_memory()) / 1_000_000_000
+        guard available > 0 else { return Double(physicalMemoryGB) * 0.6 }
+        return available
     }
 
     /// The app's memory budget, independent of what is resident right now.
@@ -479,6 +577,9 @@ enum DeviceCapability {
     /// custom model refused on a 12 GB phone with the message "this device
     /// has 12 GB". This is the stable figure those decisions want.
     nonisolated static var memoryBudgetGB: Int {
-        max(2, Int((Double(physicalMemoryGB) * 0.55).rounded(.down)))
+        if let limit = appMemoryLimitBytes {
+            return max(1, Int((Double(limit) / 1_000_000_000 * 0.55).rounded(.down)))
+        }
+        return max(2, Int((Double(physicalMemoryGB) * 0.55).rounded(.down)))
     }
 }

@@ -76,15 +76,15 @@ enum ModelCapability: String, Codable, CaseIterable {
 
 extension AIModel {
 
-    /// Qwen3-VL 2B: current-generation vision-language model. Default for devices
-    /// with 6 GB of RAM or more.
+    /// Qwen3-VL 2B: the previous default for devices with 6 GB of RAM or more,
+    /// kept for everyone who has it and anyone who prefers it.
     static var qwen3VL2B: AIModel {
         let bytes: Int64 = 1_780_000_000
         return AIModel(
             id: "qwen3-vl-2b",
             name: "Qwen3 Vision 2B",
-            shortDescription: L10n.text("Best quality - vision, 30+ languages"),
-            fullDescription: L10n.text("Qwen3-VL 2B (4-bit). The strongest small vision model available: sharper image understanding, better reasoning, and wide language coverage. Recommended for iPhone 14 Pro and newer."),
+            shortDescription: L10n.text("Proven vision model - 30+ languages"),
+            fullDescription: L10n.text("Qwen3-VL 2B (4-bit). A proven small vision model with sharp image understanding and wide language coverage. Qwen3.5 Vision 2B is the newer model at about the same size."),
             size: AIModel.formattedCatalogSize(bytes),
             sizeBytes: bytes,
             capabilities: [.chat, .vision, .multilingual, .documentAnalysis],
@@ -98,15 +98,16 @@ extension AIModel {
         )
     }
 
-    /// Qwen3-VL 8B "Pro": the most powerful model we offer. Only for phones
-    /// with 12 GB of RAM (iPhone 17 Pro / Pro Max class); hidden elsewhere.
+    /// Qwen3-VL 8B: the previous large model, kept for people who already
+    /// use it. Only for phones with 12 GB of RAM. The id is unchanged so
+    /// existing downloads keep working; "Pro" moved to Qwen3.5 9B.
     static var qwen3VL8BPro: AIModel {
         let bytes: Int64 = 5_760_000_000
         return AIModel(
             id: "qwen3-vl-8b",
-            name: "Qwen3 Vision 8B Pro",
-            shortDescription: L10n.text("Maximum intelligence - for Pro phones"),
-            fullDescription: L10n.text("Qwen3-VL 8B (4-bit). Our most powerful model: noticeably deeper reasoning, richer answers, and the sharpest image understanding. Requires a phone with 12 GB of RAM, like iPhone 17 Pro Max. Responses are slower than the 2B model."),
+            name: "Qwen3 Vision 8B",
+            shortDescription: L10n.text("Previous-generation large model"),
+            fullDescription: L10n.text("Qwen3-VL 8B (4-bit). Deep reasoning and sharp image understanding from the previous Qwen generation. Requires a device with 12 GB of RAM. Qwen3.5 Vision 9B Pro is newer and usually gives better answers."),
             size: AIModel.formattedCatalogSize(bytes),
             sizeBytes: bytes,
             capabilities: [.chat, .vision, .multilingual, .documentAnalysis],
@@ -162,6 +163,143 @@ extension AIModel {
         )
     }
 
+    // MARK: Qwen3.5 (natively multimodal: every size sees images)
+    //
+    // Sizes are the bytes the prefetcher downloads (weights, JSON, chat
+    // template) from the Hugging Face listing, so the picker's "0.7 GB" is
+    // what actually lands on the phone. Thinking stays off: the chat
+    // template closes an empty think block unless asked to think.
+
+    /// Qwen3.5 0.8B: the smallest of the new generation, for 4 GB devices.
+    static var qwen35_08B: AIModel {
+        let bytes: Int64 = 652_027_143
+        return AIModel(
+            id: "qwen3.5-0.8b",
+            name: "Qwen3.5 Vision 0.8B",
+            shortDescription: L10n.text("Tiny and quick - newest generation"),
+            fullDescription: L10n.text("Qwen3.5 0.8B (4-bit). The newest Qwen generation in its smallest size. It understands photos and many languages and stays light enough for older iPhones. Answers are simpler than the larger models."),
+            size: AIModel.formattedCatalogSize(bytes),
+            sizeBytes: bytes,
+            capabilities: [.chat, .vision, .multilingual, .fast],
+            memoryRequired: L10n.text("About 2 GB RAM while active"),
+            backend: .mlx,
+            supportsVision: true,
+            huggingFaceId: "mlx-community/Qwen3.5-0.8B-4bit",
+            minRecommendedRAMGB: 4,
+            imageProcessingEdge: 640,
+            isLegacy: false
+        )
+    }
+
+    /// Qwen3.5 2B: newest-generation all-rounder for 6 GB devices.
+    static var qwen35_2B: AIModel {
+        let bytes: Int64 = 1_749_079_691
+        return AIModel(
+            id: "qwen3.5-2b",
+            name: "Qwen3.5 Vision 2B",
+            shortDescription: L10n.text("Fast all-rounder - newest generation"),
+            fullDescription: L10n.text("Qwen3.5 2B (4-bit). The newest Qwen generation: better reasoning and image understanding than Qwen3 Vision 2B at about the same size, in many languages. Needs a device with 6 GB of RAM or more."),
+            size: AIModel.formattedCatalogSize(bytes),
+            sizeBytes: bytes,
+            capabilities: [.chat, .vision, .multilingual, .documentAnalysis],
+            memoryRequired: L10n.text("About 2.5 GB RAM while active"),
+            backend: .mlx,
+            supportsVision: true,
+            huggingFaceId: "mlx-community/Qwen3.5-2B-4bit",
+            minRecommendedRAMGB: 6,
+            imageProcessingEdge: 768,
+            isLegacy: false
+        )
+    }
+
+    /// Qwen3.5 4B: the sweet spot for 8 GB devices.
+    static var qwen35_4B: AIModel {
+        let bytes: Int64 = 3_061_129_077
+        return AIModel(
+            id: "qwen3.5-4b",
+            name: "Qwen3.5 Vision 4B",
+            shortDescription: L10n.text("Smarter answers - for 8 GB devices"),
+            fullDescription: L10n.text("Qwen3.5 4B (4-bit). Noticeably smarter than the 2B models, with strong image understanding and reasoning. Needs a device with 8 GB of RAM or more, like iPhone 15 Pro, iPhone 16 or newer."),
+            size: AIModel.formattedCatalogSize(bytes),
+            sizeBytes: bytes,
+            capabilities: [.chat, .vision, .multilingual, .documentAnalysis],
+            memoryRequired: L10n.text("About 4 GB RAM while active"),
+            backend: .mlx,
+            supportsVision: true,
+            huggingFaceId: "mlx-community/Qwen3.5-4B-4bit",
+            minRecommendedRAMGB: 8,
+            imageProcessingEdge: 768,
+            isLegacy: false
+        )
+    }
+
+    /// Qwen3.5 9B "Pro": the most capable model we offer. Only for 12 GB
+    /// devices (iPhone 17 Pro, iPhone 18 Pro and the Duo class); shown
+    /// disabled elsewhere.
+    static var qwen35_9BPro: AIModel {
+        let bytes: Int64 = 5_977_071_067
+        return AIModel(
+            id: "qwen3.5-9b",
+            name: "Qwen3.5 Vision 9B Pro",
+            shortDescription: L10n.text("Our most capable model - for 12 GB devices"),
+            fullDescription: L10n.text("Qwen3.5 9B (4-bit). The most capable model we offer: deeper reasoning, richer answers and the sharpest image understanding. Made for devices with 12 GB of RAM, like iPhone 17 Pro and iPhone 18 Pro. Answers come more slowly than with the smaller models."),
+            size: AIModel.formattedCatalogSize(bytes),
+            sizeBytes: bytes,
+            capabilities: [.chat, .vision, .multilingual, .documentAnalysis],
+            memoryRequired: L10n.text("About 7 GB RAM while active"),
+            backend: .mlx,
+            supportsVision: true,
+            huggingFaceId: "mlx-community/Qwen3.5-9B-4bit",
+            minRecommendedRAMGB: 12,
+            imageProcessingEdge: 768,
+            isLegacy: false
+        )
+    }
+
+    // MARK: Gemma 4 (Google)
+
+    /// Gemma 4 E2B: Google's efficient model for 8 GB devices.
+    static var gemma4E2B: AIModel {
+        let bytes: Int64 = 3_583_086_498
+        return AIModel(
+            id: "gemma4-e2b",
+            name: "Gemma 4 E2B",
+            shortDescription: L10n.text("Google's Gemma 4 - efficient and multilingual"),
+            fullDescription: L10n.text("Gemma 4 E2B (4-bit) from Google. Strong multilingual chat and image understanding in an efficient design. Needs a device with 8 GB of RAM or more. Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms."),
+            size: AIModel.formattedCatalogSize(bytes),
+            sizeBytes: bytes,
+            capabilities: [.chat, .vision, .multilingual],
+            memoryRequired: L10n.text("About 4.5 GB RAM while active"),
+            backend: .mlx,
+            supportsVision: true,
+            huggingFaceId: "mlx-community/gemma-4-e2b-it-4bit",
+            minRecommendedRAMGB: 8,
+            imageProcessingEdge: 768,
+            isLegacy: false
+        )
+    }
+
+    /// Gemma 4 E4B: the larger efficient Gemma, for 12 GB devices.
+    static var gemma4E4B: AIModel {
+        let bytes: Int64 = 5_179_239_349
+        return AIModel(
+            id: "gemma4-e4b",
+            name: "Gemma 4 E4B",
+            shortDescription: L10n.text("Google's Gemma 4 - richer answers, for 12 GB devices"),
+            fullDescription: L10n.text("Gemma 4 E4B (4-bit) from Google. Richer answers and sharper image understanding than E2B. Needs a device with 12 GB of RAM. Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms."),
+            size: AIModel.formattedCatalogSize(bytes),
+            sizeBytes: bytes,
+            capabilities: [.chat, .vision, .multilingual, .documentAnalysis],
+            memoryRequired: L10n.text("About 6 GB RAM while active"),
+            backend: .mlx,
+            supportsVision: true,
+            huggingFaceId: "mlx-community/gemma-4-e4b-it-4bit",
+            minRecommendedRAMGB: 12,
+            imageProcessingEdge: 768,
+            isLegacy: false
+        )
+    }
+
     /// Apple Intelligence: the built-in on-device model. Instant, no download,
     /// text-only. Availability is checked at runtime.
     static var appleIntelligence: AIModel { AIModel(
@@ -181,8 +319,16 @@ extension AIModel {
         isLegacy: false
     ) }
 
-    /// The models we ship and test ourselves.
-    static var builtInModels: [AIModel] { [qwen3VL8BPro, qwen3VL2B, smolVLM2, qwen2VL2B] }
+    /// The models we ship and test ourselves, most capable first within
+    /// each generation: the pickers show them in this order (Recommended
+    /// first, models too large for the device last).
+    static var builtInModels: [AIModel] {
+        [qwen35_9BPro, gemma4E4B, qwen3VL8BPro,
+         qwen35_4B, gemma4E2B,
+         qwen35_2B, qwen3VL2B,
+         qwen35_08B, smolVLM2,
+         qwen2VL2B]
+    }
 
     /// All downloadable models, including any the user added from Hugging
     /// Face (legacy ones included; pickers decide visibility).
@@ -214,9 +360,15 @@ extension AIModel {
         return allModels.first { $0.id == id }
     }
 
-    /// The downloadable model recommended for this device.
+    /// The downloadable model recommended for this device: a quick first
+    /// download that answers well. Bigger models are a choice in the picker,
+    /// not the default - on a 12 GB phone the 9B Pro is a 6 GB download
+    /// and noticeably slower, which is the wrong first impression.
+    /// Qwen3.5 2B replaced Qwen3-VL 2B here: in side-by-side runs it kept
+    /// the conversation better and read text in photos as well, at a
+    /// slightly smaller size.
     static var recommendedDownloadModel: AIModel {
-        DeviceCapability.physicalMemoryGB >= 6 ? qwen3VL2B : smolVLM2
+        DeviceCapability.physicalMemoryGB >= 6 ? qwen35_2B : smolVLM2
     }
 
     // MARK: - Sizes

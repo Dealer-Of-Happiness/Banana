@@ -40,8 +40,12 @@ struct SetupView: View {
     /// load preflight (`AIModel.fitsThisDevice`). Not filtered by what is
     /// free at this instant: that hid models the picker offered, and a
     /// momentary shortage is reported at load time with what to do about it.
+    /// The Recommended model first: with ten models in the catalog, a
+    /// 12 GB device would otherwise open on the largest, slowest download.
     private var choices: [AIModel] {
-        AIModel.builtInModels.filter { !$0.isLegacy && $0.fitsThisDevice() }
+        let models = AIModel.builtInModels.filter { !$0.isLegacy && $0.fitsThisDevice() }
+        let recommendedId = AIModel.recommendedDownloadModel.id
+        return models.filter { $0.id == recommendedId } + models.filter { $0.id != recommendedId }
     }
 
     var body: some View {

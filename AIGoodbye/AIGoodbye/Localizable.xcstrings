@@ -8154,82 +8154,6 @@
         }
       }
     },
-    "Best quality - vision, 30+ languages": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Beste Qualität – Bildanalyse, über 30 Sprachen"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Κορυφαία ποιότητα – ανάλυση εικόνων, 30+ γλώσσες"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La mejor calidad: visión y más de 30 idiomas"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Meilleure qualité – vision, plus de 30 langues"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Migliore qualità: visione, oltre 30 lingue"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最高品質 - 画像分析、30以上の言語に対応"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "최고 품질 - 비전, 30개 이상 언어 지원"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Melhor qualidade – visão, mais de 30 idiomas"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Лучшее качество — анализ изображений, 30+ языков"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Найкраща якість — аналіз зображень, понад 30 мов"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "質素最佳 - 視覺分析，支援 30 多種語言"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最佳质量 - 视觉，支持 30 多种语言"
-          }
-        }
-      }
-    },
     "Book": {
       "localizations": {
         "de": {
@@ -24864,82 +24788,6 @@
         }
       }
     },
-    "Maximum intelligence - for Pro phones": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Maximale Intelligenz – für Pro-iPhones"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Μέγιστη νοημοσύνη – για iPhone Pro"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Máxima inteligencia: para iPhones Pro"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Intelligence maximale – pour les iPhone Pro"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Massima intelligenza: per gli iPhone Pro"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最高の知能 - Pro機種向け"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "최고의 지능 - Pro 모델용"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Inteligência máxima – para iPhones Pro"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Максимальный интеллект — для iPhone Pro"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Максимальний інтелект — для iPhone Pro"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "智能最強 - 適合 Pro 型號"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最强智能 - 适合 Pro 机型"
-          }
-        }
-      }
-    },
     "Memory": {
       "localizations": {
         "de": {
@@ -32782,158 +32630,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Qwen2-VL 2B（4-bit）。之前的默认模型。目前仍然好用；同样大小下，Qwen3 Vision 2B 的回答更好。"
-          }
-        }
-      }
-    },
-    "Qwen3-VL 2B (4-bit). The strongest small vision model available: sharper image understanding, better reasoning, and wide language coverage. Recommended for iPhone 14 Pro and newer.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 2B (4-bit). Das stärkste kleine Vision-Modell, das es derzeit gibt: präziseres Bildverständnis, besseres logisches Denken und Unterstützung für viele Sprachen. Empfohlen für iPhone 14 Pro und neuer."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 2B (4-bit). Το ισχυρότερο μικρό μοντέλο όρασης που είναι διαθέσιμο: πιο ακριβής κατανόηση εικόνων, καλύτερος συλλογισμός και ευρεία γλωσσική κάλυψη. Συνιστάται για iPhone 14 Pro και νεότερα."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 2B (4-bit). El modelo de visión compacto más potente disponible: mejor comprensión de imágenes, mejor razonamiento y amplia cobertura de idiomas. Recomendado para iPhone 14 Pro y posteriores."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 2B (4-bit). Le modèle de vision compact le plus performant : meilleure compréhension des images, raisonnement amélioré et large couverture linguistique. Recommandé pour l'iPhone 14 Pro et les modèles plus récents."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 2B (4-bit). Il modello di visione compatto più potente disponibile: comprensione delle immagini più precisa, ragionamento migliore e ampio supporto linguistico. Consigliato per iPhone 14 Pro e successivi."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 2B（4-bit）。現在利用できる最も強力な小型ビジョンモデルです。より正確な画像理解、優れた推論、幅広い言語対応が特長です。iPhone 14 Pro以降におすすめです。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 2B(4-bit). 현재 사용 가능한 가장 강력한 소형 비전 모델입니다. 더 정확한 이미지 이해, 더 나은 추론, 폭넓은 언어 지원을 제공합니다. iPhone 14 Pro 및 이후 모델에 권장됩니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 2B (4-bit). O modelo de visão compacto mais forte disponível: compreensão de imagens mais precisa, raciocínio aprimorado e amplo suporte a idiomas. Recomendado para o iPhone 14 Pro e mais recentes."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 2B (4-bit). Самая сильная из компактных моделей компьютерного зрения: точнее понимает изображения, лучше рассуждает и поддерживает множество языков. Рекомендуется для iPhone 14 Pro и новее."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 2B (4-bit). Найсильніша з компактних моделей комп'ютерного зору: точніше розуміє зображення, краще міркує й підтримує багато мов. Рекомендується для iPhone 14 Pro і новіших."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 2B（4-bit）。目前最強的小型視覺模型：圖像理解更精準，推理能力更強，支援的語言更多。建議 iPhone 14 Pro 或之後的型號使用。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 2B（4-bit）。目前最强的小型视觉模型：图像理解更精准，推理能力更强，语言覆盖更广。推荐 iPhone 14 Pro 及更新机型使用。"
-          }
-        }
-      }
-    },
-    "Qwen3-VL 8B (4-bit). Our most powerful model: noticeably deeper reasoning, richer answers, and the sharpest image understanding. Requires a phone with 12 GB of RAM, like iPhone 17 Pro Max. Responses are slower than the 2B model.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 8B (4-bit). Unser leistungsstärkstes Modell: spürbar tieferes logisches Denken, ausführlichere Antworten und das schärfste Bildverständnis. Erfordert ein Telefon mit 12 GB RAM, wie das iPhone 17 Pro Max. Antworten sind langsamer als beim 2B-Modell."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 8B (4-bit). Το πιο ισχυρό μοντέλο μας: αισθητά βαθύτερος συλλογισμός, πλουσιότερες απαντήσεις και η πιο ακριβής κατανόηση εικόνων. Απαιτεί τηλέφωνο με 12 GB RAM, όπως το iPhone 17 Pro Max. Οι απαντήσεις είναι πιο αργές από το μοντέλο 2B."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 8B (4-bit). Nuestro modelo más potente: razonamiento notablemente más profundo, respuestas más completas y la mejor comprensión de imágenes. Requiere un teléfono con 12 GB de RAM, como el iPhone 17 Pro Max. Las respuestas son más lentas que con el modelo 2B."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 8B (4-bit). Notre modèle le plus puissant : raisonnement nettement plus approfondi, réponses plus riches et compréhension des images la plus fine. Nécessite un téléphone avec 12 GB de RAM, comme l'iPhone 17 Pro Max. Les réponses sont plus lentes qu'avec le modèle 2B."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 8B (4-bit). Il nostro modello più potente: ragionamento nettamente più profondo, risposte più ricche e la comprensione delle immagini più precisa. Richiede un telefono con 12 GB di RAM, come iPhone 17 Pro Max. Le risposte sono più lente rispetto al modello 2B."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 8B（4-bit）。最も強力なモデルです。推論は目に見えて深く、回答はより充実し、画像理解も最高レベルです。iPhone 17 Pro Maxなど、12 GB RAMを搭載した機種が必要です。応答は2Bモデルより遅くなります。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 8B(4-bit). 가장 강력한 모델입니다. 눈에 띄게 깊은 추론, 풍부한 답변, 가장 정확한 이미지 이해를 제공합니다. iPhone 17 Pro Max와 같이 12 GB RAM을 갖춘 기기가 필요합니다. 응답 속도는 2B 모델보다 느립니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 8B (4-bit). Nosso modelo mais poderoso: raciocínio visivelmente mais profundo, respostas mais ricas e a compreensão de imagens mais precisa. Exige um celular com 12 GB de RAM, como o iPhone 17 Pro Max. As respostas são mais lentas que as do modelo 2B."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 8B (4-bit). Наша самая мощная модель: заметно более глубокие рассуждения, более содержательные ответы и самое точное понимание изображений. Требуется телефон с 12 GB RAM, например iPhone 17 Pro Max. Ответы медленнее, чем у модели 2B."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 8B (4-bit). Наша найпотужніша модель: помітно глибші міркування, змістовніші відповіді й найточніше розуміння зображень. Потрібен телефон із 12 GB RAM, наприклад iPhone 17 Pro Max. Відповіді повільніші, ніж у моделі 2B."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 8B（4-bit）。我們最強大的模型：推理明顯更深入，回答更豐富，圖像理解亦最精準。需要配備 12 GB RAM 的手機，例如 iPhone 17 Pro Max。回應速度會比 2B 模型慢。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-VL 8B（4-bit）。我们最强大的模型：推理明显更深入，回答更丰富，图像理解最为精准。需要配备 12 GB RAM 的手机，如 iPhone 17 Pro Max。响应速度比 2B 模型慢。"
           }
         }
       }
@@ -53024,6 +52720,1602 @@
           "stringUnit": {
             "state": "translated",
             "value": "AiGoodbye 免费使用，没有订阅，没有 App 内购买，也没有广告。"
+          }
+        }
+      }
+    },
+    "Previous-generation large model": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Großes Modell der vorherigen Generation"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Μεγάλο μοντέλο προηγούμενης γενιάς"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo grande de la generación anterior"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grand modèle de la génération précédente"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modello grande della generazione precedente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前世代の大型モデル"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이전 세대의 대형 모델"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo grande da geração anterior"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Большая модель предыдущего поколения"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Велика модель попереднього покоління"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一代大型模型"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一代大型模型"
+          }
+        }
+      }
+    },
+    "Qwen3-VL 8B (4-bit). Deep reasoning and sharp image understanding from the previous Qwen generation. Requires a device with 12 GB of RAM. Qwen3.5 Vision 9B Pro is newer and usually gives better answers.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 8B (4-bit). Tiefes logisches Denken und präzises Bildverständnis aus der vorherigen Qwen-Generation. Erfordert ein Gerät mit 12 GB RAM. Qwen3.5 Vision 9B Pro ist neuer und liefert meist bessere Antworten."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 8B (4-bit). Βαθύς συλλογισμός και ακριβής κατανόηση εικόνων από την προηγούμενη γενιά Qwen. Απαιτεί συσκευή με 12 GB RAM. Το Qwen3.5 Vision 9B Pro είναι νεότερο και συνήθως δίνει καλύτερες απαντήσεις."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 8B (4-bit). Razonamiento profundo y comprensión precisa de imágenes de la generación anterior de Qwen. Requiere un dispositivo con 12 GB de RAM. Qwen3.5 Vision 9B Pro es más reciente y suele dar mejores respuestas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 8B (4-bit). Raisonnement approfondi et compréhension fine des images, issus de la génération Qwen précédente. Nécessite un appareil avec 12 GB de RAM. Qwen3.5 Vision 9B Pro est plus récent et donne généralement de meilleures réponses."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 8B (4-bit). Ragionamento profondo e comprensione precisa delle immagini dalla generazione Qwen precedente. Richiede un dispositivo con 12 GB di RAM. Qwen3.5 Vision 9B Pro è più recente e di solito dà risposte migliori."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 8B（4-bit）。前世代のQwenによる、深い推論と精度の高い画像理解。12 GB RAMを搭載したデバイスが必要です。より新しいQwen3.5 Vision 9B Proの方が、たいていより良い回答をします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 8B(4-bit). 이전 세대 Qwen의 깊은 추론과 정확한 이미지 이해를 제공합니다. 12 GB RAM을 갖춘 기기가 필요합니다. 더 새로운 Qwen3.5 Vision 9B Pro가 대체로 더 나은 답변을 제공합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 8B (4-bit). Raciocínio profundo e compreensão precisa de imagens da geração anterior do Qwen. Exige um dispositivo com 12 GB de RAM. O Qwen3.5 Vision 9B Pro é mais novo e costuma dar respostas melhores."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 8B (4-bit). Глубокие рассуждения и точное понимание изображений от предыдущего поколения Qwen. Требуется устройство с 12 ГБ ОЗУ. Qwen3.5 Vision 9B Pro новее и обычно отвечает лучше."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 8B (4-bit). Глибокі міркування й точне розуміння зображень від попереднього покоління Qwen. Потрібен пристрій із 12 ГБ ОЗП. Qwen3.5 Vision 9B Pro новіша й зазвичай відповідає краще."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 8B（4-bit）。上一代 Qwen 的深入推理與精準圖像理解。需要配備 12 GB RAM 的裝置。較新的 Qwen3.5 Vision 9B Pro 通常回答得更好。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 8B（4-bit）。上一代 Qwen 的深入推理与精准图像理解。需要配备 12 GB RAM 的设备。更新的 Qwen3.5 Vision 9B Pro 通常回答得更好。"
+          }
+        }
+      }
+    },
+    "Tiny and quick - newest generation": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Winzig und schnell – neueste Generation"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Μικροσκοπικό και γρήγορο – νεότερη γενιά"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diminuto y rápido: la generación más nueva"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minuscule et rapide – dernière génération"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Piccolissimo e veloce: ultima generazione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超小型で高速 - 最新世代"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "초소형에 빠름 - 최신 세대"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minúsculo e rápido – geração mais recente"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Крошечная и быстрая — новейшее поколение"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Крихітна і швидка — найновіше покоління"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "極輕巧快速 - 最新一代"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超轻巧快速 - 最新一代"
+          }
+        }
+      }
+    },
+    "Qwen3.5 0.8B (4-bit). The newest Qwen generation in its smallest size. It understands photos and many languages and stays light enough for older iPhones. Answers are simpler than the larger models.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (4-bit). Die neueste Qwen-Generation in ihrer kleinsten Größe. Versteht Fotos und viele Sprachen und bleibt leicht genug für ältere iPhones. Die Antworten sind einfacher als bei den größeren Modellen."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (4-bit). Η νεότερη γενιά Qwen στο μικρότερο μέγεθός της. Κατανοεί φωτογραφίες και πολλές γλώσσες και παραμένει αρκετά ελαφρύ για παλαιότερα iPhone. Οι απαντήσεις είναι πιο απλές από αυτές των μεγαλύτερων μοντέλων."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (4-bit). La generación más nueva de Qwen en su tamaño más pequeño. Entiende fotos y muchos idiomas, y es lo bastante ligero para iPhones antiguos. Sus respuestas son más sencillas que las de los modelos más grandes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (4-bit). La dernière génération Qwen dans sa plus petite taille. Il comprend les photos et de nombreuses langues tout en restant assez léger pour les iPhone plus anciens. Ses réponses sont plus simples que celles des modèles plus grands."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (4-bit). L'ultima generazione di Qwen nella sua versione più piccola. Capisce le foto e molte lingue e resta abbastanza leggero per gli iPhone meno recenti. Le risposte sono più semplici rispetto ai modelli più grandi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B（4-bit）。最新世代のQwenの最小サイズ。写真と多くの言語を理解し、古いiPhoneでも動く軽さです。回答は大きなモデルよりシンプルになります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B(4-bit). 최신 세대 Qwen의 가장 작은 크기입니다. 사진과 여러 언어를 이해하면서도 오래된 iPhone에서 돌아갈 만큼 가볍습니다. 답변은 큰 모델보다 단순합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (4-bit). A geração mais recente do Qwen no menor tamanho. Entende fotos e muitos idiomas e é leve o bastante para iPhones antigos. As respostas são mais simples que as dos modelos maiores."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (4-bit). Новейшее поколение Qwen в самом компактном размере. Понимает фотографии и многие языки и при этом достаточно лёгкая для старых iPhone. Ответы проще, чем у больших моделей."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (4-bit). Найновіше покоління Qwen у найменшому розмірі. Розуміє фото й багато мов і водночас достатньо легка для старіших iPhone. Відповіді простіші, ніж у більших моделей."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B（4-bit）。最新一代 Qwen 的最小型號。看得懂相片和多種語言，而且夠輕巧，較舊的 iPhone 也能使用。回答會比大型模型簡單。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B（4-bit）。最新一代 Qwen 的最小版本。能理解照片和多种语言，且足够轻巧，较旧的 iPhone 也能运行。回答比大型模型更简单。"
+          }
+        }
+      }
+    },
+    "Smarter answers - for 8 GB devices": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klügere Antworten – für Geräte mit 8 GB"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Πιο έξυπνες απαντήσεις – για συσκευές 8 GB"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Respuestas más inteligentes: para dispositivos de 8 GB"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réponses plus intelligentes – pour les appareils de 8 GB"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Risposte più intelligenti: per dispositivi da 8 GB"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "より賢い回答 - 8 GBのデバイス向け"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 똑똑한 답변 - 8 GB 기기용"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Respostas mais inteligentes – para dispositivos de 8 GB"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Более умные ответы — для устройств с 8 ГБ"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Розумніші відповіді — для пристроїв із 8 ГБ"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回答更聰明 - 適合 8 GB 裝置"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回答更聪明 - 适合 8 GB 设备"
+          }
+        }
+      }
+    },
+    "Qwen3.5 4B (4-bit). Noticeably smarter than the 2B models, with strong image understanding and reasoning. Needs a device with 8 GB of RAM or more, like iPhone 15 Pro, iPhone 16 or newer.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 4B (4-bit). Spürbar klüger als die 2B-Modelle, mit starkem Bildverständnis und logischem Denken. Erfordert ein Gerät mit mindestens 8 GB RAM, etwa iPhone 15 Pro, iPhone 16 oder neuer."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 4B (4-bit). Αισθητά πιο έξυπνο από τα μοντέλα 2B, με ισχυρή κατανόηση εικόνων και συλλογισμό. Απαιτεί συσκευή με τουλάχιστον 8 GB RAM, όπως iPhone 15 Pro, iPhone 16 ή νεότερο."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 4B (4-bit). Notablemente más inteligente que los modelos 2B, con gran comprensión de imágenes y buen razonamiento. Requiere un dispositivo con 8 GB de RAM o más, como el iPhone 15 Pro, el iPhone 16 o posteriores."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 4B (4-bit). Nettement plus intelligent que les modèles 2B, avec une solide compréhension des images et un bon raisonnement. Nécessite un appareil avec au moins 8 GB de RAM, comme l'iPhone 15 Pro, l'iPhone 16 ou plus récent."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 4B (4-bit). Nettamente più intelligente dei modelli 2B, con un'ottima comprensione delle immagini e un buon ragionamento. Richiede un dispositivo con almeno 8 GB di RAM, come iPhone 15 Pro, iPhone 16 o successivi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 4B（4-bit）。2Bモデルより目に見えて賢く、画像理解と推論に優れています。iPhone 15 Pro、iPhone 16以降など、8 GB以上のRAMを搭載したデバイスが必要です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 4B(4-bit). 2B 모델보다 눈에 띄게 똑똑하며 이미지 이해와 추론이 뛰어납니다. iPhone 15 Pro, iPhone 16 이상처럼 8 GB 이상의 RAM을 갖춘 기기가 필요합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 4B (4-bit). Visivelmente mais inteligente que os modelos 2B, com ótima compreensão de imagens e bom raciocínio. Exige um dispositivo com 8 GB de RAM ou mais, como iPhone 15 Pro, iPhone 16 ou mais recente."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 4B (4-bit). Заметно умнее моделей 2B, хорошо понимает изображения и рассуждает. Требуется устройство с 8 ГБ ОЗУ или больше, например iPhone 15 Pro, iPhone 16 или новее."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 4B (4-bit). Помітно розумніша за моделі 2B, добре розуміє зображення й міркує. Потрібен пристрій із 8 ГБ ОЗП або більше, наприклад iPhone 15 Pro, iPhone 16 чи новіший."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 4B（4-bit）。明顯比 2B 模型聰明，圖像理解和推理能力都很強。需要配備 8 GB 或以上 RAM 的裝置，例如 iPhone 15 Pro、iPhone 16 或更新型號。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 4B（4-bit）。明显比 2B 模型聪明，图像理解和推理能力都很强。需要配备 8 GB 或以上 RAM 的设备，如 iPhone 15 Pro、iPhone 16 或更新机型。"
+          }
+        }
+      }
+    },
+    "Our most capable model - for 12 GB devices": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unser leistungsfähigstes Modell – für Geräte mit 12 GB"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το πιο ικανό μοντέλο μας – για συσκευές 12 GB"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuestro modelo más capaz: para dispositivos de 12 GB"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notre modèle le plus performant – pour les appareils de 12 GB"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il nostro modello più capace: per dispositivi da 12 GB"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最も高性能なモデル - 12 GBのデバイス向け"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가장 뛰어난 모델 - 12 GB 기기용"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nosso modelo mais capaz – para dispositivos de 12 GB"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Наша самая способная модель — для устройств с 12 ГБ"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Наша найздібніша модель — для пристроїв із 12 ГБ"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我們最強的模型 - 適合 12 GB 裝置"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我们最强的模型 - 适合 12 GB 设备"
+          }
+        }
+      }
+    },
+    "Qwen3.5 9B (4-bit). The most capable model we offer: deeper reasoning, richer answers and the sharpest image understanding. Made for devices with 12 GB of RAM, like iPhone 17 Pro and iPhone 18 Pro. Answers come more slowly than with the smaller models.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 9B (4-bit). Das leistungsfähigste Modell, das wir anbieten: tieferes logisches Denken, ausführlichere Antworten und das schärfste Bildverständnis. Gemacht für Geräte mit 12 GB RAM, wie iPhone 17 Pro und iPhone 18 Pro. Die Antworten kommen langsamer als bei den kleineren Modellen."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 9B (4-bit). Το πιο ικανό μοντέλο που προσφέρουμε: βαθύτερος συλλογισμός, πλουσιότερες απαντήσεις και η πιο ακριβής κατανόηση εικόνων. Σχεδιασμένο για συσκευές με 12 GB RAM, όπως το iPhone 17 Pro και το iPhone 18 Pro. Οι απαντήσεις έρχονται πιο αργά από ό,τι στα μικρότερα μοντέλα."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 9B (4-bit). El modelo más capaz que ofrecemos: razonamiento más profundo, respuestas más completas y la mejor comprensión de imágenes. Pensado para dispositivos con 12 GB de RAM, como el iPhone 17 Pro y el iPhone 18 Pro. Las respuestas llegan más despacio que con los modelos más pequeños."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 9B (4-bit). Le modèle le plus performant que nous proposons : raisonnement plus approfondi, réponses plus riches et compréhension des images la plus fine. Conçu pour les appareils avec 12 GB de RAM, comme l'iPhone 17 Pro et l'iPhone 18 Pro. Les réponses arrivent plus lentement qu'avec les modèles plus petits."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 9B (4-bit). Il modello più capace che offriamo: ragionamento più profondo, risposte più ricche e la comprensione delle immagini più precisa. Pensato per dispositivi con 12 GB di RAM, come iPhone 17 Pro e iPhone 18 Pro. Le risposte arrivano più lentamente rispetto ai modelli più piccoli."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 9B（4-bit）。私たちが提供する最も高性能なモデルです。より深い推論、より充実した回答、最高レベルの画像理解。iPhone 17 ProやiPhone 18 Proなど、12 GB RAMを搭載したデバイス向けです。回答は小さなモデルより時間がかかります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 9B(4-bit). 저희가 제공하는 가장 뛰어난 모델입니다. 더 깊은 추론, 더 풍부한 답변, 가장 정확한 이미지 이해를 제공합니다. iPhone 17 Pro, iPhone 18 Pro처럼 12 GB RAM을 갖춘 기기용입니다. 답변은 작은 모델보다 느리게 나옵니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 9B (4-bit). O modelo mais capaz que oferecemos: raciocínio mais profundo, respostas mais ricas e a compreensão de imagens mais precisa. Feito para dispositivos com 12 GB de RAM, como iPhone 17 Pro e iPhone 18 Pro. As respostas chegam mais devagar que nos modelos menores."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 9B (4-bit). Самая способная модель из всех, что мы предлагаем: более глубокие рассуждения, более содержательные ответы и самое точное понимание изображений. Создана для устройств с 12 ГБ ОЗУ, таких как iPhone 17 Pro и iPhone 18 Pro. Ответы появляются медленнее, чем у моделей поменьше."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 9B (4-bit). Найздібніша модель із тих, що ми пропонуємо: глибші міркування, змістовніші відповіді й найточніше розуміння зображень. Створена для пристроїв із 12 ГБ ОЗП, як-от iPhone 17 Pro та iPhone 18 Pro. Відповіді з'являються повільніше, ніж у менших моделей."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 9B（4-bit）。我們提供的最強模型：推理更深入，回答更豐富，圖像理解最精準。專為配備 12 GB RAM 的裝置而設，例如 iPhone 17 Pro 和 iPhone 18 Pro。回應速度會比較小的模型慢。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 9B（4-bit）。我们提供的最强模型：推理更深入，回答更丰富，图像理解最精准。专为配备 12 GB RAM 的设备打造，如 iPhone 17 Pro 和 iPhone 18 Pro。响应速度比小型模型慢。"
+          }
+        }
+      }
+    },
+    "Google's Gemma 4 - efficient and multilingual": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 von Google – effizient und mehrsprachig"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 της Google – αποδοτικό και πολύγλωσσο"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 de Google: eficiente y multilingüe"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 de Google – efficace et multilingue"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 di Google: efficiente e multilingue"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GoogleのGemma 4 - 効率的で多言語対応"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google의 Gemma 4 - 효율적이고 다국어 지원"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 do Google – eficiente e multilíngue"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 от Google — эффективная и многоязычная"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 від Google — ефективна й багатомовна"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google 的 Gemma 4 - 高效率、支援多種語言"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google 的 Gemma 4 - 高效、支持多种语言"
+          }
+        }
+      }
+    },
+    "Gemma 4 E2B (4-bit) from Google. Strong multilingual chat and image understanding in an efficient design. Needs a device with 8 GB of RAM or more. Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 E2B (4-bit) von Google. Starke mehrsprachige Unterhaltungen und gutes Bildverständnis in einem effizienten Design. Erfordert ein Gerät mit mindestens 8 GB RAM. Gemma wird gemäß den Gemma-Nutzungsbedingungen (ai.google.dev/gemma/terms) bereitgestellt und unterliegt diesen."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 E2B (4-bit) από την Google. Ισχυρή πολύγλωσση συνομιλία και κατανόηση εικόνων σε έναν αποδοτικό σχεδιασμό. Απαιτεί συσκευή με τουλάχιστον 8 GB RAM. Το Gemma παρέχεται σύμφωνα με τους Όρους Χρήσης του Gemma (ai.google.dev/gemma/terms) και υπόκειται σε αυτούς."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 E2B (4-bit) de Google. Conversación multilingüe sólida y buena comprensión de imágenes con un diseño eficiente. Requiere un dispositivo con 8 GB de RAM o más. Gemma se ofrece de acuerdo con los Términos de Uso de Gemma (ai.google.dev/gemma/terms) y está sujeto a ellos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 E2B (4-bit) de Google. Conversations multilingues solides et bonne compréhension des images, dans une conception efficace. Nécessite un appareil avec au moins 8 GB de RAM. Gemma est fourni conformément aux Conditions d'utilisation de Gemma (ai.google.dev/gemma/terms) et y est soumis."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 E2B (4-bit) di Google. Conversazioni multilingue solide e buona comprensione delle immagini in un design efficiente. Richiede un dispositivo con almeno 8 GB di RAM. Gemma è fornito in base ai Termini di utilizzo di Gemma (ai.google.dev/gemma/terms) ed è soggetto a essi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google製のGemma 4 E2B（4-bit）。効率的な設計で、多言語の会話と画像理解に優れています。8 GB以上のRAMを搭載したデバイスが必要です。GemmaはGemma利用規約（ai.google.dev/gemma/terms）に基づき、その条件に従って提供されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google의 Gemma 4 E2B(4-bit). 효율적인 설계로 다국어 대화와 이미지 이해가 뛰어납니다. 8 GB 이상의 RAM을 갖춘 기기가 필요합니다. Gemma는 Gemma 이용약관(ai.google.dev/gemma/terms)에 따라 제공되며 이를 따릅니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 E2B (4-bit) do Google. Conversas multilíngues sólidas e boa compreensão de imagens em um design eficiente. Exige um dispositivo com 8 GB de RAM ou mais. O Gemma é fornecido de acordo com os Termos de Uso do Gemma (ai.google.dev/gemma/terms) e está sujeito a eles."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 E2B (4-bit) от Google. Уверенно общается на многих языках и понимает изображения, при этом экономно расходует ресурсы. Требуется устройство с 8 ГБ ОЗУ или больше. Gemma предоставляется на условиях Условий использования Gemma (ai.google.dev/gemma/terms)."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 E2B (4-bit) від Google. Упевнено спілкується багатьма мовами й розуміє зображення, водночас ощадливо витрачає ресурси. Потрібен пристрій із 8 ГБ ОЗП або більше. Gemma надається на умовах Умов використання Gemma (ai.google.dev/gemma/terms)."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google 的 Gemma 4 E2B（4-bit）。設計高效，多語言對話和圖像理解都很出色。需要配備 8 GB 或以上 RAM 的裝置。Gemma 根據《Gemma 使用條款》（ai.google.dev/gemma/terms）提供，並受其約束。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google 的 Gemma 4 E2B（4-bit）。设计高效，多语言对话和图像理解都很出色。需要配备 8 GB 或以上 RAM 的设备。Gemma 依据《Gemma 使用条款》（ai.google.dev/gemma/terms）提供，并受其约束。"
+          }
+        }
+      }
+    },
+    "Google's Gemma 4 - richer answers, for 12 GB devices": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 von Google – ausführlichere Antworten, für Geräte mit 12 GB"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 της Google – πλουσιότερες απαντήσεις, για συσκευές 12 GB"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 de Google: respuestas más completas, para dispositivos de 12 GB"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 de Google – réponses plus riches, pour les appareils de 12 GB"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 di Google: risposte più ricche, per dispositivi da 12 GB"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GoogleのGemma 4 - より充実した回答、12 GBのデバイス向け"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google의 Gemma 4 - 더 풍부한 답변, 12 GB 기기용"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 do Google – respostas mais ricas, para dispositivos de 12 GB"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 от Google — более содержательные ответы, для устройств с 12 ГБ"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 від Google — змістовніші відповіді, для пристроїв із 12 ГБ"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google 的 Gemma 4 - 回答更豐富，適合 12 GB 裝置"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google 的 Gemma 4 - 回答更丰富，适合 12 GB 设备"
+          }
+        }
+      }
+    },
+    "Gemma 4 E4B (4-bit) from Google. Richer answers and sharper image understanding than E2B. Needs a device with 12 GB of RAM. Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 E4B (4-bit) von Google. Ausführlichere Antworten und präziseres Bildverständnis als E2B. Erfordert ein Gerät mit 12 GB RAM. Gemma wird gemäß den Gemma-Nutzungsbedingungen (ai.google.dev/gemma/terms) bereitgestellt und unterliegt diesen."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 E4B (4-bit) από την Google. Πλουσιότερες απαντήσεις και πιο ακριβής κατανόηση εικόνων από το E2B. Απαιτεί συσκευή με 12 GB RAM. Το Gemma παρέχεται σύμφωνα με τους Όρους Χρήσης του Gemma (ai.google.dev/gemma/terms) και υπόκειται σε αυτούς."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 E4B (4-bit) de Google. Respuestas más completas y comprensión de imágenes más precisa que E2B. Requiere un dispositivo con 12 GB de RAM. Gemma se ofrece de acuerdo con los Términos de Uso de Gemma (ai.google.dev/gemma/terms) y está sujeto a ellos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 E4B (4-bit) de Google. Réponses plus riches et compréhension des images plus fine qu'E2B. Nécessite un appareil avec 12 GB de RAM. Gemma est fourni conformément aux Conditions d'utilisation de Gemma (ai.google.dev/gemma/terms) et y est soumis."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 E4B (4-bit) di Google. Risposte più ricche e comprensione delle immagini più precisa rispetto a E2B. Richiede un dispositivo con 12 GB di RAM. Gemma è fornito in base ai Termini di utilizzo di Gemma (ai.google.dev/gemma/terms) ed è soggetto a essi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google製のGemma 4 E4B（4-bit）。E2Bより充実した回答と、より精度の高い画像理解。12 GB RAMを搭載したデバイスが必要です。GemmaはGemma利用規約（ai.google.dev/gemma/terms）に基づき、その条件に従って提供されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google의 Gemma 4 E4B(4-bit). E2B보다 풍부한 답변과 더 정확한 이미지 이해를 제공합니다. 12 GB RAM을 갖춘 기기가 필요합니다. Gemma는 Gemma 이용약관(ai.google.dev/gemma/terms)에 따라 제공되며 이를 따릅니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 E4B (4-bit) do Google. Respostas mais ricas e compreensão de imagens mais precisa que o E2B. Exige um dispositivo com 12 GB de RAM. O Gemma é fornecido de acordo com os Termos de Uso do Gemma (ai.google.dev/gemma/terms) e está sujeito a eles."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 E4B (4-bit) от Google. Более содержательные ответы и более точное понимание изображений, чем у E2B. Требуется устройство с 12 ГБ ОЗУ. Gemma предоставляется на условиях Условий использования Gemma (ai.google.dev/gemma/terms)."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemma 4 E4B (4-bit) від Google. Змістовніші відповіді й точніше розуміння зображень, ніж у E2B. Потрібен пристрій із 12 ГБ ОЗП. Gemma надається на умовах Умов використання Gemma (ai.google.dev/gemma/terms)."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google 的 Gemma 4 E4B（4-bit）。回答比 E2B 更豐富，圖像理解更精準。需要配備 12 GB RAM 的裝置。Gemma 根據《Gemma 使用條款》（ai.google.dev/gemma/terms）提供，並受其約束。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google 的 Gemma 4 E4B（4-bit）。回答比 E2B 更丰富，图像理解更精准。需要配备 12 GB RAM 的设备。Gemma 依据《Gemma 使用条款》（ai.google.dev/gemma/terms）提供，并受其约束。"
+          }
+        }
+      }
+    },
+    "Fast all-rounder - newest generation": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schneller Allrounder – neueste Generation"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Γρήγορο και πολυχρηστικό – νεότερη γενιά"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rápido y versátil: la generación más nueva"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rapide et polyvalent – dernière génération"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Veloce e versatile: ultima generazione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高速なオールラウンダー - 最新世代"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빠른 만능형 - 최신 세대"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rápido e versátil – geração mais recente"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Быстрая и универсальная — новейшее поколение"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Швидка й універсальна — найновіше покоління"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快速全能 - 最新一代"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快速全能 - 最新一代"
+          }
+        }
+      }
+    },
+    "Qwen3.5 2B (4-bit). The newest Qwen generation: better reasoning and image understanding than Qwen3 Vision 2B at about the same size, in many languages. Needs a device with 6 GB of RAM or more.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B (4-bit). Die neueste Qwen-Generation: besseres logisches Denken und Bildverständnis als Qwen3 Vision 2B bei etwa gleicher Größe, in vielen Sprachen. Erfordert ein Gerät mit mindestens 6 GB RAM."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B (4-bit). Η νεότερη γενιά Qwen: καλύτερος συλλογισμός και κατανόηση εικόνων από το Qwen3 Vision 2B σε περίπου ίδιο μέγεθος, σε πολλές γλώσσες. Απαιτεί συσκευή με τουλάχιστον 6 GB RAM."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B (4-bit). La generación más nueva de Qwen: mejor razonamiento y comprensión de imágenes que Qwen3 Vision 2B con un tamaño similar, en muchos idiomas. Requiere un dispositivo con 6 GB de RAM o más."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B (4-bit). La dernière génération Qwen : meilleur raisonnement et meilleure compréhension des images que Qwen3 Vision 2B pour une taille similaire, dans de nombreuses langues. Nécessite un appareil avec au moins 6 GB de RAM."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B (4-bit). L'ultima generazione di Qwen: ragionamento e comprensione delle immagini migliori di Qwen3 Vision 2B con dimensioni simili, in molte lingue. Richiede un dispositivo con almeno 6 GB di RAM."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B（4-bit）。最新世代のQwen。ほぼ同じサイズで、Qwen3 Vision 2Bより推論と画像理解が向上し、多くの言語に対応します。6 GB以上のRAMを搭載したデバイスが必要です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B(4-bit). 최신 세대 Qwen으로, 비슷한 크기에서 Qwen3 Vision 2B보다 추론과 이미지 이해가 뛰어나며 여러 언어를 지원합니다. 6 GB 이상의 RAM을 갖춘 기기가 필요합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B (4-bit). A geração mais recente do Qwen: raciocínio e compreensão de imagens melhores que o Qwen3 Vision 2B com tamanho parecido, em muitos idiomas. Exige um dispositivo com 6 GB de RAM ou mais."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B (4-bit). Новейшее поколение Qwen: рассуждает и понимает изображения лучше, чем Qwen3 Vision 2B, при почти том же размере, и знает многие языки. Требуется устройство с 6 ГБ ОЗУ или больше."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B (4-bit). Найновіше покоління Qwen: міркує й розуміє зображення краще, ніж Qwen3 Vision 2B, за майже того самого розміру, і знає багато мов. Потрібен пристрій із 6 ГБ ОЗП або більше."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B（4-bit）。最新一代 Qwen：大小相若，推理和圖像理解卻比 Qwen3 Vision 2B 更好，並支援多種語言。需要配備 6 GB 或以上 RAM 的裝置。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 2B（4-bit）。最新一代 Qwen：体积相近，推理和图像理解却优于 Qwen3 Vision 2B，并支持多种语言。需要配备 6 GB 或以上 RAM 的设备。"
+          }
+        }
+      }
+    },
+    "Proven vision model - 30+ languages": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bewährtes Vision-Modell – über 30 Sprachen"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δοκιμασμένο μοντέλο όρασης – 30+ γλώσσες"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo de visión probado: más de 30 idiomas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle de vision éprouvé – plus de 30 langues"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modello di visione collaudato: oltre 30 lingue"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実績ある画像対応モデル - 30以上の言語に対応"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "검증된 비전 모델 - 30개 이상 언어 지원"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo de visão comprovado – mais de 30 idiomas"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проверенная модель с анализом изображений — 30+ языков"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перевірена модель з аналізом зображень — понад 30 мов"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "久經考驗的視覺模型 - 支援 30 多種語言"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "久经考验的视觉模型 - 支持 30 多种语言"
+          }
+        }
+      }
+    },
+    "Qwen3-VL 2B (4-bit). A proven small vision model with sharp image understanding and wide language coverage. Qwen3.5 Vision 2B is the newer model at about the same size.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 2B (4-bit). Ein bewährtes kleines Vision-Modell mit präzisem Bildverständnis und Unterstützung für viele Sprachen. Qwen3.5 Vision 2B ist das neuere Modell bei etwa gleicher Größe."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 2B (4-bit). Ένα δοκιμασμένο μικρό μοντέλο όρασης με ακριβή κατανόηση εικόνων και υποστήριξη πολλών γλωσσών. Το Qwen3.5 Vision 2B είναι το νεότερο μοντέλο σε περίπου ίδιο μέγεθος."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 2B (4-bit). Un modelo de visión pequeño y probado, con comprensión precisa de imágenes y compatible con muchos idiomas. Qwen3.5 Vision 2B es el modelo más reciente con un tamaño similar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 2B (4-bit). Un petit modèle de vision éprouvé, avec une compréhension fine des images et de nombreuses langues. Qwen3.5 Vision 2B est le modèle plus récent, pour une taille similaire."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 2B (4-bit). Un piccolo modello di visione collaudato, con una comprensione precisa delle immagini e il supporto di molte lingue. Qwen3.5 Vision 2B è il modello più recente con dimensioni simili."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 2B（4-bit）。精度の高い画像理解と幅広い言語対応を備えた、実績ある小型の画像対応モデル。ほぼ同じサイズの新しいモデルはQwen3.5 Vision 2Bです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 2B(4-bit). 정확한 이미지 이해와 폭넓은 언어 지원을 갖춘 검증된 소형 비전 모델입니다. 비슷한 크기의 더 새로운 모델은 Qwen3.5 Vision 2B입니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 2B (4-bit). Um modelo de visão pequeno e comprovado, com compreensão precisa de imagens e suporte a muitos idiomas. O Qwen3.5 Vision 2B é o modelo mais novo, com tamanho parecido."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 2B (4-bit). Проверенная небольшая модель с точным пониманием изображений и поддержкой многих языков. Более новая модель того же размера — Qwen3.5 Vision 2B."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 2B (4-bit). Перевірена невелика модель із точним розумінням зображень і підтримкою багатьох мов. Новіша модель того самого розміру — Qwen3.5 Vision 2B."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 2B（4-bit）。久經考驗的小型視覺模型，圖像理解精準，支援多種語言。大小相若的較新模型是 Qwen3.5 Vision 2B。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL 2B（4-bit）。久经考验的小型视觉模型，图像理解精准，支持多种语言。体积相近的更新模型是 Qwen3.5 Vision 2B。"
+          }
+        }
+      }
+    },
+    "About 2 GB RAM while active": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwa 2 GB RAM während der Nutzung"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Περίπου 2 GB RAM κατά τη λειτουργία"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unos 2 GB de RAM mientras está activo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environ 2 GB de RAM en cours d'utilisation"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Circa 2 GB di RAM quando è attivo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動作中は約2 GB RAMを使用"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "실행 중 약 2 GB RAM 사용"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca de 2 GB de RAM durante o uso"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Около 2 ГБ ОЗУ во время работы"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Близько 2 ГБ ОЗП під час роботи"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "運作時佔用約 2 GB RAM"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时占用约 2 GB RAM"
+          }
+        }
+      }
+    },
+    "About 2.5 GB RAM while active": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwa 2,5 GB RAM während der Nutzung"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Περίπου 2,5 GB RAM κατά τη λειτουργία"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unos 2,5 GB de RAM mientras está activo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environ 2,5 GB de RAM en cours d'utilisation"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Circa 2,5 GB di RAM quando è attivo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動作中は約2.5 GB RAMを使用"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "실행 중 약 2.5 GB RAM 사용"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca de 2,5 GB de RAM durante o uso"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Около 2,5 ГБ ОЗУ во время работы"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Близько 2,5 ГБ ОЗП під час роботи"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "運作時佔用約 2.5 GB RAM"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时占用约 2.5 GB RAM"
+          }
+        }
+      }
+    },
+    "About 4 GB RAM while active": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwa 4 GB RAM während der Nutzung"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Περίπου 4 GB RAM κατά τη λειτουργία"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unos 4 GB de RAM mientras está activo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environ 4 GB de RAM en cours d'utilisation"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Circa 4 GB di RAM quando è attivo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動作中は約4 GB RAMを使用"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "실행 중 약 4 GB RAM 사용"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca de 4 GB de RAM durante o uso"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Около 4 ГБ ОЗУ во время работы"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Близько 4 ГБ ОЗП під час роботи"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "運作時佔用約 4 GB RAM"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时占用约 4 GB RAM"
+          }
+        }
+      }
+    },
+    "About 4.5 GB RAM while active": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwa 4,5 GB RAM während der Nutzung"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Περίπου 4,5 GB RAM κατά τη λειτουργία"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unos 4,5 GB de RAM mientras está activo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environ 4,5 GB de RAM en cours d'utilisation"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Circa 4,5 GB di RAM quando è attivo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動作中は約4.5 GB RAMを使用"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "실행 중 약 4.5 GB RAM 사용"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca de 4,5 GB de RAM durante o uso"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Около 4,5 ГБ ОЗУ во время работы"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Близько 4,5 ГБ ОЗП під час роботи"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "運作時佔用約 4.5 GB RAM"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时占用约 4.5 GB RAM"
+          }
+        }
+      }
+    },
+    "About 6 GB RAM while active": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwa 6 GB RAM während der Nutzung"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Περίπου 6 GB RAM κατά τη λειτουργία"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unos 6 GB de RAM mientras está activo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environ 6 GB de RAM en cours d'utilisation"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Circa 6 GB di RAM quando è attivo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動作中は約6 GB RAMを使用"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "실행 중 약 6 GB RAM 사용"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca de 6 GB de RAM durante o uso"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Около 6 ГБ ОЗУ во время работы"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Близько 6 ГБ ОЗП під час роботи"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "運作時佔用約 6 GB RAM"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时占用约 6 GB RAM"
           }
         }
       }

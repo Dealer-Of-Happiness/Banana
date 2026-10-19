@@ -404,7 +404,7 @@ final class MLXService: ObservableObject {
 
         // Text-only models (which a user can add themselves) are not VLMs and
         // the vision factory doesn't know how to build them.
-        let factory: ModelFactory = model.supportsVision
+        let factory: any ModelFactory = model.supportsVision
             ? VLMModelFactory.shared
             : LLMModelFactory.shared
 
@@ -428,9 +428,11 @@ final class MLXService: ObservableObject {
         // prefetcher fills, so leaving it out made the loader download the
         // whole model a second time after the app had already said the
         // model was installed.
+        let tokenizerLoader = TransformersTokenizerLoader()
         func load(_ configuration: ModelConfiguration) async throws -> ModelContainer {
             try await factory.loadContainer(
-                hub: ModelManager.shared.hub,
+                from: AppHubDownloader(hub: ModelManager.shared.hub),
+                using: tokenizerLoader,
                 configuration: configuration
             ) { [weak self] progress in
                 let service = self
@@ -440,6 +442,11 @@ final class MLXService: ObservableObject {
                     service.isPreparingModel = true
                 }
             }
+        }
+        // Installed models load straight from their folder: no downloader is
+        // involved, so nothing can reach the network on this path.
+        func load(directory: URL) async throws -> ModelContainer {
+            try await factory.loadContainer(from: directory, using: tokenizerLoader)
         }
 
         // A download that finishes while the phone is locked or another app
@@ -455,7 +462,7 @@ final class MLXService: ObservableObject {
         do {
             if filesOnDisk, let repoDir = ModelManager.shared.modelDirectory(for: model) {
                 do {
-                    modelContainer = try await load(ModelConfiguration(directory: repoDir))
+                    modelContainer = try await load(directory: repoDir)
                 } catch is CancellationError {
                     throw CancellationError()
                 } catch {

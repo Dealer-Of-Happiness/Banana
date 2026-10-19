@@ -72,6 +72,11 @@ final class ChatEngine: ObservableObject {
         } else if ai.isAvailable {
             // Instant chat out of the box; vision model can come later.
             self.selectedModel = .appleIntelligence
+        } else if let onDisk = AIModel.builtInModels.first(where: { $0.fitsThisDevice() && $0.isDownloaded }) {
+            // A model already on disk beats the current recommendation:
+            // when the recommended model changes (Qwen3-VL 2B to Qwen3.5 2B)
+            // nobody should be asked to download again to keep chatting.
+            self.selectedModel = onDisk
         } else {
             self.selectedModel = AIModel.recommendedDownloadModel
         }

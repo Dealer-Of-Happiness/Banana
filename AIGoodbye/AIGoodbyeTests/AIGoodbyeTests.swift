@@ -70,11 +70,59 @@ struct ModelCatalogTests {
     @Test func recommendedModelMatchesDeviceTier() {
         let recommended = AIModel.recommendedDownloadModel
         if DeviceCapability.physicalMemoryGB >= 6 {
-            #expect(recommended.id == AIModel.qwen3VL2B.id)
+            #expect(recommended.id == AIModel.qwen35_2B.id)
         } else {
             #expect(recommended.id == AIModel.smolVLM2.id)
         }
         #expect(!recommended.isLegacy)
+    }
+
+    /// Every model must be offered on the devices its description names,
+    /// and never on smaller ones. Ceilings are `memoryCeilingGB` for 4, 6,
+    /// 8 and 12 GB devices.
+    @Test func modelsLandOnTheirDeviceTier() {
+        let ceiling4GB = 2, ceiling6GB = 4, ceiling8GB = 5, ceiling12GB = 8
+
+        #expect(AIModel.qwen35_08B.fitsThisDevice(memoryCeilingGB: ceiling4GB))
+
+        #expect(AIModel.qwen35_2B.fitsThisDevice(memoryCeilingGB: ceiling6GB))
+        #expect(!AIModel.qwen35_2B.fitsThisDevice(memoryCeilingGB: ceiling4GB))
+
+        for model in [AIModel.qwen35_4B, .gemma4E2B] {
+            #expect(model.fitsThisDevice(memoryCeilingGB: ceiling8GB), "\(model.name) is for 8 GB devices")
+            #expect(!model.fitsThisDevice(memoryCeilingGB: ceiling6GB), "\(model.name) is too big for 6 GB devices")
+        }
+
+        for model in [AIModel.qwen35_9BPro, .gemma4E4B, .qwen3VL8BPro] {
+            #expect(model.fitsThisDevice(memoryCeilingGB: ceiling12GB), "\(model.name) is for 12 GB devices")
+            #expect(!model.fitsThisDevice(memoryCeilingGB: ceiling8GB), "\(model.name) is too big for 8 GB devices")
+        }
+    }
+
+    /// A model's own minimum RAM figure must agree with the memory gate,
+    /// or the description promises a device the picker then refuses.
+    @Test func minimumRAMAgreesWithTheMemoryGate() {
+        for model in AIModel.builtInModels {
+            let ceiling = max(2, Int((Double(model.minRecommendedRAMGB) * 0.7).rounded(.down)))
+            #expect(model.fitsThisDevice(memoryCeilingGB: ceiling),
+                    "\(model.name) says \(model.minRecommendedRAMGB) GB but doesn't fit there")
+        }
+    }
+
+    /// Thinking models must not show their reasoning: every Qwen3.5 repo's
+    /// chat template closes an empty think block unless asked to think,
+    /// and the app never asks. Guard the ids so a typo can't point at a
+    /// thinking-by-default repo.
+    @Test func newGenerationModelsPointAtTheTestedRepos() {
+        #expect(AIModel.qwen35_08B.huggingFaceId == "mlx-community/Qwen3.5-0.8B-4bit")
+        #expect(AIModel.qwen35_2B.huggingFaceId == "mlx-community/Qwen3.5-2B-4bit")
+        #expect(AIModel.qwen35_4B.huggingFaceId == "mlx-community/Qwen3.5-4B-4bit")
+        #expect(AIModel.qwen35_9BPro.huggingFaceId == "mlx-community/Qwen3.5-9B-4bit")
+        #expect(AIModel.gemma4E2B.huggingFaceId == "mlx-community/gemma-4-e2b-it-4bit")
+        #expect(AIModel.gemma4E4B.huggingFaceId == "mlx-community/gemma-4-e4b-it-4bit")
+        for model in AIModel.builtInModels {
+            #expect(model.supportsVision, "\(model.name): every built-in model sees images")
+        }
     }
 }
 

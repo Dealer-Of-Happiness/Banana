@@ -86,8 +86,14 @@ struct ModelSelectionView: View {
         // The Recommended model first: on a 12 GB phone the catalog order
         // put the 8B Pro above it, so the first thing offered was the
         // slowest, largest download.
+        // Then everything this device can run, then the ones it can't: with
+        // ten models, a 4 GB phone would otherwise scroll past a column of
+        // greyed-out 12 GB models to reach its own.
         let recommendedId = AIModel.recommendedDownloadModel.id
-        return models.filter { $0.id == recommendedId } + models.filter { $0.id != recommendedId }
+        let others = models.filter { $0.id != recommendedId }
+        return models.filter { $0.id == recommendedId }
+            + others.filter { $0.fitsThisDevice() }
+            + others.filter { !$0.fitsThisDevice() }
     }
 
     // MARK: - Rows

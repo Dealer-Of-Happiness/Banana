@@ -107,6 +107,34 @@ final class AIGoodbyeStoreShots: XCTestCase {
         }
     }
 
+    /// The main screen in another language, upright and on its side, with
+    /// no element lookups (labels are translated). For checking a language
+    /// and orientation together, and the start of localized store shots:
+    /// AIG_SHOT_LANGUAGE=ru (any of the app's language codes).
+    @MainActor
+    func testLanguageShot() throws {
+        let language = ProcessInfo.processInfo.environment["AIG_SHOT_LANGUAGE"] ?? "ru"
+        let app = XCUIApplication()
+        app.launchEnvironment["AIG_DEMO"] = "1"
+        app.launchEnvironment["AIG_DEMO_TOP"] = "1"
+        app.launchArguments += [
+            "-AppleLanguages", "(\(language))",
+            "-AppleLocale", language,
+            "-hasAcceptedTerms", "YES",
+            "-hasSeenSetup", "YES",
+            "-showSidebar", "YES",
+            "-lastConversationId", sunday,
+        ]
+        XCUIDevice.shared.orientation = .portrait
+        app.launch()
+        sleep(4)
+        snap(app, "lang-\(language)-portrait")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        sleep(3)
+        snap(app, "lang-\(language)-landscape")
+        XCUIDevice.shared.orientation = .portrait
+    }
+
     @MainActor
     private func launch(conversation: String, extraEnvironment: [String: String] = [:]) -> XCUIApplication {
         let app = XCUIApplication()

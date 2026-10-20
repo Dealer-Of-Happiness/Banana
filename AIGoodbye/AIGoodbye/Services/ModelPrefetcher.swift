@@ -32,6 +32,13 @@ nonisolated enum PrefetchError: Error {
     /// A file transfer ended with a non-2xx response (0: no request built).
     case downloadFailed(status: Int)
     case sizeMismatch
+    /// A file from the fallback source did not match the pinned SHA-256.
+    case checksumMismatch
+
+    var isChecksumMismatch: Bool {
+        if case .checksumMismatch = self { return true }
+        return false
+    }
 }
 
 final class ModelPrefetcher {
@@ -47,43 +54,183 @@ final class ModelPrefetcher {
     /// identifier - offline, and without the model's directory listing.
     private static let transferManifestName = ".aig_transfers"
 
+    // MARK: - Download sources
+
+    /// Where a model's files come from.
+    ///
+    /// Hugging Face is the home of every model the app offers, but it is
+    /// blocked on some networks - mainland China above all, where every
+    /// download failed with a network error. ModelScope (modelscope.cn) hosts
+    /// byte-identical copies of the built-in models and is reachable there.
+    /// It is only ever used for built-in models, whose every file is pinned
+    /// in `BuiltInModelManifests` and checked against Hugging Face's own
+    /// SHA-256 after it arrives.
+    nonisolated enum Source: String, Sendable {
+        case huggingFace
+        case modelScope
+
+        func fileURL(repo: String, encodedPath: String) -> URL? {
+            switch self {
+            case .huggingFace:
+                URL(string: "https://huggingface.co/\(repo)/resolve/main/\(encodedPath)")
+            case .modelScope:
+                URL(string: "https://modelscope.cn/models/\(repo)/resolve/master/\(encodedPath)")
+            }
+        }
+    }
+
+    nonisolated private static let preferredSourceKey = "modelDownloadSource"
+
+    /// The source that last worked. After Hugging Face has been unreachable
+    /// and ModelScope delivered, the next download starts at ModelScope
+    /// instead of waiting for Hugging Face to fail again.
+    nonisolated static var preferredSource: Source {
+        get { Source(rawValue: UserDefaults.standard.string(forKey: preferredSourceKey) ?? "") ?? .huggingFace }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: preferredSourceKey) }
+    }
+
+    /// The order to try sources in for a model. Models without a pinned
+    /// manifest (ones a user added) only ever come from Hugging Face.
+    nonisolated static func sourceOrder(hasPinnedManifest: Bool, preferred: Source) -> [Source] {
+        guard hasPinnedManifest else { return [.huggingFace] }
+        return preferred == .modelScope ? [.modelScope, .huggingFace] : [.huggingFace, .modelScope]
+    }
+
+    /// Whether a failure means the source could not serve the model - worth
+    /// trying the other one - rather than something a second source cannot
+    /// fix (a full disk, the user stopping, no internet at all).
+    nonisolated static func isUnreachable(_ error: Error) -> Bool {
+        if error is CancellationError { return false }
+        if let prefetchError = error as? PrefetchError {
+            switch prefetchError {
+            case .listingFailed(let status), .downloadFailed(let status):
+                return status != 0
+            case .sizeMismatch, .checksumMismatch:
+                return true
+            case .noFiles:
+                return false
+            }
+        }
+        if MLXService.isOutOfSpace(error) { return false }
+        let ns = error as NSError
+        guard ns.domain == NSURLErrorDomain else { return false }
+        switch ns.code {
+        case NSURLErrorCancelled, NSURLErrorNotConnectedToInternet,
+             NSURLErrorDataNotAllowed, NSURLErrorInternationalRoamingOff:
+            return false
+        default:
+            return true
+        }
+    }
+
+    /// Requests that are not file transfers (the repository listing and its
+    /// commit id). A short timeout, so a network that silently drops
+    /// Hugging Face reaches the fallback in seconds rather than a minute.
+    nonisolated private static let apiSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForResource = 60
+        config.waitsForConnectivity = false
+        NetworkAudit.observe(config)
+        return URLSession(configuration: config)
+    }()
+
     func prefetch(
         hfId: String,
         into repoDir: URL,
         progress: @escaping @Sendable (Int64, Int64) -> Void
     ) async throws {
-        // 1. Repo info: latest commit hash (nicety for metadata sidecars —
-        // a failure here must not forfeit the fast path).
-        var commitHash: String?
-        if let infoURL = URL(string: "https://huggingface.co/api/models/\(hfId)"),
-           let (data, response) = try? await URLSession.shared.data(from: infoURL),
-           (response as? HTTPURLResponse)?.statusCode == 200,
-           let info = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            commitHash = info["sha"] as? String
+        let pinned = BuiltInModelManifests.manifest(for: hfId)
+        let order = Self.sourceOrder(hasPinnedManifest: pinned != nil, preferred: Self.preferredSource)
+        var firstError: Error?
+        for source in order {
+            do {
+                try await prefetch(hfId: hfId, into: repoDir, from: source, pinned: pinned, progress: progress)
+                if pinned != nil { Self.preferredSource = source }
+                return
+            } catch {
+                try Task.checkCancellation()
+                if error is CancellationError { throw error }
+                let isLast = source == order.last
+                if isLast || !Self.isUnreachable(error) {
+                    // Both sources unreachable: the first failure is the one
+                    // that describes the user's network.
+                    if let firstError, Self.isUnreachable(error) { throw firstError }
+                    throw error
+                }
+                firstError = error
+            }
         }
+    }
 
-        // 2. File listing with sizes. The HTTP status travels with the error:
-        // a 503 from Hugging Face, a 429, and a gated repository each need a
-        // different sentence, and a blanket "check Wi-Fi" was wrong for all.
-        guard let treeURL = URL(string: "https://huggingface.co/api/models/\(hfId)/tree/main?recursive=true") else {
-            throw PrefetchError.listingFailed(status: 0)
-        }
-        let (treeData, treeResponse) = try await URLSession.shared.data(from: treeURL)
-        let listingStatus = (treeResponse as? HTTPURLResponse)?.statusCode ?? 0
-        guard listingStatus == 200 else {
-            throw PrefetchError.listingFailed(status: listingStatus)
-        }
-        let allEntries = try JSONDecoder().decode([RepoFile].self, from: treeData)
-        // `.jinja` too: newer repositories ship the chat template as a
-        // standalone file that the library prefers over the JSON copy, and
-        // a purely local load can only use what is on disk.
-        let files = allEntries.filter { entry in
-            entry.type == "file"
-                && (entry.path.hasSuffix(".safetensors")
-                    || entry.path.hasSuffix(".json")
-                    || entry.path.hasSuffix(".jinja"))
+    /// One source, no fallback. Internal for the tests.
+    func prefetch(
+        hfId: String,
+        into repoDir: URL,
+        from source: Source,
+        pinned: PinnedModelManifest?,
+        progress: @escaping @Sendable (Int64, Int64) -> Void
+    ) async throws {
+        var commitHash: String?
+        let files: [RepoFile]
+        switch source {
+        case .huggingFace:
+            #if DEBUG
+            // Debug builds only: behave as on a network that blocks Hugging
+            // Face (mainland China), to exercise the fallback anywhere.
+            if ProcessInfo.processInfo.environment["AIG_BLOCK_HUGGINGFACE"] == "1" {
+                throw URLError(.cannotFindHost)
+            }
+            #endif
+            // 1. File listing with sizes. The HTTP status travels with the
+            // error: a 503 from Hugging Face, a 429, and a gated repository
+            // each need a different sentence, and a blanket "check Wi-Fi" was
+            // wrong for all.
+            guard let treeURL = URL(string: "https://huggingface.co/api/models/\(hfId)/tree/main?recursive=true") else {
+                throw PrefetchError.listingFailed(status: 0)
+            }
+            let (treeData, treeResponse) = try await Self.apiSession.data(from: treeURL)
+            let listingStatus = (treeResponse as? HTTPURLResponse)?.statusCode ?? 0
+            guard listingStatus == 200 else {
+                throw PrefetchError.listingFailed(status: listingStatus)
+            }
+            let allEntries = try JSONDecoder().decode([RepoFile].self, from: treeData)
+            // `.jinja` too: newer repositories ship the chat template as a
+            // standalone file that the library prefers over the JSON copy,
+            // and a purely local load can only use what is on disk.
+            files = allEntries.filter { entry in
+                entry.type == "file"
+                    && (entry.path.hasSuffix(".safetensors")
+                        || entry.path.hasSuffix(".json")
+                        || entry.path.hasSuffix(".jinja"))
+            }
+
+            // 2. Repo info: latest commit hash (nicety for metadata sidecars
+            // - a failure here must not forfeit the fast path). After the
+            // listing, so a blocked Hugging Face fails over on the first
+            // request rather than the second.
+            if let infoURL = URL(string: "https://huggingface.co/api/models/\(hfId)"),
+               let (data, response) = try? await Self.apiSession.data(from: infoURL),
+               (response as? HTTPURLResponse)?.statusCode == 200,
+               let info = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                commitHash = info["sha"] as? String
+            }
+        case .modelScope:
+            // No listing: the pinned manifest says exactly which files, how
+            // big, and what each one must hash to.
+            guard let pinned else { throw PrefetchError.listingFailed(status: 0) }
+            commitHash = pinned.commit
+            files = pinned.files.map {
+                RepoFile(type: "file", path: $0.path, size: $0.size, oid: $0.etag, lfs: nil)
+            }
         }
         guard !files.isEmpty else { throw PrefetchError.noFiles }
+
+        // Files from the fallback source are checked against Hugging Face's
+        // own fingerprints before the app trusts them.
+        let expectedHashes: [String: String] = source == .modelScope
+            ? Dictionary(uniqueKeysWithValues: (pinned?.files ?? []).map { ($0.path, $0.sha256) })
+            : [:]
 
         // Resolve every source URL before the first byte moves. Paths are
         // percent-encoded: a repository file name with a space or a
@@ -92,7 +239,7 @@ final class ModelPrefetcher {
         var sources: [(file: RepoFile, url: URL)] = []
         for file in files {
             guard let encodedPath = file.path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
-                  let url = URL(string: "https://huggingface.co/\(hfId)/resolve/main/\(encodedPath)") else {
+                  let url = source.fileURL(repo: hfId, encodedPath: encodedPath) else {
                 throw PrefetchError.downloadFailed(status: 0)
             }
             sources.append((file: file, url: url))
@@ -113,13 +260,20 @@ final class ModelPrefetcher {
             try Task.checkCancellation()
 
             let destination = repoDir.appendingPathComponent(file.path)
-            let resumeFile = FileDownload.resumeDataFile(for: destination)
+            // Resume data names the URL it came from, so each source parks
+            // its own: resuming a Hugging Face transfer would go back to the
+            // server that just failed.
+            let resumeFile = FileDownload.resumeDataFile(for: destination, source: source)
             let expectedSize = file.actualSize
+            let expectedHash = expectedHashes[file.path]
 
             // Already fully downloaded (size matches)? Count it and move on.
+            // From the fallback source the bytes must also match: a file can
+            // reach full size and the app be killed before it was checked.
             if expectedSize > 0,
                let attrs = try? FileManager.default.attributesOfItem(atPath: destination.path),
-               (attrs[.size] as? Int64) == expectedSize {
+               (attrs[.size] as? Int64) == expectedSize,
+               await Self.matches(destination, sha256: expectedHash) {
                 try? FileManager.default.removeItem(at: resumeFile)
                 writeSidecarIfNeeded(for: file, commitHash: commitHash, metaDir: metaDir)
                 completedBytes += expectedSize
@@ -144,8 +298,13 @@ final class ModelPrefetcher {
             var resumeData: Data? = FileManager.default.contents(atPath: resumeFile.path)
             if resumeData?.isEmpty == true { resumeData = nil }
             while true {
+                let resumedThisAttempt = resumeData != nil
                 do {
-                    let download = FileDownload(destination: destination, wifiOnly: wifiOnly) { bytesSoFar in
+                    let download = FileDownload(
+                        destination: destination,
+                        resumeFile: resumeFile,
+                        wifiOnly: wifiOnly
+                    ) { bytesSoFar in
                         progress(base + bytesSoFar, totalBytes)
                     }
                     try await download.run(url: sourceURL, resumeData: resumeData, timeout: 30)
@@ -160,9 +319,19 @@ final class ModelPrefetcher {
                             throw PrefetchError.sizeMismatch
                         }
                     }
+                    // The fallback source's bytes must be exactly Hugging
+                    // Face's. Not retried: a mirror that serves the wrong
+                    // file will serve it again.
+                    if !(await Self.matches(destination, sha256: expectedHash)) {
+                        try? FileManager.default.removeItem(at: destination)
+                        try? FileManager.default.removeItem(at: resumeFile)
+                        throw PrefetchError.checksumMismatch
+                    }
                     // The file is complete; its resume data is stale now.
                     try? FileManager.default.removeItem(at: resumeFile)
                     break
+                } catch let error as PrefetchError where error.isChecksumMismatch {
+                    throw error
                 } catch {
                     // Park partial progress on disk before anything else, so
                     // a kill between retries (or the cancel below) does not
@@ -183,7 +352,11 @@ final class ModelPrefetcher {
                     if let prefetchError = error as? PrefetchError,
                        case .downloadFailed(let status) = prefetchError,
                        (400..<500).contains(status) {
-                        throw error
+                        // Resume data carries the signed CDN address it was
+                        // made from, and those expire (ModelScope's within a
+                        // day). A refusal of a resumed transfer earns one
+                        // fresh start before it counts as the file's answer.
+                        guard resumedThisAttempt, attempt < 3 else { throw error }
                     }
                     attempt += 1
                     if attempt > 3 { throw error }
@@ -231,10 +404,38 @@ final class ModelPrefetcher {
 
     // MARK: - Transfer manifest and background-session teardown
 
+    /// Adds to what is already listed: after a switch of source, transfers
+    /// from both may still be alive in the system, and a delete must reach
+    /// every one of them.
     private static func writeTransferManifest(urls: [URL], in repoDir: URL) {
         try? FileManager.default.createDirectory(at: repoDir, withIntermediateDirectories: true)
-        guard let data = try? JSONEncoder().encode(urls.map(\.absoluteString)) else { return }
-        try? data.write(to: repoDir.appendingPathComponent(transferManifestName), options: .atomic)
+        let manifest = repoDir.appendingPathComponent(transferManifestName)
+        var strings: [String] = []
+        if let data = FileManager.default.contents(atPath: manifest.path),
+           let existing = try? JSONDecoder().decode([String].self, from: data) {
+            strings = existing
+        }
+        for url in urls.map(\.absoluteString) where !strings.contains(url) {
+            strings.append(url)
+        }
+        guard let data = try? JSONEncoder().encode(strings) else { return }
+        try? data.write(to: manifest, options: .atomic)
+    }
+
+    /// The Hugging Face file URLs planned for this model: what the library's
+    /// own downloader (which only knows Hugging Face) fetches when the app
+    /// hands a download to it.
+    static func plannedLibraryURLs(for model: AIModel) -> [URL] {
+        let planned = plannedTransferURLs(for: model).filter { $0.host()?.hasSuffix("huggingface.co") == true }
+        if !planned.isEmpty { return planned }
+        // Only ModelScope was tried so far: the pinned file list says what
+        // the library would fetch from Hugging Face.
+        guard let hfId = model.huggingFaceId,
+              let pinned = BuiltInModelManifests.manifest(for: hfId) else { return [] }
+        return pinned.files.compactMap { file in
+            file.path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
+                .flatMap { Source.huggingFace.fileURL(repo: hfId, encodedPath: $0) }
+        }
     }
 
     /// The file URLs the prefetcher planned for this model, from the manifest
@@ -285,9 +486,41 @@ final class ModelPrefetcher {
             default:
                 return nil
             }
+        case .checksumMismatch:
+            return L10n.text("A downloaded file didn't match the original, so it was deleted. Try the download again later.")
         case .noFiles, .sizeMismatch:
             return nil
         }
+    }
+
+    // MARK: - Integrity
+
+    /// Whether the file's SHA-256 is `sha256`; true when there is nothing to
+    /// check against. Hashing gigabytes takes seconds, so it runs off the
+    /// main actor.
+    static func matches(_ file: URL, sha256 expected: String?) async -> Bool {
+        guard let expected else { return true }
+        let actual = await Task.detached(priority: .utility) {
+            try? Self.sha256(of: file)
+        }.value
+        return actual == expected.lowercased()
+    }
+
+    /// Lowercase hex SHA-256 of a file, read in 8 MB pieces so a 6 GB
+    /// weights file never sits in memory.
+    nonisolated static func sha256(of file: URL) throws -> String {
+        let handle = try FileHandle(forReadingFrom: file)
+        defer { try? handle.close() }
+        var hasher = SHA256()
+        while true {
+            let finished: Bool = try autoreleasepool {
+                guard let chunk = try handle.read(upToCount: 8 << 20), !chunk.isEmpty else { return true }
+                hasher.update(data: chunk)
+                return false
+            }
+            if finished { break }
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
     /// Whether an error means a file that should be on disk is not (Cocoa or
@@ -383,10 +616,27 @@ nonisolated final class FileDownload: NSObject, URLSessionDownloadDelegate, @unc
         destination.appendingPathExtension("resume")
     }
 
-    private var resumeFile: URL { Self.resumeDataFile(for: destination) }
+    /// Per source: resume data names the URL it was made from, so a
+    /// ModelScope transfer must never pick up a Hugging Face blob or the
+    /// reverse. Hugging Face keeps the original name, so transfers parked by
+    /// an older version still resume.
+    static func resumeDataFile(for destination: URL, source: ModelPrefetcher.Source) -> URL {
+        switch source {
+        case .huggingFace: resumeDataFile(for: destination)
+        case .modelScope: destination.appendingPathExtension("msresume")
+        }
+    }
 
-    init(destination: URL, wifiOnly: Bool, onBytes: @escaping @Sendable (Int64) -> Void) {
+    private let resumeFile: URL
+
+    init(
+        destination: URL,
+        resumeFile: URL? = nil,
+        wifiOnly: Bool,
+        onBytes: @escaping @Sendable (Int64) -> Void
+    ) {
         self.destination = destination
+        self.resumeFile = resumeFile ?? Self.resumeDataFile(for: destination)
         self.wifiOnly = wifiOnly
         self.onBytes = onBytes
     }

@@ -846,3 +846,147 @@ struct AppLanguageDateTests {
         #expect(longAgo.aigRelative(now: now) != todayText)
     }
 }
+
+/// Where Hugging Face is blocked (mainland China), built-in models come from
+/// ModelScope instead, checked file by file against pinned SHA-256s.
+struct DownloadSourceTests {
+
+    @Test func everyBuiltInModelIsPinnedFileForFile() throws {
+        for model in AIModel.builtInModels {
+            let hfId = try #require(model.huggingFaceId)
+            let pinned = try #require(BuiltInModelManifests.manifest(for: hfId), "\(model.name) has no pinned manifest")
+            // The pinned files are the model's advertised size (the older
+            // catalog entries give it rounded).
+            let drift = abs(Double(pinned.totalBytes - model.sizeBytes)) / Double(model.sizeBytes)
+            #expect(drift < 0.02, "\(model.name): pinned \(pinned.totalBytes) vs \(model.sizeBytes)")
+            #expect(pinned.files.contains { $0.path == "config.json" })
+            #expect(pinned.files.contains { $0.path.hasSuffix(".safetensors") })
+            #expect(pinned.commit.count == 40)
+            for file in pinned.files {
+                #expect(file.sha256.count == 64 && file.sha256 == file.sha256.lowercased())
+                #expect(file.size > 0)
+                #expect(file.path.hasSuffix(".safetensors") || file.path.hasSuffix(".json") || file.path.hasSuffix(".jinja"))
+            }
+        }
+    }
+
+    @Test func onlyPinnedModelsEverUseModelScope() {
+        #expect(ModelPrefetcher.sourceOrder(hasPinnedManifest: false, preferred: .modelScope) == [.huggingFace])
+        #expect(ModelPrefetcher.sourceOrder(hasPinnedManifest: false, preferred: .huggingFace) == [.huggingFace])
+        #expect(ModelPrefetcher.sourceOrder(hasPinnedManifest: true, preferred: .huggingFace) == [.huggingFace, .modelScope])
+        #expect(ModelPrefetcher.sourceOrder(hasPinnedManifest: true, preferred: .modelScope) == [.modelScope, .huggingFace])
+        // A model the user added has no pin.
+        #expect(BuiltInModelManifests.manifest(for: "someone/their-model-4bit") == nil)
+    }
+
+    @Test func fileURLsPointAtEachSource() {
+        let repo = "mlx-community/Qwen3.5-0.8B-4bit"
+        #expect(ModelPrefetcher.Source.huggingFace.fileURL(repo: repo, encodedPath: "config.json")?.absoluteString
+                == "https://huggingface.co/mlx-community/Qwen3.5-0.8B-4bit/resolve/main/config.json")
+        #expect(ModelPrefetcher.Source.modelScope.fileURL(repo: repo, encodedPath: "config.json")?.absoluteString
+                == "https://modelscope.cn/models/mlx-community/Qwen3.5-0.8B-4bit/resolve/master/config.json")
+    }
+
+    @Test func onlyAnUnreachableSourceTriesTheOther() {
+        // A blocked or failing server: try the other source.
+        #expect(ModelPrefetcher.isUnreachable(URLError(.cannotFindHost)))
+        #expect(ModelPrefetcher.isUnreachable(URLError(.cannotConnectToHost)))
+        #expect(ModelPrefetcher.isUnreachable(URLError(.timedOut)))
+        #expect(ModelPrefetcher.isUnreachable(URLError(.secureConnectionFailed)))
+        #expect(ModelPrefetcher.isUnreachable(URLError(.networkConnectionLost)))
+        #expect(ModelPrefetcher.isUnreachable(PrefetchError.listingFailed(status: 503)))
+        #expect(ModelPrefetcher.isUnreachable(PrefetchError.downloadFailed(status: 403)))
+        #expect(ModelPrefetcher.isUnreachable(PrefetchError.sizeMismatch))
+        // Nothing a second source can fix.
+        #expect(!ModelPrefetcher.isUnreachable(URLError(.notConnectedToInternet)))
+        #expect(!ModelPrefetcher.isUnreachable(URLError(.cancelled)))
+        #expect(!ModelPrefetcher.isUnreachable(CancellationError()))
+        #expect(!ModelPrefetcher.isUnreachable(PrefetchError.noFiles))
+        #expect(!ModelPrefetcher.isUnreachable(CocoaError(.fileWriteOutOfSpace)))
+    }
+
+    @Test func modelScopeDownloadsAreLabelledInThePrivacyCenter() {
+        let repo = "mlx-community/Qwen3.5-0.8B-4bit"
+        #expect(NetworkEvent.purpose(host: "modelscope.cn", path: "/models/\(repo)/resolve/master/model.safetensors", downloadingRepo: repo) == L10n.text("Downloading AI model files"))
+        #expect(NetworkEvent.purpose(host: "cdn-lfs-cn-1.modelscope.cn", path: "/prod/lfs-objects/f5/a0/abc", downloadingRepo: repo) == L10n.text("Downloading AI model files"))
+        #expect(NetworkEvent.purpose(host: "modelscope.cn.example.com", path: "/x", downloadingRepo: repo) == L10n.text("Other"))
+    }
+
+    @Test func sha256MatchesAKnownValue() async throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("aig-sha-\(UUID().uuidString)")
+        try Data("abc".utf8).write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let known = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        #expect(try ModelPrefetcher.sha256(of: url) == known)
+        #expect(await ModelPrefetcher.matches(url, sha256: known))
+        #expect(await ModelPrefetcher.matches(url, sha256: known.uppercased()))
+        #expect(!(await ModelPrefetcher.matches(url, sha256: String(repeating: "0", count: 64))))
+        #expect(await ModelPrefetcher.matches(url, sha256: nil))
+    }
+
+    @Test func eachSourceParksItsOwnResumeData() {
+        let file = URL(fileURLWithPath: "/tmp/model.safetensors")
+        let hf = FileDownload.resumeDataFile(for: file, source: .huggingFace)
+        let ms = FileDownload.resumeDataFile(for: file, source: .modelScope)
+        #expect(hf == FileDownload.resumeDataFile(for: file))
+        #expect(hf != ms)
+    }
+}
+
+/// Real downloads from ModelScope. Opt-in (TEST_RUNNER_AIG_NETWORK_TESTS=1),
+/// so the regular suite never touches the network.
+@Suite(.enabled(if: ProcessInfo.processInfo.environment["AIG_NETWORK_TESTS"] == "1"))
+struct ModelScopeNetworkTests {
+
+    private func tempDir() -> URL {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("aig-ms-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    /// The small files of a model straight from ModelScope: right URL
+    /// format, redirects followed, every file's SHA-256 checked.
+    @Test @MainActor func modelScopeServesThePinnedFiles() async throws {
+        let hfId = "mlx-community/Qwen3.5-0.8B-4bit"
+        let full = try #require(BuiltInModelManifests.manifest(for: hfId))
+        let small = PinnedModelManifest(commit: full.commit, files: full.files.filter { !$0.path.hasSuffix(".safetensors") })
+        let dir = tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let prefetcher = ModelPrefetcher()
+        prefetcher.wifiOnly = false
+        try await prefetcher.prefetch(hfId: hfId, into: dir, from: .modelScope, pinned: small) { _, _ in }
+        for file in small.files {
+            let url = dir.appendingPathComponent(file.path)
+            #expect(try ModelPrefetcher.sha256(of: url) == file.sha256, "\(file.path)")
+        }
+        // The loader's metadata sidecars carry Hugging Face's ids.
+        let sidecar = dir.appendingPathComponent(".cache/huggingface/download/config.json.metadata")
+        let contents = try String(contentsOf: sidecar, encoding: .utf8)
+        #expect(contents.hasPrefix(full.commit))
+    }
+
+    /// A whole model with Hugging Face blocked, through the same entry point
+    /// the app uses: it must come from ModelScope, intact. 650 MB, so it
+    /// needs TEST_RUNNER_AIG_NETWORK_TESTS_FULL=1 and
+    /// TEST_RUNNER_AIG_BLOCK_HUGGINGFACE=1 as well.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["AIG_NETWORK_TESTS_FULL"] == "1"),
+          .timeLimit(.minutes(20)))
+    @MainActor func blockedHuggingFaceFallsBackToModelScope() async throws {
+        #expect(ProcessInfo.processInfo.environment["AIG_BLOCK_HUGGINGFACE"] == "1")
+        let hfId = "mlx-community/Qwen3.5-0.8B-4bit"
+        let pinned = try #require(BuiltInModelManifests.manifest(for: hfId))
+        let saved = ModelPrefetcher.preferredSource
+        ModelPrefetcher.preferredSource = .huggingFace
+        defer { ModelPrefetcher.preferredSource = saved }
+        let dir = tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let prefetcher = ModelPrefetcher()
+        prefetcher.wifiOnly = false
+        try await prefetcher.prefetch(hfId: hfId, into: dir) { _, _ in }
+        for file in pinned.files {
+            #expect(try ModelPrefetcher.sha256(of: dir.appendingPathComponent(file.path)) == file.sha256, "\(file.path)")
+        }
+        // The next download starts where this one succeeded.
+        #expect(ModelPrefetcher.preferredSource == .modelScope)
+    }
+}

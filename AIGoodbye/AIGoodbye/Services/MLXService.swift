@@ -407,7 +407,7 @@ final class MLXService: ObservableObject {
                 // Library fallback still runs; show byte progress from disk,
                 // and record the transfers it is about to make so the
                 // Privacy Center's log stays honest.
-                NetworkAudit.noteLibraryDownload(files: ModelPrefetcher.plannedTransferURLs(for: model))
+                NetworkAudit.noteLibraryDownload(files: ModelPrefetcher.plannedLibraryURLs(for: model))
                 startDiskPollProgress(for: model)
             }
         }
@@ -489,7 +489,7 @@ final class MLXService: ObservableObject {
                         )
                     }
                     beginDownloadState(expectedBytes: model.sizeBytes)
-                    NetworkAudit.noteLibraryDownload(files: ModelPrefetcher.plannedTransferURLs(for: model))
+                    NetworkAudit.noteLibraryDownload(files: ModelPrefetcher.plannedLibraryURLs(for: model))
                     startDiskPollProgress(for: model)
                     modelContainer = try await load(hubConfiguration)
                 }

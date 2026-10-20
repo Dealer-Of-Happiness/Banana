@@ -1568,82 +1568,6 @@
         }
       }
     },
-    "AI models are downloaded once from Hugging Face - about 1 to 6 GB depending on the model, so Wi-Fi is recommended. After the download, everything works fully offline. You can delete models anytime in Settings. If you add your own model by name, the app first fetches that public repository's file list - a few kilobytes - to check the size and whether your device can run it. Only the model name is sent; never your content.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "KI-Modelle werden einmalig von Hugging Face geladen – je nach Modell etwa 1 bis 6 GB, daher wird WLAN empfohlen. Nach dem Download funktioniert alles vollständig offline. Du kannst Modelle jederzeit in den Einstellungen löschen. Wenn du ein eigenes Modell über seinen Namen hinzufügst, holt die App zuerst die Dateiliste dieses öffentlichen Repositorys – ein paar Kilobyte –, um Größe und Eignung deines Geräts zu prüfen. Gesendet wird nur der Modellname, niemals deine Inhalte."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Τα μοντέλα AI κατεβαίνουν μία φορά από το Hugging Face – περίπου 1 έως 6 GB ανάλογα με το μοντέλο, οπότε συνιστάται Wi-Fi. Μετά τη λήψη όλα λειτουργούν εντελώς εκτός σύνδεσης. Μπορείς να διαγράψεις μοντέλα οποιαδήποτε στιγμή στις Ρυθμίσεις. Αν προσθέσεις δικό σου μοντέλο με το όνομά του, η εφαρμογή φέρνει πρώτα τη λίστα αρχείων αυτού του δημόσιου αποθετηρίου – λίγα kilobyte – για να ελέγξει το μέγεθος και αν το τρέχει η συσκευή σου. Στέλνεται μόνο το όνομα του μοντέλου, ποτέ το περιεχόμενό σου."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los modelos de IA se descargan una vez desde Hugging Face: entre 1 y 6 GB según el modelo, así que se recomienda Wi-Fi. Tras la descarga, todo funciona completamente sin conexión. Puedes eliminar modelos cuando quieras en Ajustes. Si añades tu propio modelo por su nombre, la app primero obtiene la lista de archivos de ese repositorio público (unos pocos kilobytes) para comprobar el tamaño y si tu dispositivo puede ejecutarlo. Solo se envía el nombre del modelo, nunca tu contenido."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les modèles d'IA sont téléchargés une seule fois depuis Hugging Face : entre 1 et 6 Go selon le modèle, le Wi-Fi est donc recommandé. Après le téléchargement, tout fonctionne entièrement hors ligne. Vous pouvez supprimer des modèles à tout moment dans Réglages. Si vous ajoutez votre propre modèle par son nom, l'app récupère d'abord la liste des fichiers de ce dépôt public – quelques kilo-octets – pour vérifier la taille et si votre appareil peut l'exécuter. Seul le nom du modèle est envoyé, jamais votre contenu."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "I modelli di IA vengono scaricati una sola volta da Hugging Face: da 1 a 6 GB a seconda del modello, quindi è consigliato il Wi-Fi. Dopo il download tutto funziona completamente offline. Puoi eliminare i modelli quando vuoi in Impostazioni. Se aggiungi un tuo modello indicandone il nome, l'app recupera prima l'elenco dei file di quel repository pubblico – pochi kilobyte – per verificarne le dimensioni e se il tuo dispositivo può eseguirlo. Viene inviato solo il nome del modello, mai i tuoi contenuti."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI モデルは Hugging Face から一度だけダウンロードされます。モデルにより約 1〜6 GB なので Wi-Fi を推奨します。ダウンロード後はすべて完全にオフラインで動作します。モデルは「設定」からいつでも削除できます。自分のモデルを名前で追加する場合、アプリはまずその公開リポジトリのファイル一覧（数キロバイト）を取得し、サイズと端末で動作するかを確認します。送信されるのはモデル名だけで、あなたのコンテンツが送られることはありません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI 모델은 Hugging Face에서 한 번만 내려받습니다. 모델에 따라 약 1~6 GB이므로 Wi-Fi를 권장합니다. 다운로드 후에는 모든 기능이 완전히 오프라인으로 작동합니다. 모델은 설정에서 언제든 삭제할 수 있습니다. 직접 모델을 이름으로 추가하면 앱이 먼저 해당 공개 저장소의 파일 목록(수 킬로바이트)을 가져와 크기와 기기에서 실행 가능한지 확인합니다. 전송되는 것은 모델 이름뿐이며, 사용자의 콘텐츠는 절대 전송되지 않습니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Os modelos de IA são baixados uma vez do Hugging Face: cerca de 1 a 6 GB dependendo do modelo, então recomenda-se Wi-Fi. Após o download, tudo funciona totalmente off-line. Você pode apagar modelos quando quiser nos Ajustes. Se adicionar seu próprio modelo pelo nome, o app primeiro busca a lista de arquivos desse repositório público — alguns kilobytes — para verificar o tamanho e se o seu dispositivo consegue executá-lo. Só o nome do modelo é enviado; nunca o seu conteúdo."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Модели ИИ загружаются один раз с Hugging Face — от 1 до 6 ГБ в зависимости от модели, поэтому рекомендуется Wi-Fi. После загрузки всё работает полностью офлайн. Удалить модели можно в любой момент в настройках. Если вы добавляете свою модель по имени, приложение сначала получает список файлов этого публичного репозитория — несколько килобайт — чтобы проверить размер и потянет ли её ваше устройство. Отправляется только имя модели, никогда ваш контент."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Моделі ШІ завантажуються один раз із Hugging Face — від 1 до 6 ГБ залежно від моделі, тож рекомендовано Wi-Fi. Після завантаження все працює повністю офлайн. Видалити моделі можна будь-коли в параметрах. Якщо ви додаєте власну модель за іменем, застосунок спершу отримує список файлів цього публічного репозиторію — кілька кілобайтів — щоб перевірити розмір і чи потягне її ваш пристрій. Надсилається лише ім'я моделі, ніколи ваш вміст."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI 模型只需從 Hugging Face 下載一次——視模型而定約 1 到 6 GB，建議使用 Wi-Fi。下載完成後，一切都可完全離線運行。你可以隨時在「設定」中刪除模型。如果你按名稱加入自己的模型，App 會先取得該公開儲存庫的檔案清單（幾 KB），以檢查大小以及你的裝置能否運行。僅傳送模型名稱，絕不傳送你的內容。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI 模型只需从 Hugging Face 下载一次——视模型而定约 1 到 6 GB，建议使用 Wi-Fi。下载完成后，一切都可完全离线运行。你可以随时在“设置”中删除模型。如果你按名称添加自己的模型，App 会先获取该公开仓库的文件列表（几 KB），以检查大小以及你的设备能否运行。仅发送模型名称，绝不发送你的内容。"
-          }
-        }
-      }
-    },
     "About %lld GB": {
       "localizations": {
         "de": {
@@ -35218,82 +35142,6 @@
         }
       }
     },
-    "Requests made by the app are recorded here on your device. Model downloads from Hugging Face are the only ones you should ever see.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anfragen der App werden hier auf deinem Gerät aufgezeichnet. Modell-Downloads von Hugging Face sind die einzigen, die du je sehen solltest."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Τα αιτήματα που κάνει η εφαρμογή καταγράφονται εδώ, στη συσκευή σου. Οι λήψεις μοντέλων από το Hugging Face είναι οι μόνες που θα πρέπει να βλέπεις."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Las solicitudes que hace la app se registran aquí, en tu dispositivo. Las descargas de modelos desde Hugging Face son las únicas que deberías ver."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les requêtes effectuées par l'app sont enregistrées ici, sur votre appareil. Les téléchargements de modèles depuis Hugging Face sont les seuls que vous devriez voir."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le richieste effettuate dall'app vengono registrate qui, sul tuo dispositivo. I download dei modelli da Hugging Face sono gli unici che dovresti vedere."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アプリが行ったリクエストはこのデバイス上に記録され、ここに表示されます。表示されるのはHugging Faceからのモデルのダウンロードだけのはずです。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "앱이 보낸 요청은 이 기기에 기록되어 여기에 표시됩니다. Hugging Face의 모델 다운로드 외에는 보이지 않아야 합니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "As solicitações feitas pelo app são registradas aqui, no seu dispositivo. Os downloads de modelos do Hugging Face são os únicos que você deve ver."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Запросы, которые делает приложение, записываются здесь, на вашем устройстве. Единственное, что вы должны видеть, — загрузки моделей с Hugging Face."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Запити, які робить застосунок, записуються тут, на вашому пристрої. Єдине, що ви маєте бачити, — завантаження моделей із Hugging Face."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "App 發出嘅請求會喺你部裝置度記錄並顯示喺呢度。你應該淨係會見到 Hugging Face 嘅模型下載。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "应用发出的请求会记录在你的设备上并显示于此。你应该只会看到来自 Hugging Face 的模型下载。"
-          }
-        }
-      }
-    },
     "Requests since install": {
       "localizations": {
         "de": {
@@ -54842,6 +54690,234 @@
           "stringUnit": {
             "state": "translated",
             "value": "此设备未设置任何邮件 App。请用任意邮箱写信至 %@。"
+          }
+        }
+      }
+    },
+    "AI models are downloaded once from Hugging Face (or, where it can't be reached, the identical files from ModelScope) - about 1 to 6 GB depending on the model, so Wi-Fi is recommended. After the download, everything works fully offline. You can delete models anytime in Settings. If you add your own model by name, the app first fetches that public repository's file list - a few kilobytes - to check the size and whether your device can run it. Only the model name is sent; never your content.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KI-Modelle werden einmalig von Hugging Face geladen (wo Hugging Face nicht erreichbar ist, als identische Dateien von ModelScope) – je nach Modell etwa 1 bis 6 GB, daher wird WLAN empfohlen. Nach dem Download funktioniert alles vollständig offline. Du kannst Modelle jederzeit in den Einstellungen löschen. Wenn du ein eigenes Modell über seinen Namen hinzufügst, holt die App zuerst die Dateiliste dieses öffentlichen Repositorys – ein paar Kilobyte –, um Größe und Eignung deines Geräts zu prüfen. Gesendet wird nur der Modellname, niemals deine Inhalte."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Τα μοντέλα AI κατεβαίνουν μία φορά από το Hugging Face (ή, όπου δεν είναι προσβάσιμο, τα ίδια ακριβώς αρχεία από το ModelScope) – περίπου 1 έως 6 GB ανάλογα με το μοντέλο, οπότε συνιστάται Wi-Fi. Μετά τη λήψη όλα λειτουργούν εντελώς εκτός σύνδεσης. Μπορείς να διαγράψεις μοντέλα οποιαδήποτε στιγμή στις Ρυθμίσεις. Αν προσθέσεις δικό σου μοντέλο με το όνομά του, η εφαρμογή φέρνει πρώτα τη λίστα αρχείων αυτού του δημόσιου αποθετηρίου – λίγα kilobyte – για να ελέγξει το μέγεθος και αν το τρέχει η συσκευή σου. Στέλνεται μόνο το όνομα του μοντέλου, ποτέ το περιεχόμενό σου."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los modelos de IA se descargan una vez desde Hugging Face (o, donde no está disponible, los mismos archivos desde ModelScope): entre 1 y 6 GB según el modelo, así que se recomienda Wi-Fi. Tras la descarga, todo funciona completamente sin conexión. Puedes eliminar modelos cuando quieras en Ajustes. Si añades tu propio modelo por su nombre, la app primero obtiene la lista de archivos de ese repositorio público (unos pocos kilobytes) para comprobar el tamaño y si tu dispositivo puede ejecutarlo. Solo se envía el nombre del modelo, nunca tu contenido."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les modèles d'IA sont téléchargés une seule fois depuis Hugging Face (ou, là où il est inaccessible, les mêmes fichiers depuis ModelScope) : entre 1 et 6 Go selon le modèle, le Wi-Fi est donc recommandé. Après le téléchargement, tout fonctionne entièrement hors ligne. Vous pouvez supprimer des modèles à tout moment dans Réglages. Si vous ajoutez votre propre modèle par son nom, l'app récupère d'abord la liste des fichiers de ce dépôt public – quelques kilo-octets – pour vérifier la taille et si votre appareil peut l'exécuter. Seul le nom du modèle est envoyé, jamais votre contenu."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I modelli di IA vengono scaricati una sola volta da Hugging Face (oppure, dove non è raggiungibile, gli stessi identici file da ModelScope): da 1 a 6 GB a seconda del modello, quindi è consigliato il Wi-Fi. Dopo il download tutto funziona completamente offline. Puoi eliminare i modelli quando vuoi in Impostazioni. Se aggiungi un tuo modello indicandone il nome, l'app recupera prima l'elenco dei file di quel repository pubblico – pochi kilobyte – per verificarne le dimensioni e se il tuo dispositivo può eseguirlo. Viene inviato solo il nome del modello, mai i tuoi contenuti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI モデルは Hugging Face から一度だけダウンロードされます（Hugging Face に接続できない地域では、同一のファイルを ModelScope からダウンロードします）。モデルにより約 1〜6 GB なので Wi-Fi を推奨します。ダウンロード後はすべて完全にオフラインで動作します。モデルは「設定」からいつでも削除できます。自分のモデルを名前で追加する場合、アプリはまずその公開リポジトリのファイル一覧（数キロバイト）を取得し、サイズと端末で動作するかを確認します。送信されるのはモデル名だけで、あなたのコンテンツが送られることはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 모델은 Hugging Face에서 한 번만 내려받습니다(Hugging Face에 연결할 수 없는 곳에서는 동일한 파일을 ModelScope에서 받습니다). 모델에 따라 약 1~6 GB이므로 Wi-Fi를 권장합니다. 다운로드 후에는 모든 기능이 완전히 오프라인으로 작동합니다. 모델은 설정에서 언제든 삭제할 수 있습니다. 직접 모델을 이름으로 추가하면 앱이 먼저 해당 공개 저장소의 파일 목록(수 킬로바이트)을 가져와 크기와 기기에서 실행 가능한지 확인합니다. 전송되는 것은 모델 이름뿐이며, 사용자의 콘텐츠는 절대 전송되지 않습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os modelos de IA são baixados uma vez do Hugging Face (ou, onde ele não está acessível, os mesmos arquivos do ModelScope): cerca de 1 a 6 GB dependendo do modelo, então recomenda-se Wi-Fi. Após o download, tudo funciona totalmente off-line. Você pode apagar modelos quando quiser nos Ajustes. Se adicionar seu próprio modelo pelo nome, o app primeiro busca a lista de arquivos desse repositório público — alguns kilobytes — para verificar o tamanho e se o seu dispositivo consegue executá-lo. Só o nome do modelo é enviado; nunca o seu conteúdo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Модели ИИ загружаются один раз с Hugging Face (или, если он недоступен, те же самые файлы с ModelScope) — от 1 до 6 ГБ в зависимости от модели, поэтому рекомендуется Wi-Fi. После загрузки всё работает полностью офлайн. Удалить модели можно в любой момент в настройках. Если вы добавляете свою модель по имени, приложение сначала получает список файлов этого публичного репозитория — несколько килобайт — чтобы проверить размер и потянет ли её ваше устройство. Отправляется только имя модели, никогда ваш контент."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Моделі ШІ завантажуються один раз із Hugging Face (або, якщо він недоступний, ті самі файли з ModelScope) — від 1 до 6 ГБ залежно від моделі, тож рекомендовано Wi-Fi. Після завантаження все працює повністю офлайн. Видалити моделі можна будь-коли в параметрах. Якщо ви додаєте власну модель за іменем, застосунок спершу отримує список файлів цього публічного репозиторію — кілька кілобайтів — щоб перевірити розмір і чи потягне її ваш пристрій. Надсилається лише ім'я моделі, ніколи ваш вміст."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 模型只需從 Hugging Face 下載一次（如無法連接 Hugging Face，則從 ModelScope 下載完全相同的檔案）——視模型而定約 1 到 6 GB，建議使用 Wi-Fi。下載完成後，一切都可完全離線運行。你可以隨時在「設定」中刪除模型。如果你按名稱加入自己的模型，App 會先取得該公開儲存庫的檔案清單（幾 KB），以檢查大小以及你的裝置能否運行。僅傳送模型名稱，絕不傳送你的內容。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 模型只需从 Hugging Face 下载一次（如无法连接 Hugging Face，则从 ModelScope 下载完全相同的文件）——视模型而定约 1 到 6 GB，建议使用 Wi-Fi。下载完成后，一切都可完全离线运行。你可以随时在“设置”中删除模型。如果你按名称添加自己的模型，App 会先获取该公开仓库的文件列表（几 KB），以检查大小以及你的设备能否运行。仅发送模型名称，绝不发送你的内容。"
+          }
+        }
+      }
+    },
+    "Requests made by the app are recorded here on your device. Model downloads from Hugging Face, or from ModelScope where Hugging Face can't be reached, are the only ones you should ever see.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anfragen der App werden hier auf deinem Gerät aufgezeichnet. Modell-Downloads von Hugging Face, oder von ModelScope, wo Hugging Face nicht erreichbar ist, sind die einzigen, die du je sehen solltest."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Τα αιτήματα που κάνει η εφαρμογή καταγράφονται εδώ, στη συσκευή σου. Οι λήψεις μοντέλων από το Hugging Face, ή από το ModelScope όπου το Hugging Face δεν είναι προσβάσιμο, είναι οι μόνες που θα πρέπει να βλέπεις."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las solicitudes que hace la app se registran aquí, en tu dispositivo. Las descargas de modelos desde Hugging Face, o desde ModelScope donde Hugging Face no está disponible, son las únicas que deberías ver."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les requêtes effectuées par l'app sont enregistrées ici, sur votre appareil. Les téléchargements de modèles depuis Hugging Face, ou depuis ModelScope là où Hugging Face est inaccessible, sont les seuls que vous devriez voir."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le richieste effettuate dall'app vengono registrate qui, sul tuo dispositivo. I download dei modelli da Hugging Face, o da ModelScope dove Hugging Face non è raggiungibile, sono gli unici che dovresti vedere."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリが行ったリクエストはこのデバイス上に記録され、ここに表示されます。表示されるのは、Hugging Face（接続できない地域では ModelScope）からのモデルのダウンロードだけのはずです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱이 보낸 요청은 이 기기에 기록되어 여기에 표시됩니다. Hugging Face(연결할 수 없는 곳에서는 ModelScope)의 모델 다운로드 외에는 보이지 않아야 합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As solicitações feitas pelo app são registradas aqui, no seu dispositivo. Os downloads de modelos do Hugging Face, ou do ModelScope onde o Hugging Face não está acessível, são os únicos que você deve ver."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запросы, которые делает приложение, записываются здесь, на вашем устройстве. Единственное, что вы должны видеть, — загрузки моделей с Hugging Face или, если он недоступен, с ModelScope."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запити, які робить застосунок, записуються тут, на вашому пристрої. Єдине, що ви маєте бачити, — завантаження моделей із Hugging Face або, якщо він недоступний, із ModelScope."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App 發出嘅請求會喺你部裝置度記錄並顯示喺呢度。你應該淨係會見到 Hugging Face 嘅模型下載（連唔到 Hugging Face 嘅地方就係 ModelScope）。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用发出的请求会记录在你的设备上并显示于此。你应该只会看到来自 Hugging Face 的模型下载（无法连接 Hugging Face 的地区则来自 ModelScope）。"
+          }
+        }
+      }
+    },
+    "A downloaded file didn't match the original, so it was deleted. Try the download again later.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine heruntergeladene Datei stimmte nicht mit dem Original überein und wurde gelöscht. Versuche den Download später erneut."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ένα αρχείο που κατέβηκε δεν ταίριαζε με το πρωτότυπο, γι' αυτό διαγράφηκε. Δοκίμασε ξανά τη λήψη αργότερα."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un archivo descargado no coincidía con el original, así que se ha eliminado. Vuelve a intentar la descarga más tarde."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un fichier téléchargé ne correspondait pas à l'original, il a donc été supprimé. Réessayez le téléchargement plus tard."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un file scaricato non corrispondeva all'originale, quindi è stato eliminato. Riprova il download più tardi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードしたファイルが元のファイルと一致しなかったため、削除しました。しばらくしてからもう一度ダウンロードしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다운로드한 파일이 원본과 일치하지 않아 삭제했습니다. 나중에 다시 다운로드해 보세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um arquivo baixado não correspondia ao original, então foi apagado. Tente baixar novamente mais tarde."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Загруженный файл не совпал с оригиналом, поэтому он удалён. Повторите загрузку позже."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Завантажений файл не збігся з оригіналом, тому його видалено. Повторіть завантаження пізніше."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載嘅檔案同原本嘅唔一致，所以已經刪除。請稍後再試下載。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载的文件与原始文件不一致，已被删除。请稍后重新下载。"
           }
         }
       }

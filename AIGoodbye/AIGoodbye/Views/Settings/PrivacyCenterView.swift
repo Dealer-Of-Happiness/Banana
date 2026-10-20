@@ -135,7 +135,7 @@ struct PrivacyCenterView: View {
         } header: {
             Text("Network activity")
         } footer: {
-            Text("Requests made by the app are recorded here on your device. Model downloads from Hugging Face are the only ones you should ever see.")
+            Text("Requests made by the app are recorded here on your device. Model downloads from Hugging Face, or from ModelScope where Hugging Face can't be reached, are the only ones you should ever see.")
         }
     }
 

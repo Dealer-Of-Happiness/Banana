@@ -29,7 +29,12 @@ struct NetworkEvent: Identifiable, Equatable {
     /// - Parameter downloadingRepo: the Hugging Face repository a model
     ///   download is fetching right now, if any.
     nonisolated static func purpose(host: String, path: String, downloadingRepo: String?) -> String {
-        guard host.contains("huggingface") || host.contains("hf.co") else {
+        // ModelScope serves the same model files where Hugging Face is
+        // blocked (see `ModelPrefetcher.Source`); its CDN is
+        // cdn-lfs-cn-*.modelscope.cn.
+        let isModelHost = host.contains("huggingface") || host.contains("hf.co")
+            || host == "modelscope.cn" || host.hasSuffix(".modelscope.cn")
+        guard isModelHost else {
             return L10n.text("Other")
         }
         let lowered = path.lowercased()

@@ -37,7 +37,7 @@ enum LegalText {
             ),
             (
                 title: L10n.text("Model Downloads"),
-                body: L10n.text("AI models are downloaded once from Hugging Face - about 1 to 6 GB depending on the model, so Wi-Fi is recommended. After the download, everything works fully offline. You can delete models anytime in Settings. If you add your own model by name, the app first fetches that public repository's file list - a few kilobytes - to check the size and whether your device can run it. Only the model name is sent; never your content."),
+                body: L10n.text("AI models are downloaded once from Hugging Face (or, where it can't be reached, the identical files from ModelScope) - about 1 to 6 GB depending on the model, so Wi-Fi is recommended. After the download, everything works fully offline. You can delete models anytime in Settings. If you add your own model by name, the app first fetches that public repository's file list - a few kilobytes - to check the size and whether your device can run it. Only the model name is sent; never your content."),
                 icon: "arrow.down.circle.fill"
             ),
             (

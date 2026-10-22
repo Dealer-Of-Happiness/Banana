@@ -34,10 +34,52 @@ nonisolated enum PrefetchError: Error {
     case sizeMismatch
     /// A file from the fallback source did not match the pinned SHA-256.
     case checksumMismatch
+    /// Every source was tried and none could deliver; `summary` says what
+    /// each one answered ("Hugging Face: network -1001; ModelScope: HTTP 403").
+    case allSourcesFailed(summary: String)
 
     var isChecksumMismatch: Bool {
         if case .checksumMismatch = self { return true }
         return false
+    }
+}
+
+/// What the last model download did, source by source, kept so a "Send
+/// Feedback" email can say it. A user in mainland China reported "the model
+/// won't download" with nothing else to go on; next time the email carries
+/// the answer.
+nonisolated enum DownloadDiagnostics {
+    private static let key = "lastModelDownloadReport"
+
+    static var lastReport: String? {
+        UserDefaults.standard.string(forKey: key)
+    }
+
+    static func record(_ report: String) {
+        let stamp = ISO8601DateFormatter().string(from: Date())
+        UserDefaults.standard.set("\(report) [\(stamp)]", forKey: key)
+    }
+
+    /// A short, language-neutral reason: codes, not sentences, so it reads
+    /// the same in every language and can be searched for.
+    static func shortReason(_ error: Error) -> String {
+        if let prefetchError = error as? PrefetchError {
+            switch prefetchError {
+            case .listingFailed(let status): return "listing HTTP \(status)"
+            case .downloadFailed(let status): return "HTTP \(status)"
+            case .noFiles: return "no files"
+            case .sizeMismatch: return "size mismatch"
+            case .checksumMismatch: return "checksum mismatch"
+            case .allSourcesFailed(let summary): return summary
+            }
+        }
+        if error is CancellationError { return "cancelled" }
+        let ns = error as NSError
+        var reason = ns.domain == NSURLErrorDomain ? "network \(ns.code)" : "\(ns.domain) \(ns.code)"
+        if let url = ns.userInfo[NSURLErrorFailingURLErrorKey] as? URL, let host = url.host() {
+            reason += " at \(host)"
+        }
+        return reason
     }
 }
 
@@ -77,6 +119,43 @@ final class ModelPrefetcher {
                 URL(string: "https://modelscope.cn/models/\(repo)/resolve/master/\(encodedPath)")
             }
         }
+
+        /// ModelScope's other way to the same file (its file API), tried
+        /// when the usual address refuses or serves the wrong size. Same
+        /// bytes, same checks.
+        func alternateFileURL(repo: String, path: String) -> URL? {
+            guard self == .modelScope else { return nil }
+            var components = URLComponents()
+            components.scheme = "https"
+            components.host = "www.modelscope.cn"
+            components.path = "/api/v1/models/\(repo)/repo"
+            components.queryItems = [
+                URLQueryItem(name: "Revision", value: "master"),
+                URLQueryItem(name: "FilePath", value: path),
+            ]
+            return components.url
+        }
+
+        var displayName: String {
+            switch self {
+            case .huggingFace: "Hugging Face"
+            case .modelScope: "ModelScope"
+            }
+        }
+    }
+
+    /// Whether this device is most likely in mainland China, where Hugging
+    /// Face is blocked: there the first attempt goes to ModelScope, instead
+    /// of waiting for Hugging Face to time out (and never depending on how
+    /// the block happens to fail that day). Region or time zone, either is
+    /// enough; Hong Kong, Macau and Taiwan have their own.
+    nonisolated static var isLikelyMainlandChina: Bool {
+        #if DEBUG
+        if let override = ProcessInfo.processInfo.environment["AIG_REGION_CN"] { return override == "1" }
+        #endif
+        if Locale.current.region?.identifier == "CN" { return true }
+        return ["Asia/Shanghai", "Asia/Chongqing", "Asia/Chungking", "Asia/Harbin", "Asia/Urumqi", "PRC"]
+            .contains(TimeZone.current.identifier)
     }
 
     nonisolated private static let preferredSourceKey = "modelDownloadSource"
@@ -91,9 +170,15 @@ final class ModelPrefetcher {
 
     /// The order to try sources in for a model. Models without a pinned
     /// manifest (ones a user added) only ever come from Hugging Face.
-    nonisolated static func sourceOrder(hasPinnedManifest: Bool, preferred: Source) -> [Source] {
+    nonisolated static func sourceOrder(
+        hasPinnedManifest: Bool,
+        preferred: Source,
+        inMainlandChina: Bool = false
+    ) -> [Source] {
         guard hasPinnedManifest else { return [.huggingFace] }
-        return preferred == .modelScope ? [.modelScope, .huggingFace] : [.huggingFace, .modelScope]
+        return preferred == .modelScope || inMainlandChina
+            ? [.modelScope, .huggingFace]
+            : [.huggingFace, .modelScope]
     }
 
     /// Whether a failure means the source could not serve the model - worth
@@ -107,7 +192,7 @@ final class ModelPrefetcher {
                 return status != 0
             case .sizeMismatch, .checksumMismatch:
                 return true
-            case .noFiles:
+            case .noFiles, .allSourcesFailed:
                 return false
             }
         }
@@ -141,24 +226,34 @@ final class ModelPrefetcher {
         progress: @escaping @Sendable (Int64, Int64) -> Void
     ) async throws {
         let pinned = BuiltInModelManifests.manifest(for: hfId)
-        let order = Self.sourceOrder(hasPinnedManifest: pinned != nil, preferred: Self.preferredSource)
-        var firstError: Error?
+        let order = Self.sourceOrder(
+            hasPinnedManifest: pinned != nil,
+            preferred: Self.preferredSource,
+            inMainlandChina: Self.isLikelyMainlandChina
+        )
+        var attempts: [String] = []
         for source in order {
             do {
                 try await prefetch(hfId: hfId, into: repoDir, from: source, pinned: pinned, progress: progress)
                 if pinned != nil { Self.preferredSource = source }
+                attempts.append("\(source.displayName): ok")
+                DownloadDiagnostics.record("\(hfId) - " + attempts.joined(separator: "; "))
                 return
             } catch {
                 try Task.checkCancellation()
                 if error is CancellationError { throw error }
+                attempts.append("\(source.displayName): \(DownloadDiagnostics.shortReason(error))")
+                DownloadDiagnostics.record("\(hfId) - " + attempts.joined(separator: "; "))
                 let isLast = source == order.last
                 if isLast || !Self.isUnreachable(error) {
-                    // Both sources unreachable: the first failure is the one
-                    // that describes the user's network.
-                    if let firstError, Self.isUnreachable(error) { throw firstError }
+                    // Every source tried and none delivered: say what each
+                    // one answered, so the message on screen (and a
+                    // screenshot of it) carries the diagnosis.
+                    if attempts.count > 1, Self.isUnreachable(error) {
+                        throw PrefetchError.allSourcesFailed(summary: attempts.joined(separator: "; "))
+                    }
                     throw error
                 }
-                firstError = error
             }
         }
     }
@@ -181,12 +276,18 @@ final class ModelPrefetcher {
             if ProcessInfo.processInfo.environment["AIG_BLOCK_HUGGINGFACE"] == "1" {
                 throw URLError(.cannotFindHost)
             }
+            // As the Great Firewall does it: the name resolves to an address
+            // that never answers, so connections hang until they time out.
+            // AIG_HF_HOST=10.255.255.1 (a blackhole) reproduces that.
+            let hfHost = ProcessInfo.processInfo.environment["AIG_HF_HOST"] ?? "huggingface.co"
+            #else
+            let hfHost = "huggingface.co"
             #endif
             // 1. File listing with sizes. The HTTP status travels with the
             // error: a 503 from Hugging Face, a 429, and a gated repository
             // each need a different sentence, and a blanket "check Wi-Fi" was
             // wrong for all.
-            guard let treeURL = URL(string: "https://huggingface.co/api/models/\(hfId)/tree/main?recursive=true") else {
+            guard let treeURL = URL(string: "https://\(hfHost)/api/models/\(hfId)/tree/main?recursive=true") else {
                 throw PrefetchError.listingFailed(status: 0)
             }
             let (treeData, treeResponse) = try await Self.apiSession.data(from: treeURL)
@@ -209,7 +310,7 @@ final class ModelPrefetcher {
             // - a failure here must not forfeit the fast path). After the
             // listing, so a blocked Hugging Face fails over on the first
             // request rather than the second.
-            if let infoURL = URL(string: "https://huggingface.co/api/models/\(hfId)"),
+            if let infoURL = URL(string: "https://\(hfHost)/api/models/\(hfId)"),
                let (data, response) = try? await Self.apiSession.data(from: infoURL),
                (response as? HTTPURLResponse)?.statusCode == 200,
                let info = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -244,7 +345,8 @@ final class ModelPrefetcher {
             }
             sources.append((file: file, url: url))
         }
-        Self.writeTransferManifest(urls: sources.map { $0.url }, in: repoDir)
+        let alternates = files.compactMap { source.alternateFileURL(repo: hfId, path: $0.path) }
+        Self.writeTransferManifest(urls: sources.map { $0.url } + alternates, in: repoDir)
 
         let totalBytes = files.reduce(Int64(0)) { $0 + $1.actualSize }
         var completedBytes: Int64 = 0
@@ -292,6 +394,10 @@ final class ModelPrefetcher {
 
             let base = completedBytes
             var attempt = 0
+            // ModelScope has a second address for every file; a refusal or
+            // a wrong size at one switches to the other for the next try.
+            let alternateURL = source.alternateFileURL(repo: hfId, path: file.path)
+            var useAlternate = false
             // Resume data left by an earlier cancel or failure - in this life
             // of the app or a previous one - continues the transfer instead
             // of restarting a multi-gigabyte file from byte zero.
@@ -307,7 +413,17 @@ final class ModelPrefetcher {
                     ) { bytesSoFar in
                         progress(base + bytesSoFar, totalBytes)
                     }
-                    try await download.run(url: sourceURL, resumeData: resumeData, timeout: 30)
+                    var url = useAlternate ? (alternateURL ?? sourceURL) : sourceURL
+                    #if DEBUG
+                    // Test hook: ModelScope's usual address refuses (404),
+                    // so the second address has to carry the download.
+                    if ProcessInfo.processInfo.environment["AIG_MS_BREAK_PRIMARY"] == "1",
+                       source == .modelScope, !useAlternate,
+                       let broken = URL(string: sourceURL.absoluteString + ".missing") {
+                        url = broken
+                    }
+                    #endif
+                    try await download.run(url: url, resumeData: resumeData, timeout: 30)
 
                     // Verify size when known: a truncated weights file would
                     // otherwise surface later as a cryptic load failure.
@@ -355,8 +471,17 @@ final class ModelPrefetcher {
                         // Resume data carries the signed CDN address it was
                         // made from, and those expire (ModelScope's within a
                         // day). A refusal of a resumed transfer earns one
-                        // fresh start before it counts as the file's answer.
-                        guard resumedThisAttempt, attempt < 3 else { throw error }
+                        // fresh start before it counts as the file's answer;
+                        // on ModelScope, so does a refusal at one address.
+                        if alternateURL != nil, attempt < 3 {
+                            useAlternate.toggle()
+                        } else {
+                            guard resumedThisAttempt, attempt < 3 else { throw error }
+                        }
+                    }
+                    if let prefetchError = error as? PrefetchError, case .sizeMismatch = prefetchError,
+                       alternateURL != nil {
+                        useAlternate.toggle()
                     }
                     attempt += 1
                     if attempt > 3 { throw error }
@@ -488,6 +613,8 @@ final class ModelPrefetcher {
             }
         case .checksumMismatch:
             return L10n.text("A downloaded file didn't match the original, so it was deleted. Try the download again later.")
+        case .allSourcesFailed(let summary):
+            return L10n.text("Couldn't download the model from Hugging Face or ModelScope. Check your connection and try again.") + " (\(summary))"
         case .noFiles, .sizeMismatch:
             return nil
         }
@@ -663,7 +790,11 @@ nonisolated final class FileDownload: NSObject, URLSessionDownloadDelegate, @unc
                 // Multi-gigabyte downloads shouldn't eat a cellular plan.
                 config.allowsCellularAccess = !wifiOnly
                 config.allowsExpensiveNetworkAccess = !wifiOnly
-                config.allowsConstrainedNetworkAccess = false
+                // Low Data Mode is for what apps do on their own; this is a
+                // download the user asked for, as a tap on Get in the App
+                // Store is. Refusing it left the bar frozen at 0% with no
+                // reason given.
+                config.allowsConstrainedNetworkAccess = true
                 config.waitsForConnectivity = true
                 config.timeoutIntervalForResource = 60 * 60 * 6
                 // Background sessions ignore protocolClasses, so the audit

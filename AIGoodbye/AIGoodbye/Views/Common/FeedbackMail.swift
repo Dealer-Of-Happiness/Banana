@@ -48,6 +48,12 @@ enum FeedbackMail {
         }
         lines.append("Model: \(modelName)")
         lines.append("App language: \(languageName)")
+        // Which source downloads try first, and what the last one met: the
+        // two things a "the model won't download" report needs.
+        lines.append("Downloads try first: \(ModelPrefetcher.isLikelyMainlandChina || ModelPrefetcher.preferredSource == .modelScope ? "ModelScope" : "Hugging Face")")
+        if let report = DownloadDiagnostics.lastReport {
+            lines.append("Last download: \(report)")
+        }
         return lines.joined(separator: "\n")
     }
 

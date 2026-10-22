@@ -877,6 +877,29 @@ struct DownloadSourceTests {
         #expect(ModelPrefetcher.sourceOrder(hasPinnedManifest: true, preferred: .modelScope) == [.modelScope, .huggingFace])
         // A model the user added has no pin.
         #expect(BuiltInModelManifests.manifest(for: "someone/their-model-4bit") == nil)
+        // In mainland China ModelScope comes first, whatever worked before;
+        // a user-added model still only has Hugging Face.
+        #expect(ModelPrefetcher.sourceOrder(hasPinnedManifest: true, preferred: .huggingFace, inMainlandChina: true) == [.modelScope, .huggingFace])
+        #expect(ModelPrefetcher.sourceOrder(hasPinnedManifest: false, preferred: .huggingFace, inMainlandChina: true) == [.huggingFace])
+    }
+
+    @Test func modelScopeHasASecondAddressForEveryFile() throws {
+        let repo = "mlx-community/Qwen3.5-0.8B-4bit"
+        let url = try #require(ModelPrefetcher.Source.modelScope.alternateFileURL(repo: repo, path: "config.json"))
+        #expect(url.absoluteString == "https://www.modelscope.cn/api/v1/models/mlx-community/Qwen3.5-0.8B-4bit/repo?Revision=master&FilePath=config.json")
+        #expect(ModelPrefetcher.Source.huggingFace.alternateFileURL(repo: repo, path: "config.json") == nil)
+    }
+
+    @Test func failuresAreSummarizedInCodes() {
+        #expect(DownloadDiagnostics.shortReason(URLError(.timedOut)) == "network -1001")
+        let atHost = URLError(.cannotConnectToHost, userInfo: [NSURLErrorFailingURLErrorKey: URL(string: "https://huggingface.co/api/models/x")!])
+        #expect(DownloadDiagnostics.shortReason(atHost) == "network -1004 at huggingface.co")
+        #expect(DownloadDiagnostics.shortReason(PrefetchError.downloadFailed(status: 403)) == "HTTP 403")
+        #expect(DownloadDiagnostics.shortReason(PrefetchError.checksumMismatch) == "checksum mismatch")
+        // A failure of every source is final: nothing left to fall back to.
+        #expect(!ModelPrefetcher.isUnreachable(PrefetchError.allSourcesFailed(summary: "x")))
+        let message = ModelPrefetcher.friendlyMessage(for: PrefetchError.allSourcesFailed(summary: "Hugging Face: network -1001; ModelScope: HTTP 403"))
+        #expect(message?.contains("(Hugging Face: network -1001; ModelScope: HTTP 403)") == true)
     }
 
     @Test func fileURLsPointAtEachSource() {
@@ -922,6 +945,13 @@ struct DownloadSourceTests {
         #expect(await ModelPrefetcher.matches(url, sha256: known.uppercased()))
         #expect(!(await ModelPrefetcher.matches(url, sha256: String(repeating: "0", count: 64))))
         #expect(await ModelPrefetcher.matches(url, sha256: nil))
+    }
+
+    @Test @MainActor func feedbackSaysWhereDownloadsComeFrom() {
+        DownloadDiagnostics.record("mlx-community/Qwen3-VL-2B-Instruct-4bit - ModelScope: HTTP 403; Hugging Face: network -1001")
+        let details = FeedbackMail.details(modelName: "Qwen3 Vision 2B", languageName: "English")
+        #expect(details.contains("Downloads try first: "))
+        #expect(details.contains("Last download: mlx-community/Qwen3-VL-2B-Instruct-4bit - ModelScope: HTTP 403; Hugging Face: network -1001"))
     }
 
     @Test func eachSourceParksItsOwnResumeData() {

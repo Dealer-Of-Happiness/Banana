@@ -54921,6 +54921,82 @@
           }
         }
       }
+    },
+    "Couldn't download the model from Hugging Face or ModelScope. Check your connection and try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Modell konnte weder von Hugging Face noch von ModelScope geladen werden. Prüfe deine Verbindung und versuche es erneut."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δεν ήταν δυνατή η λήψη του μοντέλου ούτε από το Hugging Face ούτε από το ModelScope. Έλεγξε τη σύνδεσή σου και δοκίμασε ξανά."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo descargar el modelo ni desde Hugging Face ni desde ModelScope. Comprueba tu conexión y vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de télécharger le modèle depuis Hugging Face ou ModelScope. Vérifiez votre connexion et réessayez."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile scaricare il modello né da Hugging Face né da ModelScope. Controlla la connessione e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hugging Face からも ModelScope からもモデルをダウンロードできませんでした。接続を確認して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hugging Face와 ModelScope 모두에서 모델을 내려받지 못했습니다. 연결을 확인하고 다시 시도해 주세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível baixar o modelo do Hugging Face nem do ModelScope. Verifique sua conexão e tente novamente."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось загрузить модель ни с Hugging Face, ни с ModelScope. Проверьте подключение и попробуйте ещё раз."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не вдалося завантажити модель ні з Hugging Face, ні з ModelScope. Перевірте підключення та спробуйте ще раз."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法從 Hugging Face 或 ModelScope 下載模型。請檢查網絡連線後再試。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法从 Hugging Face 或 ModelScope 下载模型。请检查网络连接后重试。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

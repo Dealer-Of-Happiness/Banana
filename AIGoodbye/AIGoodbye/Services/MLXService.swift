@@ -654,7 +654,9 @@ final class MLXService: ObservableObject {
             let moved = Double(last.bytes - first.bytes)
             // Three seconds of data at least: the first callbacks after a
             // resume arrive in a burst and would promise seconds for gigabytes.
-            if span >= 3, moved > 0 {
+            // And a megabyte at least: a model's small files trickle in
+            // first, and kilobytes per second promised "453 hr left".
+            if span >= 3, moved >= 1_000_000 {
                 let remainingBytes = Double(max(totalDownloadBytes - last.bytes, 0))
                 estimate = (remainingBytes / (moved / span)).rounded()
             }
@@ -696,7 +698,13 @@ final class MLXService: ObservableObject {
             guard let hfId = model.huggingFaceId,
                   let repoDir = ModelManager.shared.modelDirectory(for: model) else { return }
             beginDownloadState(expectedBytes: model.sizeBytes)
-            defer { endDownloadState() }
+            // As the real load does, so the chip names the model being
+            // fetched rather than the selected one.
+            loadingModelName = model.name
+            defer {
+                endDownloadState()
+                loadingModelName = nil
+            }
             try await ModelPrefetcher().prefetch(hfId: hfId, into: repoDir) { [weak self] done, total in
                 let service = self
                 Task { @MainActor in

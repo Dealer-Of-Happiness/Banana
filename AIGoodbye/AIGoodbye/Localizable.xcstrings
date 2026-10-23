@@ -52262,158 +52262,6 @@
         }
       }
     },
-    "Tiny and quick - newest generation": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Winzig und schnell – neueste Generation"
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Μικροσκοπικό και γρήγορο – νεότερη γενιά"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diminuto y rápido: la generación más nueva"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Minuscule et rapide – dernière génération"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Piccolissimo e veloce: ultima generazione"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "超小型で高速 - 最新世代"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "초소형에 빠름 - 최신 세대"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Minúsculo e rápido – geração mais recente"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Крошечная и быстрая — новейшее поколение"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Крихітна і швидка — найновіше покоління"
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "極輕巧快速 - 最新一代"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "超轻巧快速 - 最新一代"
-          }
-        }
-      }
-    },
-    "Qwen3.5 0.8B (4-bit). The newest Qwen generation in its smallest size. It understands photos and many languages and stays light enough for older iPhones. Answers are simpler than the larger models.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 0.8B (4-bit). Die neueste Qwen-Generation in ihrer kleinsten Größe. Versteht Fotos und viele Sprachen und bleibt leicht genug für ältere iPhones. Die Antworten sind einfacher als bei den größeren Modellen."
-          }
-        },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 0.8B (4-bit). Η νεότερη γενιά Qwen στο μικρότερο μέγεθός της. Κατανοεί φωτογραφίες και πολλές γλώσσες και παραμένει αρκετά ελαφρύ για παλαιότερα iPhone. Οι απαντήσεις είναι πιο απλές από αυτές των μεγαλύτερων μοντέλων."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 0.8B (4-bit). La generación más nueva de Qwen en su tamaño más pequeño. Entiende fotos y muchos idiomas, y es lo bastante ligero para iPhones antiguos. Sus respuestas son más sencillas que las de los modelos más grandes."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 0.8B (4-bit). La dernière génération Qwen dans sa plus petite taille. Il comprend les photos et de nombreuses langues tout en restant assez léger pour les iPhone plus anciens. Ses réponses sont plus simples que celles des modèles plus grands."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 0.8B (4-bit). L'ultima generazione di Qwen nella sua versione più piccola. Capisce le foto e molte lingue e resta abbastanza leggero per gli iPhone meno recenti. Le risposte sono più semplici rispetto ai modelli più grandi."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 0.8B（4-bit）。最新世代のQwenの最小サイズ。写真と多くの言語を理解し、古いiPhoneでも動く軽さです。回答は大きなモデルよりシンプルになります。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 0.8B(4-bit). 최신 세대 Qwen의 가장 작은 크기입니다. 사진과 여러 언어를 이해하면서도 오래된 iPhone에서 돌아갈 만큼 가볍습니다. 답변은 큰 모델보다 단순합니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 0.8B (4-bit). A geração mais recente do Qwen no menor tamanho. Entende fotos e muitos idiomas e é leve o bastante para iPhones antigos. As respostas são mais simples que as dos modelos maiores."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 0.8B (4-bit). Новейшее поколение Qwen в самом компактном размере. Понимает фотографии и многие языки и при этом достаточно лёгкая для старых iPhone. Ответы проще, чем у больших моделей."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 0.8B (4-bit). Найновіше покоління Qwen у найменшому розмірі. Розуміє фото й багато мов і водночас достатньо легка для старіших iPhone. Відповіді простіші, ніж у більших моделей."
-          }
-        },
-        "zh-HK": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 0.8B（4-bit）。最新一代 Qwen 的最小型號。看得懂相片和多種語言，而且夠輕巧，較舊的 iPhone 也能使用。回答會比大型模型簡單。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3.5 0.8B（4-bit）。最新一代 Qwen 的最小版本。能理解照片和多种语言，且足够轻巧，较旧的 iPhone 也能运行。回答比大型模型更简单。"
-          }
-        }
-      }
-    },
     "Google's Gemma 4 - efficient and multilingual": {
       "localizations": {
         "de": {
@@ -54994,6 +54842,462 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法从 Hugging Face 或 ModelScope 下载模型。请检查网络连接后重试。"
+          }
+        }
+      }
+    },
+    "Small and careful - for older iPhones": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klein und sorgfältig – für ältere iPhones"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Μικρό και προσεκτικό – για παλαιότερα iPhone"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pequeño y cuidadoso: para iPhone más antiguos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Petit et soigneux – pour les iPhone plus anciens"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Piccolo e accurato: per iPhone meno recenti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小さく丁寧 - 古いiPhone向け"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "작고 꼼꼼한 모델 - 오래된 iPhone용"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pequeno e cuidadoso – para iPhones mais antigos"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Маленькая и аккуратная — для старых iPhone"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Маленька й уважна — для старіших iPhone"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "細巧而仔細 - 適合較舊嘅 iPhone"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小巧细致 - 适合较旧的 iPhone"
+          }
+        }
+      }
+    },
+    "Qwen3.5 0.8B (8-bit). The smallest Qwen3.5 at full quality: much better at sums and at reading text in photos than the Lite version, and it understands many languages. Like every model this small it often gets facts wrong, so check anything important.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (8-Bit). Das kleinste Qwen3.5 in voller Qualität: rechnet und liest Text in Fotos deutlich besser als die Lite-Version und versteht viele Sprachen. Wie jedes so kleine Modell liegt es bei Fakten oft falsch – prüfe also alles Wichtige."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (8-bit). Το μικρότερο Qwen3.5 σε πλήρη ποιότητα: πολύ καλύτερο στις πράξεις και στην ανάγνωση κειμένου σε φωτογραφίες από την έκδοση Lite, και καταλαβαίνει πολλές γλώσσες. Όπως κάθε τόσο μικρό μοντέλο, συχνά κάνει λάθος στα γεγονότα, γι' αυτό έλεγξε ό,τι είναι σημαντικό."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (8 bits). El Qwen3.5 más pequeño con calidad completa: mucho mejor en cuentas y leyendo texto en fotos que la versión Lite, y entiende muchos idiomas. Como todo modelo tan pequeño, a menudo se equivoca con los datos, así que comprueba lo importante."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (8 bits). Le plus petit Qwen3.5 en pleine qualité : bien meilleur en calcul et pour lire le texte des photos que la version Lite, et il comprend de nombreuses langues. Comme tout modèle aussi petit, il se trompe souvent sur les faits : vérifiez ce qui compte."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (8 bit). Il Qwen3.5 più piccolo a piena qualità: molto più bravo nei calcoli e nel leggere il testo nelle foto rispetto alla versione Lite, e capisce molte lingue. Come ogni modello così piccolo sbaglia spesso i fatti, quindi verifica ciò che è importante."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B（8ビット）。最小のQwen3.5をフル品質で。Lite版より計算や写真内の文字の読み取りがずっと正確で、多くの言語を理解します。これほど小さなモデルはどれも事実をよく間違えるので、大事なことは必ず確認してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B(8비트). 가장 작은 Qwen3.5를 온전한 품질로. Lite 버전보다 계산과 사진 속 글자 읽기가 훨씬 정확하고 여러 언어를 이해합니다. 이렇게 작은 모델은 모두 사실을 자주 틀리므로 중요한 내용은 꼭 확인하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (8 bits). O menor Qwen3.5 em qualidade total: muito melhor em contas e em ler texto em fotos do que a versão Lite, e entende muitos idiomas. Como todo modelo tão pequeno, ele erra fatos com frequência, então confira o que for importante."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (8 бит). Самая маленькая Qwen3.5 в полном качестве: гораздо лучше считает и читает текст на фото, чем версия Lite, и понимает многие языки. Как любая модель такого размера, она часто ошибается в фактах, поэтому проверяйте всё важное."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (8 біт). Найменша Qwen3.5 у повній якості: значно краще рахує й читає текст на фото, ніж версія Lite, і розуміє багато мов. Як будь-яка модель такого розміру, вона часто помиляється у фактах, тож перевіряйте все важливе."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B（8 位元）。最細嘅 Qwen3.5，完整質素：計數同讀相片入面嘅文字都比 Lite 版好得多，亦明白多種語言。同所有咁細嘅模型一樣，佢成日會搞錯事實，重要嘅嘢記得核實。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B（8 位）。最小的 Qwen3.5，完整质量：计算和识别照片中的文字都比 Lite 版好得多，也能理解多种语言。和所有这么小的模型一样，它经常弄错事实，重要的内容请自行核实。"
+          }
+        }
+      }
+    },
+    "Lightest - for iPhones with the least memory": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Am leichtesten – für iPhones mit wenig Speicher"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το πιο ελαφρύ – για iPhone με την ελάχιστη μνήμη"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El más ligero: para iPhone con muy poca memoria"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le plus léger – pour les iPhone avec le moins de mémoire"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il più leggero: per iPhone con pochissima memoria"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最軽量 - メモリが最も少ないiPhone向け"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가장 가벼운 모델 - 메모리가 가장 적은 iPhone용"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O mais leve – para iPhones com pouca memória"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Самая лёгкая — для iPhone с минимумом памяти"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Найлегша — для iPhone з найменшою пам'яттю"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最輕巧 - 適合記憶體最少嘅 iPhone"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最轻巧 - 适合内存最少的 iPhone"
+          }
+        }
+      }
+    },
+    "Qwen3.5 0.8B (4-bit). The lightest version of the smallest Qwen3.5, for devices that can't run the full one. It understands photos and many languages, but it often gets sums and facts wrong.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (4-Bit). Die leichteste Version des kleinsten Qwen3.5, für Geräte, auf denen die volle nicht läuft. Es versteht Fotos und viele Sprachen, liegt aber bei Rechnungen und Fakten oft falsch."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (4-bit). Η πιο ελαφριά έκδοση του μικρότερου Qwen3.5, για συσκευές που δεν μπορούν να τρέξουν την πλήρη. Καταλαβαίνει φωτογραφίες και πολλές γλώσσες, αλλά συχνά κάνει λάθη σε πράξεις και γεγονότα."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (4 bits). La versión más ligera del Qwen3.5 más pequeño, para dispositivos que no pueden usar la completa. Entiende fotos y muchos idiomas, pero a menudo falla en cuentas y datos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (4 bits). La version la plus légère du plus petit Qwen3.5, pour les appareils qui ne peuvent pas utiliser la version complète. Il comprend les photos et de nombreuses langues, mais se trompe souvent dans les calculs et les faits."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (4 bit). La versione più leggera del Qwen3.5 più piccolo, per i dispositivi che non possono usare quella completa. Capisce le foto e molte lingue, ma sbaglia spesso calcoli e fatti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B（4ビット）。最小のQwen3.5の最軽量版で、フル版を動かせないデバイス向け。写真や多くの言語を理解しますが、計算や事実をよく間違えます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B(4비트). 가장 작은 Qwen3.5의 가장 가벼운 버전으로, 전체 버전을 실행할 수 없는 기기용입니다. 사진과 여러 언어를 이해하지만 계산과 사실을 자주 틀립니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (4 bits). A versão mais leve do menor Qwen3.5, para aparelhos que não rodam a completa. Entende fotos e muitos idiomas, mas erra contas e fatos com frequência."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (4 бит). Самая лёгкая версия самой маленькой Qwen3.5 — для устройств, на которых полная не запускается. Понимает фото и многие языки, но часто ошибается в вычислениях и фактах."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B (4 біт). Найлегша версія найменшої Qwen3.5 — для пристроїв, на яких повна не запускається. Розуміє фото й багато мов, але часто помиляється в обчисленнях і фактах."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B（4 位元）。最細嘅 Qwen3.5 嘅最輕巧版本，適合行唔到完整版嘅裝置。佢明白相片同多種語言，但成日計錯數同搞錯事實。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 0.8B（4 位）。最小的 Qwen3.5 的最轻巧版本，适合无法运行完整版的设备。它能理解照片和多种语言，但经常算错、弄错事实。"
+          }
+        }
+      }
+    },
+    "About 1.7 GB RAM while active": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwa 1,7 GB RAM während der Nutzung"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Περίπου 1,7 GB RAM κατά τη χρήση"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unos 1,7 GB de RAM mientras está activo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environ 1,7 Go de RAM pendant l'utilisation"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Circa 1,7 GB di RAM durante l'uso"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用中のRAMは約1.7 GB"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사용 중 RAM 약 1.7GB"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca de 1,7 GB de RAM em uso"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Около 1,7 ГБ ОЗУ во время работы"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Близько 1,7 ГБ ОЗП під час роботи"
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "運行時約使用 1.7 GB 記憶體"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时约占用 1.7 GB 内存"
+          }
+        }
+      }
+    },
+    "Small models like %@ often get facts wrong. Check anything important.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kleine Modelle wie %@ liegen bei Fakten oft falsch. Prüfe alles Wichtige."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Μικρά μοντέλα όπως το %@ συχνά κάνουν λάθος στα γεγονότα. Έλεγξε ό,τι είναι σημαντικό."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los modelos pequeños como %@ a menudo se equivocan con los datos. Comprueba lo importante."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les petits modèles comme %@ se trompent souvent sur les faits. Vérifiez ce qui compte."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I modelli piccoli come %@ sbagliano spesso i fatti. Verifica ciò che è importante."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ のような小さなモデルは事実をよく間違えます。大事なことは必ず確認してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 같은 작은 모델은 사실을 자주 틀립니다. 중요한 내용은 꼭 확인하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelos pequenos como o %@ costumam errar fatos. Confira o que for importante."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Маленькие модели вроде %@ часто ошибаются в фактах. Проверяйте всё важное."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Маленькі моделі на кшталт %@ часто помиляються у фактах. Перевіряйте все важливе."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好似 %@ 咁細嘅模型成日會搞錯事實。重要嘅嘢記得核實。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "像 %@ 这样的小模型经常弄错事实。重要的内容请自行核实。"
           }
         }
       }

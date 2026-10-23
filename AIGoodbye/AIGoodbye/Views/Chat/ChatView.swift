@@ -1155,6 +1155,24 @@ struct ChatView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
+                // The smallest models answer with the same confidence whether
+                // they are right or not (a tester was told the German flag is
+                // white, red and green). Say so where a chat begins, not in a
+                // terms screen nobody reads.
+                if appState.engine.selectedModel.prefersCompactPrompt {
+                    Label {
+                        Text("Small models like \(appState.engine.selectedModel.name) often get facts wrong. Check anything important.")
+                    } icon: {
+                        Image(systemName: "info.circle")
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal)
+                    .accessibilityElement(children: .combine)
+                }
+
                 // These are the app's actual capabilities, not just
                 // "attach something". Nine features had been living behind a
                 // "+" button labelled "Add photo or document", where nobody

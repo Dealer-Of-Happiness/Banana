@@ -179,18 +179,51 @@ extension AIModel {
     // what actually lands on the phone. Thinking stays off: the chat
     // template closes an empty think block unless asked to think.
 
-    /// Qwen3.5 0.8B: the smallest of the new generation, for 4 GB devices.
-    static var qwen35_08B: AIModel {
-        let bytes: Int64 = 652_027_143
+    /// Qwen3.5 0.8B at 8 bits: the default for 4 GB devices.
+    ///
+    /// The same model as `qwen35_08B` with twice the bits per weight, and on
+    /// a small model that is the difference between getting simple sums
+    /// right or not. On 87 test questions with the app's settings (Mac,
+    /// same engine): 26 of 27 sums right, where the 4-bit one with the old
+    /// prompt got 20 (it said "3 + 1 + 4 = 7 apples" to "I have 3, give 1
+    /// away, buy 4"); 69 of 87 in all against 62. It also reads text in
+    /// photos the 4-bit one could not. Both still get world facts wrong
+    /// (the German flag, the Italian one): that is what 0.8 billion
+    /// parameters hold, at any precision - full 16-bit weights answer the
+    /// same, and so does Gemma 3 1B.
+    static var qwen35_08B8: AIModel {
+        let bytes: Int64 = 1_027_974_615
         return AIModel(
-            id: "qwen3.5-0.8b",
+            id: "qwen3.5-0.8b-8bit",
             name: "Qwen3.5 Vision 0.8B",
-            shortDescription: L10n.text("Tiny and quick - newest generation"),
-            fullDescription: L10n.text("Qwen3.5 0.8B (4-bit). The newest Qwen generation in its smallest size. It understands photos and many languages and stays light enough for older iPhones. Answers are simpler than the larger models."),
+            shortDescription: L10n.text("Small and careful - for older iPhones"),
+            fullDescription: L10n.text("Qwen3.5 0.8B (8-bit). The smallest Qwen3.5 at full quality: much better at sums and at reading text in photos than the Lite version, and it understands many languages. Like every model this small it often gets facts wrong, so check anything important."),
             size: AIModel.formattedCatalogSize(bytes),
             sizeBytes: bytes,
             capabilities: [.chat, .vision, .multilingual, .fast],
             memoryRequired: L10n.text("About 2 GB RAM while active"),
+            backend: .mlx,
+            supportsVision: true,
+            huggingFaceId: "mlx-community/Qwen3.5-0.8B-8bit",
+            minRecommendedRAMGB: 4,
+            imageProcessingEdge: 640,
+            isLegacy: false
+        )
+    }
+
+    /// Qwen3.5 0.8B at 4 bits: the lightest, for devices the 8-bit one
+    /// does not fit.
+    static var qwen35_08B: AIModel {
+        let bytes: Int64 = 652_027_143
+        return AIModel(
+            id: "qwen3.5-0.8b",
+            name: "Qwen3.5 Vision 0.8B Lite",
+            shortDescription: L10n.text("Lightest - for iPhones with the least memory"),
+            fullDescription: L10n.text("Qwen3.5 0.8B (4-bit). The lightest version of the smallest Qwen3.5, for devices that can't run the full one. It understands photos and many languages, but it often gets sums and facts wrong."),
+            size: AIModel.formattedCatalogSize(bytes),
+            sizeBytes: bytes,
+            capabilities: [.chat, .vision, .multilingual, .fast],
+            memoryRequired: L10n.text("About 1.7 GB RAM while active"),
             backend: .mlx,
             supportsVision: true,
             huggingFaceId: "mlx-community/Qwen3.5-0.8B-4bit",
@@ -336,7 +369,7 @@ extension AIModel {
         [qwen35_9BPro, gemma4E4B, qwen3VL8BPro,
          qwen35_4B, gemma4E2B,
          qwen35_2B, qwen3VL2B,
-         qwen35_08B, smolVLM2,
+         qwen35_08B8, qwen35_08B, smolVLM2,
          qwen2VL2B]
     }
 
@@ -379,6 +412,8 @@ extension AIModel {
 
     nonisolated static let measuredMemoryGB: [String: Double] = [
         "qwen3.5-0.8b": 1.7,
+        // 1.87 GB peak with a photo at the 640-point edge it uses.
+        "qwen3.5-0.8b-8bit": 2.1,
         "smolvlm2-500m": 2.0,
         "qwen3.5-2b": 2.8,
         "qwen3-vl-2b": 2.9,
@@ -415,10 +450,30 @@ extension AIModel {
     /// Below 6 GB, Qwen3.5 0.8B rather than Smol Vision: Smol could not say
     /// how many apples are left after giving one away and buying four, at
     /// any setting, while the 0.8B usually could - and it needs less memory.
+    ///
+    /// The 8-bit 0.8B before the 4-bit one: on sums it went from wrong a
+    /// third of the time to right every time. The 4-bit one remains for
+    /// devices where only it fits.
     static var recommendedDownloadModel: AIModel {
         if DeviceCapability.physicalMemoryGB >= 6, qwen3VL2B.fitsThisDevice() { return qwen3VL2B }
+        if qwen35_08B8.fitsThisDevice() { return qwen35_08B8 }
         if qwen35_08B.fitsThisDevice() { return qwen35_08B }
         return smolVLM2
+    }
+
+    /// Small enough that the full system prompt costs it accuracy.
+    ///
+    /// The app's usual prompt (who made AiGoodbye, its website, Markdown,
+    /// images) made the 0.8B models introduce themselves, then invent a
+    /// biography for a name they had never seen, and spend the words a sum
+    /// needs. A short prompt that asks for care with facts and for the steps
+    /// of a calculation raised the 8-bit model from 64 to 69 of 87 test
+    /// questions, and its sums from 21 to 26 of 27. The same brand prompt
+    /// with the step instruction added got 63: the prompt's length is the
+    /// problem, not a missing sentence.
+    var prefersCompactPrompt: Bool {
+        sizeBytes < 1_100_000_000
+            && (huggingFaceId ?? "").localizedCaseInsensitiveContains("qwen3.5")
     }
 
     // MARK: - Sizes

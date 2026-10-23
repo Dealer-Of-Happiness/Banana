@@ -92,6 +92,17 @@ final class MLXService: ObservableObject {
     When analyzing images, describe what you see clearly and answer questions about the visual content.
     """
 
+    /// What the smallest models get instead of `basePrompt` (see
+    /// `AIModel.prefersCompactPrompt`): who they are in one clause, then the
+    /// two habits that made the most difference to their answers - saying
+    /// "I don't know" instead of inventing, and working sums out step by step.
+    nonisolated static let compactBasePrompt = """
+    You are AiGoodbye, a helpful assistant made by Dmitry Mikhaylov (Dealer Of Happiness) that runs offline on this device. \
+    Be accurate and concise. \
+    If you are not sure about a fact, or you do not know who someone is, say so plainly instead of guessing. \
+    For questions with numbers, work out each step before you give the answer.
+    """
+
     /// Full system prompt: brand and behavior, the response-language rule,
     /// the active persona, and anything the user asked the app to remember.
     ///
@@ -99,9 +110,13 @@ final class MLXService: ObservableObject {
     ///   take (the newest that fit go in). Apple Intelligence passes
     ///   `AppleIntelligenceService.memoryBudgetTokens`; downloaded models an
     ///   eighth of the window they actually get.
+    ///
+    /// - Parameter model: the model it is for; the smallest get
+    ///   `compactBasePrompt`. Nil (Apple Intelligence, tests) means the full one.
     @MainActor
-    static func systemPrompt(for language: AppLanguage, memoryTokens: Int) -> String {
-        var prompt = basePrompt + " " + language.modelInstruction
+    static func systemPrompt(for language: AppLanguage, memoryTokens: Int, model: AIModel? = nil) -> String {
+        let base = model?.prefersCompactPrompt == true ? compactBasePrompt : basePrompt
+        var prompt = base + " " + language.modelInstruction
 
         let persona = PersonaStore.shared.activeInstructions
         if !persona.isEmpty {
@@ -833,7 +848,7 @@ final class MLXService: ObservableObject {
         }
 
         let instructions = overrideInstructions
-            ?? Self.systemPrompt(for: settings.appLanguage, memoryTokens: budget / 8)
+            ?? Self.systemPrompt(for: settings.appLanguage, memoryTokens: budget / 8, model: model)
 
         // What the cache starts out holding. Seeding this with the history
         // matters: a reopened conversation used to start its count at zero

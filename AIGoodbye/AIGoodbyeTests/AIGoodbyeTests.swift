@@ -73,8 +73,10 @@ struct ModelCatalogTests {
             #expect(recommended.id == AIModel.qwen3VL2B.id)
         } else {
             // Not Smol Vision any more: it couldn't do "3 apples, give one
-            // away, buy four" at any setting.
-            #expect(recommended.id == AIModel.qwen35_08B.id)
+            // away, buy four" at any setting. The 8-bit 0.8B where it fits,
+            // the 4-bit Lite where only that does.
+            #expect([AIModel.qwen35_08B8.id, AIModel.qwen35_08B.id].contains(recommended.id))
+            if AIModel.qwen35_08B8.fitsThisDevice() { #expect(recommended.id == AIModel.qwen35_08B8.id) }
         }
         #expect(!recommended.isLegacy)
     }
@@ -87,9 +89,13 @@ struct ModelCatalogTests {
     @Test @MainActor func modelsLandOnTheirDeviceTier() {
         let phone4GB = 2.5 - 0.3, phone6GB = 4.2 - 0.3, phone12GB = 6.3 - 0.3, big = 10.0
 
-        for model in [AIModel.qwen35_08B, .smolVLM2] {
+        for model in [AIModel.qwen35_08B8, .qwen35_08B, .smolVLM2] {
             #expect(model.fitsThisDevice(budgetGB: phone4GB), "\(model.name) is for 4 GB iPhones")
         }
+        // A 4 GB iPhone that gives the app less (about 2 GB, as some
+        // reported) still gets the Lite version.
+        #expect(!AIModel.qwen35_08B8.fitsThisDevice(budgetGB: 2.0 - 0.3))
+        #expect(AIModel.qwen35_08B.fitsThisDevice(budgetGB: 2.0 - 0.3))
         for model in [AIModel.qwen35_2B, .qwen3VL2B] {
             #expect(model.fitsThisDevice(budgetGB: phone6GB), "\(model.name) is for 6 GB iPhones")
             #expect(!model.fitsThisDevice(budgetGB: phone4GB), "\(model.name) is too big for 4 GB iPhones")
@@ -121,6 +127,7 @@ struct ModelCatalogTests {
     /// randomness; the larger ones keep the Creativity setting as it is.
     @Test func smallModelsGetLessRandomness() {
         #expect(AIModel.qwen35_08B.temperatureScale < 0.5)
+        #expect(AIModel.qwen35_08B8.temperatureScale < 0.5)
         #expect(AIModel.smolVLM2.temperatureScale < 0.5)
         for model in [AIModel.qwen3VL2B, .qwen35_2B, .qwen35_4B, .qwen35_9BPro, .gemma4E2B] {
             #expect(model.temperatureScale == 1.0, "\(model.name)")
@@ -133,6 +140,7 @@ struct ModelCatalogTests {
     /// thinking-by-default repo.
     @Test func newGenerationModelsPointAtTheTestedRepos() {
         #expect(AIModel.qwen35_08B.huggingFaceId == "mlx-community/Qwen3.5-0.8B-4bit")
+        #expect(AIModel.qwen35_08B8.huggingFaceId == "mlx-community/Qwen3.5-0.8B-8bit")
         #expect(AIModel.qwen35_2B.huggingFaceId == "mlx-community/Qwen3.5-2B-4bit")
         #expect(AIModel.qwen35_4B.huggingFaceId == "mlx-community/Qwen3.5-4B-4bit")
         #expect(AIModel.qwen35_9BPro.huggingFaceId == "mlx-community/Qwen3.5-9B-4bit")
@@ -1018,5 +1026,30 @@ struct ModelScopeNetworkTests {
         }
         // The next download starts where this one succeeded.
         #expect(ModelPrefetcher.preferredSource == .modelScope)
+    }
+}
+
+/// The smallest models answer better with a short prompt (see
+/// `AIModel.prefersCompactPrompt`); every other model keeps the full one.
+struct CompactPromptTests {
+
+    @Test func onlyTheSmallestQwenModelsGetTheShortPrompt() {
+        #expect(AIModel.qwen35_08B8.prefersCompactPrompt)
+        #expect(AIModel.qwen35_08B.prefersCompactPrompt)
+        for model in [AIModel.qwen35_2B, .qwen3VL2B, .qwen35_4B, .qwen35_9BPro, .gemma4E2B, .smolVLM2, .appleIntelligence] {
+            #expect(!model.prefersCompactPrompt, "\(model.name)")
+        }
+    }
+
+    @Test @MainActor func theShortPromptAsksForCareAndSteps() {
+        let small = MLXService.systemPrompt(for: .automatic, memoryTokens: 0, model: AIModel.qwen35_08B8)
+        #expect(small.hasPrefix(MLXService.compactBasePrompt))
+        #expect(small.contains("say so plainly instead of guessing"))
+        #expect(small.contains("work out each step"))
+        #expect(small.contains(AppLanguage.automatic.modelInstruction))
+        #expect(!small.contains("aigoodbye.ai"))
+        // Larger models, and no model at all (Apple Intelligence), keep the full prompt.
+        #expect(MLXService.systemPrompt(for: .automatic, memoryTokens: 0, model: AIModel.qwen35_2B).hasPrefix(MLXService.basePrompt))
+        #expect(MLXService.systemPrompt(for: .automatic, memoryTokens: 0).hasPrefix(MLXService.basePrompt))
     }
 }

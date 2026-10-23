@@ -198,5 +198,20 @@ nonisolated enum BuiltInModelManifests {
                 PinnedModelFile(path: "tokenizer_config.json", size: 2740, sha256: "080d9e1aff284e2f6043889cd05367966f7c7b80e025fbc0b06745e218158656", etag: "cf6235aee46a24bf71f251c0a4e7a0379948f7d2"),
             ]
         ),
+        "mlx-community/Qwen3.5-0.8B-8bit": PinnedModelManifest(
+            commit: "87e768fbfa03994095f3d14527c80c5ae70c5758",
+            files: [
+                PinnedModelFile(path: "chat_template.jinja", size: 7755, sha256: "273d8e0e683b885071fb17e08d71e5f2a5ddfb5309756181681de4f5a1822d80", etag: "0ef09f214eaa6d9bca297988afc1454b5827b2c7"),
+                PinnedModelFile(path: "config.json", size: 3112, sha256: "be287fbd6f3549b1ca08a61d69833e48f72d884a0957084f4cbc7b5e3eac23db", etag: "9bb95955e9161e75b13366fc2e367934f87c108e"),
+                PinnedModelFile(path: "model.safetensors", size: 1001176958, sha256: "9a887c5731520e33bbd324378ecb7b560c1f750af16a6dc28229d500304e656c", etag: "9a887c5731520e33bbd324378ecb7b560c1f750af16a6dc28229d500304e656c"),
+                PinnedModelFile(path: "model.safetensors.index.json", size: 71474, sha256: "46e263363b4a4ad4e450ac06024ab804d8686149690a955f68397fcc6483f5e9", etag: "f75d94dbe4b9fe6b0366e825b79ac5a3c676e613"),
+                PinnedModelFile(path: "preprocessor_config.json", size: 390, sha256: "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516", etag: "2ea84a437d448ff71b08df68fdd949d5cc4ebb64"),
+                PinnedModelFile(path: "processor_config.json", size: 1300, sha256: "14932921ca485d458a04dafd8069fbb0a4505622a48208d19ed247115801385b", etag: "7ad6acdf4203f22b7b990e36ccc3a1fe38563d5e"),
+                PinnedModelFile(path: "tokenizer.json", size: 19989343, sha256: "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4", etag: "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4"),
+                PinnedModelFile(path: "tokenizer_config.json", size: 1139, sha256: "e98f1901ac6f0adff67b1d540bfa0c36ac1a0cf59eb72ed78146ef89aafa1182", etag: "a068e2468cff426a9b105006e74e044030a6faf4"),
+                PinnedModelFile(path: "video_preprocessor_config.json", size: 385, sha256: "7768af27c1fafa9cc9011c1dc20067e03f8915e03b63504550e11d5066986d13", etag: "3ba673a5ad7d4d13f54155ecd38b2a94a6dac8fe"),
+                PinnedModelFile(path: "vocab.json", size: 6722759, sha256: "ce99b4cb2983d118806ce0a8b777a35b093e2000a503ebde25853284c9dfa003", etag: "0aa0ce0658d60ac4a5d609f4eadb0e8e43514176"),
+            ]
+        ),
     ]
 }

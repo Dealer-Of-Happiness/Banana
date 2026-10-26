@@ -273,7 +273,12 @@ final class AIGoodbyeEndToEndTests: XCTestCase {
         choose.tap()
         XCTAssertTrue(app.navigationBars["Choose AI Model"].waitForExistence(timeout: 5))
         // Pick the smallest model.
+        // Near the end of a longer list since the 0.8B models were added:
+        // scroll until the lazy list has created its row.
         let smol = app.staticTexts["Smol Vision 500M"].firstMatch
+        for _ in 0..<4 where !(smol.exists && smol.isHittable) {
+            app.swipeUp()
+        }
         XCTAssertTrue(smol.waitForExistence(timeout: 5))
         smol.tap()
         let done = app.buttons["Done"].firstMatch

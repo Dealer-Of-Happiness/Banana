@@ -246,7 +246,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ muss zuerst geladen werden."
+            "value": "%@ muss zuerst heruntergeladen werden."
           }
         },
         "el": {
@@ -4952,7 +4952,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Für die Bildanalyse wird das Vision-Modell %1$@ (%2$@) benötigt. Es wird einmal geladen und funktioniert danach offline."
+            "value": "Für die Bildanalyse wird das Vision-Modell %1$@ (%2$@) benötigt. Es wird einmal heruntergeladen und funktioniert danach offline."
           }
         },
         "el": {
@@ -14117,7 +14117,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Das Löschen eines Modells gibt sofort Speicherplatz frei. Es wird beim nächsten Gebrauch erneut geladen."
+            "value": "Das Löschen eines Modells gibt sofort Speicherplatz frei. Es wird beim nächsten Gebrauch erneut heruntergeladen."
           }
         },
         "el": {
@@ -16017,7 +16017,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Laden"
+            "value": "Herunterladen"
           }
         },
         "el": {
@@ -16093,7 +16093,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ laden · %@"
+            "value": "%@ herunterladen · %@"
           }
         },
         "el": {
@@ -16175,7 +16175,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ laden?"
+            "value": "%@ herunterladen?"
           }
         },
         "el": {
@@ -16251,7 +16251,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ein Modell laden"
+            "value": "Ein Modell herunterladen"
           }
         },
         "el": {
@@ -16403,7 +16403,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nur über WLAN laden"
+            "value": "Nur über WLAN herunterladen"
           }
         },
         "el": {
@@ -16859,7 +16859,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Werden von iOS bei Apple geladen, wenn du zum ersten Mal in einer Sprache sprichst oder aufnimmst"
+            "value": "Werden von iOS bei Apple heruntergeladen, wenn du zum ersten Mal in einer Sprache sprichst oder aufnimmst"
           }
         },
         "el": {
@@ -16935,7 +16935,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lade %@"
+            "value": "%@ wird heruntergeladen"
           }
         },
         "el": {
@@ -16983,7 +16983,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Загрузка %@"
+            "value": "Скачивание %@"
           }
         },
         "uk": {
@@ -17011,7 +17011,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lade %1$@ · %2$@ von %3$@"
+            "value": "%1$@ wird heruntergeladen · %2$@ von %3$@"
           }
         },
         "el": {
@@ -17059,7 +17059,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Загрузка %1$@ · %2$@ из %3$@"
+            "value": "Скачивание %1$@ · %2$@ из %3$@"
           }
         },
         "uk": {
@@ -17087,7 +17087,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "KI-Modelldateien werden geladen"
+            "value": "KI-Modelldateien werden heruntergeladen"
           }
         },
         "el": {
@@ -17163,7 +17163,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wird im Hintergrund geladen. Deine Nachricht wird beantwortet, sobald der Download fertig ist."
+            "value": "Wird im Hintergrund heruntergeladen. Deine Nachricht wird beantwortet, sobald der Download fertig ist."
           }
         },
         "el": {
@@ -17239,7 +17239,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Das Spracherkennungsmodell für diese Sprache wird einmalig geladen."
+            "value": "Das Spracherkennungsmodell für diese Sprache wird einmalig heruntergeladen."
           }
         },
         "el": {
@@ -17315,7 +17315,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sprachmodell für diese Sprache wird geladen ..."
+            "value": "Sprachmodell für diese Sprache wird heruntergeladen ..."
           }
         },
         "el": {
@@ -17391,7 +17391,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wird geladen ..."
+            "value": "Wird heruntergeladen ..."
           }
         },
         "el": {
@@ -17467,7 +17467,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wird bei der ersten Verwendung geladen"
+            "value": "Wird bei der ersten Verwendung heruntergeladen"
           }
         },
         "el": {
@@ -18151,7 +18151,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Jede Antwort stammt von einem Modell, das auf deiner eigenen Hardware läuft. Die App nutzt das Internet nur, um ein von dir gewünschtes Modell zu laden oder eines zu prüfen, das du hinzufügen möchtest. Deine Nachrichten, Dateien und Aufnahmen werden nirgendwohin gesendet."
+            "value": "Jede Antwort stammt von einem Modell, das auf deiner eigenen Hardware läuft. Die App nutzt das Internet nur, um ein von dir gewünschtes Modell herunterzuladen oder eines zu prüfen, das du hinzufügen möchtest. Deine Nachrichten, Dateien und Aufnahmen werden nirgendwohin gesendet."
           }
         },
         "el": {
@@ -24939,7 +24939,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Modelle sind 1–6 GB groß, daher wird das Laden über WLAN empfohlen."
+            "value": "Modelle sind 1–6 GB groß, daher wird das Herunterladen über WLAN empfohlen."
           }
         },
         "el": {
@@ -25015,7 +25015,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Modelle werden einmal geladen und funktionieren danach vollständig offline. Du kannst sie jederzeit in den Einstellungen löschen."
+            "value": "Modelle werden einmal heruntergeladen und funktionieren danach vollständig offline. Du kannst sie jederzeit in den Einstellungen löschen."
           }
         },
         "el": {
@@ -26535,7 +26535,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keine Internetverbindung. Das Laden des Modells benötigt einmalig Internet; danach funktioniert das Chatten vollständig offline."
+            "value": "Keine Internetverbindung. Das Herunterladen des Modells benötigt einmalig Internet; danach funktioniert das Chatten vollständig offline."
           }
         },
         "el": {
@@ -27827,7 +27827,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nicht geladen"
+            "value": "Nicht heruntergeladen"
           }
         },
         "el": {
@@ -41853,7 +41853,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Das KI-Modell ist noch nicht bereit. Lade oder wähle ein Modell in den Einstellungen."
+            "value": "Das KI-Modell ist noch nicht bereit. Lade ein Modell herunter oder wähle eines in den Einstellungen."
           }
         },
         "el": {
@@ -43619,7 +43619,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Das Modell ist noch nicht geladen, daher wurde deine Nachricht nicht beantwortet."
+            "value": "Das Modell ist noch nicht heruntergeladen, daher wurde deine Nachricht nicht beantwortet."
           }
         },
         "el": {
@@ -44385,7 +44385,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dieses Gerät hat kein Apple Intelligence, deshalb muss AiGoodbye ein Modell laden, bevor es antworten kann. Das passiert nur einmal."
+            "value": "Dieses Gerät hat kein Apple Intelligence, deshalb muss AiGoodbye ein Modell herunterladen, bevor es antworten kann. Das passiert nur einmal."
           }
         },
         "el": {
@@ -45145,7 +45145,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Das gibt sofort %1$@ frei. %2$@ ist dein aktuelles Modell und wird bei der nächsten Nutzung erneut geladen."
+            "value": "Das gibt sofort %1$@ frei. %2$@ ist dein aktuelles Modell und wird bei der nächsten Nutzung erneut heruntergeladen."
           }
         },
         "el": {
@@ -45221,7 +45221,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Das gibt sofort %1$@ frei. Du kannst %2$@ jederzeit erneut laden."
+            "value": "Das gibt sofort %1$@ frei. Du kannst %2$@ jederzeit erneut herunterladen."
           }
         },
         "el": {
@@ -46303,7 +46303,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Um auf diesem Gerät privat zu chatten, muss %1$@ (%2$@) einmal geladen werden. Danach funktioniert alles offline."
+            "value": "Um auf diesem Gerät privat zu chatten, muss %1$@ (%2$@) einmal heruntergeladen werden. Danach funktioniert alles offline."
           }
         },
         "el": {
@@ -49209,7 +49209,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Warte auf WLAN. Verbinde dich mit einem WLAN oder schalte „Nur über WLAN laden“ in den Einstellungen aus."
+            "value": "Warte auf WLAN. Verbinde dich mit einem WLAN oder schalte „Nur über WLAN herunterladen“ in den Einstellungen aus."
           }
         },
         "el": {
@@ -54547,7 +54547,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "KI-Modelle werden einmalig von Hugging Face geladen (wo Hugging Face nicht erreichbar ist, als identische Dateien von ModelScope) – je nach Modell etwa 1 bis 6 GB, daher wird WLAN empfohlen. Nach dem Download funktioniert alles vollständig offline. Du kannst Modelle jederzeit in den Einstellungen löschen. Wenn du ein eigenes Modell über seinen Namen hinzufügst, holt die App zuerst die Dateiliste dieses öffentlichen Repositorys – ein paar Kilobyte –, um Größe und Eignung deines Geräts zu prüfen. Gesendet wird nur der Modellname, niemals deine Inhalte."
+            "value": "KI-Modelle werden einmalig von Hugging Face heruntergeladen (wo Hugging Face nicht erreichbar ist, als identische Dateien von ModelScope) – je nach Modell etwa 1 bis 6 GB, daher wird WLAN empfohlen. Nach dem Download funktioniert alles vollständig offline. Du kannst Modelle jederzeit in den Einstellungen löschen. Wenn du ein eigenes Modell über seinen Namen hinzufügst, holt die App zuerst die Dateiliste dieses öffentlichen Repositorys – ein paar Kilobyte –, um Größe und Eignung deines Geräts zu prüfen. Gesendet wird nur der Modellname, niemals deine Inhalte."
           }
         },
         "el": {
@@ -54775,7 +54775,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Das Modell konnte weder von Hugging Face noch von ModelScope geladen werden. Prüfe deine Verbindung und versuche es erneut."
+            "value": "Das Modell konnte weder von Hugging Face noch von ModelScope heruntergeladen werden. Prüfe deine Verbindung und versuche es erneut."
           }
         },
         "el": {

@@ -28,11 +28,11 @@ final class MLXService: ObservableObject {
 
     // MARK: - Published state
 
-    @Published var isDownloading: Bool = false
+    @Published var isDownloading: Bool = false { didSet { refreshScreenAwake() } }
     @Published var downloadProgress: Double = 0
     @Published var downloadedBytes: Int64 = 0
     @Published var totalDownloadBytes: Int64 = 0
-    @Published var isDownloadStalled: Bool = false
+    @Published var isDownloadStalled: Bool = false { didSet { refreshScreenAwake() } }
     @Published var isPreparingModel: Bool = false
     @Published var loadedModelId: String?
     /// The model a `performLoad` is currently downloading or preparing. Not
@@ -44,12 +44,20 @@ final class MLXService: ObservableObject {
     /// True while a Wi-Fi-only download is parked because the device is on
     /// cellular or another expensive path. The system waits silently (for
     /// hours) in that state, so the chip has to say what is going on.
-    @Published private(set) var isWaitingForWiFi: Bool = false
+    @Published private(set) var isWaitingForWiFi: Bool = false { didSet { refreshScreenAwake() } }
     /// Seconds left in the running download, from the last ten seconds of
     /// throughput. Nil until there is enough data for an honest figure, and
     /// whenever the transfer is parked or stalled - "about 4 min left" on a
     /// frozen bar is worse than no estimate.
     @Published private(set) var estimatedSecondsRemaining: TimeInterval?
+
+    /// The screen stays on while a download is actually moving: with the
+    /// phone locked the app is suspended between files and the download
+    /// crawls. Not while it is parked waiting for Wi-Fi or stalled - that
+    /// can last hours, and the screen would burn the battery for nothing.
+    private func refreshScreenAwake() {
+        ScreenAwake.set(.modelDownload, isDownloading && !isWaitingForWiFi && !isDownloadStalled)
+    }
 
     /// Recent (time, bytes) samples for the estimate.
     private var throughputSamples: [(time: Date, bytes: Int64)] = []
@@ -986,6 +994,38 @@ final class MLXService: ObservableObject {
                 task.cancel()
             }
         }
+    }
+
+    /// Whether the loaded model says it knows for certain who the person in
+    /// `question` is: true, false, or nil when it gave no clear answer or no
+    /// model is loaded.
+    ///
+    /// For the smallest models, which answer "Who is ...?" with an invented
+    /// biography for anyone they have never heard of, in German even when
+    /// told not to. Asked on its own, in English and with nothing else
+    /// around it, the same model judges well whether it knows someone: in
+    /// tests it said yes for Einstein, Merkel, Marie Curie, Messi and
+    /// Goethe and no for private people, every time. The answer then sets
+    /// the note in front of the real question (see `TurnContext`). A few
+    /// tokens on a separate, throwaway session: under a second.
+    func knowsPerson(in question: String) async -> Bool? {
+        guard let container = modelContainer else { return nil }
+        let probe = ChatSession(
+            container,
+            instructions: "You are a careful assistant.",
+            generateParameters: GenerateParameters(maxTokens: 4, temperature: 0),
+            additionalContext: Self.chatTemplateContext
+        )
+        let asked = question.replacingOccurrences(of: "\n", with: " ")
+        guard let raw = try? await probe.respond(
+            to: "Question: «\(asked)» Do you know for certain who the person in this question is? Answer only yes or no."
+        ) else { return nil }
+        let answer = ChatTemplateOptions.visibleAnswer(raw)
+            .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+            .lowercased()
+        if answer.hasPrefix("yes") { return true }
+        if answer.hasPrefix("no") { return false }
+        return nil
     }
 
     // MARK: - History trimming

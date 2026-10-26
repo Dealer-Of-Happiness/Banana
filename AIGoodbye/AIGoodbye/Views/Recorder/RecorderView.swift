@@ -159,11 +159,11 @@ struct RecorderView: View {
             // Only throw away a recording that is still in progress: after
             // it has been saved, cancelling would delete its audio file.
             if recorder.phase != .idle && !isStopping { recorder.cancel() }
-            UIApplication.shared.isIdleTimerDisabled = false
+            ScreenAwake.set(.recorder, false)
         }
         .onChange(of: recorder.phase) { _, phase in
             // Keep the screen awake only while actually capturing.
-            UIApplication.shared.isIdleTimerDisabled = (phase == .recording)
+            ScreenAwake.set(.recorder, (phase == .recording))
         }
         .onChange(of: recorder.reachedLimit) { _, hit in
             // Four hours is the cap: save what we have rather than leaving a
@@ -626,7 +626,7 @@ struct RecorderView: View {
         }
         summaryTask?.cancel()
         if recorder.phase != .idle { recorder.cancel() }
-        UIApplication.shared.isIdleTimerDisabled = false
+        ScreenAwake.set(.recorder, false)
         dismiss()
     }
 

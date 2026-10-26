@@ -742,7 +742,7 @@ struct LiveCameraView: View {
                 // Pointing the phone at something and waiting for the answer
                 // is hands-off by nature; auto-lock used to black out the
                 // viewfinder and cancel the answer half a minute in.
-                UIApplication.shared.isIdleTimerDisabled = true
+                ScreenAwake.set(.liveCamera, true)
             }
             voice.setSpeechLanguage(appState.settings.appLanguage)
             voice.speechRate = Float(appState.settings.speechRate)
@@ -751,7 +751,7 @@ struct LiveCameraView: View {
             generationTask?.cancel()
             camera.stop()
             voice.shutdown()
-            UIApplication.shared.isIdleTimerDisabled = false
+            ScreenAwake.set(.liveCamera, false)
         }
         .onChange(of: scenePhase) { _, phase in
             // Never keep the camera or speaker running in the background -
@@ -761,7 +761,7 @@ struct LiveCameraView: View {
             case .active:
                 guard !lock.isLocked else { return }
                 camera.resume()
-                UIApplication.shared.isIdleTimerDisabled = true
+                ScreenAwake.set(.liveCamera, true)
             case .inactive:
                 // Control Center, a call banner, Siri, a system alert: the
                 // camera is still on screen, so it stays on. Stopping it
@@ -772,7 +772,7 @@ struct LiveCameraView: View {
                 generationTask?.cancel()
                 camera.stop()
                 voice.stopSpeaking()
-                UIApplication.shared.isIdleTimerDisabled = false
+                ScreenAwake.set(.liveCamera, false)
             @unknown default:
                 break
             }
@@ -781,7 +781,7 @@ struct LiveCameraView: View {
             // Unlocked after the `.active` turn that was skipped above.
             guard !locked, scenePhase != .background else { return }
             camera.resume()
-            UIApplication.shared.isIdleTimerDisabled = true
+            ScreenAwake.set(.liveCamera, true)
         }
     }
 

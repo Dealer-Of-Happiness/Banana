@@ -71,6 +71,30 @@ final class AIGoodbyeSmallDeviceTests: XCTestCase {
         add(snap(app, "small-picker"))
     }
 
+    /// "Who is Dmitry Mikhaylov?" to the smallest model is answered by the
+    /// app itself (the model made him a footballer), and the chat goes on.
+    @MainActor
+    func testTheSmallModelSaysWhoMadeTheApp() {
+        let app = launch(selected: "qwen3.5-0.8b-8bit")
+        let field = app.textFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        field.tap()
+        field.typeText("Who is Dmitry Mikhaylov?")
+        app.buttons["Send message"].tap()
+        let download = app.buttons["Download"]
+        if download.waitForExistence(timeout: 3) { download.tap() }
+        let answer = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS 'also known as Dealer Of Happiness, is the developer who made me'")).firstMatch
+        XCTAssertTrue(answer.waitForExistence(timeout: 20), "the app's own answer about its developer is missing")
+        add(snap(app, "developer-answer"))
+        // The next question goes to the model as usual (the echo, here).
+        field.tap()
+        field.typeText("What is 2 + 2?")
+        app.buttons["Send message"].tap()
+        let echo = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Simulator test mode'")).firstMatch
+        XCTAssertTrue(echo.waitForExistence(timeout: 20))
+    }
+
     @MainActor
     private func snap(_ app: XCUIApplication, _ name: String) -> XCTAttachment {
         let attachment = XCTAttachment(screenshot: app.screenshot())

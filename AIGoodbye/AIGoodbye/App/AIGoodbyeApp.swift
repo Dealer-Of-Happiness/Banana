@@ -341,6 +341,8 @@ class AppState: ObservableObject {
         // Sample content for store screenshots (AIG_DEMO=1), before the
         // last-conversation restore so a launch argument can pick the chat.
         if DemoContent.isEnabled { DemoContent.seed(into: conversationManager) }
+        // Layout checks from the command line: open with the drawer out.
+        if ProcessInfo.processInfo.environment["AIG_OPEN_MENU"] == "1" { showSideMenu = true }
         #endif
 
         // Come back to the conversation the user was actually in. Always

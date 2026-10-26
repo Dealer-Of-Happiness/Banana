@@ -150,7 +150,7 @@ struct SceneDescriptionView: View {
             describeTask?.cancel()
             camera.stop()
             voice.shutdown()
-            UIApplication.shared.isIdleTimerDisabled = false
+            ScreenAwake.set(.sceneDescription, false)
         }
         .onChange(of: camera.failed) { _, failed in
             guard failed else { return }
@@ -174,7 +174,7 @@ struct SceneDescriptionView: View {
                 camera.stop()
                 voice.pause()
                 isDescribing = false
-                UIApplication.shared.isIdleTimerDisabled = false
+                ScreenAwake.set(.sceneDescription, false)
             @unknown default:
                 break
             }
@@ -230,7 +230,7 @@ struct SceneDescriptionView: View {
             if isContinuous { scheduleNext(after: 0.2) }
         }
         .onChange(of: isContinuous) { _, on in
-            UIApplication.shared.isIdleTimerDisabled = on
+            ScreenAwake.set(.sceneDescription, on)
             if on {
                 spokeQuickImpression = false
                 lastSpoken = ""
@@ -454,7 +454,7 @@ struct SceneDescriptionView: View {
         guard !lock.isLocked else { return }
         camera.start()
         if isContinuous {
-            UIApplication.shared.isIdleTimerDisabled = true
+            ScreenAwake.set(.sceneDescription, true)
             scheduleNext(after: 1.2)
         }
     }
@@ -467,7 +467,7 @@ struct SceneDescriptionView: View {
     private func resumeAfterPause() {
         camera.resume()
         guard isContinuous else { return }
-        UIApplication.shared.isIdleTimerDisabled = true
+        ScreenAwake.set(.sceneDescription, true)
         guard !isDescribing, !voice.isSpeaking else { return }
         scheduleNext(after: 0.6)
     }
@@ -523,7 +523,7 @@ struct SceneDescriptionView: View {
         describeTask?.cancel()
         isDescribing = false
         isContinuous = false
-        UIApplication.shared.isIdleTimerDisabled = false
+        ScreenAwake.set(.sceneDescription, false)
         notice = reason
         // Speak after the toggle change has settled, so the state change
         // doesn't stop the very announcement explaining it.

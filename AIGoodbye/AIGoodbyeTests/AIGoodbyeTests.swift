@@ -1053,3 +1053,125 @@ struct CompactPromptTests {
         #expect(MLXService.systemPrompt(for: .automatic, memoryTokens: 0).hasPrefix(MLXService.basePrompt))
     }
 }
+
+/// The note in front of each message (TurnContext): the answer's language,
+/// the clock only when asked, and the "who is" reminder. From a tester's
+/// German report on an iPhone SE.
+struct TurnContextTests {
+    /// Monday 26 October 2026, 11:11 in Berlin.
+    let monday = ISO8601DateFormatter().date(from: "2026-10-26T10:11:00Z")!
+    let berlin = TimeZone(identifier: "Europe/Berlin")!
+
+    @Test func theTimeQuestionGetsTheRealTimeInGerman() {
+        let sent = TurnContext.wrap("Wie spät ist es?", question: "Wie spät ist es?",
+                                    appLanguage: .automatic, now: monday, timeZone: berlin)
+        #expect(sent == "(Es ist jetzt Montag, 26. Oktober 2026 um 11:11. Antworte auf Deutsch.)\n\nWie spät ist es?")
+    }
+
+    @Test func sumsGetNoClock() {
+        let q = "Wie viel ist 2 + 2? Antworte nur mit der Zahl."
+        let sent = TurnContext.wrap(q, question: q, appLanguage: .automatic, now: monday, timeZone: berlin)
+        #expect(sent == "(Antworte auf Deutsch.)\n\n" + q)
+        #expect(!sent.contains("2026"))
+    }
+
+    @Test func aGermanQuestionAboutAPhotoIsAnsweredInGerman() {
+        #expect(TurnContext.replyLanguage(for: "Sag mir, was du auf diesem Bild siehst.", appLanguage: .automatic) == .german)
+        #expect(TurnContext.replyLanguage(for: "Tell me what you see in this picture.", appLanguage: .automatic) == .english)
+        #expect(TurnContext.replyLanguage(for: "Que horas são?", appLanguage: .automatic) == .portuguese)
+        #expect(TurnContext.replyLanguage(for: "而家幾點？", appLanguage: .automatic) == nil)  // too short to be sure
+    }
+
+    @Test func shortMessagesKeepTheSystemPromptsRule() {
+        #expect(TurnContext.replyLanguage(for: "Hallo", appLanguage: .automatic) == nil)
+        #expect(TurnContext.wrap("Hallo", question: "Hallo", appLanguage: .automatic) == "Hallo")
+    }
+
+    @Test func aLanguageChosenInSettingsWins() {
+        #expect(TurnContext.replyLanguage(for: "What time is it?", appLanguage: .german) == .german)
+        let note = TurnContext.note(for: "Hi", appLanguage: .french)
+        #expect(note == "(Réponds en français.)")
+    }
+
+    @Test func whoIsQuestionsGetTheReminder() {
+        let note = TurnContext.note(for: "Wer ist Scott von Gimborn?", appLanguage: .automatic)
+        #expect(note == "(Wenn du diese Person nicht sicher kennst, sag ehrlich, dass du sie nicht kennst. Antworte auf Deutsch.)")
+        #expect(TurnContext.asksWhoSomeoneIs("Who’s Dmitry Mikhaylov?"))
+        #expect(TurnContext.asksWhoSomeoneIs("Erzähl mir etwas über Scott von Gimborn."))
+        #expect(TurnContext.asksWhoSomeoneIs("Кто такой Альберт Эйнштейн?"))
+        #expect(!TurnContext.asksWhoSomeoneIs("Wer bin ich?"))
+        #expect(!TurnContext.asksWhoSomeoneIs("What is the capital of France?"))
+    }
+
+    @Test func peopleTheModelSaysItDoesNotKnowGetAnHonestAnswer() {
+        let q = "Wer ist Scott von Gimborn?"
+        let german = TurnContext.Phrases.for(.german)
+        #expect(TurnContext.fixedAnswer(for: q, hasImage: false, personKnown: false, appLanguage: .automatic) == german.dontKnowAnswer)
+        // Known people, and photos (which may show who it is), go to the model.
+        #expect(TurnContext.fixedAnswer(for: q, hasImage: false, personKnown: true, appLanguage: .automatic) == nil)
+        #expect(TurnContext.fixedAnswer(for: q, hasImage: false, personKnown: nil, appLanguage: .automatic) == nil)
+        #expect(TurnContext.fixedAnswer(for: q, hasImage: true, personKnown: false, appLanguage: .automatic) == nil)
+        #expect(TurnContext.note(for: q, appLanguage: .automatic, personKnown: false)
+                == "(" + german.unknownPersonCertain + " " + german.answerIn + ")")
+        #expect(TurnContext.note(for: "Wer war Albert Einstein?", appLanguage: .automatic, personKnown: true)
+                == "(" + german.answerIn + ")")
+        // Not a question about a person: nothing fixed.
+        #expect(TurnContext.fixedAnswer(for: "Wie viel ist 2 + 2?", hasImage: false, personKnown: false, appLanguage: .automatic) == nil)
+    }
+
+    @Test func whoAmIIsAnsweredWithWhatTheAppKnows() {
+        let q = "Wer bin ich? Nenne nur Informationen, die du tatsächlich über mich weißt. Erfinde nichts und sage ausdrücklich, wenn du etwas nicht weißt."
+        let german = TurnContext.Phrases.for(.german)
+        #expect(TurnContext.asksWhoTheUserIs(q))
+        #expect(!TurnContext.asksWhoSomeoneIs(q))
+        #expect(TurnContext.asksWhoTheUserIs("What do you know about me?"))
+        #expect(!TurnContext.asksWhoSomeoneIs("What do you know about me?"))
+        #expect(TurnContext.fixedAnswer(for: q, hasImage: false, personKnown: nil, appLanguage: .automatic) == german.aboutUserAnswer)
+        let withFacts = TurnContext.fixedAnswer(for: "Who am I?", hasImage: false, personKnown: nil,
+                                                appLanguage: .english, rememberedFacts: ["I'm vegetarian", "I live in Hamburg"])
+        #expect(withFacts == TurnContext.Phrases.for(.english).aboutUserAnswer
+                + "\n\nYou asked me to remember this about you:\n- I'm vegetarian\n- I live in Hamburg")
+        #expect(!TurnContext.asksWhoTheUserIs("Wer bist du?"))
+    }
+
+    @Test func theAppSaysWhoMadeIt() {
+        let answer = TurnContext.fixedAnswer(for: "Wer ist Dmitry Mikhaylov?", hasImage: false, personKnown: nil, appLanguage: .automatic)
+        #expect(answer == TurnContext.Phrases.for(.german).developerAnswer)
+        #expect(answer?.contains("AiGoodbye") == true)
+        #expect(TurnContext.fixedAnswer(for: "Who is Dmitry Mikhaylov?", hasImage: false, personKnown: nil, appLanguage: .automatic)?
+                .hasPrefix("Dmitry Mikhaylov, also known as Dealer Of Happiness") == true)
+        let note = TurnContext.note(for: "Was ist Dealer of Happiness?", appLanguage: .automatic)
+        #expect(note == "(" + TurnContext.Phrases.for(.german).developerNote + " Antworte auf Deutsch.)")
+    }
+
+    @Test func everyLanguageHasEveryPhrase() {
+        for language in AppLanguage.allCases {
+            let p = TurnContext.Phrases.for(language)
+            for text in [p.answerIn, p.nowTemplate, p.unknownPerson, p.unknownPersonCertain, p.developerNote, p.developerAnswer, p.dontKnowAnswer] {
+                #expect(!text.isEmpty, "\(language)")
+            }
+            #expect(p.nowTemplate.contains("{date}"), "\(language)")
+            #expect(p.developerAnswer.contains("Dmitry Mikhaylov") && p.developerAnswer.contains("AiGoodbye"), "\(language)")
+        }
+    }
+
+    @Test func dateQuestionsAcrossLanguages() {
+        for q in ["What time is it?", "Welcher Wochentag ist heute?", "Quelle heure est-il ?", "¿Qué hora es?",
+                  "Che ore sono?", "Que horas são?", "Который час?", "Котра година?", "Τι ώρα είναι;",
+                  "今何時ですか？", "지금 몇 시예요?", "现在几点？", "而家幾點？", "What’s the date today?"] {
+            #expect(TurnContext.asksAboutDateOrTime(q), "\(q)")
+        }
+        for q in ["Wie viel ist 2 + 2?", "Hier ist mein Text.", "How much time does it take to boil an egg?",
+                  "Wer ist Scott von Gimborn?", "这需要多少时间？", "2時間で何キロ歩けますか？", "Update the data please."] {
+            #expect(!TurnContext.asksAboutDateOrTime(q), "\(q)")
+        }
+    }
+
+    @Test func theNoteIsNeverStoredOrShown() {
+        // Only the model's copy: the request's prompt and display text stay as typed.
+        let q = "Wie spät ist es?"
+        let sent = TurnContext.wrap("passages\n\n" + q, question: q, appLanguage: .automatic, now: monday, timeZone: berlin)
+        #expect(sent.hasSuffix("passages\n\n" + q))
+        #expect(sent.hasPrefix("(Es ist jetzt"))
+    }
+}

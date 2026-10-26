@@ -345,6 +345,12 @@ final class ModelPrefetcher {
             }
             sources.append((file: file, url: url))
         }
+        // Small files first, the weights last. Each file is its own
+        // transfer, started by the app; with the phone locked the app is
+        // suspended, and in alphabetical order the tokenizer and configs
+        // after `model.safetensors` waited for the user to come back. Now
+        // the one transfer the system finishes on its own is the big one.
+        sources.sort { $0.file.actualSize < $1.file.actualSize }
         let alternates = files.compactMap { source.alternateFileURL(repo: hfId, path: $0.path) }
         Self.writeTransferManifest(urls: sources.map { $0.url } + alternates, in: repoDir)
 

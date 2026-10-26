@@ -39,6 +39,9 @@ struct SideMenuView: View {
     @State private var showRenameChatAlert = false
     @State private var renameChatText = ""
     @State private var chatToRename: Conversation?
+    /// Measured heights of the fixed parts; see `scrollsAsOne`.
+    @State private var topChromeHeight: CGFloat = 0
+    @State private var bottomChromeHeight: CGFloat = 0
 
     // Pre-compute folder chat counts once - O(n) instead of O(n * m)
     private var folderChatCounts: [UUID: Int] {
@@ -52,8 +55,8 @@ struct SideMenuView: View {
     }
 
     var body: some View {
-        Group {
-            if dynamicTypeSize.isAccessibilitySize {
+        GeometryReader { proxy in
+            if scrollsAsOne(height: proxy.size.height) {
                 accessibilitySizeLayout
             } else {
                 standardLayout
@@ -220,9 +223,25 @@ struct SideMenuView: View {
         }
     }
 
-    /// Header and buttons fixed, folders and chats scrolling, Settings
-    /// pinned at the bottom.
-    private var standardLayout: some View {
+    /// Whether everything scrolls together instead of the standard layout.
+    ///
+    /// At accessibility sizes always. Otherwise when the fixed header,
+    /// buttons and Settings row would leave the chats too little room: on
+    /// an iPhone SE with Larger Text (or Display Zoom) they took about two
+    /// thirds of the screen, and Recent Chats was a strip one row high that
+    /// was hard to hit. The fixed parts are measured, not guessed; they are
+    /// the same views, the same height, in either layout.
+    private func scrollsAsOne(height: CGFloat) -> Bool {
+        if dynamicTypeSize.isAccessibilitySize { return true }
+        let fixed = topChromeHeight + bottomChromeHeight
+        guard fixed > 0, height > 0 else { return false }
+        // About four rows of chats (folders share the region), and never
+        // less than about half the drawer.
+        return height - fixed < max(300, height * 0.45)
+    }
+
+    /// The header with New Chat, New Folder, Search and Recordings.
+    private var topChrome: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
 
@@ -230,6 +249,25 @@ struct SideMenuView: View {
 
             // New Chat/Folder buttons
             actionButtons
+        }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { topChromeHeight = $0 }
+    }
+
+    /// Send Feedback and Settings.
+    private var bottomChrome: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            feedbackButton
+
+            settingsButton
+        }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { bottomChromeHeight = $0 }
+    }
+
+    /// Header and buttons fixed, folders and chats scrolling, Settings
+    /// pinned at the bottom.
+    private var standardLayout: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            topChrome
 
             Divider()
 
@@ -248,25 +286,19 @@ struct SideMenuView: View {
 
             Divider()
 
-            feedbackButton
-
-            // Settings button
-            settingsButton
+            bottomChrome
         }
     }
 
     /// At accessibility text sizes the fixed header, buttons and Settings
     /// row no longer fit on the screen, and SwiftUI squeezed every label to
     /// one truncated line ("New...", "Set ti..."). Everything scrolls
-    /// together instead, so each label can wrap.
+    /// together instead, so each label can wrap. Also on a short screen
+    /// with large text (see `scrollsAsOne`).
     private var accessibilitySizeLayout: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                header
-
-                Divider()
-
-                actionButtons
+                topChrome
 
                 Divider()
 
@@ -279,9 +311,7 @@ struct SideMenuView: View {
 
                 Divider()
 
-                feedbackButton
-
-                settingsButton
+                bottomChrome
             }
         }
     }
@@ -883,19 +913,22 @@ struct ChatRow: View {
         // No drag-handle glyph: rows are not reorderable (dragging only
         // files a chat into a folder), and the glyph was the same one as
         // the toolbar's Conversations button.
-        HStack {
+        // Body-sized title and a two-line preview: at caption sizes a row
+        // was a thin strip that was hard to read and to hit on a small
+        // iPhone, even with Larger Text (reported on an iPhone SE).
+        HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(conversation.displayTitle)
-                    .font(.subheadline)
-                    .lineLimit(1)
+                    .font(.body.weight(.medium))
+                    .lineLimit(2)
 
                 Text(conversation.previewText)
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
             if conversation.folderId != nil {
                 Image(systemName: "folder.fill")
@@ -905,11 +938,12 @@ struct ChatRow: View {
             }
 
             Text(conversation.updatedAt.aigRelative())
-                .font(.caption2)
+                .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .padding(.horizontal)
-        .padding(.vertical, 8)
+        .padding(.vertical, 12)
+        .frame(minHeight: 64)
         .background(
             RoundedRectangle(cornerRadius: 10)
                 .fill(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)

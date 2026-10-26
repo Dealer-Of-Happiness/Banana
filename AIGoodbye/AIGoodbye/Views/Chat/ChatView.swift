@@ -97,8 +97,10 @@ struct ChatView: View {
     /// The consent copy has four bullets App Review and privacy-minded users
     /// actually read. At accessibility sizes, and on a landscape phone, the
     /// medium detent showed two lines and hid the rest with no scroll hint.
+    /// Larger text too: on an iPhone SE at the largest standard size the
+    /// last sentence sat under the Download button.
     private var consentDetents: Set<PresentationDetent> {
-        dynamicTypeSize.isAccessibilitySize || verticalSizeClass == .compact
+        dynamicTypeSize > .large || verticalSizeClass == .compact
             ? [.large]
             : [.medium, .large]
     }
@@ -758,6 +760,12 @@ struct ChatView: View {
             // Messages; before this there was no gesture to get it out of
             // the way once Send stopped dismissing it.
             .scrollDismissesKeyboard(.interactively)
+            // A firm edge under the title bar. With the soft default, an
+            // answer scrolled under the bar stayed readable through it, so
+            // at large text sizes the chat name, the model and even the
+            // status bar clock sat on top of the answer's lines (an iPhone
+            // SE with Larger Text, reported by a tester).
+            .scrollEdgeEffectStyle(.hard, for: .top)
             // Scrolling up while an answer streams used to be impossible:
             // every token yanked the view back down. Follow the answer only
             // while the user is still at the bottom.
@@ -1253,6 +1261,8 @@ struct ChatView: View {
             .frame(maxWidth: 640)
             .frame(maxWidth: .infinity)
         }
+        // As for the transcript: nothing readable under the title bar.
+        .scrollEdgeEffectStyle(.hard, for: .top)
     }
 
     // MARK: - Attachment Previews
@@ -2407,9 +2417,47 @@ class ChatViewModel: ObservableObject {
                         )
                     }
 
+                    // "Who is ...?" and "Who am I?" on the smallest models:
+                    // first ask the model, on the side, whether it knows the
+                    // person at all; some answers the app gives itself (see
+                    // `MLXService.knowsPerson` and `TurnContext.fixedAnswer`).
+                    let appLanguage = appState.settings.appLanguage
+                    var personKnown: Bool?
+                    if routedModel.prefersCompactPrompt,
+                       TurnContext.asksWhoSomeoneIs(request.prompt),
+                       !TurnContext.mentionsDeveloper(request.prompt) {
+                        personKnown = await appState.engine.mlx.knowsPerson(in: request.prompt)
+                        try Task.checkCancellation()
+                    }
+                    if routedModel.prefersCompactPrompt,
+                       let fixed = TurnContext.fixedAnswer(
+                           for: request.prompt,
+                           hasImage: request.image != nil,
+                           personKnown: personKnown,
+                           appLanguage: appLanguage,
+                           fallbackLanguage: AppLanguage(rawValue: L10n.deviceLanguageCode ?? "en") ?? .english,
+                           rememberedFacts: MemoryStore.shared.isEnabled ? MemoryStore.shared.facts.map(\.text) : []
+                       ) {
+                        finalText = fixed
+                        if generationToken == token { streamingText = fixed }
+                        // The model never saw this exchange; the next turn
+                        // rebuilds its session from the saved chat, which has it.
+                        appState.engine.mlx.dropSession()
+                        break
+                    }
+
+                    // The answer language and, for a question about it,
+                    // the date and time - taken now, after any download or
+                    // load: a question asked at 10:41 and answered after a
+                    // 30-minute download must still get the time right.
                     let stream = appState.engine.respondStream(
                         model: routedModel,
-                        prompt: generationPrompt,
+                        prompt: TurnContext.wrap(
+                            generationPrompt,
+                            question: request.prompt,
+                            appLanguage: appLanguage,
+                            personKnown: personKnown
+                        ),
                         image: request.image
                     )
 

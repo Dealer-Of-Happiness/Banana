@@ -49,6 +49,7 @@ struct VoiceModeView: View {
     @State private var demoTranscript = ""
     #endif
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -99,7 +100,7 @@ struct VoiceModeView: View {
                 // on return; the user taps to resume.
                 voice.pause()
                 if isActive { turn = .idle }
-                UIApplication.shared.isIdleTimerDisabled = false
+                ScreenAwake.set(.voiceMode, false)
             case .inactive:
                 // Control Center, the app switcher, a system alert - including
                 // the one-time Speech Recognition prompt a first listen in
@@ -172,7 +173,9 @@ struct VoiceModeView: View {
                 onApprove: { viewModel.approveConsentAndResend() },
                 onCancel: { viewModel.declineConsent() }
             )
-            .presentationDetents([.medium, .large])
+            // As in the chat: with larger text or on a landscape phone the
+            // medium detent hid the end of the copy under the buttons.
+            .presentationDetents(dynamicTypeSize > .large || verticalSizeClass == .compact ? [.large] : [.medium, .large])
         }
     }
 
@@ -490,7 +493,7 @@ struct VoiceModeView: View {
         loadingCueTask?.cancel()
         loadingCueTask = nil
         voice.shutdown()   // also clears the callbacks (no retain cycle)
-        UIApplication.shared.isIdleTimerDisabled = false
+        ScreenAwake.set(.voiceMode, false)
     }
 
     /// Side effects of a turn change that belong to the turn itself rather
@@ -502,7 +505,7 @@ struct VoiceModeView: View {
         // (backgrounding stops all audio) and the microphone never reopened.
         // Idle and blocked let the phone lock as usual.
         let working = newTurn == .listening || newTurn == .thinking || newTurn == .speaking
-        UIApplication.shared.isIdleTimerDisabled = isActive && working
+        ScreenAwake.set(.voiceMode, isActive && working)
 
         loadingCueTask?.cancel()
         loadingCueTask = nil

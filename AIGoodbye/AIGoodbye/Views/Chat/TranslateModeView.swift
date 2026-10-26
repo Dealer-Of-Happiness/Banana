@@ -98,7 +98,7 @@ struct TranslateModeView: View {
             translateTask?.cancel()
             translateTask = nil
             voice.shutdown()
-            UIApplication.shared.isIdleTimerDisabled = false
+            ScreenAwake.set(.translate, false)
         }
         .onChange(of: scenePhase) { _, phase in
             inForeground = (phase == .active)
@@ -110,7 +110,7 @@ struct TranslateModeView: View {
                 listeningForMine = nil
                 // Don't keep the microphone running in the background.
                 isHandsFree = false
-                UIApplication.shared.isIdleTimerDisabled = false
+                ScreenAwake.set(.translate, false)
             case .inactive:
                 // Control Center, the app switcher, a system alert - including
                 // the one-time Speech Recognition prompt a first listen in
@@ -634,7 +634,7 @@ struct TranslateModeView: View {
     /// Released as soon as nothing is listening, translating or speaking.
     private func updateIdleTimer() {
         let working = isHandsFree || listeningForMine != nil || isTranslating || voice.isSpeaking
-        UIApplication.shared.isIdleTimerDisabled = isActive && scenePhase != .background && working
+        ScreenAwake.set(.translate, isActive && scenePhase != .background && working)
     }
 
     /// VoiceOver only; without it the status on screen, the tones and the

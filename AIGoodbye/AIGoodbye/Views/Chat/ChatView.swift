@@ -990,7 +990,11 @@ struct ChatView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .accessibilityElement(children: .combine)
+                // One element with its own label: `.combine` kept only the
+                // model's name once the bar sat between it and the figures,
+                // so VoiceOver never heard how far the download had got.
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(downloadAccessibilityLabel(progress: progress)))
                 .accessibilityAddTraits(.updatesFrequently)
 
                 // The only way to stop a transfer used to be the composer's
@@ -1054,10 +1058,27 @@ struct ChatView: View {
         appState.engine.mlx.loadingModelName ?? appState.engine.selectedModel.name
     }
 
-    /// "213 MB of 1.8 GB · about 4 min left" when byte counts are known,
+    /// The chip as VoiceOver reads it: name, figures and any warning, with
+    /// commas where the screen shows separate lines and a middle dot.
+    private func downloadAccessibilityLabel(progress: Double) -> String {
+        var parts = [L10n.text("Downloading \(loadingModelName)")]
+        parts.append(contentsOf: downloadDetailParts(progress: progress))
+        if appState.engine.mlx.isWaitingForWiFi {
+            parts.append(L10n.text("Waiting for Wi-Fi. Connect to Wi-Fi, or turn off \"Download over Wi-Fi only\" in Settings."))
+        } else if appState.engine.mlx.isDownloadStalled {
+            parts.append(L10n.text("Download stalled. Check your internet connection."))
+        }
+        return parts.joined(separator: ", ")
+    }
+
+    private func downloadDetailText(progress: Double) -> String {
+        downloadDetailParts(progress: progress).joined(separator: " · ")
+    }
+
+    /// "213 MB of 1.8 GB", "about 4 min left" when byte counts are known,
     /// falling back to a simple percentage. The model's name is on the line
     /// above.
-    private func downloadDetailText(progress: Double) -> String {
+    private func downloadDetailParts(progress: Double) -> [String] {
         let mlx = appState.engine.mlx
         var parts: [String] = []
         if mlx.totalDownloadBytes > 1, mlx.downloadedBytes > 0 {
@@ -1072,7 +1093,7 @@ struct ChatView: View {
         if let eta = remainingTimeText {
             parts.append(L10n.text("about \(eta) left"))
         }
-        return parts.joined(separator: " · ")
+        return parts
     }
 
     /// "4 min" / "40 sec" from the download's measured speed; nil until the

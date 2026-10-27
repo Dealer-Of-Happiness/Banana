@@ -94,7 +94,9 @@ final class AIGoodbyeUITests: XCTestCase {
 
         // Progress chip should appear and its label should change as bytes
         // arrive (this fails if the UI freezes like it did in 3.0.0).
-        let chip = app.staticTexts.matching(
+        // The chip as VoiceOver reads it: one element whose label carries
+        // the model's name and the figures (its texts are separate lines).
+        let chip = app.otherElements.matching(
             NSPredicate(format: "label BEGINSWITH %@", "Downloading")
         ).firstMatch
         XCTAssertTrue(chip.waitForExistence(timeout: 20), "Progress chip should appear")
@@ -109,7 +111,8 @@ final class AIGoodbyeUITests: XCTestCase {
             }
             if !chip.exists { break } // tiny files finished before we sampled
         }
-        XCTAssertTrue(moved || !chip.exists, "Progress must move (was frozen in 3.0.0)")
+        XCTAssertTrue(moved || !chip.exists,
+                      "Progress must move (was frozen in 3.0.0); chip reads \"\(chip.exists ? chip.label : "")\"")
 
         // Stop must cancel cleanly: no error banner, composer usable again
         // (an empty composer shows the voice conversation button).
@@ -203,8 +206,23 @@ final class AIGoodbyeUITests: XCTestCase {
             menuButton.tap()
         }
         XCTAssertTrue(settings.waitForExistence(timeout: 5), "List should open in landscape")
-        XCTAssertTrue(settings.isHittable)
+        // A landscape phone is too short for a pinned header and Settings
+        // row plus a usable chat list, so the whole menu scrolls as one
+        // (see SideMenuView.scrollsAsOne): Settings is at its end.
+        for _ in 0..<4 where !settings.isHittable {
+            let handle = ["New Chat", "New Folder", "Recordings", "Send Feedback"]
+                .map { app.buttons[$0].firstMatch }
+                .first { $0.exists && $0.isHittable }
+            guard let handle else { break }
+            handle.swipeUp()
+            usleep(500_000)
+        }
+        XCTAssertTrue(settings.isHittable, "Settings must be reachable in landscape")
         let closeMenu = app.buttons["Close menu"].firstMatch
+        for _ in 0..<4 where closeMenu.exists && !closeMenu.isHittable && settings.isHittable {
+            settings.swipeDown()
+            usleep(500_000)
+        }
         if closeMenu.exists && closeMenu.isHittable {
             closeMenu.tap()
         }

@@ -9,6 +9,7 @@ import Testing
 import Foundation
 import UIKit
 import SwiftUI
+import Speech
 @testable import AIGoodbye
 
 struct HistoryTrimmingTests {
@@ -1115,8 +1116,9 @@ struct TurnContextTests {
                 == "(" + german.unknownPersonCertain + " " + german.answerIn + ")")
         #expect(TurnContext.note(for: "Wer war Albert Einstein?", appLanguage: .automatic, personKnown: true)
                 == "(" + german.answerIn + ")")
-        // Not a question about a person: nothing fixed.
-        #expect(TurnContext.fixedAnswer(for: "Wie viel ist 2 + 2?", hasImage: false, personKnown: false, appLanguage: .automatic) == nil)
+        // personKnown is only false for questions about that person (see
+        // PeopleGuardTests); a plain remark still gets nothing fixed.
+        #expect(TurnContext.fixedAnswer(for: "Danke, das war hilfreich.", hasImage: false, personKnown: false, appLanguage: .automatic) == nil)
     }
 
     @Test func whoAmIIsAnsweredWithWhatTheAppKnows() {
@@ -1173,5 +1175,194 @@ struct TurnContextTests {
         let sent = TurnContext.wrap("passages\n\n" + q, question: q, appLanguage: .automatic, now: monday, timeZone: berlin)
         #expect(sent.hasSuffix("passages\n\n" + q))
         #expect(sent.hasPrefix("(Es ist jetzt"))
+    }
+}
+
+/// Questions about people on the smallest models (PeopleGuard), with the
+/// model's side answers scripted. From a tester's chat in which the app
+/// first said it did not know him, then invented "Karl von Gimborn".
+struct PeopleGuardTests {
+    /// Answers the two side questions the way the 0.8B model did.
+    final class FakeModel {
+        var calls: [String] = []
+        let names: [String: String]      // question -> name probe answer
+        let known: Set<String>           // names it says it knows
+        init(names: [String: String], known: Set<String>) { self.names = names; self.known = known }
+        func answer(_ prompt: String, _ maxTokens: Int) -> String? {
+            calls.append(prompt)
+            if prompt.contains("Is this question about a specific, named person") {
+                return names.first { prompt.contains($0.key) }?.value ?? "NONE"
+            }
+            if let name = known.first(where: { prompt.contains("Wer ist \($0)?") }) { _ = name; return "Yes" }
+            return "No"
+        }
+    }
+
+    let german = TurnContext.Phrases.for(.german)
+
+    @Test func followUpsAboutSomeoneUnknownGetTheSameHonestAnswer() async {
+        let model = FakeModel(names: ["Was macht Scott von Gimborn?": "Scott von Gimborn"], known: [])
+        var state = PeopleState()
+        let first = await PeopleGuard.resolve(question: "Was macht Scott von Gimborn?", hasImage: false,
+                                              appLanguage: .automatic, state: &state,
+                                              probe: { model.answer($0, $1) })
+        #expect(first.personKnown == false)
+        #expect(first.fixed == german.dontKnowAnswer)
+        #expect(state.unknownNames == ["Scott von Gimborn"])
+
+        let calls = model.calls.count
+        let followUp = await PeopleGuard.resolve(question: "Ist er ein Schauspieler?", hasImage: false,
+                                                 appLanguage: .automatic, state: &state,
+                                                 probe: { model.answer($0, $1) })
+        #expect(followUp.fixed == german.dontKnowAnswer)
+        #expect(model.calls.count == calls, "no side questions needed for a follow-up")
+
+        let byName = await PeopleGuard.resolve(question: "In welchen Filmen hat Scott von Gimborn mitgespielt?",
+                                               hasImage: false, appLanguage: .automatic, state: &state,
+                                               probe: { model.answer($0, $1) })
+        #expect(byName.fixed == german.dontKnowAnswer)
+    }
+
+    @Test func famousPeopleAreLeftToTheModel() async {
+        let model = FakeModel(names: ["Wer war Albert Einstein?": "Albert Einstein"], known: ["Albert Einstein"])
+        var state = PeopleState()
+        let einstein = await PeopleGuard.resolve(question: "Wer war Albert Einstein?", hasImage: false,
+                                                 appLanguage: .automatic, state: &state,
+                                                 probe: { model.answer($0, $1) })
+        #expect(einstein.personKnown == true)
+        #expect(einstein.fixed == nil)
+        let followUp = await PeopleGuard.resolve(question: "Was hat er entdeckt?", hasImage: false,
+                                                 appLanguage: .automatic, state: &state,
+                                                 probe: { model.answer($0, $1) })
+        #expect(followUp.fixed == nil)
+        #expect(followUp.personKnown == nil)
+    }
+
+    @Test func theUserIntroducingThemselvesIsGreetedAndRemembered() async {
+        let model = FakeModel(names: [:], known: [])
+        var state = PeopleState()
+        let intro = await PeopleGuard.resolve(question: "Ich heiße Scott von Gimborn.", hasImage: false,
+                                              appLanguage: .automatic, state: &state,
+                                              probe: { model.answer($0, $1) })
+        #expect(intro.fixed == "Schön, dich kennenzulernen, Scott von Gimborn! Wie kann ich dir helfen?")
+        #expect(state.userName == "Scott von Gimborn")
+
+        let aboutMe = await PeopleGuard.resolve(question: "Was weißt du über Scott von Gimborn?", hasImage: false,
+                                                appLanguage: .automatic, state: &state,
+                                                probe: { model.answer($0, $1) })
+        #expect(aboutMe.fixed == german.aboutUserAnswer + " Ich weiß nur, dass du Scott von Gimborn heißt.")
+
+        let actor = await PeopleGuard.resolve(question: "Bin ich ein Schauspieler?", hasImage: false,
+                                              appLanguage: .automatic, state: &state,
+                                              probe: { model.answer($0, $1) })
+        #expect(actor.fixed?.hasPrefix(german.aboutUserAnswer) == true)
+        #expect(model.calls.isEmpty, "questions about the user need no side questions")
+    }
+
+    @Test func statementsAndTheDeveloperNeedNoSideQuestions() async {
+        let model = FakeModel(names: [:], known: [])
+        var state = PeopleState()
+        let statement = await PeopleGuard.resolve(question: "Scott von Gimborn kommt aus Emmerich am Rhein.",
+                                                  hasImage: false, appLanguage: .automatic, state: &state,
+                                                  probe: { model.answer($0, $1) })
+        #expect(statement.fixed == nil)
+        let developer = await PeopleGuard.resolve(question: "Wer ist Dmitry Mikhaylov?", hasImage: false,
+                                                  appLanguage: .automatic, state: &state,
+                                                  probe: { model.answer($0, $1) })
+        #expect(developer.fixed == german.developerAnswer)
+        #expect(model.calls.isEmpty)
+    }
+
+    @Test func aPhotoIsLeftToTheModelWithANote() async {
+        let model = FakeModel(names: ["Wer ist Scott von Gimborn?": "Scott von Gimborn"], known: [])
+        var state = PeopleState()
+        let photo = await PeopleGuard.resolve(question: "Wer ist Scott von Gimborn?", hasImage: true,
+                                              appLanguage: .automatic, state: &state,
+                                              probe: { model.answer($0, $1) })
+        #expect(photo.fixed == nil)
+        #expect(photo.personKnown == false)
+        let note = TurnContext.note(for: "Wer ist Scott von Gimborn?", appLanguage: .automatic, personKnown: false)
+        #expect(note?.contains(german.unknownPersonCertain) == true)
+    }
+
+    @Test func readingTheModelsSideAnswers() {
+        let q = "Was macht Scott von Gimborn beruflich?"
+        #expect(TurnContext.personName(fromProbe: "Scott von Gimborn", question: q) == "Scott von Gimborn")
+        #expect(TurnContext.personName(fromProbe: "Scott von Gimborn is a fictional character from", question: q) == "Scott von Gimborn")
+        #expect(TurnContext.personName(fromProbe: "NONE", question: q) == nil)
+        #expect(TurnContext.personName(fromProbe: "Yes.", question: q) == nil)
+        #expect(TurnContext.personName(fromProbe: "Karl Gimborn", question: q) == nil)
+        #expect(TurnContext.yesOrNo("Yes.") == true)
+        #expect(TurnContext.yesOrNo("no") == false)
+        #expect(TurnContext.yesOrNo("Maybe") == nil)
+    }
+
+    @Test func detectingIntroductionsQuestionsAndPronouns() {
+        #expect(TurnContext.selfIntroductionName(in: "Ich heiße Scott von Gimborn.") == "Scott von Gimborn")
+        #expect(TurnContext.selfIntroductionName(in: "Mein Name ist Scott von Gimborn. Was weißt du?") == "Scott von Gimborn")
+        #expect(TurnContext.selfIntroductionName(in: "My name is Anna Schmidt") == "Anna Schmidt")
+        #expect(TurnContext.selfIntroductionName(in: "Ich bin müde.") == nil)
+        #expect(TurnContext.isQuestionLike("Erzähl mir mehr über ihn."))
+        #expect(TurnContext.isQuestionLike("Ist er ein Schauspieler?"))
+        #expect(!TurnContext.isQuestionLike("Scott kommt aus Emmerich."))
+        #expect(TurnContext.refersBackToSomeone("Ist er ein Schauspieler?"))
+        #expect(TurnContext.refersBackToSomeone("Tell me more about her."))
+        #expect(!TurnContext.refersBackToSomeone("Wie spät ist es?"))
+        #expect(TurnContext.asksWhoTheUserIs("Bin ich ein Schauspieler?"))
+        #expect(TurnContext.asksWhoTheUserIs("Welche Filme habe ich gemacht?"))
+    }
+}
+
+/// A covered lens or a dark room is said, not described.
+struct FrameCheckTests {
+    func image(gray: CGFloat, noise: CGFloat = 0) -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 64, height: 48))
+        return renderer.image { context in
+            for x in stride(from: 0, to: 64, by: 4) {
+                for y in stride(from: 0, to: 48, by: 4) {
+                    let value = max(0, min(1, gray + (noise > 0 ? CGFloat.random(in: -noise...noise) : 0)))
+                    UIColor(white: value, alpha: 1).setFill()
+                    context.fill(CGRect(x: x, y: y, width: 4, height: 4))
+                }
+            }
+        }
+    }
+
+    @Test func darkOrFeaturelessFramesShowNothing() {
+        #expect(FrameCheck.showsNothing(image(gray: 0)))
+        #expect(FrameCheck.showsNothing(image(gray: 0.12, noise: 0.02)))   // taped over
+        #expect(!FrameCheck.showsNothing(image(gray: 0.9)))                // a white wall is real
+        #expect(!FrameCheck.showsNothing(image(gray: 0.4, noise: 0.35)))   // an ordinary scene
+    }
+}
+
+/// Recording summaries stay with what was said.
+struct RecordingSummaryHonestyTests {
+    @Test func aSentenceOrTwoIsNotSummarized() {
+        #expect(!RecordingSummarizer.isWorthSummarizing("Hallo, mein Name ist Scott von Gimborn."))
+        #expect(!RecordingSummarizer.isWorthSummarizing("Heute ist Dienstag. Ich trinke einen Kaffee und esse ein Brot."))
+        let meeting = String(repeating: "Wir besprechen heute das Budget für die nächste Woche. ", count: 6)
+        #expect(RecordingSummarizer.isWorthSummarizing(meeting))
+    }
+
+    @Test func summariesAreNotWrittenAsTheBrandedAssistant() {
+        let system = RecordingSummarizer.instructions(language: .german)
+        #expect(!system.contains("Dealer Of Happiness"))
+        #expect(!system.contains("AiGoodbye"))
+        #expect(system.contains("Never add names, places, events, plans, wishes or tasks"))
+        #expect(system.hasSuffix("Write in German."))
+    }
+}
+
+/// Live speech: words while the user talks, not after.
+struct LiveSpeechTests {
+    @Test @MainActor func liveResultsAreAskedFor() {
+        #expect(Transcriber.reportingOptions.contains(.fastResults))
+        #expect(Transcriber.reportingOptions.contains(.volatileResults))
+    }
+
+    @Test func punctuationIsNotSpeech() {
+        #expect(VoiceService.words(of: "Hallo, wie spät ist es heute") == VoiceService.words(of: "Hallo, wie spät ist es heute?"))
+        #expect(VoiceService.words(of: "Ich möchte") != VoiceService.words(of: "Ich möchte einen"))
     }
 }

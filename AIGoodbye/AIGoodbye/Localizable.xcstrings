@@ -55301,6 +55301,158 @@
           }
         }
       }
+    },
+    "It's too dark to see anything. The camera may be covered.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es ist zu dunkel, um etwas zu erkennen. Vielleicht ist die Kamera verdeckt."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Είναι πολύ σκοτεινά για να φανεί κάτι. Ίσως η κάμερα είναι καλυμμένη."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Está demasiado oscuro para ver nada. Puede que la cámara esté tapada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il fait trop sombre pour voir quoi que ce soit. L'appareil photo est peut-être masqué."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "È troppo buio per vedere qualcosa. Forse la fotocamera è coperta."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暗すぎて何も見えません。カメラが覆われている可能性があります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "너무 어두워서 아무것도 보이지 않습니다. 카메라가 가려져 있을 수 있습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Está escuro demais para ver qualquer coisa. Talvez a câmera esteja coberta."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Слишком темно, чтобы что-то разглядеть. Возможно, камера закрыта."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Занадто темно, щоб щось розгледіти. Можливо, камеру закрито."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "太暗喇，咩都睇唔到。部相機可能被遮住咗。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "太暗了，什么也看不见。相机可能被遮住了。"
+          }
+        }
+      }
+    },
+    "Short recordings aren't summarized. The transcript says it all.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurze Aufnahmen werden nicht zusammengefasst. Das Transkript sagt alles."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Οι σύντομες ηχογραφήσεις δεν συνοψίζονται. Η απομαγνητοφώνηση τα λέει όλα."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las grabaciones cortas no se resumen. La transcripción lo dice todo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les enregistrements courts ne sont pas résumés. La transcription dit tout."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le registrazioni brevi non vengono riassunte. La trascrizione dice già tutto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "短い録音は要約しません。文字起こしにすべて書かれています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "짧은 녹음은 요약하지 않습니다. 녹취록에 모두 담겨 있습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gravações curtas não são resumidas. A transcrição já diz tudo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Короткие записи не пересказываются. В расшифровке и так всё есть."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Короткі записи не підсумовуються. У розшифровці й так усе є."
+          }
+        },
+        "zh-HK": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "短嘅錄音唔會做摘要，逐字稿已經講晒。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "简短的录音不会生成摘要，转写文字已说明一切。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

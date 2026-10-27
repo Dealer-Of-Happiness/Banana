@@ -945,15 +945,25 @@ struct ChatView: View {
         switch appState.engine.status {
         case .downloading(let progress):
             HStack(spacing: 4) {
-                VStack(spacing: 4) {
-                    HStack(spacing: 8) {
-                        ProgressView(value: progress)
-                            .frame(maxWidth: 120)
-                        Text(downloadStatusText(progress: progress))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
+                VStack(alignment: .leading, spacing: 4) {
+                    // Three steady lines: the model's name (it does not change
+                    // while the bytes tick), the bar, and the figures on one
+                    // line that shrinks rather than wraps. Name, bar and
+                    // figures used to share one line; with large text the
+                    // figures re-wrapped on every update and the whole chip
+                    // jumped up and down for the length of the download.
+                    Text(L10n.text("Downloading \(loadingModelName)"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    ProgressView(value: progress)
+                    Text(downloadDetailText(progress: progress))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                     // Orange on the icon only: orange caption text on gray is
                     // about 2:1, unreadable for the people who most need it.
                     if appState.engine.mlx.isWaitingForWiFi {
@@ -1044,26 +1054,25 @@ struct ChatView: View {
         appState.engine.mlx.loadingModelName ?? appState.engine.selectedModel.name
     }
 
-    /// "Downloading Qwen3 Vision 2B · 213 MB of 1.8 GB" when byte counts are
-    /// known, falling back to a simple percentage.
-    private func downloadStatusText(progress: Double) -> String {
+    /// "213 MB of 1.8 GB · about 4 min left" when byte counts are known,
+    /// falling back to a simple percentage. The model's name is on the line
+    /// above.
+    private func downloadDetailText(progress: Double) -> String {
         let mlx = appState.engine.mlx
-        let name = loadingModelName
-        var text: String
+        var parts: [String] = []
         if mlx.totalDownloadBytes > 1, mlx.downloadedBytes > 0 {
             let done = ByteCountFormatter.string(fromByteCount: mlx.downloadedBytes, countStyle: .file)
             let total = ByteCountFormatter.string(fromByteCount: mlx.totalDownloadBytes, countStyle: .file)
-            text = L10n.text("Downloading \(name) · \(done) of \(total)")
+            parts.append(L10n.text("\(done) of \(total)"))
         } else {
             // Locale-aware: "45 %" in French, "%45" in Turkish.
-            let percent = progress.formatted(.percent.precision(.fractionLength(0)).locale(L10n.locale))
-            text = L10n.text("Downloading \(name)") + " · " + percent
+            parts.append(progress.formatted(.percent.precision(.fractionLength(0)).locale(L10n.locale)))
         }
         // "213 MB of 1.8 GB" says nothing about whether to wait or walk away.
         if let eta = remainingTimeText {
-            text += " · " + L10n.text("about \(eta) left")
+            parts.append(L10n.text("about \(eta) left"))
         }
-        return text
+        return parts.joined(separator: " · ")
     }
 
     /// "4 min" / "40 sec" from the download's measured speed; nil until the
@@ -1657,6 +1666,13 @@ class ChatViewModel: ObservableObject {
         /// declined download - until a non-empty replacement exists.
         var replacingMessageId: UUID? = nil
     }
+
+    /// What each chat has learned about the people in it (see `PeopleGuard`).
+    /// In memory only: after a relaunch a chat starts fresh, and the probe
+    /// asks again.
+    private var peopleStates: [UUID: PeopleState] = [:]
+    /// The key for a chat that has no conversation yet.
+    private static let unsavedChatKey = UUID()
 
     @Published var messages: [Message] = []
     @Published var inputText = ""
@@ -2417,27 +2433,29 @@ class ChatViewModel: ObservableObject {
                         )
                     }
 
-                    // "Who is ...?" and "Who am I?" on the smallest models:
-                    // first ask the model, on the side, whether it knows the
-                    // person at all; some answers the app gives itself (see
-                    // `MLXService.knowsPerson` and `TurnContext.fixedAnswer`).
+                    // Questions about people, on the smallest models: who
+                    // the message is about and whether the model knows them,
+                    // asked on the side first; some answers the app gives
+                    // itself (see `PeopleGuard`).
                     let appLanguage = appState.settings.appLanguage
-                    var personKnown: Bool?
-                    if routedModel.prefersCompactPrompt,
-                       TurnContext.asksWhoSomeoneIs(request.prompt),
-                       !TurnContext.mentionsDeveloper(request.prompt) {
-                        personKnown = await appState.engine.mlx.knowsPerson(in: request.prompt)
+                    var people = PeopleGuard.Outcome()
+                    if routedModel.prefersCompactPrompt {
+                        let key = conversationId ?? Self.unsavedChatKey
+                        var state = peopleStates[key] ?? PeopleState()
+                        let mlx = appState.engine.mlx
+                        people = await PeopleGuard.resolve(
+                            question: request.prompt,
+                            hasImage: request.image != nil,
+                            appLanguage: appLanguage,
+                            fallbackLanguage: AppLanguage(rawValue: L10n.deviceLanguageCode ?? "en") ?? .english,
+                            rememberedFacts: MemoryStore.shared.isEnabled ? MemoryStore.shared.facts.map(\.text) : [],
+                            state: &state,
+                            probe: { prompt, maxTokens in await mlx.probe(prompt, maxTokens: maxTokens) }
+                        )
+                        peopleStates[key] = state
                         try Task.checkCancellation()
                     }
-                    if routedModel.prefersCompactPrompt,
-                       let fixed = TurnContext.fixedAnswer(
-                           for: request.prompt,
-                           hasImage: request.image != nil,
-                           personKnown: personKnown,
-                           appLanguage: appLanguage,
-                           fallbackLanguage: AppLanguage(rawValue: L10n.deviceLanguageCode ?? "en") ?? .english,
-                           rememberedFacts: MemoryStore.shared.isEnabled ? MemoryStore.shared.facts.map(\.text) : []
-                       ) {
+                    if let fixed = people.fixed {
                         finalText = fixed
                         if generationToken == token { streamingText = fixed }
                         // The model never saw this exchange; the next turn
@@ -2456,7 +2474,8 @@ class ChatViewModel: ObservableObject {
                             generationPrompt,
                             question: request.prompt,
                             appLanguage: appLanguage,
-                            personKnown: personKnown
+                            personKnown: people.personKnown,
+                            introducedName: people.introducedName
                         ),
                         image: request.image
                     )

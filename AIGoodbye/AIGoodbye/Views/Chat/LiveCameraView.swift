@@ -925,6 +925,15 @@ struct LiveCameraView: View {
         answer = ""
         spokenOffset = 0
         voice.stopSpeaking()
+
+        // Nothing to look at (a covered lens, darkness): say so rather than
+        // let the model invent a scene.
+        if FrameCheck.showsNothing(frame) {
+            let nothing = L10n.text("It's too dark to see anything. The camera may be covered.")
+            answer = nothing
+            if speakAnswers { voice.speak(nothing) }
+            return
+        }
         isAnswering = true
 
         let engine = appState.engine
@@ -957,7 +966,13 @@ struct LiveCameraView: View {
                 if let loadingCue, notice == loadingCue { notice = nil }
 
                 var final = ""
-                let stream = engine.respondStream(model: model, prompt: text, image: frame)
+                // The answer's language, and the date when asked: the same
+                // note as in the chat (see `TurnContext`).
+                let stream = engine.respondStream(
+                    model: model,
+                    prompt: TurnContext.wrap(text, question: text, appLanguage: appState.settings.appLanguage),
+                    image: frame
+                )
                 for try await snapshot in stream {
                     if Task.isCancelled { break }
                     final = snapshot

@@ -469,14 +469,24 @@ struct RecorderView: View {
                     }
 
                     if !saved.transcript.isEmpty {
-                        DisclosureGroup(L10n.text("Transcript")) {
+                        if RecordingSummarizer.isWorthSummarizing(saved.transcript) {
+                            DisclosureGroup(L10n.text("Transcript")) {
+                                Text(saved.transcript)
+                                    .font(.callout)
+                                    .textSelection(.enabled)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.top, 6)
+                            }
+                            .font(.headline)
+                        } else {
+                            // A few sentences get no summary (the words say
+                            // it all), so the words are shown instead of
+                            // being folded away under a disclosure.
                             Text(saved.transcript)
-                                .font(.callout)
+                                .font(.body)
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.top, 6)
                         }
-                        .font(.headline)
                     }
 
                     Text("Saved to Recordings. You'll find it in the menu.")

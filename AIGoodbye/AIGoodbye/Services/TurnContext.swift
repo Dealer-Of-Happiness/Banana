@@ -35,11 +35,12 @@ nonisolated enum TurnContext {
         question: String,
         appLanguage: AppLanguage,
         personKnown: Bool? = nil,
+        introducedName: String? = nil,
         now: Date = Date(),
         timeZone: TimeZone = .current
     ) -> String {
         guard let note = note(for: question, appLanguage: appLanguage, personKnown: personKnown,
-                              now: now, timeZone: timeZone) else {
+                              introducedName: introducedName, now: now, timeZone: timeZone) else {
             return prompt
         }
         return note + "\n\n" + prompt
@@ -50,10 +51,13 @@ nonisolated enum TurnContext {
     /// - Parameter personKnown: for a "who is" question, whether the model
     ///   said it knows the person (`MLXService.knowsPerson`); nil when it
     ///   was not asked.
+    /// - Parameter introducedName: the name the user just gave as their own
+    ///   ("Ich heiße ..."), which the model is told and told not to embroider.
     static func note(
         for question: String,
         appLanguage: AppLanguage,
         personKnown: Bool? = nil,
+        introducedName: String? = nil,
         now: Date = Date(),
         timeZone: TimeZone = .current
     ) -> String? {
@@ -63,14 +67,15 @@ nonisolated enum TurnContext {
         if asksAboutDateOrTime(question) {
             parts.append(phrases.now(dateLine(now: now, timeZone: timeZone, language: language)))
         }
+        if let introducedName {
+            parts.append(phrases.userIntro(introducedName))
+        }
         if mentionsDeveloper(question) {
             parts.append(phrases.developerNote)
-        } else if asksWhoSomeoneIs(question) {
-            switch personKnown {
-            case false?: parts.append(phrases.unknownPersonCertain)
-            case true?: break
-            case nil: parts.append(phrases.unknownPerson)
-            }
+        } else if personKnown == false {
+            parts.append(phrases.unknownPersonCertain)
+        } else if personKnown == nil, asksWhoSomeoneIs(question) {
+            parts.append(phrases.unknownPerson)
         }
         if language != nil {
             parts.append(phrases.answerIn)
@@ -94,24 +99,38 @@ nonisolated enum TurnContext {
     /// "Who am I?" too: the model described itself instead. The app says
     /// what it knows about the user - what they say in the chat, and the
     /// facts they asked it to remember, listed.
+    ///
+    /// - Parameters:
+    ///   - asksAboutUser: the question is about the user (see `PeopleGuard`,
+    ///     which also counts questions naming the user's own name).
+    ///   - userName: the name the user gave as their own, if any.
     static func fixedAnswer(
         for question: String,
         hasImage: Bool,
         personKnown: Bool?,
         appLanguage: AppLanguage,
         fallbackLanguage: AppLanguage = .english,
-        rememberedFacts: [String] = []
+        rememberedFacts: [String] = [],
+        asksAboutUser: Bool? = nil,
+        userName: String? = nil
     ) -> String? {
         guard !hasImage else { return nil }
         let phrases = Phrases.for(replyLanguage(for: question, appLanguage: appLanguage) ?? fallbackLanguage)
-        if asksWhoTheUserIs(question) {
-            guard !rememberedFacts.isEmpty else { return phrases.aboutUserAnswer }
-            return phrases.aboutUserAnswer + "\n\n" + phrases.rememberedIntro + "\n"
+        if asksAboutUser ?? asksWhoTheUserIs(question) {
+            var answer = phrases.aboutUserAnswer
+            if let userName { answer += " " + phrases.userNameIs(userName) }
+            guard !rememberedFacts.isEmpty else { return answer }
+            return answer + "\n\n" + phrases.rememberedIntro + "\n"
                 + rememberedFacts.map { "- " + $0 }.joined(separator: "\n")
         }
-        guard asksWhoSomeoneIs(question) else { return nil }
-        if mentionsDeveloper(question) { return phrases.developerAnswer }
-        if personKnown == false { return phrases.dontKnowAnswer }
+        if mentionsDeveloper(question) {
+            return asksWhoSomeoneIs(question) ? phrases.developerAnswer : nil
+        }
+        // Someone the model said it does not know, asked about in any form
+        // ("Wer ist ...?", "Was macht ...?", "Ist er Schauspieler?").
+        if personKnown == false, asksWhoSomeoneIs(question) || isQuestionLike(question) {
+            return phrases.dontKnowAnswer
+        }
         return nil
     }
 
@@ -135,6 +154,17 @@ nonisolated enum TurnContext {
         guard let (language, confidence) = recognizer.languageHypotheses(withMaximum: 1).first,
               confidence >= 0.6 else { return nil }
         return supported.first { $0.0 == language }?.1
+    }
+
+    /// The language the app speaks to the user: the one chosen in Settings,
+    /// or with Automatic the device's. For prompts the app writes itself
+    /// (describe the surroundings, summaries), where there is no message
+    /// of the user's to take the language from: "the same language the user
+    /// writes to you" then meant the English of the app's own prompt, and a
+    /// German phone described the room in English.
+    static func uiLanguage(_ appLanguage: AppLanguage) -> AppLanguage {
+        if appLanguage != .automatic { return appLanguage }
+        return L10n.deviceLanguageCode.flatMap(RecordingSummarizer.language(forCode:)) ?? .english
     }
 
     /// The languages the app speaks, as NaturalLanguage names them.
@@ -172,6 +202,89 @@ nonisolated enum TurnContext {
     static func asksWhoTheUserIs(_ text: String) -> Bool {
         matches(text, selfPatterns)
     }
+
+    /// Whether the message asks for something - a question, or "tell me",
+    /// "describe" - rather than stating something.
+    static func isQuestionLike(_ text: String) -> Bool {
+        if text.contains("?") || text.contains("？") || text.contains("¿") || text.contains(";") { return true }
+        return matches(text, requestPatterns)
+    }
+
+    /// Whether the message refers to someone already mentioned ("Ist er
+    /// ein Schauspieler?", "Tell me more about her").
+    static func refersBackToSomeone(_ text: String) -> Bool {
+        matches(text, pronounPatterns)
+    }
+
+    /// The name in "Ich heiße ...", "My name is ...": the user introducing
+    /// themselves, which is neither a question about a stranger nor
+    /// something to invent a biography for.
+    static func selfIntroductionName(in text: String) -> String? {
+        let particle = #"(?:von|van|de|der|den|zu|da|di|del|la|le|bin|al|ten|ter)"#
+        let name = #"([\p{Lu}][\p{L}'\-]*(?:\s+(?:"# + particle + #"\s+)?[\p{Lu}][\p{L}'\-]*){0,3})"#
+        let triggers = #"(?i:ich hei(?:ß|ss)e|mein name ist|nenn mich|my name is|i'm called|i am called|call me|je m'appelle|mon nom est|me llamo|mi nombre es|mi chiamo|il mio nome è|me chamo|meu nome é|меня зовут|мене звати|με λένε|ονομάζομαι)"#
+        guard let regex = try? NSRegularExpression(pattern: triggers + #"\s+"# + name) else { return nil }
+        let range = NSRange(text.startIndex..., in: text)
+        guard let match = regex.firstMatch(in: text, range: range),
+              let found = Range(match.range(at: 1), in: text) else { return nil }
+        let candidate = String(text[found]).trimmingCharacters(in: .whitespaces)
+        return candidate.count >= 2 ? candidate : nil
+    }
+
+    // MARK: - Side questions to the model (see `PeopleGuard`)
+
+    /// Asks the model which person, if any, a message is about.
+    static func nameProbe(for question: String) -> String {
+        let asked = question.replacingOccurrences(of: "\n", with: " ")
+        return "Question: «\(asked)» Is this question about a specific, named person (not the user, not you)? "
+            + "If so, reply with that person's name only. If not, reply NONE."
+    }
+
+    /// Asks the model whether it knows a person. Always phrased as the
+    /// German "Wer ist ...?": in tests that form made the smallest model's
+    /// judgement reliable (famous people recognized 17 of 18, private
+    /// people flagged 11 of 12), where "Who is ...?" called most private
+    /// names known.
+    static func identityProbe(for name: String) -> String {
+        "Question: «Wer ist \(name)?» Do you know for certain who the person in this question is? Answer only yes or no."
+    }
+
+    /// The name in the model's answer to `nameProbe`, if it is one that
+    /// appears in the question. The model sometimes answers with a sentence
+    /// ("Scott von Gimborn is a fictional character..."); only the leading
+    /// words that occur in the question count, which also rules out a
+    /// "Yes." or an invented name.
+    static func personName(fromProbe output: String, question: String) -> String? {
+        let line = output.trimmingCharacters(in: .whitespacesAndNewlines)
+            .components(separatedBy: .newlines).first ?? ""
+        if line.uppercased().hasPrefix("NONE") { return nil }
+        let words = line.split(whereSeparator: { $0.isWhitespace })
+            .map { $0.trimmingCharacters(in: CharacterSet.punctuationCharacters.union(.symbols)) }
+            .filter { !$0.isEmpty }
+        guard !words.isEmpty else { return nil }
+        for count in stride(from: min(words.count, 6), through: 1, by: -1) {
+            let candidate = words.prefix(count).joined(separator: " ")
+            guard candidate.count >= 2, question.localizedCaseInsensitiveContains(candidate) else { continue }
+            if probeStopWords.contains(candidate.lowercased()) { continue }
+            guard let first = candidate.first, first.isUppercase || !first.isCased else { continue }
+            return candidate
+        }
+        return nil
+    }
+
+    /// The model's yes or no; nil for anything else.
+    static func yesOrNo(_ output: String) -> Bool? {
+        let answer = output.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters))
+            .lowercased()
+        if answer.hasPrefix("yes") { return true }
+        if answer.hasPrefix("no") { return false }
+        return nil
+    }
+
+    private static let probeStopWords: Set<String> = [
+        "yes", "no", "none", "ja", "nein", "ich", "du", "er", "sie", "es", "wir", "ihr", "wer", "was",
+        "who", "what", "i", "you", "he", "she", "they", "we", "it", "the", "a", "an", "der", "die", "das",
+    ]
 
     /// Whether the message names the app's developer or the name he
     /// publishes under. The system prompt says who made the app, and the
@@ -232,8 +345,11 @@ nonisolated enum TurnContext {
 
     /// "Who am I?" and "what do you know about me?" in the app's languages.
     private static let selfPatterns: [String] = [
-        #"\bwho am i\b"#, #"\bwhat do you know about me\b"#,
-        #"\bwer bin ich\b"#, #"\bwas weißt du (alles )?über mich\b"#,
+        #"\bwho am i\b"#, #"\bwhat do you know about me\b"#, #"\babout me\b"#,
+        #"\bam i (a|an|the|famous|known|really)\b"#, #"\bwhat (films|movies|books|songs|work) (have|did) i\b"#,
+        #"\bwer bin ich\b"#, #"\bwas weißt du (alles )?über mich\b"#, #"\büber mich\b"#,
+        #"\bbin ich (ein|eine|der|die|das|bekannt|berühmt|wirklich)\b"#,
+        #"\b(welche|was für) \w+ (habe|hab) ich (gemacht|geschrieben|gedreht|gespielt|veröffentlicht)\b"#,
         #"\bqui suis-je\b"#, #"\bque sais-tu (de|sur) moi\b"#,
         #"\bquién soy\b"#, #"\bqué sabes (de|sobre) mí\b"#,
         #"\bchi sono( io)?\b"#, #"\bcosa sai (di|su) me\b"#,
@@ -242,6 +358,25 @@ nonisolated enum TurnContext {
         "ποιος είμαι", "ποια είμαι", "τι ξέρεις για μένα",
         "私は誰", "僕は誰", "私について何を知って", "나는 누구", "내가 누구", "나에 대해 (뭘|무엇을) 알",
         "我是谁", "你对我了解", "你知道我什么", "我係邊個", "你知我啲咩",
+    ]
+
+    /// "Tell me", "describe", "explain" and the like, in the app's languages.
+    private static let requestPatterns: [String] = [
+        #"^\s*(tell|say|give|describe|explain|list|name)\b"#,
+        #"^\s*(erzähl|erzähle|sag|sage|nenn|nenne|beschreib|beschreibe|erklär|erkläre)\b"#,
+        #"^\s*(raconte|dis|décris|explique)\b"#, #"^\s*(cuéntame|dime|describe|explica)\b"#,
+        #"^\s*(raccontami|dimmi|descrivi|spiega)\b"#, #"^\s*(conte|diga|descreva|explique)\b"#,
+        #"^\s*(расскажи|скажи|опиши|объясни|розкажи|поясни|πες|περιέγραψε|εξήγησε)"#,
+        "教えて", "説明して", "알려", "말해", "告诉", "介绍", "講", "話我知",
+    ]
+
+    /// Third-person pronouns, for questions that continue about someone.
+    private static let pronounPatterns: [String] = [
+        #"\b(er|ihn|ihm|sein|seine|seinen|seinem|seiner|seines|sie|ihr|ihre|ihren|ihrem|ihrer)\b"#,
+        #"\b(he|him|his|she|her|hers|they|them|their)\b"#,
+        #"\b(il|elle|lui|son|sa|ses|él|ella|su|sus|lei|suo|sua|ele|ela|dele|dela|seu)\b"#,
+        #"(^|\s)(он|она|его|её|ее|ему|ей|ним|ней|він|вона|його|її|йому|їй|αυτός|αυτή|αυτόν|αυτήν)(\s|[?.,!]|$)"#,
+        "彼", "彼女", "그는", "그녀", "他", "她", "佢",
     ]
 
     /// "Who is ...?" and "tell me about ..." in the app's languages.
@@ -299,7 +434,82 @@ nonisolated enum TurnContext {
             nowTemplate.replacingOccurrences(of: "{date}", with: date)
         }
 
+        /// Which language these phrases are in.
+        var language: AppLanguage = .english
+
+        /// The user has given their name. In the note.
+        func userIntro(_ name: String) -> String {
+            (Self.userIntroTemplates[language] ?? Self.userIntroTemplates[.english] ?? "")
+                .replacingOccurrences(of: "{name}", with: name)
+        }
+
+        /// The reply to a user who just said their name.
+        func greeting(_ name: String) -> String {
+            (Self.greetingTemplates[language] ?? Self.greetingTemplates[.english] ?? "")
+                .replacingOccurrences(of: "{name}", with: name)
+        }
+
+        static let greetingTemplates: [AppLanguage: String] = [
+            .english: "Nice to meet you, {name}! How can I help?",
+            .german: "Schön, dich kennenzulernen, {name}! Wie kann ich dir helfen?",
+            .french: "Enchanté, {name} ! Comment puis-je t'aider ?",
+            .spanish: "¡Encantado de conocerte, {name}! ¿En qué puedo ayudarte?",
+            .italian: "Piacere di conoscerti, {name}! Come posso aiutarti?",
+            .portuguese: "Prazer em te conhecer, {name}! Como posso ajudar?",
+            .russian: "Приятно познакомиться, {name}! Чем могу помочь?",
+            .ukrainian: "Приємно познайомитися, {name}! Чим можу допомогти?",
+            .greek: "Χάρηκα που σε γνώρισα, {name}! Πώς μπορώ να βοηθήσω;",
+            .japanese: "{name}さん、はじめまして！何をお手伝いしましょうか？",
+            .korean: "{name}님, 만나서 반가워요! 무엇을 도와드릴까요?",
+            .mandarin: "{name}，很高兴认识你！有什么可以帮你的吗？",
+            .cantonese: "{name}，好高興識到你！有咩可以幫到你？",
+        ]
+
+        /// The user's name, said back in "Who am I?".
+        func userNameIs(_ name: String) -> String {
+            (Self.userNameTemplates[language] ?? Self.userNameTemplates[.english] ?? "")
+                .replacingOccurrences(of: "{name}", with: name)
+        }
+
+        static let userIntroTemplates: [AppLanguage: String] = [
+            .english: "The user says their name is {name}. You know nothing else about them; do not make anything up about them.",
+            .german: "Der Nutzer sagt, er heißt {name}. Mehr weißt du nicht über ihn; erfinde nichts über ihn.",
+            .french: "L'utilisateur dit s'appeler {name}. Tu ne sais rien d'autre sur lui ; n'invente rien à son sujet.",
+            .spanish: "El usuario dice que se llama {name}. No sabes nada más de él; no inventes nada sobre él.",
+            .italian: "L'utente dice di chiamarsi {name}. Non sai nient'altro di lui; non inventare nulla su di lui.",
+            .portuguese: "O usuário diz que se chama {name}. Você não sabe mais nada sobre ele; não invente nada sobre ele.",
+            .russian: "Пользователь говорит, что его зовут {name}. Больше ты о нём ничего не знаешь; ничего о нём не выдумывай.",
+            .ukrainian: "Користувач каже, що його звати {name}. Більше ти про нього нічого не знаєш; нічого про нього не вигадуй.",
+            .greek: "Ο χρήστης λέει ότι τον λένε {name}. Δεν ξέρεις τίποτα άλλο γι' αυτόν· μην επινοήσεις τίποτα.",
+            .japanese: "ユーザーの名前は{name}です。それ以外のことは知りません。何も作り上げないでください。",
+            .korean: "사용자의 이름은 {name}입니다. 그 외에는 아무것도 모릅니다. 아무것도 지어내지 마세요.",
+            .mandarin: "用户说他叫{name}。除此之外你对他一无所知，不要编造任何内容。",
+            .cantonese: "用戶話佢叫{name}。除此之外你對佢一無所知，唔好作任何嘢。",
+        ]
+
+        static let userNameTemplates: [AppLanguage: String] = [
+            .english: "I only know that your name is {name}.",
+            .german: "Ich weiß nur, dass du {name} heißt.",
+            .french: "Je sais seulement que tu t'appelles {name}.",
+            .spanish: "Solo sé que te llamas {name}.",
+            .italian: "So solo che ti chiami {name}.",
+            .portuguese: "Só sei que você se chama {name}.",
+            .russian: "Я знаю только, что тебя зовут {name}.",
+            .ukrainian: "Я знаю лише, що тебе звати {name}.",
+            .greek: "Ξέρω μόνο ότι σε λένε {name}.",
+            .japanese: "あなたの名前が{name}だということだけは知っています。",
+            .korean: "당신의 이름이 {name}이라는 것만 알고 있습니다.",
+            .mandarin: "我只知道你叫{name}。",
+            .cantonese: "我只知道你叫{name}。",
+        ]
+
         static func `for`(_ language: AppLanguage) -> Phrases {
+            var phrases = base(language)
+            phrases.language = language == .automatic ? .english : language
+            return phrases
+        }
+
+        private static func base(_ language: AppLanguage) -> Phrases {
             switch language {
             case .automatic, .english:
                 return Phrases(

@@ -340,10 +340,15 @@ final class ChatEngine: ObservableObject {
     ///   in <app language>" rule, for callers whose prompt names the output
     ///   language itself (translation): two competing language instructions
     ///   are a coin toss for a 2B model.
-    func startCleanSession(model: AIModel, languageInstruction: Bool = true) async throws {
-        let plain: String = languageInstruction
+    /// - Parameter instructions: the system prompt for this task, instead of
+    ///   the assistant's own (which names the app and its developer). A
+    ///   summary written under "You are AiGoodbye, created by Dmitry
+    ///   Mikhaylov (Dealer Of Happiness)" titled a recording of someone
+    ///   saying his name "Scott von Gimborn's Dealer Of Happiness".
+    func startCleanSession(model: AIModel, languageInstruction: Bool = true, instructions: String? = nil) async throws {
+        let plain: String = instructions ?? (languageInstruction
             ? MLXService.basePrompt(for: settings.appLanguage)
-            : MLXService.basePrompt
+            : MLXService.basePrompt)
         #if targetEnvironment(simulator)
         if model.backend == .appleIntelligence {
             appleIntelligence.startSession(history: [], instructions: plain)

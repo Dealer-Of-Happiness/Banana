@@ -23,6 +23,38 @@ enum RecordingSummarizer {
     /// How many sets of notes are folded together at once.
     nonisolated static let notesPerReduction = 6
 
+    /// Below this many words there is nothing to summarize: the transcript
+    /// says it all, and a small model asked for "two or three sentences, key
+    /// points and action items" about one sentence pads them out with
+    /// invention. "Hallo, mein Name ist Scott von Gimborn." came back as a
+    /// talk about personal history and memory; "Heute ist Dienstag. Ich
+    /// trinke einen Kaffee und esse ein Brot." gained tasks to drink coffee
+    /// and eat bread. Such recordings keep a title from their own words and
+    /// no summary.
+    nonisolated static let minimumWordsToSummarize = 40
+
+    /// Whether a transcript is long enough to be worth summarizing. CJK
+    /// text has no spaces, so it is measured in characters there.
+    nonisolated static func isWorthSummarizing(_ transcript: String) -> Bool {
+        let text = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        let words = text.split(whereSeparator: { $0.isWhitespace || $0.isPunctuation }).count
+        let cjk = text.unicodeScalars.filter { (0x2E80...0x9FFF).contains($0.value) || (0xAC00...0xD7AF).contains($0.value) }.count
+        return words >= minimumWordsToSummarize || cjk >= minimumWordsToSummarize * 2
+    }
+
+    /// The system prompt for every pass. Not the assistant's own: that one
+    /// introduces the app and its developer, and those names ended up in
+    /// recordings' titles.
+    nonisolated static func instructions(language: AppLanguage?) -> String {
+        var text = """
+        You write short, faithful notes about recorded speech. Use only what the transcript says. \
+        Never add names, places, events, plans, wishes or tasks that are not in it. \
+        If something is unclear, leave it out.
+        """
+        if let language { text += " Write in \(language.englishName)." }
+        return text
+    }
+
     // MARK: - Slicing (pure, testable)
 
     /// Split a transcript into slices that end on sentence boundaries where
@@ -156,11 +188,17 @@ enum RecordingSummarizer {
         engine: ChatEngine,
         progress: @MainActor (Double, String) -> Void = { _, _ in }
     ) async throws -> Result {
+        // Too short to summarize: the words themselves are the record.
+        guard isWorthSummarizing(transcript) else {
+            return Result(title: fallbackTitle(from: transcript), summary: "")
+        }
         let model = try routedModel(engine: engine)
         // Only one utility may own the engine: two summaries (or a summary
         // and a translation) would each destroy the other's session.
         guard engine.claimUtility() else { throw SummarizerError.engineBusy }
         defer { engine.releaseUtility() }
+        let language = languageCode.flatMap(Self.language(forCode:))
+        let system = instructions(language: language)
 
         // Slicing a four-hour transcript is hundreds of milliseconds of pure
         // string work; it must not block the main actor before the progress
@@ -194,7 +232,7 @@ enum RecordingSummarizer {
 
                 \(piece)
                 """
-                let note = try await answer(prompt, model: model, engine: engine)
+                let note = try await answer(prompt, model: model, engine: engine, instructions: system)
                 // An empty answer would silently delete this part of the
                 // meeting from the summary; keep the raw text instead.
                 notes.append(note.isEmpty ? piece : note)
@@ -219,7 +257,7 @@ enum RecordingSummarizer {
 
                 \(joined)
                 """
-                let combined = try await answer(prompt, model: model, engine: engine)
+                let combined = try await answer(prompt, model: model, engine: engine, instructions: system)
                 folded.append(combined.isEmpty ? joined : combined)
             }
             notes = folded
@@ -238,40 +276,50 @@ enum RecordingSummarizer {
         let keyPointsHeading = L10n.text("Key points")
         let actionItemsHeading = L10n.text("Action items")
         let noneWord = L10n.text("None")
-        let languageLine = languageCode
-            .flatMap(Self.language(forCode:))
-            .map { " Write the whole result in \($0.englishName)." } ?? ""
+        let languageLine = language.map { " Write the whole result in \($0.englishName)." } ?? ""
+        // One slice means `combined` is the transcript itself, not notes
+        // about it; the prompt says which, and asks for less where there is
+        // less to say.
+        let single = pieces.count == 1
+        let source = single ? "the transcript of a recording" : "notes from a recording"
+        let summaryLength = single ? "One or two sentences saying what was said." : "Two or three sentences describing what the recording was about."
         let finalPrompt = """
-        Below are notes from a recording. Write the result in Markdown with exactly these three \
+        Below is \(source). Write the result in Markdown with exactly these three \
         sections and nothing else:
 
         ## \(summaryHeading)
-        Two or three sentences describing what the recording was about.
+        \(summaryLength)
 
         ## \(keyPointsHeading)
-        Bullet points of the most important content.
+        Up to five bullet points, each one something that was actually said.
 
         ## \(actionItemsHeading)
-        Bullet points in the form "Who - what - when" for anything someone said they would do. \
+        Only what someone explicitly says someone must, should or will do, as bullet points, \
+        with who and when if they were said. Saying what someone is doing right now is not a task. \
         Write "\(noneWord)" if there are none.
 
-        Use only what is in the notes. Do not invent names, dates or tasks.\(languageLine)
+        Use only what is in the text. Do not invent names, places, dates, journeys, wishes or tasks.\(languageLine)
 
+        \(single ? "Transcript:" : "Notes:")
         \(combined)
         """
-        let summary = try await answer(finalPrompt, model: model, engine: engine)
+        let summary = try await answer(finalPrompt, model: model, engine: engine, instructions: system)
 
         try Task.checkCancellation()
         progress(0.95, L10n.text("Naming the recording"))
 
+        // Named from the transcript itself when it fits, not from the
+        // summary: a title taken from a summary repeats whatever the summary
+        // got wrong.
         var title = fallbackTitle(from: transcript)
+        let titleSource = single ? String(transcript.prefix(1200)) : String(summary.prefix(1200))
         let titlePrompt = """
-        Give this recording a short title of 3 to 6 words. Reply with the title only, \
-        with no quotes and no explanation.
+        Write a title of 2 to 6 words for this recording, using only words and facts from the \
+        text below. Reply with the title only, with no quotes and no explanation.\(languageLine)
 
-        \(summary.prefix(1200))
+        \(titleSource)
         """
-        if let generated = try? await answer(titlePrompt, model: model, engine: engine) {
+        if let generated = try? await answer(titlePrompt, model: model, engine: engine, instructions: system) {
             let cleaned = cleanTitle(generated)
             if !cleaned.isEmpty { title = cleaned }
         }
@@ -321,8 +369,8 @@ enum RecordingSummarizer {
 
     /// One question, one clean session, the whole answer as a string.
     @MainActor
-    private static func answer(_ prompt: String, model: AIModel, engine: ChatEngine) async throws -> String {
-        try await engine.startCleanSession(model: model)
+    private static func answer(_ prompt: String, model: AIModel, engine: ChatEngine, instructions: String) async throws -> String {
+        try await engine.startCleanSession(model: model, instructions: instructions)
         var final = ""
         for try await snapshot in engine.respondStream(model: model, prompt: prompt, image: nil) {
             final = snapshot

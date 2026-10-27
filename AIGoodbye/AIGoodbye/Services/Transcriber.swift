@@ -157,11 +157,23 @@ final class Transcriber {
         }
     }
 
+    /// How results are reported. `.fastResults` is not optional for a live
+    /// microphone: without it SpeechTranscriber held every result back
+    /// until the audio stream was closed (measured with German speech fed
+    /// in real time: nothing at all for 27 seconds of speech, then the whole
+    /// text the moment the stream ended). Voice conversations and the
+    /// translator, which wait for words before they can answer, sat there
+    /// listening forever; the recorder showed an empty transcript until
+    /// Stop. With it, words arrive about once a second and a finished
+    /// sentence a few seconds after the speaker pauses - and the final text
+    /// was as accurate in the same test.
+    static let reportingOptions: Set<SpeechTranscriber.ReportingOption> = [.volatileResults, .fastResults]
+
     private func installAssetsIfNeeded(for locale: Locale) async throws {
         let transcriber = SpeechTranscriber(
             locale: locale,
             transcriptionOptions: [],
-            reportingOptions: [.volatileResults],
+            reportingOptions: Self.reportingOptions,
             attributeOptions: [.audioTimeRange]
         )
         // Reserved, so the system doesn't reclaim the asset between
@@ -254,7 +266,7 @@ final class Transcriber {
         let transcriber = SpeechTranscriber(
             locale: locale,
             transcriptionOptions: [],
-            reportingOptions: [.volatileResults],
+            reportingOptions: Self.reportingOptions,
             attributeOptions: [.audioTimeRange]
         )
         speechTranscriber = transcriber

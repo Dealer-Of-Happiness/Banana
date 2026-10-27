@@ -996,36 +996,22 @@ final class MLXService: ObservableObject {
         }
     }
 
-    /// Whether the loaded model says it knows for certain who the person in
-    /// `question` is: true, false, or nil when it gave no clear answer or no
-    /// model is loaded.
+    /// A short side question to the loaded model on a throwaway session:
+    /// its raw answer, or nil when no model is loaded or it failed.
     ///
-    /// For the smallest models, which answer "Who is ...?" with an invented
-    /// biography for anyone they have never heard of, in German even when
-    /// told not to. Asked on its own, in English and with nothing else
-    /// around it, the same model judges well whether it knows someone: in
-    /// tests it said yes for Einstein, Merkel, Marie Curie, Messi and
-    /// Goethe and no for private people, every time. The answer then sets
-    /// the note in front of the real question (see `TurnContext`). A few
-    /// tokens on a separate, throwaway session: under a second.
-    func knowsPerson(in question: String) async -> Bool? {
+    /// For `PeopleGuard`: which person a message is about, and whether the
+    /// model knows them. Greedy, a handful of tokens, under a second; the
+    /// chat's own session and cache are untouched.
+    func probe(_ prompt: String, maxTokens: Int) async -> String? {
         guard let container = modelContainer else { return nil }
-        let probe = ChatSession(
+        let session = ChatSession(
             container,
             instructions: "You are a careful assistant.",
-            generateParameters: GenerateParameters(maxTokens: 4, temperature: 0),
+            generateParameters: GenerateParameters(maxTokens: maxTokens, temperature: 0),
             additionalContext: Self.chatTemplateContext
         )
-        let asked = question.replacingOccurrences(of: "\n", with: " ")
-        guard let raw = try? await probe.respond(
-            to: "Question: «\(asked)» Do you know for certain who the person in this question is? Answer only yes or no."
-        ) else { return nil }
-        let answer = ChatTemplateOptions.visibleAnswer(raw)
-            .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
-            .lowercased()
-        if answer.hasPrefix("yes") { return true }
-        if answer.hasPrefix("no") { return false }
-        return nil
+        guard let raw = try? await session.respond(to: prompt) else { return nil }
+        return ChatTemplateOptions.visibleAnswer(raw)
     }
 
     // MARK: - History trimming

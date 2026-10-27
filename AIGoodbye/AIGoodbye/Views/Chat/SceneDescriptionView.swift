@@ -63,8 +63,12 @@ struct SceneDescriptionView: View {
     /// Kept apart from the stored preference on purpose: the loop also
     /// switches itself off on errors (`stopLoop`), and that must not become
     /// the user's choice for next time.
-    @State private var isContinuous = UserDefaults.standard.object(forKey: "describe.continuous") as? Bool ?? true
-    @AppStorage("describe.continuous") private var prefersContinuous = true
+    // Off until the user turns it on (and then remembered). On by default,
+    // the screen started describing by itself the moment it opened and
+    // went on and on; a tester could hardly reach the controls before the
+    // next description started.
+    @State private var isContinuous = UserDefaults.standard.object(forKey: "describe.continuous") as? Bool ?? false
+    @AppStorage("describe.continuous") private var prefersContinuous = false
     @State private var isDescribing = false
     @State private var latest = ""
     @State private var notice: String?
@@ -581,6 +585,15 @@ struct SceneDescriptionView: View {
         }
         warmUpAttempts = 0
 
+        // A covered lens or a pitch-dark room: say so, rather than let the
+        // model describe a person who is not there (it did, with the lens
+        // taped over). Repeats are quietened like any unchanged view.
+        if mode != .text, FrameCheck.showsNothing(frame) {
+            latest = L10n.text("It's too dark to see anything. The camera may be covered.")
+            speakOrContinue(latest)
+            return
+        }
+
         isDescribing = true
         // Unconditional: turns are serialized, and any `currentTurn` check
         // here would leave the flag stuck true on every path that schedules
@@ -655,11 +668,16 @@ struct SceneDescriptionView: View {
                 announcedModelLoad = true
                 voice.speak(L10n.text("Loading the vision model, one moment."))
             }
-            try await engine.startCleanSession(model: model)
+            try await engine.startCleanSession(model: model, instructions: Self.instructions)
             try Task.checkCancellation()
 
+            // In the language the screen speaks. The prompt is the app's
+            // own English, so "the language the user writes in" was English
+            // on a German phone.
+            let language = TurnContext.uiLanguage(appState.settings.appLanguage)
+            let asked = prompt(for: mode) + " Answer in \(language.englishName)."
             var final = ""
-            for try await snapshot in engine.respondStream(model: model, prompt: prompt(for: mode), image: frame) {
+            for try await snapshot in engine.respondStream(model: model, prompt: asked, image: frame) {
                 if Task.isCancelled { break }
                 final = snapshot
                 if currentTurn == turn { latest = snapshot }
@@ -755,6 +773,13 @@ struct SceneDescriptionView: View {
             return scalar.value >= 0x2E80
         }
     }
+
+    /// The system prompt for describing: only what is clearly visible.
+    static let instructions = """
+    You describe what a phone camera sees for someone who cannot see it. Describe only what is \
+    clearly visible. If the picture is dark, blurred or shows nothing you can recognize, say so \
+    instead of guessing. Never invent people, objects or text.
+    """
 
     private func prompt(for mode: Mode) -> String {
         switch mode {

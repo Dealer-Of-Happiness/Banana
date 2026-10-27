@@ -343,6 +343,8 @@ class AppState: ObservableObject {
         if DemoContent.isEnabled { DemoContent.seed(into: conversationManager) }
         // Layout checks from the command line: open with the drawer out.
         if ProcessInfo.processInfo.environment["AIG_OPEN_MENU"] == "1" { showSideMenu = true }
+        // ...or straight on a feature screen, as its deep link would.
+        if let route = Route(host: ProcessInfo.processInfo.environment["AIG_ROUTE"]) { pendingRoute = route }
         #endif
 
         // Come back to the conversation the user was actually in. Always

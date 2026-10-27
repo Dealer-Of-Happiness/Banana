@@ -298,9 +298,22 @@ final class VoiceService: NSObject, ObservableObject {
     private func transcriptChanged(_ text: String, generation: Int) {
         guard generation == listenGeneration, listeningState == .listening else { return }
         if text != liveTranscript {
+            // Only new words mean the speaker is still talking. The engine
+            // adds a sentence's closing punctuation a second or more after
+            // its last word, and counting that as speech held every turn
+            // open for that much longer.
+            if Self.words(of: text) != Self.words(of: liveTranscript) {
+                lastTranscriptChange = Date()
+            }
             liveTranscript = text
-            lastTranscriptChange = Date()
         }
+    }
+
+    /// The words of a transcript, without punctuation, case or spacing.
+    nonisolated static func words(of text: String) -> [String] {
+        text.lowercased()
+            .split(whereSeparator: { !($0.isLetter || $0.isNumber) })
+            .map(String.init)
     }
 
     /// The engine died mid-turn. With words in hand, that is simply the end

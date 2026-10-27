@@ -331,6 +331,12 @@ struct RecordingDetailView: View {
 
                 if let summary = recording.summary, !summary.isEmpty {
                     MarkdownText(content: summary)
+                } else if !recording.transcript.isEmpty, !RecordingSummarizer.isWorthSummarizing(recording.transcript) {
+                    // A summary of a sentence or two is only an invitation
+                    // to invent; the transcript below is the record.
+                    Text("Short recordings aren't summarized. The transcript says it all.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 } else if !isSummarizing && !recording.transcript.isEmpty {
                     Button {
                         summarize(recording)

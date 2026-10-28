@@ -101,6 +101,35 @@ final class AIGoodbyeLargeTextLayoutTests: XCTestCase {
         add(snap(app, "recent-chats"))
         XCTAssertGreaterThanOrEqual(row.frame.height, 60, "a Recent Chats row is only \(row.frame.height) pt tall")
     }
+
+    /// The translator at an accessibility text size, as the tester uses it:
+    /// each language's name stays on one line. The menus used to break
+    /// them in the middle of the word ("Deuts" / "ch", "Englis" / "h").
+    @MainActor
+    func testTranslateLanguageNamesStayWhole() {
+        let app = XCUIApplication()
+        app.launchEnvironment["AIG_DEMO"] = "1"
+        app.launchEnvironment["AIG_FORCE_NO_AI"] = "1"
+        app.launchEnvironment["AIG_ROUTE"] = "translate"
+        app.launchArguments += [
+            "-hasAcceptedTerms", "YES",
+            "-hasSeenSetup", "YES",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityM",
+            "-AppleLanguages", "(de)",
+            "-AppleLocale", "de_DE",
+        ]
+        app.launch()
+        let mine = app.buttons["Du"]
+        let theirs = app.buttons["Gegenüber"]
+        XCTAssertTrue(mine.waitForExistence(timeout: 15), "no language menu for your side")
+        XCTAssertTrue(theirs.exists, "no language menu for the other side")
+        add(snap(app, "translate-languages"))
+        // One line at this size is under 50 pt; a name broken over two
+        // lines made the menu about 70 pt tall.
+        XCTAssertLessThan(mine.frame.height, 60, "your language's name wraps (\(mine.frame.height) pt)")
+        XCTAssertLessThan(theirs.frame.height, 60, "their language's name wraps (\(theirs.frame.height) pt)")
+        XCTAssertTrue(app.buttons["Freihändiges Gespräch"].isHittable, "hands-free button not reachable")
+    }
 }
 
 private extension XCTestCase {

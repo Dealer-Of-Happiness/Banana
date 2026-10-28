@@ -67,10 +67,28 @@ struct TranslateModeView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                // Both bars keep their full height and the conversation gets
+                // what is left: at the largest text sizes the bottom bar was
+                // squeezed instead, cutting "Hands-free conversation" to
+                // one truncated line and the talk buttons' names in half.
+                // Their text stops growing at the second accessibility size;
+                // beyond it, on an iPhone SE, the two bars filled the whole
+                // screen and left no room for the conversation, which keeps
+                // growing with the setting.
                 languageBar
+                    .dynamicTypeSize(...DynamicTypeSize.accessibility2)
+                    .fixedSize(horizontal: false, vertical: true)
                 transcript
                 controls
+                    .dynamicTypeSize(...DynamicTypeSize.accessibility2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            // Hands-free on or off swaps the bottom bar's buttons and changes
+            // its height. Animated, the old button faded out on top of the
+            // conversation's text while the new one faded in, both half
+            // visible for a moment (seen with large text on an iPhone SE).
+            // The bar switches at once instead.
+            .animation(nil, value: isHandsFree)
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Translate")
             .navigationSubtitle("Works with no internet")
@@ -159,22 +177,44 @@ struct TranslateModeView: View {
 
     // MARK: - Pieces
 
+    /// The two languages side by side when their names fit on one line
+    /// each; otherwise one row per side, with the caption beside the name
+    /// or, at the largest text sizes, above it. With large text on an
+    /// iPhone SE the side-by-side menus broke the names in the middle of
+    /// the word ("Deuts" / "ch", "Englis" / "h").
     private var languageBar: some View {
-        HStack(spacing: 12) {
-            picker(for: $myLanguage, label: L10n.text("You"))
-
-            Button {
-                let mine = myLanguage
-                myLanguage = theirLanguage
-                theirLanguage = mine
-            } label: {
-                Image(systemName: "arrow.left.arrow.right")
-                    .font(.body.weight(.semibold))
-                    .frame(minWidth: 44, minHeight: 44)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                languageColumn(for: $myLanguage, label: L10n.text("You"))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                swapButton(stacked: false)
+                languageColumn(for: $theirLanguage, label: L10n.text("Them"))
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .accessibilityLabel(Text("Swap languages"))
 
-            picker(for: $theirLanguage, label: L10n.text("Them"))
+            HStack(spacing: 8) {
+                Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 4) {
+                    GridRow {
+                        languageCaption(L10n.text("You"))
+                        languageMenu(for: $myLanguage, label: L10n.text("You"))
+                    }
+                    GridRow {
+                        languageCaption(L10n.text("Them"))
+                        languageMenu(for: $theirLanguage, label: L10n.text("Them"))
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                swapButton(stacked: true)
+            }
+
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
+                    languageColumn(for: $myLanguage, label: L10n.text("You"))
+                    languageColumn(for: $theirLanguage, label: L10n.text("Them"))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                swapButton(stacked: true)
+            }
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
@@ -182,20 +222,58 @@ struct TranslateModeView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func picker(for binding: Binding<AppLanguage>, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+    private func languageColumn(for binding: Binding<AppLanguage>, label: String) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            languageCaption(label)
+            languageMenu(for: binding, label: label)
+        }
+    }
+
+    private func languageCaption(_ text: String) -> some View {
+        Text(verbatim: text)
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .accessibilityHidden(true)
+    }
+
+    private func swapButton(stacked: Bool) -> some View {
+        Button {
+            let mine = myLanguage
+            myLanguage = theirLanguage
+            theirLanguage = mine
+        } label: {
+            // Up and down when the languages are listed one above the other.
+            Image(systemName: stacked ? "arrow.up.arrow.down" : "arrow.left.arrow.right")
+                .font(.body.weight(.semibold))
+                .frame(minWidth: 44, minHeight: 44)
+        }
+        .accessibilityLabel(Text("Swap languages"))
+    }
+
+    /// A menu whose label is the language's name on one line: a menu-style
+    /// Picker wraps its label wherever it runs out of room.
+    private func languageMenu(for binding: Binding<AppLanguage>, label: String) -> some View {
+        Menu {
             Picker(label, selection: binding) {
                 ForEach(languageChoices) { language in
                     Text(verbatim: language.displayName).tag(language)
                 }
             }
-            .pickerStyle(.menu)
-            .labelsHidden()
+        } label: {
+            HStack(spacing: 4) {
+                Text(verbatim: binding.wrappedValue.displayName)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.footnote.weight(.semibold))
+                    .imageScale(.small)
+                    .accessibilityHidden(true)
+            }
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityLabel(Text(verbatim: label))
+        .accessibilityValue(Text(verbatim: binding.wrappedValue.displayName))
     }
 
     private var transcript: some View {
@@ -673,16 +751,22 @@ struct TranslateModeView: View {
     }
 
     private func toggleHandsFree() {
-        isHandsFree.toggle()
-        if isHandsFree {
-            notice = nil
-            emptyListens = 0
-            handsFreeExpectsMine = true
-            beginListening(mine: true)
-        } else {
-            voice.stopListening(notify: false)
-            voice.stopSpeaking()
-            listeningForMine = nil
+        // Not animated, whatever transaction the tap arrives in: see the
+        // `.animation(nil, value: isHandsFree)` on the screen.
+        var instant = Transaction(animation: nil)
+        instant.disablesAnimations = true
+        withTransaction(instant) {
+            isHandsFree.toggle()
+            if isHandsFree {
+                notice = nil
+                emptyListens = 0
+                handsFreeExpectsMine = true
+                beginListening(mine: true)
+            } else {
+                voice.stopListening(notify: false)
+                voice.stopSpeaking()
+                listeningForMine = nil
+            }
         }
     }
 

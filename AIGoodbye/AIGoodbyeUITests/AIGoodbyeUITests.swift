@@ -209,18 +209,24 @@ final class AIGoodbyeUITests: XCTestCase {
         // A landscape phone is too short for a pinned header and Settings
         // row plus a usable chat list, so the whole menu scrolls as one
         // (see SideMenuView.scrollsAsOne): Settings is at its end.
-        for _ in 0..<4 where !settings.isHittable {
-            let handle = ["New Chat", "New Folder", "Recordings", "Send Feedback"]
-                .map { app.buttons[$0].firstMatch }
-                .first { $0.exists && $0.isHittable }
-            guard let handle else { break }
+        // Up to ten swipes: earlier tests in the same run leave many chats.
+        // Something in the menu to swipe on: a button by name, or a chat row
+        // (their labels are "title, preview, time").
+        func menuHandle(_ names: [String]) -> XCUIElement? {
+            names.map { app.buttons[$0].firstMatch }.first { $0.exists && $0.isHittable }
+                ?? app.buttons.matching(NSPredicate(format: "label CONTAINS ','")).allElementsBoundByIndex
+                    .first { $0.isHittable }
+        }
+        for _ in 0..<10 where !settings.isHittable {
+            guard let handle = menuHandle(["New Chat", "New Folder", "Recordings", "Send Feedback"]) else { break }
             handle.swipeUp()
             usleep(500_000)
         }
         XCTAssertTrue(settings.isHittable, "Settings must be reachable in landscape")
         let closeMenu = app.buttons["Close menu"].firstMatch
-        for _ in 0..<4 where closeMenu.exists && !closeMenu.isHittable && settings.isHittable {
-            settings.swipeDown()
+        for _ in 0..<10 where closeMenu.exists && !closeMenu.isHittable {
+            guard let handle = menuHandle(["Settings", "Send Feedback"]) else { break }
+            handle.swipeDown()
             usleep(500_000)
         }
         if closeMenu.exists && closeMenu.isHittable {

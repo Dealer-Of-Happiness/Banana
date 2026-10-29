@@ -30,20 +30,28 @@ nonisolated enum TurnContext {
     ///     passages around the question).
     ///   - question: what the user asked, alone. The language and the
     ///     kind of question are judged on this.
+    ///   - hasImage: a picture goes with the message. The note then follows
+    ///     the question instead of leading it: in front, it made the
+    ///     smallest model open half its descriptions of a cartoon frog with
+    ///     "Cartoon-Frosthund" or "Cartoon-Frosthaken"; after it, none of
+    ///     24 did, and all 24 were still in German.
     static func wrap(
         _ prompt: String,
         question: String,
         appLanguage: AppLanguage,
         personKnown: Bool? = nil,
         introducedName: String? = nil,
+        noNamedPerson: Bool = false,
+        hasImage: Bool = false,
         now: Date = Date(),
         timeZone: TimeZone = .current
     ) -> String {
         guard let note = note(for: question, appLanguage: appLanguage, personKnown: personKnown,
-                              introducedName: introducedName, now: now, timeZone: timeZone) else {
+                              introducedName: introducedName, noNamedPerson: noNamedPerson,
+                              now: now, timeZone: timeZone) else {
             return prompt
         }
-        return note + "\n\n" + prompt
+        return hasImage ? prompt + "\n\n" + note : note + "\n\n" + prompt
     }
 
     /// The note for `question`, or nil when there is nothing to add.
@@ -53,11 +61,15 @@ nonisolated enum TurnContext {
     ///   was not asked.
     /// - Parameter introducedName: the name the user just gave as their own
     ///   ("Ich heiße ..."), which the model is told and told not to embroider.
+    /// - Parameter noNamedPerson: the model was asked who the message is
+    ///   about and named nobody ("Infos über Berlin"), so there is no person
+    ///   to be careful about.
     static func note(
         for question: String,
         appLanguage: AppLanguage,
         personKnown: Bool? = nil,
         introducedName: String? = nil,
+        noNamedPerson: Bool = false,
         now: Date = Date(),
         timeZone: TimeZone = .current
     ) -> String? {
@@ -74,7 +86,7 @@ nonisolated enum TurnContext {
             parts.append(phrases.developerNote)
         } else if personKnown == false {
             parts.append(phrases.unknownPersonCertain)
-        } else if personKnown == nil, asksWhoSomeoneIs(question) {
+        } else if personKnown == nil, !noNamedPerson, asksWhoSomeoneIs(question) {
             parts.append(phrases.unknownPerson)
         }
         if language != nil {
@@ -192,8 +204,45 @@ nonisolated enum TurnContext {
     /// made it say it does not know them, and well-known people were still
     /// answered.
     static func asksWhoSomeoneIs(_ text: String) -> Bool {
-        matches(text, personPatterns) && !asksWhoTheUserIs(text)
+        (matches(text, personPatterns) || isJustAName(text)) && !asksWhoTheUserIs(text)
     }
+
+    /// A message that is nothing but a name ("Scott von Gimborn",
+    /// "Albert Einstein?"): to a chat model that reads as "tell me about
+    /// this person", and the smallest one wrote a career for it. Greetings
+    /// and thanks with a name in them are not ("Hallo Scott").
+    static func isJustAName(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "?!.…？！。")))
+        let tokens = trimmed.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        guard (2...5).contains(tokens.count) else { return false }
+        var capitalized = 0
+        for token in tokens {
+            let lower = token.lowercased()
+            if nameStopWords.contains(lower.trimmingCharacters(in: .punctuationCharacters)) { return false }
+            if nameParticles.contains(lower) { continue }
+            guard let first = token.first, first.isUppercase,
+                  token.allSatisfy({ $0.isLetter || $0 == "-" || $0 == "'" || $0 == "’" || $0 == "." }) else { return false }
+            capitalized += 1
+        }
+        return capitalized >= 2
+    }
+
+    private static let nameParticles: Set<String> = [
+        "von", "van", "vom", "de", "der", "den", "del", "della", "di", "da", "du", "dos", "das",
+        "zu", "la", "le", "bin", "ibn", "al", "el", "ten", "ter", "y", "e",
+    ]
+
+    /// Words that make a short capitalized message a greeting, thanks or a
+    /// wish rather than a name, in the app's languages that capitalize.
+    private static let nameStopWords: Set<String> = [
+        "hallo", "hello", "hi", "hey", "servus", "moin", "guten", "gute", "morgen", "tag", "abend", "nacht",
+        "danke", "dank", "vielen", "thanks", "thank", "ok", "okay", "bitte", "please", "ja", "nein", "yes", "no",
+        "frohe", "fröhliche", "happy", "merry", "schönen", "schöne", "liebe", "lieber", "dear", "sehr", "geehrte",
+        "geehrter", "good", "morning", "evening", "night", "bonjour", "bonsoir", "merci", "salut", "hola",
+        "gracias", "buenos", "buenas", "ciao", "grazie", "buongiorno", "olá", "ola", "obrigado", "obrigada",
+        "bom", "boa", "привет", "спасибо", "здравствуйте", "привіт", "дякую", "γεια", "ευχαριστώ",
+        "test", "testing", "weiter", "continue", "stop", "ende",
+    ]
 
     /// Whether the message asks who the user is, or what the app knows
     /// about them. The smallest model answered "Wer bin ich?" by
@@ -239,6 +288,53 @@ nonisolated enum TurnContext {
         return "Question: «\(asked)» Is this question about a specific, named person (not the user, not you)? "
             + "If so, reply with that person's name only. If not, reply NONE."
     }
+
+    /// Asks the model whether a phrase is a person's name. Used when it
+    /// named nobody in a message that asks about someone: "Info über Scott
+    /// von Gimborn" and a bare "Scott von Gimborn" got NONE, because they
+    /// are not questions. In tests it called all 14 names of people names,
+    /// and 15 of 16 places, companies, products and dishes not.
+    static func personCheckProbe(for candidate: String) -> String {
+        "Is «\(candidate)» the name of a person? Answer only yes or no."
+    }
+
+    /// The name-like phrase in a message, read from its capitals: two or
+    /// more capitalized words in a row, with "von", "van", "de" and the like
+    /// between them ("Scott von Gimborn", "Johann Wolfgang von Goethe").
+    /// Words that only start a request ("Info", "Wer", "Tell") are not
+    /// part of it. Nil when there is none, and for scripts without capitals.
+    static func nameCandidate(in text: String) -> String? {
+        let tokens = text.split(whereSeparator: { $0.isWhitespace })
+            .map { $0.trimmingCharacters(in: CharacterSet.punctuationCharacters.subtracting(CharacterSet(charactersIn: "-'’"))) }
+        var best: [String] = []
+        var run: [String] = []
+        func close() {
+            while let last = run.last, nameParticles.contains(last.lowercased()) { run.removeLast() }
+            if run.filter({ !nameParticles.contains($0.lowercased()) }).count >= 2, run.count > best.count { best = run }
+            run = []
+        }
+        for token in tokens {
+            let lower = token.lowercased()
+            if nameParticles.contains(lower), !run.isEmpty {
+                run.append(token)
+            } else if let first = token.first, first.isUppercase,
+                      token.allSatisfy({ $0.isLetter || $0 == "-" || $0 == "'" || $0 == "’" }),
+                      !requestWords.contains(lower), !nameStopWords.contains(lower) {
+                run.append(token)
+            } else {
+                close()
+            }
+        }
+        close()
+        return best.isEmpty ? nil : best.joined(separator: " ")
+    }
+
+    /// Capitalized words that open a request rather than belong to a name.
+    private static let requestWords: Set<String> = [
+        "info", "infos", "information", "informationen", "details", "biografie", "biographie", "lebenslauf",
+        "steckbrief", "bio", "biography", "wer", "was", "wie", "who", "what", "tell", "erzähl", "erzähle",
+        "kennst", "ist", "war", "sag", "nenne", "qui", "quién", "chi", "quem", "parle-moi", "háblame", "parlami",
+    ]
 
     /// Asks the model whether it knows a person. Always phrased as the
     /// German "Wer ist ...?": in tests that form made the smallest model's
@@ -382,19 +478,29 @@ nonisolated enum TurnContext {
     /// "Who is ...?" and "tell me about ..." in the app's languages.
     private static let personPatterns: [String] = [
         #"\bwho (is|was)\b"#, #"\bwho['’]s\b"#, #"\btell me about\b"#, #"\bwhat do you know about\b"#,
-        #"\binformation about\b"#,
-        #"\bwer (ist|war)\b"#, #"\berzähl(e)? mir (etwas |was )?über\b"#, #"\bwas weißt du über\b"#,
-        #"\binformationen über\b"#,
+        #"\binformation (about|on)\b"#, #"\binfos? (about|on)\b"#, #"\bdetails (about|on)\b"#,
+        #"\b(biography|bio) of\b"#,
+        #"\bwer (ist|war)\b"#, #"\berzähl(e)? mir (etwas |was )?(über|von)\b"#, #"\bwas weißt du (über|von)\b"#,
+        // "Info über Scott von Gimborn" - no question mark, no "wer": the
+        // smallest model made the tester an actor with three films.
+        #"\binformation(en)? (über|zu)\b"#, #"\binfos? (über|zu|von)\b"#, #"\bdetails (über|zu)\b"#,
+        #"\b(biografie|biographie|lebenslauf|steckbrief) (von|über)\b"#, #"\bwas gibt es (über|zu)\b"#,
         #"\bqui (est|était)\b"#, #"\bparle-moi de\b"#, #"\bque sais-tu (de|sur)\b"#,
+        #"\binfos? sur\b"#, #"\binformations? sur\b"#, #"\bbiographie de\b"#,
         #"\bquién (es|fue|era)\b"#, #"\bháblame (de|sobre)\b"#, #"\bqué sabes (de|sobre)\b"#,
+        #"\binfo(rmación)? sobre\b"#, #"\bbiografía de\b"#,
         #"\bchi (è|era|fu)\b"#, #"\bparlami di\b"#, #"\bcosa sai (di|su)\b"#,
+        #"\binfo(rmazioni)? su\b"#, #"\bbiografia di\b"#,
         #"\bquem (é|foi|era)\b"#, #"\bme fale (de|sobre)\b"#, #"\bo que você sabe sobre\b"#,
+        #"\binfo(rmações|rmação)? sobre\b"#, #"\bbiografia de\b"#,
         "кто (такой|такая|такие|это|был|была)", "расскажи (мне )?(о|об|про) ", "что ты знаешь (о|об|про) ",
+        "информаци[яюи] (о|об|про) ", "биография ",
         "хто (такий|така|такі|це|був|була)", "розкажи (мені )?(про|о) ", "що ти знаєш про ",
-        "ποιος (είναι|ήταν)", "ποια (είναι|ήταν)", "πες μου για",
-        "は誰", "って誰", "とは誰", "について教えて",
-        "누구(야|예요|에요|인가요|입니까|니)", "에 대해 알려",
-        "谁是", "是谁", "邊個係", "係邊個", "係咩人",
+        "інформаці[яюї] про ", "біографія ",
+        "ποιος (είναι|ήταν)", "ποια (είναι|ήταν)", "πες μου για", "πληροφορίες για", "βιογραφία",
+        "は誰", "って誰", "とは誰", "について教えて", "の情報", "のプロフィール", "の経歴",
+        "누구(야|예요|에요|인가요|입니까|니)", "에 대해 알려", "에 대한 정보", "의 프로필", "의 경력",
+        "谁是", "是谁", "邊個係", "係邊個", "係咩人", "的信息", "的资料", "的简介", "的資料", "的簡介", "嘅資料",
     ]
 
     // MARK: - The note's wording

@@ -85,6 +85,8 @@ final class VoiceService: NSObject, ObservableObject {
     /// superseded while it was still preparing must not go live later.
     private var listenGeneration = 0
     private var startTask: Task<Void, Never>?
+    /// A turn's microphone is closed and its last words are being committed.
+    private var finishTask: Task<Void, Never>?
     private var silenceTimer: Timer?
     private var levelTimer: Timer?
     private var lastTranscriptChange = Date()
@@ -384,18 +386,61 @@ final class VoiceService: NSObject, ObservableObject {
     }
 
     /// Ends the turn and delivers the final transcript.
+    ///
+    /// The microphone closes at once, but the words are taken from the
+    /// engine's finished result, not from the live text shown while
+    /// speaking: that lags the voice, and its last word often arrives only
+    /// with the finished result. Cancelling straight away lost it - "...und
+    /// komme aus Emmerich am Rhein" reached the translator as "...Emmerich
+    /// am". The wait is short and bounded; if it runs out, the live text is
+    /// used as before.
     private func finishListening() {
         guard listeningState == .listening else { return }
-        let text = liveTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
-        stopListening(notify: false)
+        let heard = liveTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Nothing the engine says from here on belongs to a live listen.
+        listenGeneration += 1
+        let generation = listenGeneration
+        silenceTimer?.invalidate(); silenceTimer = nil
+        levelTimer?.invalidate(); levelTimer = nil
+        if audioEngine.isRunning { audioEngine.stop() }
+        if didInstallTap {
+            audioEngine.inputNode.removeTap(onBus: 0)
+            didInstallTap = false
+        }
+        micLevel = 0
+        levelBox.set(0)
+        listeningState = .idle
         // "Heard you, the microphone is closed" - before the answer starts.
         playListeningSound(Self.endListeningSound)
-        if !text.isEmpty {
-            onFinalTranscript?(text)
-        } else {
-            // Nothing was said: let the UI recover instead of hanging.
-            onListeningEnded?()
+
+        finishTask?.cancel()
+        finishTask = Task { [weak self] in
+            guard let self else { return }
+            let finished = heard.isEmpty ? "" : await self.transcriber.finish(within: Self.turnFinishLimit)
+            // A new listen, or the screen closing, took over meanwhile.
+            guard generation == self.listenGeneration else { return }
+            self.cleanUpAudio()
+            let text = Self.bestTranscript(finished: finished, live: heard)
+            if !text.isEmpty {
+                self.onFinalTranscript?(text)
+            } else {
+                // Nothing was said: let the UI recover instead of hanging.
+                self.onListeningEnded?()
+            }
         }
+    }
+
+    /// How long a spoken turn waits for the engine's finished words.
+    static let turnFinishLimit: TimeInterval = 2
+
+    /// The engine's finished words, unless they came back empty or with
+    /// fewer words than were already on screen (a finish that ran out of
+    /// time keeps only what it had committed).
+    nonisolated static func bestTranscript(finished: String, live: String) -> String {
+        let finished = finished.trimmingCharacters(in: .whitespacesAndNewlines)
+        let live = live.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !finished.isEmpty else { return live }
+        return words(of: finished).count >= words(of: live).count ? finished : live
     }
 
     func stopListening(notify: Bool = true) {

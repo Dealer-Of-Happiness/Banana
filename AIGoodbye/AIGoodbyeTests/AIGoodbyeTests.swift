@@ -1176,6 +1176,15 @@ struct TurnContextTests {
         #expect(sent.hasSuffix("passages\n\n" + q))
         #expect(sent.hasPrefix("(Es ist jetzt"))
     }
+
+    @Test func withAPictureTheNoteFollowsTheQuestion() {
+        let q = "Was siehst du auf diesem Bild?"
+        let german = TurnContext.Phrases.for(.german)
+        #expect(TurnContext.wrap(q, question: q, appLanguage: .automatic, hasImage: true)
+                == q + "\n\n(" + german.answerIn + ")")
+        #expect(TurnContext.wrap(q, question: q, appLanguage: .automatic)
+                == "(" + german.answerIn + ")\n\n" + q)
+    }
 }
 
 /// Questions about people on the smallest models (PeopleGuard), with the
@@ -1187,11 +1196,17 @@ struct PeopleGuardTests {
         var calls: [String] = []
         let names: [String: String]      // question -> name probe answer
         let known: Set<String>           // names it says it knows
-        init(names: [String: String], known: Set<String>) { self.names = names; self.known = known }
+        let persons: Set<String>         // phrases it calls a person's name
+        init(names: [String: String], known: Set<String>, persons: Set<String> = []) {
+            self.names = names; self.known = known; self.persons = persons
+        }
         func answer(_ prompt: String, _ maxTokens: Int) -> String? {
             calls.append(prompt)
             if prompt.contains("Is this question about a specific, named person") {
                 return names.first { prompt.contains($0.key) }?.value ?? "NONE"
+            }
+            if prompt.contains("the name of a person?") {
+                return persons.contains { prompt.contains("«\($0)»") } ? "Yes" : "No"
             }
             if let name = known.first(where: { prompt.contains("Wer ist \($0)?") }) { _ = name; return "Yes" }
             return "No"
@@ -1285,6 +1300,61 @@ struct PeopleGuardTests {
         #expect(note?.contains(german.unknownPersonCertain) == true)
     }
 
+    @Test func requestsWithoutAQuestionAreCheckedToo() async {
+        // "Info über Scott von Gimborn": the model names nobody in a message
+        // that is not a question, so the name in it is checked.
+        let model = FakeModel(names: [:], known: ["Angela Merkel"],
+                              persons: ["Scott von Gimborn", "Angela Merkel"])
+        var state = PeopleState()
+        let info = await PeopleGuard.resolve(question: "Info über Scott von Gimborn", hasImage: false,
+                                             appLanguage: .automatic, state: &state,
+                                             probe: { model.answer($0, $1) })
+        #expect(info.personKnown == false)
+        #expect(info.fixed == german.dontKnowAnswer)
+
+        var fresh = PeopleState()
+        let bare = await PeopleGuard.resolve(question: "Scott von Gimborn", hasImage: false,
+                                             appLanguage: .automatic, state: &fresh,
+                                             probe: { model.answer($0, $1) })
+        #expect(bare.fixed == german.dontKnowAnswer)
+
+        let merkel = await PeopleGuard.resolve(question: "Info über Angela Merkel", hasImage: false,
+                                               appLanguage: .automatic, state: &fresh,
+                                               probe: { model.answer($0, $1) })
+        #expect(merkel.personKnown == true)
+        #expect(merkel.fixed == nil)
+
+        // A company is not a person: left to the model, without the
+        // "if you don't know this person" note.
+        let bahn = await PeopleGuard.resolve(question: "Info über die Deutsche Bahn", hasImage: false,
+                                             appLanguage: .automatic, state: &fresh,
+                                             probe: { model.answer($0, $1) })
+        #expect(bahn.fixed == nil)
+        #expect(bahn.noNamedPerson)
+        let note = TurnContext.note(for: "Info über die Deutsche Bahn", appLanguage: .automatic,
+                                    noNamedPerson: bahn.noNamedPerson)
+        #expect(note?.contains(german.unknownPerson) != true)
+    }
+
+    @Test func findingTheNameInARequest() {
+        #expect(TurnContext.asksWhoSomeoneIs("Info über Scott von Gimborn"))
+        #expect(TurnContext.asksWhoSomeoneIs("Infos zu Scott von Gimborn bitte"))
+        #expect(TurnContext.asksWhoSomeoneIs("Info about Taylor Swift"))
+        #expect(TurnContext.asksWhoSomeoneIs("Scott von Gimborn"))
+        #expect(!TurnContext.asksWhoSomeoneIs("Info über mich"))
+        #expect(TurnContext.isJustAName("Albert Einstein?"))
+        #expect(!TurnContext.isJustAName("Hallo Scott"))
+        #expect(!TurnContext.isJustAName("Guten Morgen"))
+        #expect(!TurnContext.isJustAName("Danke Dmitry"))
+        #expect(!TurnContext.isJustAName("Wie spät ist es?"))
+        #expect(TurnContext.nameCandidate(in: "Info über Scott von Gimborn") == "Scott von Gimborn")
+        #expect(TurnContext.nameCandidate(in: "Was macht Scott von Gimborn beruflich?") == "Scott von Gimborn")
+        #expect(TurnContext.nameCandidate(in: "Biografie von Johann Wolfgang von Goethe") == "Johann Wolfgang von Goethe")
+        #expect(TurnContext.nameCandidate(in: "Info über Berlin") == nil)
+        #expect(TurnContext.nameCandidate(in: "Erzähl mir von Emmerich am Rhein") == nil)
+        #expect(TurnContext.nameCandidate(in: "谁是李白") == nil)
+    }
+
     @Test func readingTheModelsSideAnswers() {
         let q = "Was macht Scott von Gimborn beruflich?"
         #expect(TurnContext.personName(fromProbe: "Scott von Gimborn", question: q) == "Scott von Gimborn")
@@ -1359,6 +1429,34 @@ struct LiveSpeechTests {
     @Test @MainActor func liveResultsAreAskedFor() {
         #expect(Transcriber.reportingOptions.contains(.fastResults))
         #expect(Transcriber.reportingOptions.contains(.volatileResults))
+    }
+
+    @Test func theFinishedWordsAreSentNotTheLiveOnes() {
+        // The live text lagged the voice: "Wer ist Scott von" while the
+        // finished result had the name.
+        #expect(VoiceService.bestTranscript(finished: "Wer ist Scott von Gimbon?", live: "Wer ist Scott von") == "Wer ist Scott von Gimbon?")
+        #expect(VoiceService.bestTranscript(finished: "", live: "Hallo") == "Hallo")
+        #expect(VoiceService.bestTranscript(finished: "Hallo", live: "Hallo wie geht es") == "Hallo wie geht es")
+    }
+
+    @Test func aVoiceAnswerIsSpokenWhole() {
+        // An answer the app gives itself never streamed: all of it is said.
+        #expect(VoiceModeView.answerToSpeak(saved: "Ich weiß nicht, wer das ist.", streamed: "", spokenOffset: 0)
+                == "Ich weiß nicht, wer das ist.")
+        // The last words arrived only with the saved answer.
+        #expect(VoiceModeView.answerToSpeak(saved: "Es ist warm. Und sonnig.", streamed: "Es ist warm. Und", spokenOffset: 13)
+                == "Es ist warm. Und sonnig.")
+        // Saved text that does not continue what was spoken is not used.
+        #expect(VoiceModeView.answerToSpeak(saved: "Anders.", streamed: "Es ist warm.", spokenOffset: 12) == "Es ist warm.")
+    }
+
+    @Test func translatedNameParticlesArePutBack() {
+        let source = "Hallo, mein Name ist Scott von Gimborn. Ich komme aus Emmerich am Rhein."
+        #expect(TranslateModeView.keepNames(from: source, in: "Hello, my name is Scott from Gimborn. I come from Emmerich.")
+                == "Hello, my name is Scott von Gimborn. I come from Emmerich.")
+        #expect(TranslateModeView.keepNames(from: "Karl-Heinz van der Berg kommt morgen.", in: "Karl-Heinz von der Berg is coming tomorrow.")
+                == "Karl-Heinz van der Berg is coming tomorrow.")
+        #expect(TranslateModeView.keepNames(from: "Wo ist der Bahnhof?", in: "Where is the station?") == "Where is the station?")
     }
 
     @Test func punctuationIsNotSpeech() {

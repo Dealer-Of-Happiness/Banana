@@ -660,7 +660,7 @@ struct TranslateModeView: View {
             // nothing is spoken into an empty room.
             guard isActive, !Task.isCancelled else { return }
 
-            let cleaned = Self.cleanTranslation(final)
+            let cleaned = Self.keepNames(from: text, in: Self.cleanTranslation(final))
             if let index = turns.firstIndex(where: { $0.id == turn.id }) {
                 turns[index].translation = cleaned
             }
@@ -809,6 +809,35 @@ struct TranslateModeView: View {
         "translation", "traducción", "übersetzung", "traduction", "traduzione", "tradução",
         "перевод", "переклад", "μετάφραση", "翻訳", "译文", "翻譯", "번역"
     ]
+
+    /// Names with "von", "van", "de" and the like, put back as they were
+    /// said. The smallest model translated the particle: "Scott von
+    /// Gimborn" came out as "Scott from Gimborn" in every test, whatever
+    /// the prompt said, and "van der Berg" as "von der Berg".
+    nonisolated static func keepNames(from source: String, in translation: String) -> String {
+        let particle = #"(?:von der|von dem|van der|van den|von|van|vom|zu|de la|de|da|di|du|del|della|dos|das)"#
+        let word = #"[\p{Lu}][\p{L}'’\-]+"#
+        guard let names = try? NSRegularExpression(pattern: "(" + word + #")\s+"# + particle + #"\s+("# + word + ")") else {
+            return translation
+        }
+        var result = translation
+        let range = NSRange(source.startIndex..., in: source)
+        for match in names.matches(in: source, range: range) {
+            guard let whole = Range(match.range, in: source),
+                  let firstRange = Range(match.range(at: 1), in: source),
+                  let lastRange = Range(match.range(at: 2), in: source) else { continue }
+            let original = String(source[whole])
+            guard !result.contains(original) else { continue }
+            let first = NSRegularExpression.escapedPattern(for: String(source[firstRange]))
+            let last = NSRegularExpression.escapedPattern(for: String(source[lastRange]))
+            // The two name words with one or two other words between them.
+            guard let changed = try? NSRegularExpression(pattern: #"\b"# + first + #"\s+\p{Ll}+(?:\s+\p{Ll}+)?\s+"# + last + #"\b"#) else { continue }
+            let all = NSRange(result.startIndex..., in: result)
+            result = changed.stringByReplacingMatches(in: result, range: all,
+                                                      withTemplate: NSRegularExpression.escapedTemplate(for: original))
+        }
+        return result
+    }
 
     /// Models sometimes wrap translations in quotes or add a preamble.
     nonisolated static func cleanTranslation(_ raw: String) -> String {

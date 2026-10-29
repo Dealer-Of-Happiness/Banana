@@ -34,6 +34,9 @@ struct VoiceModeView: View {
     @State private var permissionDenied = false
     @State private var spokenOffset = 0
     @State private var lastStreamed = ""
+    /// How many messages the chat had when this turn's question was sent:
+    /// the answer saved after them is this turn's.
+    @State private var answerBaseline = 0
     @State private var isActive = true
     /// False while the scene is not `.active`. Nothing is spoken and no
     /// listen is started while it is false: a streamed token used to undo
@@ -437,6 +440,7 @@ struct VoiceModeView: View {
                 guard isActive else { return }
                 spokenOffset = 0
                 lastStreamed = ""
+                answerBaseline = viewModel.messages.count
                 turn = .thinking
                 await viewModel.sendVoicePrompt(text)
             }
@@ -600,6 +604,14 @@ struct VoiceModeView: View {
         voice.speak(slice)
     }
 
+    /// The whole of this turn's answer: the saved one when it continues what
+    /// has already been spoken (always, unless the model's text had leading
+    /// space the saved copy lost), otherwise what streamed.
+    nonisolated static func answerToSpeak(saved: String, streamed: String, spokenOffset: Int) -> String {
+        let spoken = String(streamed.prefix(spokenOffset))
+        return !saved.isEmpty && saved.hasPrefix(spoken) ? saved : streamed
+    }
+
     /// Speak whatever remains once generation finishes, then hand the turn
     /// back to the user.
     private func finishAssistantTurn() {
@@ -617,8 +629,17 @@ struct VoiceModeView: View {
             turn = .idle
             return
         }
-        // Only ever speak THIS turn's text (never an older message).
-        let text = lastStreamed
+        // Only ever speak THIS turn's text (never an older message): the
+        // answer saved for this turn, or what streamed of it. The saved one
+        // is the whole answer. The streamed text is the last snapshot this
+        // screen saw: the final one and the end of the generation are
+        // published together, so the last words were never spoken, and an
+        // answer the app gives itself ("I don't know who that is") arrives
+        // in one piece at the very end and was not seen at all - the
+        // screen went quietly back to "Tap to talk".
+        let saved = viewModel.messages.dropFirst(answerBaseline).last(where: { $0.role == .assistant })?.content ?? ""
+        let text = Self.answerToSpeak(saved: saved, streamed: lastStreamed, spokenOffset: spokenOffset)
+        lastStreamed = text
         guard !text.isEmpty else {
             // Nothing was generated (cancelled, blocked, or empty).
             if !voice.isSpeaking { turn = .idle }

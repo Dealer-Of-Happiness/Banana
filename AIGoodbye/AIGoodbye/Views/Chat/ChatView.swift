@@ -2496,7 +2496,9 @@ class ChatViewModel: ObservableObject {
                             question: request.prompt,
                             appLanguage: appLanguage,
                             personKnown: people.personKnown,
-                            introducedName: people.introducedName
+                            introducedName: people.introducedName,
+                            noNamedPerson: people.noNamedPerson,
+                            hasImage: request.image != nil
                         ),
                         image: request.image
                     )

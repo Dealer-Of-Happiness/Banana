@@ -970,7 +970,7 @@ struct LiveCameraView: View {
                 // note as in the chat (see `TurnContext`).
                 let stream = engine.respondStream(
                     model: model,
-                    prompt: TurnContext.wrap(text, question: text, appLanguage: appState.settings.appLanguage),
+                    prompt: TurnContext.wrap(text, question: text, appLanguage: appState.settings.appLanguage, hasImage: true),
                     image: frame
                 )
                 for try await snapshot in stream {

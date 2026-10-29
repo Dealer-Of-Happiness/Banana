@@ -417,7 +417,11 @@ final class Transcriber {
     private let feed = AnalyzerFeed()
 
     /// Stop and return the complete transcript.
-    func finish() async -> String {
+    ///
+    /// - Parameter limit: the longest to wait for the engine to commit what
+    ///   it has heard. A recording can afford seconds; a spoken turn in a
+    ///   conversation cannot.
+    func finish(within limit: TimeInterval = 5) async -> String {
         switch engine {
         case .analyzer:
             feed.close()
@@ -438,10 +442,10 @@ final class Transcriber {
             // recorder screen with the microphone still live and no way out
             // but killing the app, which for a meeting recording is worse
             // than losing the last sentence.
-            await Timeout.run(seconds: 5) {
+            await Timeout.run(seconds: limit) {
                 try? await analyzer?.finalizeAndFinishThroughEndOfInput()
             }
-            await Timeout.join(resultsTask, seconds: 3)
+            await Timeout.join(resultsTask, seconds: min(3, limit))
             resultsTask?.cancel()
             return currentText
         case .legacy:

@@ -40,6 +40,8 @@ nonisolated enum PeopleGuard {
         var fixed: String?
         /// The name the user introduced themselves with in this message.
         var introducedName: String?
+        /// The model was asked who the message is about and named nobody.
+        var noNamedPerson = false
     }
 
     /// Decide how the model may answer `question`.
@@ -115,13 +117,26 @@ nonisolated enum PeopleGuard {
             outcome.personKnown = false
         } else if outcome.introducedName == nil,
                   TurnContext.isQuestionLike(question) || TurnContext.asksWhoSomeoneIs(question),
-                  let answer = await probe(TurnContext.nameProbe(for: question), 12),
-                  let name = TurnContext.personName(fromProbe: answer, question: question),
-                  !(state.userName.map { name.localizedCaseInsensitiveContains($0) || $0.localizedCaseInsensitiveContains(name) } ?? false),
-                  !TurnContext.mentionsDeveloper(name),
-                  let knows = await probe(TurnContext.identityProbe(for: name), 4).flatMap(TurnContext.yesOrNo) {
-            outcome.personKnown = knows
-            if !knows, !state.unknownNames.contains(name) { state.unknownNames.append(name) }
+                  let answer = await probe(TurnContext.nameProbe(for: question), 12) {
+            var named = TurnContext.personName(fromProbe: answer, question: question)
+            // "Info über Scott von Gimborn" and a bare "Scott von Gimborn"
+            // are not questions, and the model named nobody in them; the
+            // name-like phrase in the message is checked instead.
+            if named == nil, TurnContext.asksWhoSomeoneIs(question),
+               let candidate = TurnContext.nameCandidate(in: question),
+               await probe(TurnContext.personCheckProbe(for: candidate), 4).flatMap(TurnContext.yesOrNo) == true {
+                named = candidate
+            }
+            if let name = named {
+                if !(state.userName.map { name.localizedCaseInsensitiveContains($0) || $0.localizedCaseInsensitiveContains(name) } ?? false),
+                   !TurnContext.mentionsDeveloper(name),
+                   let knows = await probe(TurnContext.identityProbe(for: name), 4).flatMap(TurnContext.yesOrNo) {
+                    outcome.personKnown = knows
+                    if !knows, !state.unknownNames.contains(name) { state.unknownNames.append(name) }
+                }
+            } else {
+                outcome.noNamedPerson = true
+            }
         }
 
         state.lastTurnAboutUnknown = outcome.personKnown == false

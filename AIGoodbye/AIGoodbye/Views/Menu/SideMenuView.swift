@@ -314,6 +314,11 @@ struct SideMenuView: View {
                 bottomChrome
             }
         }
+        // Scrolled up, the menu's own buttons slid under the status bar
+        // and their text ran through the clock and the battery ("Chats
+        // durchsuchen" under "18:40" on the tester's iPhone SE). The
+        // content now ends where the screen's safe area begins.
+        .clipped()
     }
 
     // MARK: - Header
@@ -607,6 +612,10 @@ struct SideMenuView: View {
             )
         }
         .buttonStyle(.plain)
+        // The row lifted above the menu is drawn with its own background:
+        // it had none, so the rows and buttons behind it showed through
+        // its text ("Feedback senden" across a chat's title).
+        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 12))
         .contextMenu {
             Button {
                 beginRename(chat)
@@ -949,6 +958,9 @@ struct ChatRow: View {
                 .fill(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
                 .padding(.horizontal, 6)
         )
+        // Opaque, in the menu's own color: invisible in the list, and what
+        // keeps the long-press preview of the row readable.
+        .background(Color(.systemBackground))
         .contentShape(Rectangle())
         .opacity(isDragging ? 0.5 : 1.0)
         .accessibilityAddTraits(isSelected ? .isSelected : [])

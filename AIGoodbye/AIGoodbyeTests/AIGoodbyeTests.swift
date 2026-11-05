@@ -1272,6 +1272,12 @@ struct PeopleGuardTests {
                                               probe: { model.answer($0, $1) })
         #expect(actor.fixed?.hasPrefix(german.aboutUserAnswer) == true)
         #expect(model.calls.isEmpty, "questions about the user need no side questions")
+
+        // The user's own name without a question is about the user as well.
+        let bare = await PeopleGuard.resolve(question: "Info über Scott von Gimborn", hasImage: false,
+                                             appLanguage: .automatic, state: &state,
+                                             probe: { model.answer($0, $1) })
+        #expect(bare.fixed?.hasPrefix(german.aboutUserAnswer) == true)
     }
 
     @Test func statementsAndTheDeveloperNeedNoSideQuestions() async {
@@ -1571,5 +1577,58 @@ struct StrayYesTests {
     @Test func aYesOrNoQuestionKeepsItsYes() {
         #expect(TurnContext.withoutStrayYes("Ja, das ist ein Frosch.", question: "Ist das ein Frosch?") == "Ja, das ist ein Frosch.")
         #expect(TurnContext.withoutStrayYes("Es zeigt einen Frosch.", question: "Was siehst du?") == "Es zeigt einen Frosch.")
+    }
+}
+
+/// Answers that repeat themselves are stopped; code requests get a note.
+struct RepetitionGuardTests {
+    private let block = """
+            /* Comic text */
+            .comic-text {
+                position: absolute;
+                top: 50%;
+            }
+
+    """
+
+    @Test func aBlockRepeatedThreeTimesIsCutToOneCopy() throws {
+        let start = "<style>\n        body { margin: 0; }\n\n"
+        let looping = start + block + block + block
+        let cut = try #require(RepetitionGuard.cut(looping))
+        #expect(cut.hasPrefix(start + "        /* Comic text */"))
+        #expect(cut.components(separatedBy: ".comic-text").count == 2)
+        // While it has only come back once, nothing happens yet.
+        #expect(RepetitionGuard.cut(start + block + block) == nil)
+    }
+
+    @Test func aLongBlockIsStoppedOnItsSecondCopy() throws {
+        let long = String(repeating: block, count: 1) + "        .card { padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }\n"
+        #expect(long.utf16.count >= RepetitionGuard.longBlock)
+        let cut = try #require(RepetitionGuard.cut("<style>\n" + long + long))
+        #expect(cut.components(separatedBy: ".card").count == 2)
+    }
+
+    @Test func ordinaryCodeAndTextAreLeftAlone() {
+        let page = (1...30).map { "        .item\($0) { margin: \($0)px; color: #\(100 + $0); }" }.joined(separator: "\n")
+        #expect(RepetitionGuard.cut(page) == nil)
+        #expect(RepetitionGuard.cut(String(repeating: "Ein ganz normaler Satz mit Inhalt. ", count: 2)) == nil)
+        #expect(RepetitionGuard.cut("Kurz.") == nil)
+    }
+
+    @Test func aStoppedAnswerClosesItsCodeBlockAndSaysWhy() {
+        let stopped = RepetitionGuard.stopped("Hier ist der Code:\n```html\n<div>", language: .german)
+        #expect(stopped.contains("<div>\n```"))
+        #expect(stopped.hasSuffix("*(Hier angehalten: Die Antwort hatte begonnen, sich zu wiederholen.)*"))
+        #expect(RepetitionGuard.notes.count == 13)
+    }
+
+    @Test func codeRequestsGetANote() {
+        let sent = TurnContext.wrap("Schreib mir HTML für eine Webseite.", question: "Schreib mir HTML für eine Webseite.",
+                                    appLanguage: .automatic)
+        #expect(sent.contains("Erfinde keine Links zu echten Webseiten oder Fotos"))
+        #expect(TurnContext.asksForCode("Write a Python script"))
+        #expect(TurnContext.asksForCode("Mach mir eine Webseite"))
+        #expect(!TurnContext.asksForCode("Wie wird das Wetter morgen?"))
+        #expect(TurnContext.Phrases.codeNotes.count == 13)
     }
 }

@@ -2407,6 +2407,7 @@ class ChatViewModel: ObservableObject {
             var failure: String?
             var cancelledDownload = false
             var wasCancelled = false
+            var stoppedLooping = false
 
             do {
                 // The document brain: pull the passages relevant to THIS
@@ -2537,19 +2538,38 @@ class ChatViewModel: ObservableObject {
                         let clock = ContinuousClock()
                         var lastShown: ContinuousClock.Instant?
                         var raw = ""
+                        var checkedLength = 0
                         for try await snapshot in stream {
                             if Task.isCancelled { break }
-                            raw = snapshot
+                            var text = snapshot
+                            // An answer repeating itself word for word is
+                            // stopped (see `RepetitionGuard`), checked every
+                            // few dozen characters.
+                            if text.utf16.count >= checkedLength + 64 {
+                                checkedLength = text.utf16.count
+                                if let cut = RepetitionGuard.cut(text) {
+                                    text = RepetitionGuard.stopped(
+                                        cut,
+                                        language: TurnContext.replyLanguage(for: request.prompt, appLanguage: appLanguage)
+                                            ?? TurnContext.uiLanguage(appLanguage)
+                                    )
+                                    stoppedLooping = true
+                                }
+                            }
+                            raw = text
                             // About a picture, without the stray "Ja, ich habe
                             // das Bild gesehen." the smallest model opens with.
-                            finalText = request.image == nil ? snapshot
-                                : TurnContext.withoutStrayYes(snapshot, question: request.prompt)
+                            finalText = request.image == nil ? text
+                                : TurnContext.withoutStrayYes(text, question: request.prompt)
                             let now = clock.now
-                            if lastShown.map({ now - $0 >= .milliseconds(80) }) ?? true,
+                            if stoppedLooping || lastShown.map({ now - $0 >= .milliseconds(80) }) ?? true,
                                generationToken == token {
                                 streamingText = finalText
                                 lastShown = now
                             }
+                            // Leaving the loop ends the stream, which stops
+                            // the generation.
+                            if stoppedLooping { break }
                         }
                         // Nothing but the opener: keep what the model said.
                         if finalText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { finalText = raw }
@@ -2617,7 +2637,7 @@ class ChatViewModel: ObservableObject {
                     role: .assistant,
                     content: cleaned
                 )
-                if !wasCancelled {
+                if !wasCancelled, !stoppedLooping {
                     ReviewPrompter.noteCompletedAnswer()
                 }
                 // Only show the bubble if this conversation is still the one
@@ -2646,7 +2666,10 @@ class ChatViewModel: ObservableObject {
             // `lastRequest`, so its Try Again would do nothing.
             let isCurrentRun = generationToken == token
             let showsOutcome = onScreen && isCurrentRun
-            if wasCancelled, isCurrentRun {
+            // Stopped mid-answer, by the user or because it was looping: the
+            // session's cache ends in an unfinished answer, so the next turn
+            // rebuilds it from the saved chat.
+            if (wasCancelled || stoppedLooping), isCurrentRun {
                 appState.engine.resetSessions()
             }
 

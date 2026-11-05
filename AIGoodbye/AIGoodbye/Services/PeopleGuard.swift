@@ -82,8 +82,12 @@ nonisolated enum PeopleGuard {
         let namesUser = state.userName.map { question.localizedCaseInsensitiveContains($0) } ?? false
         let continuesAboutUser = state.lastTurnAboutUser
             && TurnContext.refersBackToSomeone(question) && TurnContext.isQuestionLike(question)
+        // Naming them without a question counts too ("Info über <name>", the
+        // name alone): told the user's name before, the model made the user
+        // a character from a computer game.
         let aboutUser = TurnContext.asksWhoTheUserIs(question)
-            || (namesUser && outcome.introducedName == nil && TurnContext.isQuestionLike(question))
+            || (namesUser && outcome.introducedName == nil
+                && (TurnContext.isQuestionLike(question) || TurnContext.asksWhoSomeoneIs(question)))
             || continuesAboutUser
         if aboutUser {
             state.lastTurnAboutUnknown = false

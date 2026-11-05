@@ -93,6 +93,9 @@ nonisolated enum TurnContext {
         } else if personKnown == nil, !noNamedPerson, asksWhoSomeoneIs(question) {
             parts.append(phrases.unknownPerson)
         }
+        if asksForCode(question) {
+            parts.append(phrases.codeNote)
+        }
         if language != nil {
             parts.append(phrases.answerIn)
         }
@@ -267,6 +270,25 @@ nonisolated enum TurnContext {
     ]
 
     // MARK: - What the question is about
+
+    /// Whether the message asks for code or a web page. Asked for one, the
+    /// smallest model wrote pages of CSS that ran into the token limit, and
+    /// image addresses it made up (a photo of the person on Wikimedia). With
+    /// the note, in 12 test pages: no made-up addresses at all, and five
+    /// complete pages where there had been one in eight.
+    static func asksForCode(_ text: String) -> Bool {
+        matches(text, codePatterns)
+    }
+
+    /// Requests for code or a web page. The note that goes with them is
+    /// worded "if you write code", so a stray match costs nothing.
+    private static let codePatterns: [String] = [
+        #"\bcode\b"#, #"\bhtml\b"#, #"\bcss\b"#, #"\bjavascript\b"#, #"\bpython\b"#, #"\bsql\b"#, #"\bscript\b"#,
+        #"\bweb ?(page|site)\b"#, #"\bwebseite\b"#, #"\bhomepage\b"#, #"\bprogramm"#, #"\bprogram\b"#,
+        #"\bcódigo\b"#, #"\bcodice\b"#, #"\bsite (web|internet)\b"#, #"\bsitio web\b"#, #"\bpágina web\b"#,
+        #"\bpagina web\b"#, #"\bкод\b"#, #"\bсайт"#, #"\bвеб-?сторінк"#, #"\bκώδικ"#, #"\bιστοσελίδ"#,
+        #"コード"#, #"ウェブページ"#, #"코드"#, #"웹 ?페이지"#, #"代码"#, #"代碼"#, #"网页"#, #"網頁"#,
+    ]
 
     /// Whether the message asks about the date, the time or the day.
     ///
@@ -672,6 +694,25 @@ nonisolated enum TurnContext {
             .cantonese: "用戶話佢叫{name}。除此之外你對佢一無所知，唔好作任何嘢。",
         ]
 
+        /// For a request for code. In the note.
+        var codeNote: String { Self.codeNotes[language] ?? Self.codeNotes[.english] ?? "" }
+
+        static let codeNotes: [AppLanguage: String] = [
+            .english: "If you write code, keep it short and complete. Do not invent links to real websites or photos; for images, use a local file name such as image.jpg.",
+            .german: "Wenn du Code schreibst, halte ihn kurz und vollständig. Erfinde keine Links zu echten Webseiten oder Fotos; nutze für Bilder einen lokalen Dateinamen wie bild.jpg.",
+            .french: "Si tu écris du code, garde-le court et complet. N'invente pas de liens vers de vrais sites web ou des photos ; pour les images, utilise un nom de fichier local comme image.jpg.",
+            .spanish: "Si escribes código, que sea breve y completo. No inventes enlaces a sitios web reales ni a fotos; para las imágenes usa un nombre de archivo local como imagen.jpg.",
+            .italian: "Se scrivi codice, mantienilo breve e completo. Non inventare link a siti web reali o a foto; per le immagini usa un nome di file locale come immagine.jpg.",
+            .portuguese: "Se escrever código, mantenha-o curto e completo. Não invente links para sites reais nem para fotos; para imagens, use um nome de arquivo local como imagem.jpg.",
+            .russian: "Если пишешь код, делай его коротким и законченным. Не выдумывай ссылки на настоящие сайты или фотографии; для изображений используй локальное имя файла, например image.jpg.",
+            .ukrainian: "Якщо пишеш код, роби його коротким і завершеним. Не вигадуй посилань на справжні сайти чи фотографії; для зображень використовуй локальну назву файлу, наприклад image.jpg.",
+            .greek: "Αν γράφεις κώδικα, κράτησέ τον σύντομο και πλήρη. Μην επινοείς συνδέσμους σε πραγματικούς ιστότοπους ή φωτογραφίες· για εικόνες χρησιμοποίησε ένα τοπικό όνομα αρχείου όπως image.jpg.",
+            .japanese: "コードを書く場合は、短く完結したものにしてください。実在のサイトや写真へのリンクを作り上げず、画像には image.jpg のようなローカルのファイル名を使ってください。",
+            .korean: "코드를 작성할 때는 짧고 완결되게 쓰세요. 실제 웹사이트나 사진으로 가는 링크를 지어내지 말고, 이미지에는 image.jpg 같은 로컬 파일 이름을 쓰세요.",
+            .mandarin: "如果写代码，请写得简短完整。不要编造指向真实网站或照片的链接，图片请使用 image.jpg 这样的本地文件名。",
+            .cantonese: "如果寫代碼，請寫得簡短完整。唔好作指向真實網站或者相片嘅連結，圖片請用 image.jpg 呢類本地檔案名。",
+        ]
+
         /// The text in a picture, as the device read it. In the note.
         func imageText(_ lines: [String]) -> String {
             let quoted = lines.map { "\"" + $0 + "\"" }.joined(separator: ", ")
@@ -865,4 +906,85 @@ nonisolated enum TurnContext {
             }
         }
     }
+}
+
+// MARK: - Answers that loop
+
+/// Stops an answer that has started repeating itself word for word.
+///
+/// Asked for a web page, the smallest model wrote the same CSS rule (and the
+/// same made-up image address) over and over, until the token limit a minute
+/// later or until the user gave up and pressed Stop. A block of at least 60
+/// characters that comes back three times in a row (twice, from 200 on) is
+/// never what anyone asked for.
+nonisolated enum RepetitionGuard {
+
+    /// The answer up to the end of the first copy of the repeating block,
+    /// or nil while it is not repeating.
+    static func cut(_ text: String) -> String? {
+        let units = Array(text.utf16)
+        let n = units.count
+        let probe = 40
+        guard n >= 2 * minimumBlock + probe else { return nil }
+        let maximumPeriod = min(maximumBlock, n / 2)
+        var period = minimumBlock
+        while period <= maximumPeriod {
+            defer { period += 1 }
+            let copies = period >= longBlock ? 2 : 3
+            guard copies * period <= n else { continue }
+            // Cheap test first: the last few characters, one period back.
+            var same = true
+            for i in (n - probe)..<n where units[i] != units[i - period] {
+                same = false
+                break
+            }
+            guard same else { continue }
+            // Then the whole block, every copy.
+            var repeats = true
+            outer: for copy in 1..<copies {
+                for i in (n - period)..<n where units[i] != units[i - copy * period] {
+                    repeats = false
+                    break outer
+                }
+            }
+            guard repeats else { continue }
+            var end = n - (copies - 1) * period
+            // End on a line break inside the kept copy, not mid-line.
+            if let newline = (max(end - period, 0)..<end).last(where: { units[$0] == 10 }) {
+                end = newline
+            }
+            if end > 0, UTF16.isLeadSurrogate(units[end - 1]) { end -= 1 }
+            return String(decoding: units[0..<end], as: UTF16.self)
+        }
+        return nil
+    }
+
+    /// `text`, cut where it began repeating, with any open code block closed
+    /// and a short note in `language` saying why it ends there.
+    static func stopped(_ text: String, language: AppLanguage) -> String {
+        var result = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if result.components(separatedBy: "```").count % 2 == 0 { result += "\n```" }
+        let note = notes[language] ?? notes[.english] ?? ""
+        return result + "\n\n" + note
+    }
+
+    static let minimumBlock = 60
+    static let longBlock = 200
+    static let maximumBlock = 3000
+
+    static let notes: [AppLanguage: String] = [
+        .english: "*(Stopped here: the answer had started repeating itself.)*",
+        .german: "*(Hier angehalten: Die Antwort hatte begonnen, sich zu wiederholen.)*",
+        .french: "*(Arrêté ici : la réponse avait commencé à se répéter.)*",
+        .spanish: "*(Detenido aquí: la respuesta había empezado a repetirse.)*",
+        .italian: "*(Interrotto qui: la risposta aveva iniziato a ripetersi.)*",
+        .portuguese: "*(Parado aqui: a resposta tinha começado a se repetir.)*",
+        .russian: "*(Остановлено здесь: ответ начал повторяться.)*",
+        .ukrainian: "*(Зупинено тут: відповідь почала повторюватися.)*",
+        .greek: "*(Σταμάτησε εδώ: η απάντηση είχε αρχίσει να επαναλαμβάνεται.)*",
+        .japanese: "*（ここで停止しました：回答が同じ内容を繰り返し始めたためです。）*",
+        .korean: "*(여기서 멈췄습니다: 답변이 같은 내용을 반복하기 시작했습니다.)*",
+        .mandarin: "*（已在此停止：回答开始重复。）*",
+        .cantonese: "*（喺度停咗：回答開始重複。）*",
+    ]
 }

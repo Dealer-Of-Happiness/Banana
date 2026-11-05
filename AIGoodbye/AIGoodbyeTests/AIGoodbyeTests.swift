@@ -1510,7 +1510,9 @@ struct PlaceNameAndPictureTextTests {
         #expect(sent.hasPrefix("Was siehst du auf diesem Bild?"))
         #expect(sent.contains("Im Bild steht dieser Text"))
         #expect(sent.contains("\"Hello world!\", \"Bäckerei Sonnenschein\""))
-        #expect(sent.hasSuffix("Antworte auf Deutsch.)"))
+        #expect(sent.contains("Antworte auf Deutsch."))
+        // The exact words come last, after the answer language.
+        #expect(sent.hasSuffix("schreibe ihn genau so und übersetze ihn nicht.)"))
         // No text read: no mention of it.
         let plain = TurnContext.wrap("Was siehst du auf diesem Bild?", question: "Was siehst du auf diesem Bild?",
                                      appLanguage: .automatic, hasImage: true)
@@ -1555,6 +1557,9 @@ struct StrayYesTests {
                 == "Es zeigt einen grünen Frosch.")
         #expect(TurnContext.withoutStrayYes("Ja, auf dem Bild sind zwei Handys.", question: q) == "Auf dem Bild sind zwei Handys.")
         #expect(TurnContext.withoutStrayYes("Yes, I can see the image. A frog.", question: "What do you see?") == "A frog.")
+        #expect(TurnContext.withoutStrayYes("Ja, ich habe auf dem Bild gesehen. Es ist ein Frosch.", question: q) == "Es ist ein Frosch.")
+        #expect(TurnContext.withoutStrayYes("Yes, I have seen the picture. Two phones.", question: "Describe the picture.") == "Two phones.")
+        #expect(TurnContext.withoutStrayYes("Ja, ich sehe auf dem Bild zwei Handys.", question: q) == "Ich sehe auf dem Bild zwei Handys.")
     }
 
     @Test func whileStreamingTheOpenerIsHeldBack() {

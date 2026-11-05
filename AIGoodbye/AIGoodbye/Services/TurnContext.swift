@@ -93,11 +93,15 @@ nonisolated enum TurnContext {
         } else if personKnown == nil, !noNamedPerson, asksWhoSomeoneIs(question) {
             parts.append(phrases.unknownPerson)
         }
-        if !imageText.isEmpty {
-            parts.append(phrases.imageText(imageText))
-        }
         if language != nil {
             parts.append(phrases.answerIn)
+        }
+        // Last, so the exact words are what the model reads just before it
+        // answers: that way it misspelled nothing on a sign in 24 tests and
+        // mentioned a small line of text more often. An answer that lists
+        // the text can still translate it ("Hallo Welt!").
+        if !imageText.isEmpty {
+            parts.append(phrases.imageText(imageText))
         }
         guard !parts.isEmpty else { return nil }
         return "(" + parts.joined(separator: " ") + ")"
@@ -116,13 +120,10 @@ nonisolated enum TurnContext {
         let q = question.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard let first = q.split(whereSeparator: { !$0.isLetter }).first.map(String.init),
               openQuestionWords.contains(first) else { return answer }
-        var text = answer.trimmingCharacters(in: .whitespaces)
-        for opener in emptyOpeners {
-            if opener.hasPrefix(text) { return "" }
-            if text.hasPrefix(opener) {
-                text = String(text.dropFirst(opener.count)).trimmingCharacters(in: .whitespacesAndNewlines)
-                return text
-            }
+        let text = answer.trimmingCharacters(in: .whitespaces)
+        if emptyOpeners.contains(where: { $0.hasPrefix(text) }) { return "" }
+        if let opener = text.range(of: emptyOpenerPattern, options: [.regularExpression, .anchored]) {
+            return String(text[opener.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
         }
         for yes in ["Ja, ", "Yes, "] where text.hasPrefix(yes) {
             let rest = text.dropFirst(yes.count)
@@ -132,11 +133,16 @@ nonisolated enum TurnContext {
         return answer
     }
 
-    /// Sentences that say nothing but "yes, I saw it".
+    /// Sentences that say nothing but "yes, I saw it", as the model writes
+    /// them most often: held back while one may still be arriving.
     private static let emptyOpeners = [
-        "Ja, ich habe das Bild gesehen.", "Ja, ich sehe das Bild.",
+        "Ja, ich habe das Bild gesehen.", "Ja, ich habe auf dem Bild gesehen.", "Ja, ich sehe das Bild.",
         "Yes, I have seen the image.", "Yes, I have seen the picture.", "Yes, I can see the image.",
     ]
+
+    /// Any such sentence once complete ("Ja, ich habe auf dem Bild gesehen.").
+    private static let emptyOpenerPattern =
+        #"(?:Ja|Yes),\s+(?:ich|I)\s+(?:habe|have|sehe|see|can\s+see|kann)\s+(?:(?:seen|gesehen)\s+)?(?:auf\s+)?(?:das|dem|the)\s+(?:Bild|image|picture)(?:\s+(?:gesehen|seen|sehen))?\s*[.!]"#
 
     /// First words of a question that cannot be answered with yes or no.
     private static let openQuestionWords: Set<String> = [
@@ -674,19 +680,19 @@ nonisolated enum TurnContext {
         }
 
         static let imageTextTemplates: [AppLanguage: String] = [
-            .english: "The picture contains this text, read by the device: {text}. If you mention it, copy it exactly.",
-            .german: "Im Bild steht dieser Text, vom Gerät gelesen: {text}. Wenn du ihn erwähnst, schreibe ihn genau so.",
-            .french: "L'image contient ce texte, lu par l'appareil : {text}. Si tu le mentionnes, recopie-le exactement.",
-            .spanish: "La imagen contiene este texto, leído por el dispositivo: {text}. Si lo mencionas, cópialo exactamente.",
-            .italian: "L'immagine contiene questo testo, letto dal dispositivo: {text}. Se lo citi, copialo esattamente.",
-            .portuguese: "A imagem contém este texto, lido pelo dispositivo: {text}. Se o mencionar, copie-o exatamente.",
-            .russian: "На изображении есть такой текст, распознанный устройством: {text}. Если упоминаешь его, пиши точно так же.",
-            .ukrainian: "На зображенні є такий текст, розпізнаний пристроєм: {text}. Якщо згадуєш його, пиши точно так само.",
-            .greek: "Η εικόνα περιέχει αυτό το κείμενο, όπως το διάβασε η συσκευή: {text}. Αν το αναφέρεις, γράψ' το ακριβώς έτσι.",
-            .japanese: "画像には端末が読み取った次の文字があります：{text}。触れるときはそのとおりに書いてください。",
-            .korean: "이미지에는 기기가 읽은 다음 글자가 있습니다: {text}. 언급할 때는 그대로 적으세요.",
-            .mandarin: "图片中有设备识别出的以下文字：{text}。提到时请原样照写。",
-            .cantonese: "圖片入面有裝置讀到嘅以下文字：{text}。提到嗰陣請照原樣寫。",
+            .english: "The picture contains this text, read by the device: {text}. If you mention it, copy it exactly, without translating it.",
+            .german: "Im Bild steht dieser Text, vom Gerät gelesen: {text}. Wenn du ihn erwähnst, schreibe ihn genau so und übersetze ihn nicht.",
+            .french: "L'image contient ce texte, lu par l'appareil : {text}. Si tu le mentionnes, recopie-le exactement, sans le traduire.",
+            .spanish: "La imagen contiene este texto, leído por el dispositivo: {text}. Si lo mencionas, cópialo exactamente, sin traducirlo.",
+            .italian: "L'immagine contiene questo testo, letto dal dispositivo: {text}. Se lo citi, copialo esattamente, senza tradurlo.",
+            .portuguese: "A imagem contém este texto, lido pelo dispositivo: {text}. Se o mencionar, copie-o exatamente, sem traduzi-lo.",
+            .russian: "На изображении есть такой текст, распознанный устройством: {text}. Если упоминаешь его, пиши точно так же, не переводя.",
+            .ukrainian: "На зображенні є такий текст, розпізнаний пристроєм: {text}. Якщо згадуєш його, пиши точно так само, не перекладаючи.",
+            .greek: "Η εικόνα περιέχει αυτό το κείμενο, όπως το διάβασε η συσκευή: {text}. Αν το αναφέρεις, γράψ' το ακριβώς έτσι, χωρίς να το μεταφράσεις.",
+            .japanese: "画像には端末が読み取った次の文字があります：{text}。触れるときは翻訳せず、そのとおりに書いてください。",
+            .korean: "이미지에는 기기가 읽은 다음 글자가 있습니다: {text}. 언급할 때는 번역하지 말고 그대로 적으세요.",
+            .mandarin: "图片中有设备识别出的以下文字：{text}。提到时请原样照写，不要翻译。",
+            .cantonese: "圖片入面有裝置讀到嘅以下文字：{text}。提到嗰陣請照原樣寫，唔好翻譯。",
         ]
 
         static let userNameTemplates: [AppLanguage: String] = [

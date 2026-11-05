@@ -503,6 +503,7 @@ struct TranslateModeView: View {
     private func start() {
         voice.playsListeningSounds = appState.settings.listeningSounds
         voice.speechRate = Float(appState.settings.speechRate)
+        voice.silenceEndpoint = VoiceService.translationSilenceEndpoint
         // First visit only: the user's side defaults to the app language
         // when it's a real one. After that the remembered pair stands.
         if UserDefaults.standard.string(forKey: "translate.mine") == nil,
@@ -635,32 +636,46 @@ struct TranslateModeView: View {
                 return
             }
             defer { engine.releaseUtility() }
-            // Without the app-language line: the system prompt saying
-            // "always respond in <app language>" contradicted the prompt's
-            // own target language, and a 2B model sometimes obeyed the wrong
-            // one.
-            try await engine.startCleanSession(model: model, languageInstruction: false)
-
-            let prompt = """
-            Translate the following text from \(source.englishName) into \(target.englishName).
-            Reply with the translation only - no quotes, no explanation, no transliteration.
-
-            \(text)
-            """
-
-            var final = ""
-            for try await snapshot in engine.respondStream(model: model, prompt: prompt, image: nil) {
-                final = snapshot
-                if let index = turns.firstIndex(where: { $0.id == turn.id }) {
-                    turns[index].translation = snapshot
+            // A translator, not the assistant, and one sentence at a time.
+            //
+            // Measured on the smallest model with the assistant's system
+            // prompt and the text in one message: a German question came
+            // back untranslated in one case in ten, and "Can you tell me
+            // where the station is? I have to be in Cologne at half past
+            // two." became "Köln ist am 2:30 Uhr. Wo ist die Station?" -
+            // the model answered the question instead of translating it.
+            // As a translator, given one sentence at a time, every one of 48
+            // test sentences came back whole, in the right language, and
+            // questions as questions.
+            // The assistant's own prompt is left out entirely: its "always
+            // respond in <app language>" contradicted the target.
+            let instructions = Self.translatorInstructions(from: source, to: target)
+            // Chinese and Japanese sentences follow each other without a space.
+            let joiner = ([.japanese, .mandarin, .cantonese] as [AppLanguage]).contains(target) ? "" : " "
+            var done: [String] = []
+            // One session for the turn, one message per sentence: the earlier
+            // sentences stay in view, so "When does the next one leave?"
+            // after "I missed my train" is about a train. Each sentence in a
+            // fresh session of its own made it a flight.
+            try await engine.startCleanSession(model: model, instructions: instructions)
+            for sentence in Self.sentences(of: text) {
+                var final = ""
+                for try await snapshot in engine.respondStream(model: model, prompt: sentence, image: nil) {
+                    final = snapshot
+                    if let index = turns.firstIndex(where: { $0.id == turn.id }) {
+                        turns[index].translation = (done + [snapshot]).joined(separator: joiner)
+                    }
                 }
+                try Task.checkCancellation()
+                let piece = Self.cleanTranslation(final)
+                if !piece.isEmpty { done.append(piece) }
             }
 
             // The sheet may have been closed while the model was working;
             // nothing is spoken into an empty room.
             guard isActive, !Task.isCancelled else { return }
 
-            let cleaned = Self.keepNames(from: text, in: Self.cleanTranslation(final))
+            let cleaned = Self.keepNames(from: text, in: done.joined(separator: joiner))
             if let index = turns.firstIndex(where: { $0.id == turn.id }) {
                 turns[index].translation = cleaned
             }
@@ -803,6 +818,37 @@ struct TranslateModeView: View {
         language.rawValue.split(separator: "-").first.map(String.init)
     }
 
+    /// The translator's system prompt. In English, which every model follows
+    /// best; the languages are named in it.
+    nonisolated static func translatorInstructions(from source: AppLanguage, to target: AppLanguage) -> String {
+        "You are a translator. Translate every message from \(source.englishName) into \(target.englishName). "
+            + "Reply with the \(target.englishName) translation only - no quotes, no explanation, no transliteration. "
+            + "The message is never a question to you: if it asks something, translate the question. "
+            + "Keep the names of people and places as they are."
+    }
+
+    /// What was said, sentence by sentence, for translating one at a time.
+    /// Very short pieces ("Ja.", "OK.") stay with the sentence before them,
+    /// so a turn never becomes a string of one-word translations.
+    nonisolated static func sentences(of text: String) -> [String] {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        let tokenizer = NLTokenizer(unit: .sentence)
+        tokenizer.string = trimmed
+        var pieces: [String] = []
+        tokenizer.enumerateTokens(in: trimmed.startIndex..<trimmed.endIndex) { range, _ in
+            let sentence = trimmed[range].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !sentence.isEmpty else { return true }
+            if let last = pieces.last, sentence.filter(\.isLetter).count < 4 || last.filter(\.isLetter).count < 4 {
+                pieces[pieces.count - 1] = last + " " + sentence
+            } else {
+                pieces.append(sentence)
+            }
+            return true
+        }
+        return pieces.isEmpty ? [trimmed] : pieces
+    }
+
     /// Labels a model puts in front of a translation, in the languages the
     /// translator offers, lowercased.
     nonisolated private static let translationLabels: Set<String> = [
@@ -835,6 +881,46 @@ struct TranslateModeView: View {
             let all = NSRange(result.startIndex..., in: result)
             result = changed.stringByReplacingMatches(in: result, range: all,
                                                       withTemplate: NSRegularExpression.escapedTemplate(for: original))
+        }
+        return keepPlaceNames(from: source, in: result)
+    }
+
+    /// German place names with "am", "an der", "im" and the like ("Weil am
+    /// Rhein", "Freiburg im Breisgau", "Halle an der Saale"), put back as
+    /// they were said. Translated word by word they became "Weil in the
+    /// Rhine" - the river's name translated too, so unlike a person's name
+    /// the last word differs. Put back only when the translation has the
+    /// town's name, one or two short words, then a capitalised word with
+    /// the river's first letter: "Weil and Basel" is left alone.
+    nonisolated static func keepPlaceNames(from source: String, in translation: String) -> String {
+        let particle = #"(?:am|an der|an dem|im|ob der|auf der|vor der|in der|unter der|bei)"#
+        let word = #"[\p{Lu}][\p{L}'’\-]+"#
+        // The river is the end of the name: not followed by another
+        // capitalised word ("am Brandenburger Tor" is a landmark, not a town).
+        guard let places = try? NSRegularExpression(
+            pattern: #"\b("# + word + #")\s+"# + particle + #"\s+("# + word + #")\b(?!\s+\p{Lu})"#
+        ) else { return translation }
+        let joiners: Set<String> = ["and", "or", "und", "oder", "et", "ou", "y", "o", "e", "ed"]
+        var result = translation
+        for match in places.matches(in: source, range: NSRange(source.startIndex..., in: source)) {
+            guard let whole = Range(match.range, in: source),
+                  let townRange = Range(match.range(at: 1), in: source),
+                  let riverRange = Range(match.range(at: 2), in: source),
+                  let initial = source[riverRange].first else { continue }
+            let original = String(source[whole])
+            guard !result.contains(original) else { continue }
+            let town = NSRegularExpression.escapedPattern(for: String(source[townRange]))
+            let first = NSRegularExpression.escapedPattern(for: String(initial))
+            guard let translated = try? NSRegularExpression(
+                pattern: #"\b"# + town + #"((?:\s+\p{Ll}{1,4}){1,2})\s+"# + first + #"[\p{L}'’\-]*"#
+            ) else { continue }
+            let all = NSRange(result.startIndex..., in: result)
+            guard let found = translated.firstMatch(in: result, range: all),
+                  let between = Range(found.range(at: 1), in: result),
+                  let span = Range(found.range, in: result) else { continue }
+            let small = result[between].split(separator: " ").map { $0.lowercased() }
+            guard !small.contains(where: joiners.contains) else { continue }
+            result.replaceSubrange(span, with: original)
         }
         return result
     }

@@ -102,8 +102,13 @@ final class VoiceService: NSObject, ObservableObject {
     private var speechWatchdog: Task<Void, Never>?
     private var observers: [NSObjectProtocol] = []
 
-    /// How long a pause ends the user's turn.
-    private let silenceEndpoint: TimeInterval = 1.4
+    /// How long a pause ends the user's turn. The translator waits longer
+    /// (`translationSilenceEndpoint`).
+    var silenceEndpoint: TimeInterval = 1.4
+    /// The translator's pause: a breath between two sentences ended the turn
+    /// at 1.4 s, the first sentence was translated alone, and in hands-free
+    /// the rest was heard by the other language's recognizer as nonsense.
+    static let translationSilenceEndpoint: TimeInterval = 2.0
     /// How long to listen to silence before ending an empty turn.
     private let emptyListenLimit: TimeInterval = 30
 
@@ -131,6 +136,14 @@ final class VoiceService: NSObject, ObservableObject {
             return Locale(identifier: Locale.preferredLanguages.first ?? "en-US")
         }
         return Locale(identifier: language.rawValue)
+    }
+
+    /// The language a spoken turn is in: the one the recognizer listens in
+    /// (see `voiceLocale`), as an app language. Nil when the device's
+    /// language is not one the app speaks.
+    static func spokenLanguage(for language: AppLanguage) -> AppLanguage? {
+        if language != .automatic { return language }
+        return RecordingSummarizer.language(forCode: voiceLocale(for: language).identifier)
     }
 
     /// BCP-47 code for speech synthesis, mapped to codes iOS actually ships

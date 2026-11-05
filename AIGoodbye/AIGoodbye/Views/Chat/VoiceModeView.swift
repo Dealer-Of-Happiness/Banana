@@ -17,6 +17,14 @@ import UIKit
 struct VoiceModeView: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject var viewModel: ChatViewModel
+    /// Whether the microphone opens as soon as the screen does. Only when
+    /// the conversation was asked for from outside the app (Siri, a
+    /// shortcut, Control Center), where the request itself is "let me
+    /// talk". Opened from inside the app the screen waits for a tap: a
+    /// tester found the microphone going live the moment the screen
+    /// appeared intrusive, and a first tap on the circle - meant as "stop"
+    /// - sent whatever stray word had been heard as a question.
+    var listensOnOpen = false
     @StateObject private var voice = VoiceService()
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
@@ -283,7 +291,7 @@ struct VoiceModeView: View {
         .accessibilityValue(Text(verbatim: statusDescription))
         .accessibilityHint(turn == .listening
                            ? Text("Double tap to send now")
-                           : Text("Double tap to interrupt and speak"))
+                           : isBusy ? Text("Double tap to interrupt and speak") : Text(verbatim: ""))
         .accessibilityAddTraits([.isButton, .updatesFrequently])
         .accessibilityAction { indicatorTapped() }
     }
@@ -415,18 +423,41 @@ struct VoiceModeView: View {
         .defaultScrollAnchor(.bottom)
     }
 
+    /// Listening, thinking or speaking: something is under way that Stop ends.
+    private var isBusy: Bool {
+        turn == .listening || turn == .thinking || turn == .speaking
+    }
+
+    /// One button with one meaning at a time: Tap to talk when nothing is
+    /// happening, Stop while anything is. It used to read "Tap to talk"
+    /// throughout - greyed out while listening, an interruption while
+    /// speaking - so there was no way to simply end a turn, and the circle
+    /// (which sends while listening) was what people pressed to stop.
+    @ViewBuilder
     private var controls: some View {
-        Button {
-            bargeIn()
-        } label: {
-            Label("Tap to talk", systemImage: "mic.badge.plus")
-                .font(.subheadline.weight(.medium))
-                .frame(minHeight: 44)
+        Group {
+            if isBusy {
+                Button {
+                    stopConversation()
+                } label: {
+                    Label("Stop", systemImage: "stop.fill")
+                        .font(.subheadline.weight(.medium))
+                        .frame(minHeight: 44)
+                }
+            } else {
+                Button {
+                    bargeIn()
+                } label: {
+                    Label("Tap to talk", systemImage: "mic.badge.plus")
+                        .font(.subheadline.weight(.medium))
+                        .frame(minHeight: 44)
+                }
+                .disabled(permissionDenied)
+            }
         }
         // Darker than the default blue in light mode: plain systemBlue on
         // the screen's pale gradient measured below 4.5:1.
         .tint(Color.tintedBlue)
-        .disabled(turn == .listening || permissionDenied)
         .padding(.bottom, 8)
     }
 
@@ -442,7 +473,14 @@ struct VoiceModeView: View {
                 lastStreamed = ""
                 answerBaseline = viewModel.messages.count
                 turn = .thinking
-                await viewModel.sendVoicePrompt(text)
+                // The language it was spoken in is known: the recognizer's.
+                // Guessed from the words instead, a short German turn
+                // ("Hallo", "Und morgen?") had no clear language and the
+                // smallest model often answered it in English.
+                await viewModel.sendVoicePrompt(
+                    text,
+                    spokenLanguage: VoiceService.spokenLanguage(for: appState.settings.appLanguage)
+                )
             }
         }
         voice.onFinishedSpeaking = {
@@ -484,7 +522,11 @@ struct VoiceModeView: View {
         Task {
             let granted = await VoiceService.requestPermissions()
             if granted {
-                beginListening()
+                if listensOnOpen {
+                    beginListening()
+                } else {
+                    turn = .idle
+                }
             } else {
                 permissionDenied = true
                 turn = .idle
@@ -582,6 +624,17 @@ struct VoiceModeView: View {
         spokenOffset = 0
         lastStreamed = ""
         beginListening()
+    }
+
+    /// Stop: end whatever is under way - the listen (what was heard is not
+    /// sent), the answer being written, the voice - and wait for a tap.
+    private func stopConversation() {
+        loadingCueTask?.cancel()
+        loadingCueTask = nil
+        if viewModel.isGenerating { viewModel.stopGeneration() }
+        voice.stopSpeaking()
+        voice.stopListening(notify: false)
+        turn = .idle
     }
 
     private func listeningStateChanged(_ state: VoiceService.ListeningState) {

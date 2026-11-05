@@ -43,12 +43,13 @@ nonisolated enum TurnContext {
         introducedName: String? = nil,
         noNamedPerson: Bool = false,
         hasImage: Bool = false,
+        imageText: [String] = [],
         now: Date = Date(),
         timeZone: TimeZone = .current
     ) -> String {
         guard let note = note(for: question, appLanguage: appLanguage, personKnown: personKnown,
                               introducedName: introducedName, noNamedPerson: noNamedPerson,
-                              now: now, timeZone: timeZone) else {
+                              imageText: imageText, now: now, timeZone: timeZone) else {
             return prompt
         }
         return hasImage ? prompt + "\n\n" + note : note + "\n\n" + prompt
@@ -64,12 +65,15 @@ nonisolated enum TurnContext {
     /// - Parameter noNamedPerson: the model was asked who the message is
     ///   about and named nobody ("Infos über Berlin"), so there is no person
     ///   to be careful about.
+    /// - Parameter imageText: the lines of text the device read in the
+    ///   attached picture (`imageTextLines`), given to the model as written.
     static func note(
         for question: String,
         appLanguage: AppLanguage,
         personKnown: Bool? = nil,
         introducedName: String? = nil,
         noNamedPerson: Bool = false,
+        imageText: [String] = [],
         now: Date = Date(),
         timeZone: TimeZone = .current
     ) -> String? {
@@ -89,11 +93,80 @@ nonisolated enum TurnContext {
         } else if personKnown == nil, !noNamedPerson, asksWhoSomeoneIs(question) {
             parts.append(phrases.unknownPerson)
         }
+        if !imageText.isEmpty {
+            parts.append(phrases.imageText(imageText))
+        }
         if language != nil {
             parts.append(phrases.answerIn)
         }
         guard !parts.isEmpty else { return nil }
         return "(" + parts.joined(separator: " ") + ")"
+    }
+
+    /// An answer about a picture without a "Yes" nobody asked for.
+    ///
+    /// With the note after the question, the smallest model opened almost
+    /// every answer to "Was siehst du auf diesem Bild?" with "Ja, ich habe
+    /// das Bild gesehen." - or put "Ja," in front of the description. For
+    /// an open question (what, who, describe...) the empty sentence goes
+    /// and a leading "Ja," is dropped; a yes-or-no question keeps its yes.
+    /// Works on the text as it streams: while what has arrived could still
+    /// become the empty sentence, nothing is shown yet.
+    static func withoutStrayYes(_ answer: String, question: String) -> String {
+        let q = question.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard let first = q.split(whereSeparator: { !$0.isLetter }).first.map(String.init),
+              openQuestionWords.contains(first) else { return answer }
+        var text = answer.trimmingCharacters(in: .whitespaces)
+        for opener in emptyOpeners {
+            if opener.hasPrefix(text) { return "" }
+            if text.hasPrefix(opener) {
+                text = String(text.dropFirst(opener.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+                return text
+            }
+        }
+        for yes in ["Ja, ", "Yes, "] where text.hasPrefix(yes) {
+            let rest = text.dropFirst(yes.count)
+            guard let head = rest.first, head.isLetter else { return answer }
+            return head.uppercased() + rest.dropFirst()
+        }
+        return answer
+    }
+
+    /// Sentences that say nothing but "yes, I saw it".
+    private static let emptyOpeners = [
+        "Ja, ich habe das Bild gesehen.", "Ja, ich sehe das Bild.",
+        "Yes, I have seen the image.", "Yes, I have seen the picture.", "Yes, I can see the image.",
+    ]
+
+    /// First words of a question that cannot be answered with yes or no.
+    private static let openQuestionWords: Set<String> = [
+        "was", "wer", "wie", "wo", "wohin", "woher", "welche", "welcher", "welches", "warum", "wann",
+        "beschreibe", "beschreib", "erkläre", "erzähl", "erzähle", "lies", "nenne", "zeig",
+        "what", "who", "how", "where", "which", "why", "when", "describe", "explain", "tell", "read", "list",
+    ]
+
+    /// The lines worth passing on from text recognition of a picture: real
+    /// words only (a QR code or a texture reads as stray letters), each
+    /// once - and only when there are a few of them, as on a sign, a label
+    /// or a logo. That is where the smallest model went wrong (a misspelled
+    /// word, a small line missed), and where the exact words help. With a
+    /// screenful of text in the note it listed the lines back, repeated
+    /// itself, and once said it could not see the picture at all; a
+    /// screenshot or a page gets no note, and the model reads it as before.
+    static func imageTextLines(from recognized: String, maxLines: Int = 6, maxCharacters: Int = 160) -> [String] {
+        var lines: [String] = []
+        var seen = Set<String>()
+        var total = 0
+        for raw in recognized.components(separatedBy: .newlines) {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+                .replacingOccurrences(of: "\"", with: "'")
+            guard line.filter(\.isLetter).count >= 2,
+                  seen.insert(line.lowercased()).inserted else { continue }
+            lines.append(line)
+            total += line.count
+            guard total <= maxCharacters, lines.count <= maxLines else { return [] }
+        }
+        return lines
     }
 
     /// An answer the app gives itself, in place of the smallest models'
@@ -591,6 +664,29 @@ nonisolated enum TurnContext {
             .korean: "사용자의 이름은 {name}입니다. 그 외에는 아무것도 모릅니다. 아무것도 지어내지 마세요.",
             .mandarin: "用户说他叫{name}。除此之外你对他一无所知，不要编造任何内容。",
             .cantonese: "用戶話佢叫{name}。除此之外你對佢一無所知，唔好作任何嘢。",
+        ]
+
+        /// The text in a picture, as the device read it. In the note.
+        func imageText(_ lines: [String]) -> String {
+            let quoted = lines.map { "\"" + $0 + "\"" }.joined(separator: ", ")
+            return (Self.imageTextTemplates[language] ?? Self.imageTextTemplates[.english] ?? "")
+                .replacingOccurrences(of: "{text}", with: quoted)
+        }
+
+        static let imageTextTemplates: [AppLanguage: String] = [
+            .english: "The picture contains this text, read by the device: {text}. If you mention it, copy it exactly.",
+            .german: "Im Bild steht dieser Text, vom Gerät gelesen: {text}. Wenn du ihn erwähnst, schreibe ihn genau so.",
+            .french: "L'image contient ce texte, lu par l'appareil : {text}. Si tu le mentionnes, recopie-le exactement.",
+            .spanish: "La imagen contiene este texto, leído por el dispositivo: {text}. Si lo mencionas, cópialo exactamente.",
+            .italian: "L'immagine contiene questo testo, letto dal dispositivo: {text}. Se lo citi, copialo esattamente.",
+            .portuguese: "A imagem contém este texto, lido pelo dispositivo: {text}. Se o mencionar, copie-o exatamente.",
+            .russian: "На изображении есть такой текст, распознанный устройством: {text}. Если упоминаешь его, пиши точно так же.",
+            .ukrainian: "На зображенні є такий текст, розпізнаний пристроєм: {text}. Якщо згадуєш його, пиши точно так само.",
+            .greek: "Η εικόνα περιέχει αυτό το κείμενο, όπως το διάβασε η συσκευή: {text}. Αν το αναφέρεις, γράψ' το ακριβώς έτσι.",
+            .japanese: "画像には端末が読み取った次の文字があります：{text}。触れるときはそのとおりに書いてください。",
+            .korean: "이미지에는 기기가 읽은 다음 글자가 있습니다: {text}. 언급할 때는 그대로 적으세요.",
+            .mandarin: "图片中有设备识别出的以下文字：{text}。提到时请原样照写。",
+            .cantonese: "圖片入面有裝置讀到嘅以下文字：{text}。提到嗰陣請照原樣寫。",
         ]
 
         static let userNameTemplates: [AppLanguage: String] = [

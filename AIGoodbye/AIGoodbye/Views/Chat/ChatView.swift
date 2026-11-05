@@ -43,6 +43,8 @@ struct ChatView: View {
     @State private var showingClearConfirmation = false
     @State private var showingModelPicker = false
     @State private var showingVoiceMode = false
+    /// Voice mode opened by Siri, a shortcut or Control Center listens at once.
+    @State private var voiceModeListensOnOpen = false
     @State private var showingLiveCamera = false
     @State private var showingTranslate = false
     @State private var showingRecorder = false
@@ -222,7 +224,7 @@ struct ChatView: View {
                 }
             }
             .fullScreenCover(isPresented: $showingVoiceMode) {
-                VoiceModeView(viewModel: viewModel)
+                VoiceModeView(viewModel: viewModel, listensOnOpen: voiceModeListensOnOpen)
                     .environmentObject(appState)
             }
             .fullScreenCover(isPresented: $showingLiveCamera) {
@@ -439,7 +441,11 @@ struct ChatView: View {
         guard let route = appState.pendingRoute else { return }
         appState.pendingRoute = nil
         switch route {
-        case .voice: showingVoiceMode = true
+        case .voice:
+            // Asked for from outside (Siri, a shortcut, Control Center):
+            // the microphone opens with the screen.
+            voiceModeListensOnOpen = true
+            showingVoiceMode = true
         case .camera: showingLiveCamera = true
         case .translate: showingTranslate = true
         case .describe: showingSceneDescription = true
@@ -1233,6 +1239,7 @@ struct ChatView: View {
                         title: L10n.text("Talk out loud"),
                         subtitle: L10n.text("A hands-free voice conversation")
                     ) {
+                        voiceModeListensOnOpen = false
                         showingVoiceMode = true
                     }
 
@@ -1532,6 +1539,7 @@ struct ChatView: View {
                     // Empty composer: offer hands-free voice conversation.
                     Button {
                         isInputFocused = false
+                        voiceModeListensOnOpen = false
                         showingVoiceMode = true
                     } label: {
                         Image(systemName: "waveform.circle.fill")
@@ -1686,6 +1694,9 @@ class ChatViewModel: ObservableObject {
         /// back on screen after a failure, a Stop before the first token or a
         /// declined download - until a non-empty replacement exists.
         var replacingMessageId: UUID? = nil
+        /// For a spoken question, the language it was spoken in. It decides
+        /// the answer's language instead of a guess from the words.
+        var spokenLanguage: AppLanguage? = nil
     }
 
     /// What each chat has learned about the people in it (see `PeopleGuard`).
@@ -2261,13 +2272,13 @@ class ChatViewModel: ObservableObject {
     }
 
     /// Voice mode entry point: sends spoken text as a normal chat turn.
-    func sendVoicePrompt(_ text: String) async {
+    func sendVoicePrompt(_ text: String, spokenLanguage: AppLanguage? = nil) async {
         guard !isGenerating else { return }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         errorBanner = nil
         captureMemoryIfRequested(trimmed)
-        let request = PendingRequest(
+        var request = PendingRequest(
             prompt: trimmed,
             displayMessage: trimmed,
             hiddenContext: nil,
@@ -2276,6 +2287,7 @@ class ChatViewModel: ObservableObject {
             attachmentType: nil,
             persistUserMessage: true
         )
+        request.spokenLanguage = spokenLanguage
         await perform(request)
     }
 
@@ -2430,6 +2442,18 @@ class ChatViewModel: ObservableObject {
                 }
                 try Task.checkCancellation()
 
+                // The words in a picture, read by the device's own text
+                // recognition and handed to the model with the question. The
+                // smallest model saw a sign but misspelled a word on it and
+                // missed a small line of text altogether; Vision reads both
+                // exactly, in a fraction of a second.
+                var imageText: [String] = []
+                if let image = request.image {
+                    let languages = TextRecognizer.languages(for: request.spokenLanguage ?? appState.settings.appLanguage)
+                    imageText = TurnContext.imageTextLines(from: await TextRecognizer.text(in: image, languages: languages))
+                    try Task.checkCancellation()
+                }
+
                 // One transparent retry when Apple Intelligence's transcript
                 // outgrows its window: rebuild the session from trimmed
                 // history and ask again, instead of blaming the length of
@@ -2458,7 +2482,7 @@ class ChatViewModel: ObservableObject {
                     // the message is about and whether the model knows them,
                     // asked on the side first; some answers the app gives
                     // itself (see `PeopleGuard`).
-                    let appLanguage = appState.settings.appLanguage
+                    let appLanguage = request.spokenLanguage ?? appState.settings.appLanguage
                     var people = PeopleGuard.Outcome()
                     if routedModel.prefersCompactPrompt {
                         let key = conversationId ?? Self.unsavedChatKey
@@ -2498,7 +2522,8 @@ class ChatViewModel: ObservableObject {
                             personKnown: people.personKnown,
                             introducedName: people.introducedName,
                             noNamedPerson: people.noNamedPerson,
-                            hasImage: request.image != nil
+                            hasImage: request.image != nil,
+                            imageText: imageText
                         ),
                         image: request.image
                     )
@@ -2511,16 +2536,23 @@ class ChatViewModel: ObservableObject {
                         // typing stutter on older phones.
                         let clock = ContinuousClock()
                         var lastShown: ContinuousClock.Instant?
+                        var raw = ""
                         for try await snapshot in stream {
                             if Task.isCancelled { break }
-                            finalText = snapshot
+                            raw = snapshot
+                            // About a picture, without the stray "Ja, ich habe
+                            // das Bild gesehen." the smallest model opens with.
+                            finalText = request.image == nil ? snapshot
+                                : TurnContext.withoutStrayYes(snapshot, question: request.prompt)
                             let now = clock.now
                             if lastShown.map({ now - $0 >= .milliseconds(80) }) ?? true,
                                generationToken == token {
-                                streamingText = snapshot
+                                streamingText = finalText
                                 lastShown = now
                             }
                         }
+                        // Nothing but the opener: keep what the model said.
+                        if finalText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { finalText = raw }
                         // Final flush, so the last tokens are never skipped.
                         if generationToken == token, !finalText.isEmpty {
                             streamingText = finalText

@@ -160,6 +160,13 @@ final class AIGoodbyeUITests: XCTestCase {
                       "Voice mode should present")
         allowPermissionAlerts()
 
+        // Opened from inside the app it waits for a tap: the microphone is
+        // not live, so there is nothing to stop yet.
+        let talk = app.buttons["Tap to talk"]
+        XCTAssertTrue(talk.waitForExistence(timeout: 5), "Voice mode waits for Tap to talk")
+        XCTAssertTrue(talk.isEnabled)
+        XCTAssertFalse(app.buttons["Stop"].exists, "Nothing is listening when the screen opens")
+
         let close = app.buttons["Close voice mode"]
         XCTAssertTrue(close.waitForExistence(timeout: 5))
         close.tap()

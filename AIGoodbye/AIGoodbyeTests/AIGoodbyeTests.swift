@@ -1464,3 +1464,107 @@ struct LiveSpeechTests {
         #expect(VoiceService.words(of: "Ich möchte") != VoiceService.words(of: "Ich möchte einen"))
     }
 }
+
+/// Round 7: place names in translations, text in pictures, spoken language.
+struct PlaceNameAndPictureTextTests {
+    @Test func placeNamesWithAmImAnDerArePutBack() {
+        #expect(TranslateModeView.keepNames(from: "Ich komme aus Weil am Rhein.", in: "I come from Weil in the Rhine.")
+                == "I come from Weil am Rhein.")
+        #expect(TranslateModeView.keepNames(from: "Ich wohne in Freiburg im Breisgau.", in: "I live in Freiburg in Breisgau.")
+                == "I live in Freiburg im Breisgau.")
+        #expect(TranslateModeView.keepNames(from: "Wir fahren nach Halle an der Saale.", in: "Vamos a Halle en el Saale.")
+                == "Vamos a Halle an der Saale.")
+        // Already kept: nothing to do.
+        #expect(TranslateModeView.keepNames(from: "Ich komme aus Weil am Rhein.", in: "I come from Weil am Rhein.")
+                == "I come from Weil am Rhein.")
+    }
+
+    @Test func placeNamesLeaveOtherWordsAlone() {
+        // "and" between the town and another capitalised word is not a name.
+        #expect(TranslateModeView.keepNames(from: "Weil am Rhein und Basel liegen nah.", in: "Weil and Basel are close.")
+                == "Weil and Basel are close.")
+        // A landmark after "am" is not a town's river.
+        #expect(TranslateModeView.keepNames(from: "Wir treffen uns in Berlin am Brandenburger Tor.",
+                                            in: "We meet in Berlin at the Brandenburg Gate.")
+                == "We meet in Berlin at the Brandenburg Gate.")
+        // A word with another first letter is a translation, not the river.
+        #expect(TranslateModeView.keepNames(from: "Peter am Telefon.", in: "Peter on the phone.") == "Peter on the phone.")
+        // Dropped altogether: nothing to put back.
+        #expect(TranslateModeView.keepNames(from: "Ich komme aus Weil am Rhein.", in: "I come from Weil.") == "I come from Weil.")
+    }
+
+    @Test func pictureTextKeepsRealLinesOnce() {
+        let lines = TurnContext.imageTextLines(from: "Hello world!\nBäckerei Sonnenschein\n▪︎ ▪︎\nx\nhello world!\n\n12\nOpen 9 to 5")
+        #expect(lines == ["Hello world!", "Bäckerei Sonnenschein", "Open 9 to 5"])
+        #expect(TurnContext.imageTextLines(from: "") == [])
+        // A screenshot or a page of text gets no note at all.
+        let page = (1...40).map { "Line number \($0) of a long page" }.joined(separator: "\n")
+        #expect(TurnContext.imageTextLines(from: page) == [])
+        #expect(TurnContext.imageTextLines(from: String(repeating: "A very long caption ", count: 10)) == [])
+    }
+
+    @Test func pictureTextGoesInTheNoteAfterTheQuestion() {
+        let sent = TurnContext.wrap("Was siehst du auf diesem Bild?", question: "Was siehst du auf diesem Bild?",
+                                    appLanguage: .automatic, hasImage: true,
+                                    imageText: ["Hello world!", "Bäckerei Sonnenschein"])
+        #expect(sent.hasPrefix("Was siehst du auf diesem Bild?"))
+        #expect(sent.contains("Im Bild steht dieser Text"))
+        #expect(sent.contains("\"Hello world!\", \"Bäckerei Sonnenschein\""))
+        #expect(sent.hasSuffix("Antworte auf Deutsch.)"))
+        // No text read: no mention of it.
+        let plain = TurnContext.wrap("Was siehst du auf diesem Bild?", question: "Was siehst du auf diesem Bild?",
+                                     appLanguage: .automatic, hasImage: true)
+        #expect(!plain.contains("Im Bild steht"))
+    }
+
+    @Test @MainActor func aSpokenTurnIsAnsweredInTheLanguageItWasSpokenIn() {
+        #expect(VoiceService.spokenLanguage(for: .german) == .german)
+        #expect(VoiceService.spokenLanguage(for: .french) == .french)
+        // "Hallo" alone has no clear language; spoken in German, it does.
+        #expect(TurnContext.replyLanguage(for: "Hallo", appLanguage: .automatic) == nil)
+        #expect(TurnContext.wrap("Hallo", question: "Hallo", appLanguage: .german).contains("Antworte auf Deutsch."))
+    }
+}
+
+/// The translator: one sentence at a time, as a translator.
+struct TranslatorPromptTests {
+    @Test func sentencesAreTranslatedOneByOne() {
+        #expect(TranslateModeView.sentences(of: "Können Sie mir sagen, wo der Bahnhof ist? Ich muss um halb drei in Köln sein.")
+                == ["Können Sie mir sagen, wo der Bahnhof ist?", "Ich muss um halb drei in Köln sein."])
+        #expect(TranslateModeView.sentences(of: "Wer hat dieses Bild gemalt?") == ["Wer hat dieses Bild gemalt?"])
+        #expect(TranslateModeView.sentences(of: "  ") == [])
+        // A one-word sentence stays with its neighbour.
+        #expect(TranslateModeView.sentences(of: "Ja. Ich komme morgen.") == ["Ja. Ich komme morgen."])
+        // No final punctuation, as speech often arrives.
+        #expect(TranslateModeView.sentences(of: "hallo wie geht es dir") == ["hallo wie geht es dir"])
+    }
+
+    @Test func theTranslatorIsToldNotToAnswer() {
+        let instructions = TranslateModeView.translatorInstructions(from: .german, to: .english)
+        #expect(instructions.contains("from German into English"))
+        #expect(instructions.contains("translate the question"))
+        #expect(instructions.contains("names of people and places"))
+    }
+}
+
+/// Answers about a picture without a "Yes" nobody asked for.
+struct StrayYesTests {
+    @Test func theEmptyOpenerGoes() {
+        let q = "Was siehst du auf diesem Bild?"
+        #expect(TurnContext.withoutStrayYes("Ja, ich habe das Bild gesehen. Es zeigt einen grünen Frosch.", question: q)
+                == "Es zeigt einen grünen Frosch.")
+        #expect(TurnContext.withoutStrayYes("Ja, auf dem Bild sind zwei Handys.", question: q) == "Auf dem Bild sind zwei Handys.")
+        #expect(TurnContext.withoutStrayYes("Yes, I can see the image. A frog.", question: "What do you see?") == "A frog.")
+    }
+
+    @Test func whileStreamingTheOpenerIsHeldBack() {
+        let q = "Was siehst du auf diesem Bild?"
+        #expect(TurnContext.withoutStrayYes("Ja, ich habe das", question: q) == "")
+        #expect(TurnContext.withoutStrayYes("Ja, ich sehe zwei", question: q) == "Ich sehe zwei")
+    }
+
+    @Test func aYesOrNoQuestionKeepsItsYes() {
+        #expect(TurnContext.withoutStrayYes("Ja, das ist ein Frosch.", question: "Ist das ein Frosch?") == "Ja, das ist ein Frosch.")
+        #expect(TurnContext.withoutStrayYes("Es zeigt einen Frosch.", question: "Was siehst du?") == "Es zeigt einen Frosch.")
+    }
+}
